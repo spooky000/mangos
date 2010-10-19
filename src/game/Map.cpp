@@ -187,7 +187,7 @@ template<>
 void Map::AddToGrid(Creature* obj, NGridType *grid, Cell const& cell)
 {
     // add to world object registry in grid
-    if(obj->isPet() || obj->isVehicle())
+    if(obj->isPet())
     {
         (*grid)(cell.CellX(), cell.CellY()).AddWorldObject<Creature>(obj);
         obj->SetCurrentCell(cell);
@@ -231,7 +231,7 @@ template<>
 void Map::RemoveFromGrid(Creature* obj, NGridType *grid, Cell const& cell)
 {
     // remove from world object registry in grid
-    if(obj->isPet() || obj->isVehicle())
+    if(obj->isPet())
     {
         (*grid)(cell.CellX(), cell.CellY()).RemoveWorldObject<Creature>(obj);
     }
@@ -2195,13 +2195,11 @@ void Map::ScriptsProcess()
                     break;
                 }
                 case HIGHGUID_UNIT:
+                case HIGHGUID_VEHICLE:
                     source = GetCreature(step.sourceGUID);
                     break;
                 case HIGHGUID_PET:
                     source = GetPet(step.sourceGUID);
-                    break;
-                case HIGHGUID_VEHICLE:
-                    source = GetVehicle(step.sourceGUID);
                     break;
                 case HIGHGUID_PLAYER:
                     source = HashMapHolder<Player>::Find(step.sourceGUID);
@@ -2228,13 +2226,11 @@ void Map::ScriptsProcess()
             switch(GUID_HIPART(step.targetGUID))
             {
                 case HIGHGUID_UNIT:
+                case HIGHGUID_VEHICLE:
                     target = GetCreature(step.targetGUID);
                     break;
                 case HIGHGUID_PET:
                     target = GetPet(step.targetGUID);
-                    break;
-                case HIGHGUID_VEHICLE:
-                    target = GetVehicle(step.targetGUID);
                     break;
                 case HIGHGUID_PLAYER:                       // empty GUID case also
                     target = HashMapHolder<Player>::Find(step.targetGUID);
@@ -3454,10 +3450,10 @@ Creature* Map::GetCreature(ObjectGuid guid)
  *
  * @param guid must be vehicle guid (HIGHGUID_VEHICLE)
  */
-Vehicle* Map::GetVehicle(ObjectGuid guid)
+/*Vehicle* Map::GetVehicle(ObjectGuid guid)
 {
     return m_objectsStore.find<Vehicle>(guid.GetRawValue(), (Vehicle*)NULL);
-}
+}*/
 
 /**
  * Function return pet that in world at CURRENT map
@@ -3491,9 +3487,9 @@ Creature* Map::GetAnyTypeCreature(ObjectGuid guid)
 {
     switch(guid.GetHigh())
     {
-        case HIGHGUID_UNIT:         return GetCreature(guid);
+        case HIGHGUID_UNIT:
+        case HIGHGUID_VEHICLE:      return GetCreature(guid);
         case HIGHGUID_PET:          return GetPet(guid);
-        case HIGHGUID_VEHICLE:      return GetVehicle(guid);
         default:                    break;
     }
 
@@ -3545,9 +3541,9 @@ WorldObject* Map::GetWorldObject(ObjectGuid guid)
     {
         case HIGHGUID_PLAYER:       return GetPlayer(guid);
         case HIGHGUID_GAMEOBJECT:   return GetGameObject(guid);
-        case HIGHGUID_UNIT:         return GetCreature(guid);
+        case HIGHGUID_UNIT:
+        case HIGHGUID_VEHICLE:      return GetCreature(guid);
         case HIGHGUID_PET:          return GetPet(guid);
-        case HIGHGUID_VEHICLE:      return GetVehicle(guid);
         case HIGHGUID_DYNAMICOBJECT:return GetDynamicObject(guid);
         case HIGHGUID_CORPSE:
         {
@@ -3592,8 +3588,6 @@ uint32 Map::GenerateLocalLowGuid(HighGuid guidhigh)
             return m_DynObjectGuids.Generate();
         case HIGHGUID_PET:
             return m_PetGuids.Generate();
-        case HIGHGUID_VEHICLE:
-            return m_VehicleGuids.Generate();
         default:
             MANGOS_ASSERT(0);
     }

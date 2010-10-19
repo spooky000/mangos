@@ -76,8 +76,8 @@ bool ChatHandler::HandleReloadAllCommand(char* /*args*/)
     HandleReloadMangosStringCommand((char*)"");
     HandleReloadGameTeleCommand((char*)"");
 
-    HandleReloadVehicleDataCommand((char*)"");
-    HandleReloadVehicleSeatDataCommand((char*)"");
+    //HandleReloadVehicleDataCommand((char*)"");
+    //HandleReloadVehicleSeatDataCommand((char*)"");
     return true;
 }
 
@@ -937,21 +937,21 @@ bool ChatHandler::HandleReloadMailLevelRewardCommand(char* /*args*/)
     return true;
 }
 
-bool ChatHandler::HandleReloadVehicleDataCommand(char* /*args*/)
-{
+//bool ChatHandler::HandleReloadVehicleDataCommand(char* /*args*/)
+/*{
     sLog.outString( "Re-Loading `vehicle_data` Table!" );
     sObjectMgr.LoadVehicleData();
     SendGlobalSysMessage("DB table `vehicle_data` reloaded.");
     return true;
-}
+}*/
 
-bool ChatHandler::HandleReloadVehicleSeatDataCommand(char* /*args*/)
-{
+//bool ChatHandler::HandleReloadVehicleSeatDataCommand(char* /*args*/)
+/*{
     sLog.outString( "Re-Loading `vehicle_seat_data` Table!" );
     sObjectMgr.LoadVehicleSeatData();
     SendGlobalSysMessage("DB table `vehicle_seat_data` reloaded.");
     return true;
-}
+}*/
 
 bool ChatHandler::HandleLoadScriptsCommand(char* args)
 {
@@ -4094,6 +4094,10 @@ bool ChatHandler::HandleNpcInfoCommand(char* /*args*/)
     std::string defRespawnDelayStr = secsToTimeString(target->GetRespawnDelay(),true);
 
     PSendSysMessage(LANG_NPCINFO_CHAR,  target->GetDBTableGUIDLow(), faction, npcflags, Entry, displayid, nativeid);
+
+    if (cInfo->VehicleId)
+        PSendSysMessage("VehicleId: %u", cInfo->VehicleId);
+
     PSendSysMessage(LANG_NPCINFO_LEVEL, target->getLevel());
     PSendSysMessage(LANG_NPCINFO_HEALTH,target->GetCreateHealth(), target->GetMaxHealth(), target->GetHealth());
     PSendSysMessage(LANG_NPCINFO_FLAGS, target->GetUInt32Value(UNIT_FIELD_FLAGS), target->GetUInt32Value(UNIT_DYNAMIC_FLAGS), target->getFaction());

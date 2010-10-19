@@ -3002,7 +3002,7 @@ void Aura::HandleAuraMounted(bool apply, bool Real)
         if (minfo)
             display_id = minfo->modelid;
 
-        target->Mount(display_id, GetId(), ci->VehicleEntry);
+        target->Mount(display_id, GetId(), ci->VehicleId);
     }
     else
     {
@@ -3740,7 +3740,7 @@ void Aura::HandleModPossess(bool apply, bool Real)
 
         target->SetCharmerGUID(0);
 
-        if(target->GetTypeId() == TYPEID_PLAYER)
+        if(target->GetTypeId() == TYPEID_PLAYER && !target->GetVehicle())
         {
             ((Player*)target)->setFactionForRace(target->getRace());
             ((Player*)target)->SetClientControl(target, 1);
@@ -4128,7 +4128,7 @@ void Aura::HandleAuraModStun(bool apply, bool Real)
         target->clearUnitState(UNIT_STAT_STUNNED);
         target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED);
 
-        if(!target->hasUnitState(UNIT_STAT_ROOT | UNIT_STAT_ON_VEHICLE))         // prevent allow move if have also root effect
+        if(!target->hasUnitState(UNIT_STAT_ROOT | UNIT_STAT_ON_VEHICLE))       // prevent allow move if have also root effect
         {
             if(target->getVictim() && target->isAlive())
                 target->SetTargetGUID(target->getVictim()->GetGUID());
@@ -8004,37 +8004,33 @@ void Aura::HandleAuraControlVehicle(bool apply, bool Real)
      if(!Real)
          return;
 
-    Unit* target = GetTarget();
     Unit* caster = GetCaster();
-    if (target->GetTypeId() != TYPEID_UNIT || !((Creature*)target)->isVehicle())
-        return;
-    Vehicle* vehicle = (Vehicle*)target;
 
-    if(!caster || !vehicle)
+    if (!caster)
         return;
 
-    // this can happen due to wrong caster/target spell handling
-    // note : SPELL_AURA_CONTROL_VEHICLE can have EffectImplicitTargetA
-    // TARGET_SCRIPT, TARGET_DUELVSPLAYER.. etc
-    if(caster->GetGUID() == vehicle->GetGUID())
+    Unit* target = GetTarget();
+
+    if (!target)
+        return;
+
+    VehicleKit* pVehicle = target->GetVehicleKit();
+
+    if (target->GetTypeId() != TYPEID_UNIT || !pVehicle)
         return;
 
     if (apply)
     {
-        if(caster->GetTypeId() == TYPEID_PLAYER)
-        {
-            WorldPacket data(SMSG_ON_CANCEL_EXPECTED_RIDE_VEHICLE_AURA, 0);
-            ((Player*)caster)->GetSession()->SendPacket(&data);
-        }
-        // if we leave and enter again, this will refresh
-        int32 duration = GetSpellMaxDuration(GetSpellProto());
-        if(duration > 0)
-            vehicle->SetSpawnDuration(duration);
+        // Maybe seat number stored somewhere
+        caster->EnterVehicle(pVehicle);
     }
     else
     {
         // some SPELL_AURA_CONTROL_VEHICLE auras have a dummy effect on the player - remove them
         caster->RemoveAurasDueToSpell(GetId());
+
+        if (caster->GetVehicle() == pVehicle)
+            caster->ExitVehicle();
     }
 }
 
@@ -8298,8 +8294,7 @@ m_permanent(false), m_isRemovedOnShapeLost(true), m_deleted(false), m_in_use(0)
     else
     {
         // remove this assert when not unit casters will be supported
-        MANGOS_ASSERT(caster->GetObjectGuid().IsUnit() || caster->GetObjectGuid().IsVehicle())
-
+        MANGOS_ASSERT(caster->GetObjectGuid().IsUnit())
         m_caster_guid = caster->GetGUID();
     }
 

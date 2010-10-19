@@ -42,7 +42,6 @@
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "CellImpl.h"
-#include "Vehicle.h"
 
 // apply implementation of the singletons
 #include "Policies/SingletonImp.h"
@@ -152,7 +151,7 @@ Creature::~Creature()
 void Creature::AddToWorld()
 {
     ///- Register the creature for guid lookup
-    if(!IsInWorld() && GetObjectGuid().GetHigh() == HIGHGUID_UNIT)
+    if(!IsInWorld() && GetObjectGuid().IsCreatureOrVehicle())
         GetMap()->GetObjectsStore().insert<Creature>(GetGUID(), (Creature*)this);
 
     Unit::AddToWorld();
@@ -161,7 +160,7 @@ void Creature::AddToWorld()
 void Creature::RemoveFromWorld()
 {
     ///- Remove the creature from the accessor
-    if(IsInWorld() && GetObjectGuid().GetHigh() == HIGHGUID_UNIT)
+    if(IsInWorld() && GetObjectGuid().IsCreatureOrVehicle())
         GetMap()->GetObjectsStore().erase<Creature>(GetGUID(), (Creature*)NULL);
 
     Unit::RemoveFromWorld();
@@ -684,7 +683,17 @@ bool Creature::AIM_Initialize()
 
 bool Creature::Create(uint32 guidlow, Map *map, uint32 phaseMask, uint32 Entry, uint32 team, const CreatureData *data)
 {
+    CreatureInfo const *cinfo = sObjectMgr.GetCreatureTemplate(Entry);
+
+    if (!cinfo)
+    {
+        sLog.outErrorDb("Creature entry %u does not exist.", Entry);
+        return false;
+    }
+
     MANGOS_ASSERT(map);
+
+    HighGuid hi = cinfo->VehicleId ? HIGHGUID_VEHICLE : HIGHGUID_UNIT;
     SetMap(map);
     SetPhaseMask(phaseMask,false);
 
@@ -1200,6 +1209,10 @@ bool Creature::CreateFromProto(uint32 guidlow, uint32 Entry, uint32 team, const 
     if (!UpdateEntry(Entry, team, data, false))
         return false;
 
+    // Checked at startup
+    if (GetCreatureInfo()->VehicleId)
+        CreateVehicleKit(GetCreatureInfo()->VehicleId);
+
     return true;
 }
 
@@ -1542,32 +1555,6 @@ bool Creature::IsImmunedToSpellEffect(SpellEntry const* spellInfo, SpellEffectIn
         // Spell effect taunt check
         else if (spellInfo->Effect[index] == SPELL_EFFECT_ATTACK_ME)
             return true;
-    }
-
-    // Heal immunity
-    if (isVehicle() && !(((Vehicle*)this)->GetVehicleFlags() & VF_CAN_BE_HEALED))
-    {
-        switch(spellInfo->Effect[index])
-        {
-            case SPELL_EFFECT_APPLY_AURA:
-                switch(spellInfo->EffectApplyAuraName[index])
-                {
-                    case SPELL_AURA_PERIODIC_HEAL:
-                    case SPELL_AURA_OBS_MOD_HEALTH:
-                    case SPELL_AURA_PERIODIC_HEALTH_FUNNEL:
-                    case SPELL_AURA_MOD_REGEN:
-                        return true;
-                    default: break;
-                }
-                break;
-            case SPELL_EFFECT_HEAL:
-            case SPELL_EFFECT_HEAL_MAX_HEALTH:
-            // NOTE : this too?
-            case SPELL_EFFECT_HEAL_MECHANICAL:
-            case SPELL_EFFECT_HEAL_PCT:
-                return true;
-            default : break;
-        }
     }
 
     return Unit::IsImmunedToSpellEffect(spellInfo, index);

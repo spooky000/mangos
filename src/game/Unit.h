@@ -30,6 +30,7 @@
 #include "FollowerReference.h"
 #include "FollowerRefManager.h"
 #include "Utilities/EventProcessor.h"
+#include "MapManager.h"
 #include "MotionMaster.h"
 #include "DBCStructure.h"
 #include "Path.h"
@@ -303,7 +304,7 @@ class Item;
 class Pet;
 class PetAura;
 class Totem;
-class Vehicle;
+class Transport;
 class VehicleKit;
 
 struct SpellImmune
@@ -442,7 +443,7 @@ enum UnitState
     UNIT_STAT_FOLLOW_MOVE     = 0x00010000,
     UNIT_STAT_FLEEING         = 0x00020000,                     // FleeMovementGenerator/TimedFleeingMovementGenerator active/onstack
     UNIT_STAT_FLEEING_MOVE    = 0x00040000,
-    UNIT_STAT_ON_VEHICLE      = 0x00080000,
+    UNIT_STAT_ON_VEHICLE      = 0x00080000,                     // Unit is on vehicle
 
     // masks (only for check)
 
@@ -779,7 +780,7 @@ class MovementInfo
 
         // Position manipulations
         Position const *GetPos() const { return &pos; }
-        void SetTransportData(ObjectGuid guid, float x, float y, float z, float o, uint32 time, int8 seat, VehicleSeatEntry const* seatInfo = NULL, uint32 vehicle_flags = 0)
+        void SetTransportData(ObjectGuid guid, float x, float y, float z, float o, uint32 time, int8 seat, VehicleSeatEntry const* seatInfo = NULL)
         {
             t_guid = guid;
             t_pos.x = x;
@@ -789,7 +790,6 @@ class MovementInfo
             t_time = time;
             t_seat = seat;
             t_seatInfo = seatInfo;
-            t_vehicle_flags = vehicle_flags;
         }
         void ClearTransportData()
         {
@@ -801,15 +801,13 @@ class MovementInfo
             t_time = 0;
             t_seat = -1;
             t_seatInfo = NULL;
-            t_vehicle_flags = 0;
         }
         ObjectGuid const& GetTransportGuid() const { return t_guid; }
         Position const *GetTransportPos() const { return &t_pos; }
         int8 GetTransportSeat() const { return t_seat; }
-        uint32 GetTransportTime() const { return t_time; }
-        int32 GetTransportDBCSeat() const { return t_seatInfo ? t_seatInfo->m_ID : 0; }
+        uint32 GetTransportDBCSeat() const { return t_seatInfo ? t_seatInfo->m_ID : 0; }
         uint32 GetVehicleSeatFlags() const { return t_seatInfo ? t_seatInfo->m_flags : 0; }
-        uint32 GetVehicleFlags() const { return t_vehicle_flags; }
+        uint32 GetTransportTime() const { return t_time; }
         uint32 GetFallTime() const { return fallTime; }
         void ChangePosition(float x, float y, float z, float o) { pos.x = x; pos.y = y; pos.z = z; pos.o = o; }
         void UpdateTime(uint32 _time) { time = _time; }
@@ -827,7 +825,6 @@ class MovementInfo
         int8     t_seat;
         VehicleSeatEntry const* t_seatInfo;
         uint32   t_time2;
-        uint32   t_vehicle_flags;
         // swimming and flying
         float    s_pitch;
         // last fall time
@@ -1094,6 +1091,7 @@ struct CharmInfo
         bool HasReactState(ReactStates state) { return (m_reactState == state); }
 
         void InitPossessCreateSpells();
+        void InitVehicleCreateSpells();
         void InitCharmCreateSpells();
         void InitPetActionBar();
         void InitEmptyActionBar();
@@ -1108,6 +1106,7 @@ struct CharmInfo
         {
             PetActionBar[index].SetActionAndType(spellOrAction,type);
         }
+
         UnitActionBarEntry const* GetActionBarEntry(uint8 index) const { return &(PetActionBar[index]); }
 
         void ToggleCreatureAutocast(uint32 spellid, bool apply);
@@ -1150,24 +1149,6 @@ typedef std::set<uint64> GuardianPetList;
 #define REGEN_TIME_PRECISE  500                             // Used in Spell::CheckPower for precise regeneration in spell cast time
 
 struct SpellProcEventEntry;                                 // used only privately
-
-// vehicle system
-struct SeatData
-{
-    SeatData() : OffsetX(0.0f), OffsetY(0.0f),  OffsetZ(0.0f), Orientation(0.0f),
-                c_time(0), dbc_seat(0), seat(0), s_flags(0), v_flags(0) {}
-
-    float OffsetX;
-    float OffsetY;
-    float OffsetZ;
-    float Orientation;
-    uint32 c_time;
-    uint32 dbc_seat;
-    uint8 seat;
-    //custom, used as speedup
-    uint32 s_flags;
-    uint32 v_flags;
-};
 
 class MANGOS_DLL_SPEC Unit : public WorldObject
 {
@@ -1337,7 +1318,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         bool IsMounted() const { return HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_MOUNT ); }
         uint32 GetMountID() const { return GetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID); }
-        void Mount(uint32 mount, uint32 spellId = 0, uint32 vehicleEntry = 0);
+        void Mount(uint32 mount, uint32 spellId = 0, uint32 vehicleId = 0);
         void Unmount();
 
         uint16 GetMaxSkillValueForLevel(Unit const* target = NULL) const { return (target ? getLevelForTarget(target) : getLevel()) * 5; }
@@ -1503,11 +1484,11 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         // if used additional args in ... part then floats must explicitly casted to double
         void SendMonsterMove(float x, float y, float z, SplineType type, SplineFlags flags, uint32 Time, Player* player = NULL, ...);
         void SendMonsterMoveWithSpeed(float x, float y, float z, uint32 transitTime = 0, Player* player = NULL);
+        void SendMonsterMoveTransport(WorldObject *transport, SplineType type, SplineFlags flags, uint32 moveTime, ...);
 
         template<typename PathElem, typename PathNode>
         void SendMonsterMoveByPath(Path<PathElem,PathNode> const& path, uint32 start, uint32 end, SplineFlags flags);
 
-        void SendMonsterMoveTransport(Unit *vehicle);
         virtual bool SetPosition(float x, float y, float z, float orientation, bool teleport = false);
 
         void SendHighestThreatUpdate(HostileReference* pHostileReference);
@@ -1515,7 +1496,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void SendThreatRemove(HostileReference* pHostileReference);
         void SendThreatUpdate();
 
-        void BuildHeartBeatMsg( WorldPacket *data ) const;
+        void BuildHeartBeatMsg(WorldPacket& data) const;
 
         virtual void MoveOutOfRange(Player &) {  };
 
@@ -1971,21 +1952,24 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         uint32 GetModelForForm(ShapeshiftForm form);
 
-        // Vehicle System
-        void EnterVehicle(Vehicle *vehicle, int8 seat_id, bool force = false);
-        void ExitVehicle();
-        uint64 GetVehicleGUID() { return m_vehicleGUID; }
-        void SetVehicleGUID(uint64 guid) { m_vehicleGUID = guid; }
-        // using extra variables to favoid problems with transports
-        SeatData m_SeatData;
-        void BuildVehicleInfo(Unit *target = NULL);
-        void ChangeSeat(int8 seatId, bool next = true);
-        // Vehicle Kit
+        // Transports
+        Transport* GetTransport() const { return m_transport; }
+        void SetTransport(Transport* pTransport) { m_transport = pTransport; }
+
+        float GetTransOffsetX() const { return m_movementInfo.GetTransportPos()->x; }
+        float GetTransOffsetY() const { return m_movementInfo.GetTransportPos()->y; }
+        float GetTransOffsetZ() const { return m_movementInfo.GetTransportPos()->z; }
+        float GetTransOffsetO() const { return m_movementInfo.GetTransportPos()->o; }
+        uint32 GetTransTime() const { return m_movementInfo.GetTransportTime(); }
+        int8 GetTransSeat() const { return m_movementInfo.GetTransportSeat(); }
+
+        // Vehicle system
         void EnterVehicle(VehicleKit *vehicle, int8 seatId = -1);
-        VehicleKit* GetVehicle() { return m_vehicle; }
-        VehicleKit* GetVehicleKit() { return m_vehicleKit; }
-        Unit* GetVehicleBase();
-        bool CreateVehicleKit(uint32 vehicleEntry);
+        void ExitVehicle();
+        void ChangeSeat(int8 seatId, bool next = true);
+        VehicleKit* GetVehicle() const { return m_pVehicle; }
+        VehicleKit* GetVehicleKit() const { return m_pVehicleKit; }
+        bool CreateVehicleKit(uint32 vehicleId);
         void RemoveVehicleKit();
 
         // Movement info
@@ -2043,9 +2027,11 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         uint64  m_auraUpdateMask;
 
-        uint64 m_vehicleGUID;
-        VehicleKit* m_vehicle;
-        VehicleKit* m_vehicleKit;
+        // Transports
+        Transport* m_transport;
+
+        VehicleKit* m_pVehicle;
+        VehicleKit* m_pVehicleKit;
 
     private:
         void CleanupDeletedAuras();

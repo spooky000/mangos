@@ -594,7 +594,7 @@ bool ChatHandler::HandleDebugArenaCommand(char* /*args*/)
     return true;
 }
 
-bool ChatHandler::HandleDebugSpawnVehicleCommand(char* args)
+/*bool ChatHandler::HandleDebugSpawnVehicleCommand(char* args)
 {
     if (!*args)
         return false;
@@ -643,7 +643,7 @@ bool ChatHandler::HandleDebugSpawnVehicleCommand(char* args)
     v->AIM_Initialize();
 
     return true;
-}
+}*/
 
 bool ChatHandler::HandleDebugSpellCheckCommand(char* /*args*/)
 {

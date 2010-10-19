@@ -95,7 +95,7 @@ VisibleNotifier::Notify()
         {
             player.SendAurasForTarget((Unit*)(*vItr));
             WorldPacket data;
-            ((Unit*)(*vItr))->BuildHeartBeatMsg(&data);
+            ((Unit*)(*vItr))->BuildHeartBeatMsg(data);
             player.GetSession()->SendPacket(&data);
         }
 

@@ -41,7 +41,6 @@
 #include "GossipDef.h"
 #include "Creature.h"
 #include "Totem.h"
-#include "Vehicle.h"
 #include "CreatureAI.h"
 #include "BattleGroundMgr.h"
 #include "BattleGround.h"
@@ -2102,7 +2101,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     }
                     return;
                 }
-                case 48610:                                 // Q:Shredder Repair
+                /*case 48610:                                 // Q:Shredder Repair
                 {
                     if (m_caster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_caster)->isVehicle())
                         ((Vehicle*)m_caster)->RemoveAllPassengers();
@@ -2116,7 +2115,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                         m_caster->ExitVehicle();
 
                     return;
-                }
+                }*/
 
                 case 49319:                                 // Q:The Horse Hollerer
                 {
@@ -4584,7 +4583,8 @@ void Spell::EffectSummonType(SpellEffectIndex eff_idx)
                     break;
                 case SUMMON_PROP_TYPE_SIEGE_VEH:
                 case SUMMON_PROP_TYPE_DRAKE_VEH:
-                    DoSummonVehicle(eff_idx);
+                    // TODO
+                    // EffectSummonVehicle(i);
                     break;
                 default:
                     sLog.outError("EffectSummonType: Unhandled summon type %u", summon_prop->Type);
@@ -4611,8 +4611,11 @@ void Spell::EffectSummonType(SpellEffectIndex eff_idx)
             break;
         }
         case SUMMON_PROP_GROUP_VEHICLE:
+        case SUMMON_PROP_GROUP_UNCONTROLLABLE_VEHICLE:
         {
-            DoSummonVehicle(eff_idx);
+            // TODO
+            // EffectSummonVehicle(i);
+               DoSummonVehicle(eff_idx, summon_prop->FactionId);
             break;
         }
         default:
@@ -4669,45 +4672,6 @@ void Spell::EffectSummonSnakes(SpellEffectIndex eff_idx)
         pSummon->SetLevel(m_caster->getLevel());
         pSummon->SetMaxHealth(m_caster->getLevel()+ urand(20,30));
     }
-}
-
-void Spell::DoSummonVehicle(SpellEffectIndex eff_idx)
-{
-    uint32 creature_entry = m_spellInfo->EffectMiscValue[eff_idx];
-    if(!creature_entry)
-        return;
-
-    float px, py, pz;
-    // If dest location if present
-    if (m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
-    {
-        // Summon unit in dest location
-        px = m_targets.m_destX;
-        py = m_targets.m_destY;
-        pz = m_targets.m_destZ;
-    }
-    // Summon if dest location not present near caster
-    else
-        m_caster->GetClosePoint(px,py,pz,3.0f);
-
-    Vehicle *v = m_caster->SummonVehicle(creature_entry, px, py, pz, m_caster->GetOrientation());
-    if(!v)
-        return;
-
-    v->SetUInt32Value(UNIT_CREATED_BY_SPELL, m_spellInfo->Id);
-    v->SetCreatorGUID(m_caster->GetGUID());
-
-    if(m_caster->GetTypeId() == TYPEID_PLAYER && v->AI())
-        v->AI()->SummonedBySpell((Player*)m_caster);
-
-    if(damage)
-    {
-        m_caster->CastSpell(v, damage, true);
-        m_caster->EnterVehicle(v, 0);
-    }
-    int32 duration = GetSpellMaxDuration(m_spellInfo);
-    if(duration > 0)
-        v->SetSpawnDuration(duration);
 }
 
 void Spell::DoSummon(SpellEffectIndex eff_idx)
@@ -5305,6 +5269,54 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
                 break;
          }
     }
+}
+
+void Spell::DoSummonVehicle(SpellEffectIndex eff_idx, uint32 forceFaction)
+{
+    if (!m_caster || m_caster->hasUnitState(UNIT_STAT_ON_VEHICLE))
+        return;
+
+    uint32 vehicle_entry = m_spellInfo->EffectMiscValue[eff_idx];
+
+    if (!vehicle_entry)
+        return;
+
+    uint32 mountSpellID = (m_spellInfo->EffectBasePoints[eff_idx] <= 1) ?
+                           46598 : m_spellInfo->EffectBasePoints[eff_idx]+1;
+    // Used MiscValue mount spell, if not present - hardcoded (by Blzz).
+
+    float px, py, pz;
+    // If dest location present
+    if (m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
+    {
+        px = m_targets.m_destX;
+        py = m_targets.m_destY;
+        pz = m_targets.m_destZ;
+    }
+    // Summon if dest location not present near caster
+    else
+        m_caster->GetClosePoint(px, py, pz,m_caster->GetObjectBoundingRadius());
+
+    TempSummonType summonType = (GetSpellDuration(m_spellInfo) == 0) ? TEMPSUMMON_DEAD_DESPAWN : TEMPSUMMON_TIMED_OR_DEAD_DESPAWN;
+
+    Creature* vehicle = m_caster->SummonCreature(vehicle_entry,px,py,pz,m_caster->GetOrientation(),summonType,GetSpellDuration(m_spellInfo),true);
+
+    if (vehicle && !vehicle->GetObjectGuid().IsVehicle())
+    {
+        sLog.outError("DoSommonVehicle: Creature (guidlow %d, entry %d) summoned, but this is not vehicle. Correct VehicleId in creature_template.", vehicle->GetGUIDLow(), vehicle->GetEntry());
+        vehicle->ForcedDespawn();
+        return;
+    }
+
+    if (vehicle)
+    {
+        vehicle->setFaction(forceFaction ? forceFaction : m_caster->getFaction());
+        vehicle->SetUInt32Value(UNIT_CREATED_BY_SPELL,m_spellInfo->Id);
+        m_caster->CastSpell(vehicle, mountSpellID, true);
+        DEBUG_LOG("Caster (guidlow %d) summon vehicle (guidlow %d, entry %d) and mounted with spell %d ", m_caster->GetGUIDLow(), vehicle->GetGUIDLow(), vehicle->GetEntry(), mountSpellID);
+    }
+    else
+        sLog.outError("Vehicle (guidlow %d, entry %d) NOT summoned by undefined reason. ", vehicle->GetGUIDLow(), vehicle->GetEntry());
 }
 
 void Spell::EffectTeleUnitsFaceCaster(SpellEffectIndex eff_idx)
@@ -7733,12 +7745,7 @@ void Spell::EffectAddComboPoints(SpellEffectIndex /*eff_idx*/)
     if(damage <= 0)
         return;
 
-    if(m_caster->GetTypeId() != TYPEID_PLAYER)
-    {
-        if(((Creature*)m_caster)->isVehicle())
-            ((Player*)m_caster->GetCharmer())->AddComboPoints(unitTarget, damage);
-    }else
-        ((Player*)m_caster)->AddComboPoints(unitTarget, damage);
+    ((Player*)m_caster)->AddComboPoints(unitTarget, damage);
 }
 
 void Spell::EffectDuel(SpellEffectIndex eff_idx)
