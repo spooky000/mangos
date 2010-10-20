@@ -2,7 +2,9 @@
 #define _MMAP_COMMON_H
 
 // stop warning spam from ACE includes
-#pragma warning(disable : 4996)
+#ifdef WIN32
+#  pragma warning( disable : 4996 )
+#endif
 
 #include <string>
 #include <vector>
@@ -13,11 +15,15 @@
 #include "Platform/Define.h"
 #include "DebugAlloc.h"
 
+#ifndef WIN32
+    #include <stddef.h>
+    #include <dirent.h>
+#endif
+
 using namespace std;
 
 namespace MMAP
 {
-#ifndef WIN32
     inline bool matchWildcardFilter(const char* filter, const char* str)
     {
         if(!filter || !str)
@@ -49,11 +55,10 @@ namespace MMAP
 
         return ((*filter == '\0' || (*filter == '*' && *++filter == '\0')) && *str == '\0');
     }
-#endif
 
-    enum ListFilesResult : int
+    enum ListFilesResult
     {
-        LISTFILE_DIRECTORY_NOT_FOUND = -1,
+        LISTFILE_DIRECTORY_NOT_FOUND = 0,
         LISTFILE_OK = 1
     };
 
@@ -82,9 +87,8 @@ namespace MMAP
 
     #else
         const char *p = dirpath.c_str();
-        DIR * dirp;
+        DIR * dirp = opendir(p);
         struct dirent * dp;
-        dirp = opendir(p);
 
         while (dirp)
         {
