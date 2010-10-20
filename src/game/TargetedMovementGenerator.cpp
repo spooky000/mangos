@@ -22,14 +22,17 @@
 #include "Creature.h"
 #include "DestinationHolderImp.h"
 #include "World.h"
+//#include "ace/High_Res_Timer.h"
 
 #define SMALL_ALPHA 0.05f
 
 #include <cmath>
 
+//class ACE_High_Res_Timer;
+
 //-----------------------------------------------//
 template<class T, typename D>
-void TargetedMovementGeneratorMedium<T,D>::_setTargetLocation(T &owner)
+void TargetedMovementGeneratorMedium<T,D>::_setTargetLocation(T &owner, bool updateRequired)
 {
     if (!i_target.isValid() || !i_target->IsInWorld())
         return;
@@ -75,8 +78,53 @@ void TargetedMovementGeneratorMedium<T,D>::_setTargetLocation(T &owner)
             return;
     */
 
+    //ACE_High_Res_Timer timer = ACE_High_Res_Timer();
+    //ACE_hrtime_t elapsed;
+    //timer.start();
+
+    if(!i_path)
+        i_path = new PathInfo(&owner, x, y, z);
+    else if (updateRequired)
+        i_path->Update(x, y, z);
+
+    //timer.stop();
+    //timer.elapsed_microseconds(elapsed);
+    //sLog.outDebug("Path found in %llu microseconds", elapsed);
+
+    PointPath pointPath = i_path->getFullPath();
+
+    // get current dest node's index
+    uint32 startIndex = i_path->getPathPointer();
+
+    if (i_destinationHolder.HasArrived())
+        --m_pathPointsSent;
+
     Traveller<T> traveller(owner);
-    i_destinationHolder.SetDestination(traveller, x, y, z);
+    i_path->getNextPosition(x, y, z);
+    i_destinationHolder.SetDestination(traveller, x, y, z, false);
+
+    // send the path if:
+    //    we have visited almost all of the previously sent points
+    //    the path appears to be new
+    //    movespeed has changed
+    //    the owner is stopped
+    if (m_pathPointsSent < 2 || startIndex == 1 || i_recalculateTravel || owner.IsStopped())
+    {
+        // send 10 nodes, or send all nodes if there are less than 10 left
+        m_pathPointsSent = std::min(uint32(10), uint32(pointPath.size() - startIndex));
+        uint32 endIndex = m_pathPointsSent + startIndex;
+
+        // dist to next node + world-unit length of the path
+        x -= owner.GetPositionX();
+        y -= owner.GetPositionY();
+        z -= owner.GetPositionZ();
+        float dist = sqrt(x*x + y*y + z*z) + pointPath.GetTotalLength(startIndex, endIndex);
+
+        // calculate travel time, set spline, then send path
+        uint32 traveltime = uint32(dist / (traveller.Speed()*0.001f));
+        SplineFlags flags = (owner.GetTypeId() == TYPEID_UNIT) ? ((Creature*)&owner)->GetSplineFlags() : SPLINEFLAG_WALKMODE;
+        owner.SendMonsterMoveByPath(pointPath, startIndex, endIndex, flags, traveltime);
+    }
 
     D::_addUnitStateMove(owner);
     if (owner.GetTypeId() == TYPEID_UNIT && ((Creature*)&owner)->canFly())
@@ -143,44 +191,61 @@ bool TargetedMovementGeneratorMedium<T,D>::Update(T &owner, const uint32 & time_
 
     if (!i_destinationHolder.HasDestination())
         _setTargetLocation(owner);
-    if (owner.IsStopped() && !i_destinationHolder.HasArrived())
-    {
-        D::_addUnitStateMove(owner);
-        if (owner.GetTypeId() == TYPEID_UNIT && ((Creature*)&owner)->canFly())
-            ((Creature&)owner).AddSplineFlag(SPLINEFLAG_UNKNOWN7);
 
-        i_destinationHolder.StartTravel(traveller);
-        return true;
-    }
-
-    if (i_destinationHolder.UpdateTraveller(traveller, time_diff, false))
+    if (i_destinationHolder.UpdateTraveller(traveller, time_diff, i_recalculateTravel || owner.IsStopped()))
     {
         if (!IsActive(owner))                               // force stop processing (movement can move out active zone with cleanup movegens list)
             return true;                                    // not expire now, but already lost
 
         // put targeted movement generators on a higher priority
         if (owner.GetObjectBoundingRadius())
-            i_destinationHolder.ResetUpdate(50);
+            i_destinationHolder.ResetUpdate(100);
 
         float dist = i_target->GetObjectBoundingRadius() + owner.GetObjectBoundingRadius() + sWorld.getConfig(CONFIG_FLOAT_RATE_TARGET_POS_RECALCULATION_RANGE);
 
         //More distance let have better performance, less distance let have more sensitive reaction at target move.
 
-        // try to counter precision differences
-        if (i_destinationHolder.GetDistance3dFromDestSq(*i_target.getTarget()) >= dist * dist)
+        bool targetMoved = false, needNewDest = false;
+        PathNode next_point(i_target->GetPositionX(), i_target->GetPositionY(), i_target->GetPositionZ());
+
+        if(i_path)
         {
-            owner.SetInFront(i_target.getTarget());         // Set new Angle For Map::
-            _setTargetLocation(owner);                      //Calculate New Dest and Send data To Player
+            PathNode end_point = i_path->getEndPosition();
+            next_point = i_path->getNextPosition();
+
+            needNewDest = i_destinationHolder.HasArrived() && !inRange(next_point, end_point, dist, 2*dist);
+
+            // GetClosePoint() will always return a point on the ground, so we need to
+            // handle the difference in elevation when the creature is flying
+            if (owner.GetTypeId() == TYPEID_UNIT && ((Creature*)&owner)->canFly())
+                targetMoved = i_target->GetDistanceSqr(end_point.x, end_point.y, end_point.z) >= dist*dist;
+            else
+                targetMoved = i_target->GetDistance2d(end_point.x, end_point.y) >= dist;
+        }
+
+        if (!i_path || targetMoved || needNewDest || i_recalculateTravel || owner.IsStopped())
+        {
+            // (re)calculate path
+            _setTargetLocation(owner, targetMoved || needNewDest);
+
+            if(i_path)
+            {
+                next_point = i_path->getNextPosition();
+
+                // Set new Angle For Map::
+                owner.SetOrientation(owner.GetAngle(next_point.x, next_point.y));
+            }
         }
         // Update the Angle of the target only for Map::, no need to send packet for player
-        else if (!i_angle && !owner.HasInArc(0.01f, i_target.getTarget()))
-            owner.SetInFront(i_target.getTarget());
+        else if (!i_angle && !owner.HasInArc(0.01f, next_point.x, next_point.y))
+            owner.SetOrientation(owner.GetAngle(next_point.x, next_point.y));
 
         if ((owner.IsStopped() && !i_destinationHolder.HasArrived()) || i_recalculateTravel)
         {
             i_recalculateTravel = false;
+
             //Angle update will take place into owner.StopMoving()
-            owner.SetInFront(i_target.getTarget());
+            owner.SetOrientation(owner.GetAngle(next_point.x, next_point.y));
 
             owner.StopMoving();
             static_cast<D*>(this)->_reachTarget(owner);
@@ -310,10 +375,10 @@ void FollowMovementGenerator<T>::Reset(T &owner)
 }
 
 //-----------------------------------------------//
-template void TargetedMovementGeneratorMedium<Player,ChaseMovementGenerator<Player> >::_setTargetLocation(Player &);
-template void TargetedMovementGeneratorMedium<Player,FollowMovementGenerator<Player> >::_setTargetLocation(Player &);
-template void TargetedMovementGeneratorMedium<Creature,ChaseMovementGenerator<Creature> >::_setTargetLocation(Creature &);
-template void TargetedMovementGeneratorMedium<Creature,FollowMovementGenerator<Creature> >::_setTargetLocation(Creature &);
+template void TargetedMovementGeneratorMedium<Player,ChaseMovementGenerator<Player> >::_setTargetLocation(Player &, bool);
+template void TargetedMovementGeneratorMedium<Player,FollowMovementGenerator<Player> >::_setTargetLocation(Player &, bool);
+template void TargetedMovementGeneratorMedium<Creature,ChaseMovementGenerator<Creature> >::_setTargetLocation(Creature &, bool);
+template void TargetedMovementGeneratorMedium<Creature,FollowMovementGenerator<Creature> >::_setTargetLocation(Creature &, bool);
 template bool TargetedMovementGeneratorMedium<Player,ChaseMovementGenerator<Player> >::Update(Player &, const uint32 &);
 template bool TargetedMovementGeneratorMedium<Player,FollowMovementGenerator<Player> >::Update(Player &, const uint32 &);
 template bool TargetedMovementGeneratorMedium<Creature,ChaseMovementGenerator<Creature> >::Update(Creature &, const uint32 &);

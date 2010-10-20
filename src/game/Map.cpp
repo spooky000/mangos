@@ -40,6 +40,8 @@
 #include "BattleGroundMgr.h"
 #include "CreatureEventAI.h"
 
+#include "../recastnavigation/Detour/Include/DetourNavMesh.h"
+
 struct ScriptAction
 {
     uint64 sourceGUID;
@@ -58,6 +60,12 @@ Map::~Map()
 
     if (m_instanceSave)
         m_instanceSave->SetUsedByMapState(false);           // field pointer can be deleted after this
+
+    if (m_navMesh)
+    {
+        dtFreeNavMesh(m_navMesh);
+        m_navMesh = NULL;
+    }
 }
 
 void Map::LoadVMap(int gx,int gy)
@@ -125,6 +133,7 @@ void Map::LoadMapAndVMap(int gx,int gy)
     LoadMap(gx,gy);
     if(i_InstanceId == 0)
         LoadVMap(gx, gy);                                   // Only load the data for the base map
+    LoadNavMesh(gx,gy);
 }
 
 Map::Map(uint32 id, time_t expiry, uint32 InstanceId, uint8 SpawnMode, Map* _parent)
@@ -132,7 +141,8 @@ Map::Map(uint32 id, time_t expiry, uint32 InstanceId, uint8 SpawnMode, Map* _par
   i_id(id), i_InstanceId(InstanceId), m_unloadTimer(0),
   m_VisibleDistance(DEFAULT_VISIBILITY_DISTANCE), m_instanceSave(NULL),
   m_activeNonPlayersIter(m_activeNonPlayers.end()),
-  i_gridExpiry(expiry), m_parentMap(_parent ? _parent : this)
+  i_gridExpiry(expiry), m_parentMap(_parent ? _parent : this),
+  m_navMesh(0)
 {
     for(unsigned int idx=0; idx < MAX_NUMBER_OF_GRIDS; ++idx)
     {
@@ -958,6 +968,7 @@ bool Map::UnloadGrid(const uint32 &x, const uint32 &y, bool pForce)
                 delete GridMaps[gx][gy];
             }
             VMAP::VMapFactory::createOrGetVMapManager()->unloadMap(GetId(), gx, gy);
+            UnloadNavMesh(gx, gy);
         }
         else
             ((MapInstanced*)m_parentMap)->RemoveGridMapReference(GridPair(gx, gy));

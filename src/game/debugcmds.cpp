@@ -32,6 +32,12 @@
 #include "ObjectMgr.h"
 #include "ObjectGuid.h"
 #include "SpellMgr.h"
+#include "SpellAuras.h"
+#include "World.h"
+
+#include "../recastnavigation/Detour/Include/DetourNavMesh.h"
+#include "../recastnavigation/Detour/Include/DetourCommon.h"
+#include "PathFinder.h"
 
 bool ChatHandler::HandleDebugSendSpellFailCommand(char* args)
 {
@@ -206,6 +212,290 @@ bool ChatHandler::HandleDebugUpdateWorldStateCommand(char* args)
 
     m_session->GetPlayer()->SendUpdateWorldState(world, state);
     return true;
+}
+
+bool ChatHandler::HandleDebugMoveMapCommand(char* args)
+{
+    if(!args)
+        return false;
+
+    if(!m_session->GetPlayer()->GetMap() || !m_session->GetPlayer()->GetMap()->GetNavMesh())
+    {
+        PSendSysMessage("NavMesh not loaded for current map.");
+        return true;
+    }
+
+    char* w = strtok((char*)args, " ");
+
+    if (w && strcmp(w, "path") == 0)
+    {
+        PSendSysMessage("mmap path:");
+
+        // units
+        Player* player = m_session->GetPlayer();
+        Unit* target = getSelectedUnit();
+        if(!player || !target)
+        {
+            PSendSysMessage("Invalid target/source selection.");
+            return true;
+        }
+
+        // unit locations
+        float x, y, z;
+        player->GetPosition(x, y, z);
+
+        // path
+        PathInfo path = PathInfo(target, x, y, z);
+        PointPath pointPath = path.getFullPath();
+        PSendSysMessage("%s's path to %s:", target->GetName(), player->GetName());
+        PSendSysMessage("length %i", pointPath.size());
+
+        PathNode start = path.getStartPosition();
+        PathNode next = path.getNextPosition();
+        PathNode end = path.getEndPosition();
+
+        PSendSysMessage("start  (%f,%f,%f)", start.x, start.y, start.z);
+        PSendSysMessage("next   (%f,%f,%f)", next.x, next.y, next.z);
+        PSendSysMessage("end    (%f,%f,%f)", end.x, end.y, end.z);
+
+        // this entry visible only to GM's with "gm on"
+        static const uint32 WAYPOINT_NPC_ENTRY = 1;
+        for(uint32 i = 0; i < pointPath.size(); ++i)
+            player->SummonCreature(WAYPOINT_NPC_ENTRY, pointPath[i].x, pointPath[i].y, pointPath[i].z, 0, TEMPSUMMON_TIMED_DESPAWN, 9000);
+
+        return true;
+    }
+    else if(w && strcmp(w, "verts") == 0)
+    {
+        PSendSysMessage("mmap verts:");
+        
+        // units
+        Player* player = m_session->GetPlayer();
+        Unit* target = getSelectedUnit();
+        if(!player || !target)
+        {
+            PSendSysMessage("Invalid target/source selection.");
+            return true;
+        }
+
+        // unit locations
+        float x, y, z;
+        target->GetPosition(x, y, z);
+        float start[VERTEX_SIZE] = {y, z, x};
+        player->GetPosition(x, y, z);
+        float end[VERTEX_SIZE] = {y, z, x};
+
+        PathInfo path = PathInfo(target, x, y, z);
+
+        if(path.getPolyLength() == 0)
+        {
+            PSendSysMessage("Path is 0 length");
+            return true;
+        }
+
+        float extents[VERTEX_SIZE] = {2.f, 4.f, 2.f};
+        dtQueryFilter filter = dtQueryFilter();
+        dtPolyRef startPoly = path.getMeshQuery()->findNearestPoly(start, extents, &filter, 0);
+        dtPolyRef endPoly = path.getMeshQuery()->findNearestPoly(end, extents, &filter, 0);
+
+        // vertices stuff
+        const dtMeshTile* tile;
+        const dtPoly* poly;
+        path.getMesh()->getTileAndPolyByRef(startPoly, &tile, &poly);
+        float vertices[DT_VERTS_PER_POLYGON*VERTEX_SIZE];
+
+        // startpoly vertices
+        int nv = 0;
+        for (uint32 i = 0; i < poly->vertCount; ++i)
+        {
+            dtVcopy(&vertices[nv*VERTEX_SIZE], &tile->verts[poly->verts[i]*VERTEX_SIZE]);
+            nv++;
+        }
+
+        PSendSysMessage("Poly vertices for %i:", startPoly);
+        for(uint32 i = 0; i < poly->vertCount; ++i)
+            PSendSysMessage("(%.2f,%.2f,%.2f)", vertices[i*VERTEX_SIZE], vertices[i*VERTEX_SIZE+1], vertices[i*VERTEX_SIZE+2]);
+
+        // endpoly vertices
+        path.getMesh()->getTileAndPolyByRef(endPoly, &tile, &poly);
+        nv = 0;
+        for (uint32 i = 0; i < poly->vertCount; ++i)
+        {
+            dtVcopy(&vertices[nv*VERTEX_SIZE], &tile->verts[poly->verts[i]*VERTEX_SIZE]);
+            nv++;
+        }
+
+        PSendSysMessage("Poly vertices for %i:", endPoly);
+        for(uint32 i = 0; i < poly->vertCount; ++i)
+            PSendSysMessage("(%.2f,%.2f,%.2f)", vertices[i*VERTEX_SIZE], vertices[i*VERTEX_SIZE+1], vertices[i*VERTEX_SIZE+2]);
+
+        return true;
+    }
+    else if(w && strcmp(w, "tileloc") == 0)
+    {
+        PSendSysMessage("mmap tileloc:");
+
+        // grid tile location
+        Player* player = m_session->GetPlayer();
+
+        int32 gx = 32 - player->GetPositionX() / 533.33333f;
+        int32 gy = 32 - player->GetPositionY() / 533.33333f;
+
+        PSendSysMessage("gridloc [%i,%i]", gx, gy);
+
+        // calculate navmesh tile location
+        dtNavMesh* navmesh = player->GetMap()->GetNavMesh();
+        dtNavMeshQuery* query = dtAllocNavMeshQuery();
+        query->init(navmesh, MESH_MAX_NODES);
+
+        const float* min = navmesh->getParams()->orig;
+
+        float x, y, z;
+        player->GetPosition(x, y, z);
+        float location[VERTEX_SIZE] = {y, z, x};
+        float extents[VERTEX_SIZE] = {2.f,4.f,2.f};
+
+        int32 tilex = int32((y - min[0]) / 533.33333);
+        int32 tiley = int32((x - min[2]) / 533.33333);
+
+        PSendSysMessage("Calc   [%02i,%02i]", tilex, tiley);
+
+        // navmesh poly -> navmesh tile location
+        dtPolyRef polyRef = query->findNearestPoly(location, extents, &(dtQueryFilter()), NULL);
+        
+        if(!polyRef)
+            PSendSysMessage("Dt     [??,??] (invalid poly, probably no tile loaded)");
+        else
+        {
+            const dtMeshTile* tile;
+            const dtPoly* poly;
+            navmesh->getTileAndPolyByRef(polyRef, &tile, &poly);
+            if(tile)
+                PSendSysMessage("Dt     [%02i,%02i]", tile->header->x, tile->header->y);
+            else
+                PSendSysMessage("Dt     [??,??] (no tile loaded)");
+        }
+
+        // mmtile file header -> navmesh tile location
+        char path[512];
+        sprintf(path, "%smmaps/%03u%02i%02i.mmtile", sWorld.GetDataPath().c_str(), player->GetMapId(), gx, gy);
+        FILE* file = fopen(path, "rb");
+        if(!file)
+            PSendSysMessage("mmtile [??,??] (file %03u%02i%02i.mmtile not found)", player->GetMapId(), gx, gy);
+        else
+        {
+            fseek(file, 0, SEEK_END);
+            int32 length = ftell(file);
+            fseek(file, 0, SEEK_SET);
+
+            unsigned char* data = new unsigned char[length];
+            fread(data, length, 1, file);
+            fclose(file);
+
+            dtMeshHeader* header = (dtMeshHeader*)data;
+
+            PSendSysMessage("mmtile [%02i,%02i]", header->x, header->y);
+
+            delete [] data;
+        }
+
+        return true;
+    }
+    else if(w && strcmp(w, "polytest") == 0)
+    {
+        PSendSysMessage("mmap polytest:");
+        Player* player = m_session->GetPlayer();
+
+        dtNavMesh* navmesh = player->GetMap()->GetNavMesh();
+        dtNavMeshQuery* query = dtAllocNavMeshQuery();
+        query->init(navmesh, MESH_MAX_NODES);
+
+        float x, y, z;
+        player->GetPosition(x, y, z);
+        float location[VERTEX_SIZE] = {y, z, x};
+        float extents[VERTEX_SIZE] = {2.f,4.f,2.f};
+        dtQueryFilter filter = dtQueryFilter();
+        filter.includeFlags = 0xFFFF;
+
+        PSendSysMessage("Nearest poly is:");
+
+        dtPolyRef nearestPoly = query->findNearestPoly(location, extents, &filter, NULL);
+        PSendSysMessage("(y,z,x)");
+        PSendSysMessage("(%.2f,%.2f,%.2f)", y, z, x);
+        PSendSysMessage("%u", nearestPoly);
+
+        return true;
+    }
+    else if(w && strcmp(w, "loadedtiles") == 0)
+    {
+        PSendSysMessage("mmap loadedtiles:");
+
+        dtNavMesh* navmesh = m_session->GetPlayer()->GetMap()->GetNavMesh();
+        dtNavMeshQuery* query = dtAllocNavMeshQuery();
+        query->init(navmesh, MESH_MAX_NODES);
+
+        for(int32 i = 0; i < navmesh->getMaxTiles(); ++i)
+        {
+            const dtMeshTile* tile = ((dtNavMesh const*)navmesh)->getTile(i);
+            if(!tile || !tile->header)
+                continue;
+
+            PSendSysMessage("[%02i,%02i]", tile->header->x, tile->header->y);
+        }
+
+        return true;
+    }
+    else if(w && strcmp(w, "stats") == 0)
+    {
+        PSendSysMessage("mmap stats:");
+        dtNavMesh* navmesh = m_session->GetPlayer()->GetMap()->GetNavMesh();
+
+        uint32 tileCount = 0;
+        uint32 nodeCount = 0;
+        uint32 polyCount = 0;
+        uint32 vertCount = 0;
+        uint32 triCount = 0;
+        uint32 triVertCount = 0;
+        uint32 dataSize = 0;
+        for(int32 i = 0; i < navmesh->getMaxTiles(); ++i)
+        {
+            const dtMeshTile* tile = ((dtNavMesh const*)navmesh)->getTile(i);
+            if(!tile || !tile->header)
+                continue;
+
+            tileCount ++;
+            nodeCount += tile->header->bvNodeCount;
+            polyCount += tile->header->polyCount;
+            vertCount += tile->header->vertCount;
+            triCount += tile->header->detailTriCount;
+            triVertCount += tile->header->detailVertCount;
+            dataSize += tile->dataSize;
+        }
+
+        PSendSysMessage("Navmesh stats:");
+        PSendSysMessage(" %u tiles loaded", tileCount);
+        PSendSysMessage(" %u BVTree nodes", nodeCount);
+        PSendSysMessage(" %u polygons (%u vertices)", polyCount, vertCount);
+        PSendSysMessage(" %u triangles (%u vertices)", triCount, triVertCount);
+        PSendSysMessage(" %.2f MB of data (not including pointers)", ((float)dataSize / sizeof(unsigned char)) / 1048576);
+
+        return true;
+    }
+    else
+    {
+        // usage
+        PSendSysMessage("mmap usage:");
+        PSendSysMessage("  path        print path info from target (or self) to self");
+        PSendSysMessage("  verts       print vertices of current start and end poly");
+        PSendSysMessage("  tileloc     print the current tile's navmesh index");
+        PSendSysMessage("  polytest    print the current polygon's ref");
+        PSendSysMessage("  loadedtiles print tile info for loaded tiles");
+        PSendSysMessage("  stats       print stats about the current navmesh");
+        
+        return true;
+    }
+
+    return false;
 }
 
 bool ChatHandler::HandleDebugPlayCinematicCommand(char* args)

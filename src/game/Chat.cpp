@@ -214,6 +214,7 @@ ChatCommand * ChatHandler::getCommandTable()
         { "spellmods",      SEC_ADMINISTRATOR,  false, &ChatHandler::HandleDebugSpellModsCommand,           "", NULL },
         { "spawnvehicle",   SEC_ADMINISTRATOR,  false, &ChatHandler::HandleDebugSpawnVehicleCommand,        "", NULL },
         { "uws",            SEC_ADMINISTRATOR,  false, &ChatHandler::HandleDebugUpdateWorldStateCommand,    "", NULL },
+        { "mmap",           SEC_ADMINISTRATOR,  false, &ChatHandler::HandleDebugMoveMapCommand,             "", NULL },
         { NULL,             0,                  false, NULL,                                                "", NULL }
     };
 
