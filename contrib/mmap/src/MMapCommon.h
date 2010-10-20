@@ -6,8 +6,11 @@
 
 #include <string>
 #include <vector>
+#ifndef WIN32
+#include <dirent.h>
+#endif
 
-#include "platform/Define.h"
+#include "Platform/Define.h"
 #include "DebugAlloc.h"
 
 using namespace std;
