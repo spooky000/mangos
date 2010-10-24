@@ -4394,8 +4394,8 @@ void Aura::HandleAuraModRoot(bool apply, bool Real)
             {
                 WorldPacket data(SMSG_FORCE_MOVE_ROOT, 10);
                 data << target->GetPackGUID();
-                data << (uint32)2;
-                target->SendMessageToSet(&data,true);
+                data << uint32(2);
+                target->SendMessageToSet(&data, true);
             }
 
             //Clear unit movement flags

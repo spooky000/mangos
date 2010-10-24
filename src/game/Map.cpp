@@ -3446,17 +3446,6 @@ Creature* Map::GetCreature(ObjectGuid guid)
 }
 
 /**
- * Function return vehicle that in world at CURRENT map
- *
- * @param guid must be vehicle guid (HIGHGUID_VEHICLE)
- */
-/*Vehicle* Map::GetVehicle(ObjectGuid guid)
-{
-    return m_objectsStore.find<Vehicle>(guid.GetRawValue(), (Vehicle*)NULL);
-}*/
-
-/**
- * Function return pet that in world at CURRENT map
  *
  * @param guid must be pet guid (HIGHGUID_PET)
  */

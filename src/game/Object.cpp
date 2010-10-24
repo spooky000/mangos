@@ -278,7 +278,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
                     {
                         // Feanor: Disabled - It bugs possesed flying creatures movement (Charms / Vehicles etc)
                         // (ok) possibly some "hover" mode
-                        //unit->m_movementInfo.AddMovementFlag(MOVEFLAG_ROOT);
+                        unit->m_movementInfo.AddMovementFlag(MOVEFLAG_ROOT);
                     }
                     else
                     {
