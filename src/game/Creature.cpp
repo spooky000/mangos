@@ -265,7 +265,7 @@ bool Creature::InitEntry(uint32 Entry, uint32 team, const CreatureData *data )
     SetDisplayId(display_id);
 
     SetByteValue(UNIT_FIELD_BYTES_0, 2, minfo->gender);
-    SetByteValue(UNIT_FIELD_BYTES_0, 3, cinfo->powerType);
+    SetByteValue(UNIT_FIELD_BYTES_0, 3, uint8(cinfo->powerType));
 
     // Load creature equipment
     if (!data || data->equipmentId == 0)
