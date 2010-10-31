@@ -326,7 +326,9 @@ bool Creature::UpdateEntry(uint32 Entry, uint32 team, const CreatureData *data, 
 
     SetUInt32Value(UNIT_FIELD_FLAGS, unitFlags);
 
-    SetUInt32Value(UNIT_DYNAMIC_FLAGS,GetCreatureInfo()->dynamicflags);
+    // preserve all current dynamic flags if exist
+    uint32 dynFlags = GetUInt32Value(UNIT_DYNAMIC_FLAGS);
+    SetUInt32Value(UNIT_DYNAMIC_FLAGS, dynFlags ? dynFlags : GetCreatureInfo()->dynamicflags);
 
     SetModifierValue(UNIT_MOD_ARMOR,             BASE_VALUE, float(GetCreatureInfo()->armor));
     SetModifierValue(UNIT_MOD_RESISTANCE_HOLY,   BASE_VALUE, float(GetCreatureInfo()->resistance1));
@@ -612,7 +614,27 @@ void Creature::Regenerate(Powers power)
             break;
         }
         case POWER_ENERGY:
-            addvalue = 20 * sWorld.getConfig(CONFIG_FLOAT_RATE_POWER_ENERGY);
+            if (GetObjectGuid().IsVehicle())
+            {
+                if (VehicleEntry const* vehicleInfo = sVehicleStore.LookupEntry(GetCreatureInfo()->VehicleId))
+                {
+
+                    switch (vehicleInfo->m_powerType)
+                    {
+                        case ENERGY_TYPE_PYRITE:
+                        case ENERGY_TYPE_BLOOD:
+                        case ENERGY_TYPE_OOZE:
+                        break;
+
+                        case ENERGY_TYPE_STEAM:
+                        default:
+                            addvalue = 10 * sWorld.getConfig(CONFIG_FLOAT_RATE_POWER_ENERGY);
+                        break;
+                    }
+                }
+            }
+            else
+                addvalue = 20 * sWorld.getConfig(CONFIG_FLOAT_RATE_POWER_ENERGY);
             break;
         case POWER_FOCUS:
             addvalue = 24 * sWorld.getConfig(CONFIG_FLOAT_RATE_POWER_FOCUS);
@@ -720,6 +742,21 @@ bool Creature::Create(uint32 guidlow, Map *map, uint32 phaseMask, uint32 Entry, 
     MANGOS_ASSERT(map);
 
     HighGuid hi = cinfo->VehicleId ? HIGHGUID_VEHICLE : HIGHGUID_UNIT;
+
+    if (map->GetInstanceId() == 0)
+    {
+        // Creature can be loaded already in map if grid has been unloaded while creature walk to another grid
+        // FIXME: until creature guids is global and for instances used dynamic generated guids
+        // in instance possible load creature duplicates with same DB guid but different in game guids
+        // This will be until implementing per-map creature guids
+        if (map->GetCreature(ObjectGuid(hi, Entry, guidlow)))
+            return false;
+    }
+    else
+        guidlow = sObjectMgr.GenerateLowGuid(hi);
+
+    ObjectGuid guid(hi, Entry, guidlow);
+
     SetMap(map);
     SetPhaseMask(phaseMask,false);
 
@@ -1908,7 +1945,7 @@ bool Creature::LoadCreaturesAddon(bool reload)
         // 3 ShapeshiftForm     Must be determined/set by shapeshift spell/aura
 
         SetByteValue(UNIT_FIELD_BYTES_2, 0, uint8(cainfo->bytes2 & 0xFF));
-        //SetByteValue(UNIT_FIELD_BYTES_2, 1, uint8((cainfo->bytes2 >> 8) & 0xFF));
+        SetByteValue(UNIT_FIELD_BYTES_2, 1, uint8((cainfo->bytes2 >> 8) & 0xFF));
         //SetByteValue(UNIT_FIELD_BYTES_2, 2, uint8((cainfo->bytes2 >> 16) & 0xFF));
         SetByteValue(UNIT_FIELD_BYTES_2, 2, 0);
         //SetByteValue(UNIT_FIELD_BYTES_2, 3, uint8((cainfo->bytes2 >> 24) & 0xFF));

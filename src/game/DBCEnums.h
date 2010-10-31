@@ -439,11 +439,10 @@ enum VehicleFlags
 enum VehicleSeatFlags
 {
     SEAT_FLAG_NONE                  = 0x00000000,           //
-	SEAT_FREE                       = 0x00000001,           // free seat
-    SEAT_FULL                       = 0x00000002,           // seat occupied by player/creature
-    // special cases
-    SEAT_VEHICLE_FREE               = 0x00000004,           // seat occupied by vehicle, but that vehicle is free
-    SEAT_VEHICLE_FULL               = 0x00000008,           // seat occupied by vehicle and that vehicle is full too
+	SEAT_FLAG_UNK1                  = 0x00000001,           // free seat
+    SEAT_FLAG_UNK2                  = 0x00000002,           // seat occupied by player/creature
+    SEAT_FLAG_UNK3	                = 0x00000004,           // seat occupied by vehicle, but that vehicle is free
+    SEAT_FLAG_UNK4	                = 0x00000008,           // seat occupied by vehicle and that vehicle is full too
     SEAT_FLAG_UNK5                  = 0x00000010,           //
     SEAT_FLAG_UNK6                  = 0x00000020,           //
     SEAT_FLAG_HIDE_PASSENGER        = 0x00000200,           // Passenger is hidden
