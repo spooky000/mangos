@@ -269,7 +269,8 @@ Unit::Unit()
     for(int i=0; i < MAX_REACTIVE; ++i)
         m_reactiveTimer[i] = 0;
 
-    m_auraUpdateMask = 0;
+    m_transport = NULL;
+	m_auraUpdateMask = 0;
 
     m_pVehicle = NULL;
     m_pVehicleKit = NULL;
@@ -487,7 +488,6 @@ void Unit::SendMonsterMoveWithSpeed(float x, float y, float z, uint32 transitTim
     SplineFlags flags = GetTypeId() == TYPEID_PLAYER ? SPLINEFLAG_WALKMODE : ((Creature*)this)->GetSplineFlags();
     SendMonsterMove(x, y, z, SPLINETYPE_NORMAL, flags, transitTime, player);
 }
-
 
 bool Unit::SetPosition(float x, float y, float z, float orientation, bool teleport)
 {
@@ -6174,8 +6174,11 @@ Pet* Unit::GetPet() const
 {
     if(uint64 pet_guid = GetPetGUID())
     {
-        if(Pet* pet = GetMap()->GetPet(pet_guid))
-            return pet;
+        if (IsInWorld())
+        {
+            if (Pet* pet = GetMap()->GetPet(pet_guid))
+                return pet;
+        }
 
         sLog.outError("Unit::GetPet: Pet %u not exist.",GUID_LOPART(pet_guid));
         const_cast<Unit*>(this)->SetPet(0);
@@ -11039,6 +11042,13 @@ void Unit::MonsterMoveWithSpeed(float x, float y, float z, uint32 transitTime)
     }
 }
 
+struct SetPvPHelper
+{
+    explicit SetPvPHelper(bool _state) : state(_state) {}
+    void operator()(Unit* unit) const { unit->SetPvP(state); }
+    bool state;
+};
+
 bool Unit::CreateVehicleKit(uint32 vehicleId)
 {
     VehicleEntry const *vehicleInfo = sVehicleStore.LookupEntry(vehicleId);
@@ -11154,13 +11164,6 @@ void Unit::ExitVehicle()
     GetClosePoint(x, y, z, 2.0f);
     SendMonsterMove(x, y, z, SPLINETYPE_NORMAL, SPLINEFLAG_WALKMODE, 0);
 }
-
-struct SetPvPHelper
-{
-    explicit SetPvPHelper(bool _state) : state(_state) {}
-    void operator()(Unit* unit) const { unit->SetPvP(state); }
-    bool state;
-};
 
 void Unit::SetPvP( bool state )
 {
