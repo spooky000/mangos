@@ -187,7 +187,7 @@ template<>
 void Map::AddToGrid(Creature* obj, NGridType *grid, Cell const& cell)
 {
     // add to world object registry in grid
-    if(obj->isPet())
+    if(obj->IsPet())
     {
         (*grid)(cell.CellX(), cell.CellY()).AddWorldObject<Creature>(obj);
         obj->SetCurrentCell(cell);
@@ -231,7 +231,7 @@ template<>
 void Map::RemoveFromGrid(Creature* obj, NGridType *grid, Cell const& cell)
 {
     // remove from world object registry in grid
-    if(obj->isPet())
+    if(obj->IsPet())
     {
         (*grid)(cell.CellX(), cell.CellY()).RemoveWorldObject<Creature>(obj);
     }
@@ -1055,6 +1055,12 @@ float Map::GetHeight(float x, float y, float z, bool pUseVmaps, float maxSearchD
     else
         vmapHeight = VMAP_INVALID_HEIGHT_VALUE;
 
+    if (GetAreaId(x,y,z) == 4859)
+    {
+        mapHeight  += 200.0f;
+        vmapHeight += 200.0f;
+    } 
+
     // mapHeight set for any above raw ground Z or <= INVALID_HEIGHT
     // vmapheight set for any under Z value or <= INVALID_HEIGHT
 
@@ -1596,7 +1602,7 @@ void Map::AddToActive( WorldObject* obj )
     {
         Creature* c= (Creature*)obj;
 
-        if (!c->isPet() && c->GetDBTableGUIDLow())
+        if (!c->IsPet() && c->GetDBTableGUIDLow())
         {
             float x,y,z;
             c->GetRespawnCoord(x,y,z);
@@ -1631,7 +1637,7 @@ void Map::RemoveFromActive( WorldObject* obj )
     {
         Creature* c= (Creature*)obj;
 
-        if(!c->isPet() && c->GetDBTableGUIDLow())
+        if(!c->IsPet() && c->GetDBTableGUIDLow())
         {
             float x,y,z;
             c->GetRespawnCoord(x,y,z);
@@ -3568,6 +3574,28 @@ void Map::SendObjectUpdates()
     }
 }
 
+bool Map::IsNextZcoordOK(float x, float y, float oldZ, float maxDiff) const
+{
+    // The fastest way to get an accurate result 90% of the time.
+    // Better result can be obtained like 99% accuracy with a ray light, but the cost is too high and the code is too long.
+    maxDiff = maxDiff >= 100.0f ? 10.0f : sqrtf(maxDiff);
+    bool useVmaps = false;
+    if( GetHeight(x, y, oldZ, false) <  GetHeight(x, y, oldZ, true) ) // check use of vmaps
+        useVmaps = true;
+
+    float newZ = GetHeight(x, y, oldZ+maxDiff-2.0f, useVmaps);
+
+    if (fabs(newZ-oldZ) > maxDiff)                              // bad...
+    {
+        useVmaps = !useVmaps;                                     // try change vmap use
+        newZ = GetHeight(x, y, oldZ+maxDiff-2.0f, useVmaps);
+
+        if (fabs(newZ-oldZ) > maxDiff)
+            return false;
+    }
+    return true;
+}
+
 uint32 Map::GenerateLocalLowGuid(HighGuid guidhigh)
 {
     // TODO: for map local guid counters possible force reload map instead shutdown server at guid counter overflow
@@ -3583,26 +3611,4 @@ uint32 Map::GenerateLocalLowGuid(HighGuid guidhigh)
 
     MANGOS_ASSERT(0);
     return 0;
-}
-
-bool Map::IsNextZcoordOK(float x, float y, float oldZ, float maxDiff) const
-{
-    // The fastest way to get an accurate result 90% of the time.
-    // Better result can be obtained like 99% accuracy with a ray light, but the cost is too high and the code is too long.
-    maxDiff = maxDiff >= 100.0f ? 10.0f : sqrtf(maxDiff);
-    bool useVmaps = false;
-    if ( GetHeight(x, y, oldZ+2.0f, false) <  GetHeight(x, y, oldZ+2.0f, true) ) // check use of vmaps
-        useVmaps = true;
-
-    float newZ = GetHeight(x, y, oldZ+2.0f, useVmaps);
-
-    if (fabs(newZ-oldZ) > maxDiff)                              // bad...
-    {
-        useVmaps = !useVmaps;                                     // try change vmap use
-        newZ = GetHeight(x, y, oldZ+2.0f, useVmaps);
-
-        if (fabs(newZ-oldZ) > maxDiff)
-            return false;
-    }
-    return true;
 }
