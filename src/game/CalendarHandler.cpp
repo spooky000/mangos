@@ -54,7 +54,7 @@ void WorldSession::HandleCalendarGetCalendar(WorldPacket &/*recv_data*/)
                 data << uint32(save->GetMapId());
                 data << uint32(save->GetDifficulty());
                 data << uint32(save->GetResetTime() - cur_time);
-                data << ObjectGuid(save->GetInstanceGuid());
+                data << ObjectGuid(save->GetInstanceGuid());      // instance save id as unique instance copy id
                 ++counter;
             }
         }
