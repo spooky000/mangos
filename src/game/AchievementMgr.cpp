@@ -866,7 +866,7 @@ void AchievementMgr::DoFailedTimedAchievementCriterias()
             m_criteriaProgress.erase(pro_iter);
         }
 
-        iter = m_criteriaFailTimes.erase(iter);
+        m_criteriaFailTimes.erase(iter++);
     }
 }
 
