@@ -553,11 +553,6 @@ void WorldSession::HandleMoverRelocation(MovementInfo& movementInfo, Unit* mover
             if (!plMover->GetTransport())
             {
 
-                /* process anticheat check */
-                if (GetPlayer()->GetAntiCheat()->CheckNeeded(plMover))
-                    if (!GetPlayer()->GetAntiCheat()->CheckOnTransport(movementInfo))
-                        return;
-
                 // elevators also cause the client to send MOVEFLAG_ONTRANSPORT - just unmount if the guid can be found in the transport list
                 for (MapManager::TransportSet::const_iterator iter = sMapMgr.m_Transports.begin(); iter != sMapMgr.m_Transports.end(); ++iter)
                 {
@@ -585,11 +580,6 @@ void WorldSession::HandleMoverRelocation(MovementInfo& movementInfo, Unit* mover
         {
             // now client not include swimming flag in case jumping under water
             plMover->SetInWater( !plMover->IsInWater() || plMover->GetBaseMap()->IsUnderWater(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z) );
-        }
-
-        if(plMover->GetBaseMap()->IsUnderWater(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z-7.0f))
-        {
-            plMover->GetAntiCheat()->m_anti_BeginFallZ=INVALID_HEIGHT;
         }
 
         plMover->SetPosition(movementInfo.GetPos()->x, movementInfo.GetPos()->y, movementInfo.GetPos()->z, movementInfo.GetPos()->o);

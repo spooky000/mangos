@@ -20067,7 +20067,7 @@ void Player::SendUpdateToOutOfRangeGroupMembers()
 
     m_groupUpdateMask = GROUP_UPDATE_FLAG_NONE;
     m_auraUpdateMask = 0;
-    if(Unit *pet = GetCharmOrPet())
+    if(Unit *pet = GetPet())
         pet->ResetAuraUpdateMask();
 }
 

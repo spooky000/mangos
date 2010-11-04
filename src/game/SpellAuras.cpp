@@ -9527,7 +9527,7 @@ void Aura::HandleAuraInitializeImages(bool Apply, bool Real)
     if(!caster)
         return;
 
-    Unit* creator = caster->GetMap()->GetUnit(target->GetCreatorGUID());
+    Unit* creator = caster->GetMap()->GetUnit(target->GetObjectGuid());
     Creature* pImmage = (Creature*)target;
     if (!creator || creator != caster || pImmage->IsPet())
         return;
@@ -9595,7 +9595,7 @@ void Aura::HandleCharmConvert(bool apply, bool Real)
     if( apply )
     {
         target->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
-        target->SetCharmerGUID(GetCasterGUID());
+        target->SetCharmerGuid(GetCasterGUID());
         target->setFaction(caster->getFaction());
         target->CastStop();
         uCaster->SetCharm(uTarget);
@@ -9640,7 +9640,7 @@ void Aura::HandleCharmConvert(bool apply, bool Real)
     else
     {
         uTarget->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
-        target->SetCharmerGUID(0);
+        target->SetCharmerGuid(ObjectGuid());
         target->setFactionForRace(uTarget->getRace());
         target->SetClientControl(uTarget, 1);
         target->CombatStop();

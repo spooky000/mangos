@@ -6697,7 +6697,7 @@ bool Spell::CheckTarget( Unit* target, SpellEffectIndex eff )
             return false;
     }
 
-    if (target != m_caster && m_caster->GetCharmerOrOwnerGUID() == target->GetGUID())
+    if (target != m_caster && m_caster->GetCharmerOrOwnerGuid() == target->GetObjectGuid())
     {
         if (m_spellInfo->EffectImplicitTargetA[eff] == TARGET_MASTER ||
             m_spellInfo->EffectImplicitTargetB[eff] == TARGET_MASTER)

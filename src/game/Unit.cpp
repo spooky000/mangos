@@ -5717,8 +5717,8 @@ bool Unit::IsInPartyWith(Unit const *unit) const
     if(this == unit)
       return true;
 
-   const Unit *u1 = GetCharmerOrOwnerOrSelf();
-    const Unit *u2 = unit->GetCharmerOrOwnerOrSelf();
+    Unit const *u1 = GetCharmerOrOwner();
+    Unit const *u2 = unit->GetCharmerOrOwner();
     if(u1 == u2)
         return true;
 
@@ -5733,8 +5733,8 @@ bool Unit::IsInRaidWith(Unit const *unit) const
     if(this == unit)
         return true;
 
-    const Unit *u1 = GetCharmerOrOwnerOrSelf();
-    const Unit *u2 = unit->GetCharmerOrOwnerOrSelf();
+    Unit const *u1 = GetCharmerOrOwner();
+    Unit const *u2 = unit->GetCharmerOrOwner();
     if(u1 == u2)
         return true;
 
@@ -6912,15 +6912,19 @@ int32 Unit::SpellBaseDamageBonusTaken(SpellSchoolMask schoolMask)
 
 bool Unit::IsSpellCrit(Unit *pVictim, SpellEntry const *spellProto, SpellSchoolMask schoolMask, WeaponAttackType attackType)
 {
+    // mobs can't crit with spells at all
+    if (GetObjectGuid().IsCreature())
+        return false;
+
     // not critting spell
     if((spellProto->AttributesEx2 & SPELL_ATTR_EX2_CANT_CRIT))
         return false;
 
     // Creatures cant crit with spells
-    if (GetTypeId() == TYPEID_UNIT && (((Creature*)this)->GetSubtype() == CREATURE_SUBTYPE_GENERIC // If its normal creature
+    /*if (GetTypeId() == TYPEID_UNIT && (((Creature*)this)->GetSubtype() == CREATURE_SUBTYPE_GENERIC // If its normal creature
         || (((Creature*)this)->GetSubtype() == CREATURE_SUBTYPE_TEMPORARY_SUMMON && !((Creature*)this)->GetOwnerGUID()))  // or temporary summon without owner, hope this is correct
         && spellProto->DmgClass == SPELL_DAMAGE_CLASS_MAGIC) // Also affect only magic
-        return false;
+        return false;*/
 
     float crit_chance = 0.0f;
     switch(spellProto->DmgClass)
@@ -8015,7 +8019,7 @@ void Unit::Unmount()
 
 void Unit::SetInCombatWith(Unit* enemy)
 {
-    Unit* eOwner = enemy->GetCharmerOrOwnerOrSelf();
+    Unit* eOwner = enemy->GetCharmerOrOwner();
     if (eOwner->IsPvP())
     {
         SetInCombatState(true,enemy);
@@ -8025,7 +8029,7 @@ void Unit::SetInCombatWith(Unit* enemy)
     //check for duel
     if (eOwner->GetTypeId() == TYPEID_PLAYER && ((Player*)eOwner)->duel)
     {
-        Unit const* myOwner = GetCharmerOrOwnerOrSelf();
+        Unit const* myOwner = GetCharmerOrOwner();
         if(((Player const*)eOwner)->duel->opponent == myOwner)
         {
             SetInCombatState(true,enemy);
