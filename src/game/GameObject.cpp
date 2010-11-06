@@ -168,7 +168,7 @@ bool GameObject::Create(uint32 guidlow, uint32 name_id, Map *map, uint32 phaseMa
 void GameObject::Update(uint32 update_diff, uint32 /*tick_diff*/)
 {
     if (IsInWorld())
-        m_ObjectEvents.Update(p_time);
+        m_ObjectEvents.Update(update_diff);
 
     if (GetObjectGuid().IsMOTransport())
     {

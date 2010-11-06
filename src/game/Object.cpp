@@ -2106,7 +2106,6 @@ Creature* WorldObject::GetClosestCreatureWithEntry(WorldObject* pSource, uint32 
 
     CellPair p(MaNGOS::ComputeCellPair(pSource->GetPositionX(), pSource->GetPositionY()));
     Cell cell(p);
-    cell.data.Part.reserved = ALL_DISTRICT;
     cell.SetNoCreate();
 
     MaNGOS::NearestCreatureEntryWithLiveStateInObjectRangeCheck u_check(*pSource,uiEntry,true,fMaxSearchRange);
@@ -2126,7 +2125,6 @@ GameObject* WorldObject::GetClosestGameObjectWithEntry(WorldObject* pSource, uin
 
     CellPair p(MaNGOS::ComputeCellPair(pSource->GetPositionX(), pSource->GetPositionY()));
     Cell cell(p);
-    cell.data.Part.reserved = ALL_DISTRICT;
     cell.SetNoCreate();
 
     MaNGOS::NearestGameObjectEntryInObjectRangeCheck gobject_check(*pSource, uiEntry, fMaxSearchRange);
@@ -2143,28 +2141,26 @@ void WorldObject::GetGameObjectListWithEntryInGrid(std::list<GameObject*>& lList
 {
     CellPair pair(MaNGOS::ComputeCellPair(this->GetPositionX(), this->GetPositionY()));
     Cell cell(pair);
-    cell.data.Part.reserved = ALL_DISTRICT;
     cell.SetNoCreate();
 
     MaNGOS::AllGameObjectsWithEntryInRange check(this, uiEntry, fMaxSearchRange);
     MaNGOS::GameObjectListSearcher<MaNGOS::AllGameObjectsWithEntryInRange> searcher(lList, check);
     TypeContainerVisitor<MaNGOS::GameObjectListSearcher<MaNGOS::AllGameObjectsWithEntryInRange>, GridTypeMapContainer> visitor(searcher);
 
-    cell.Visit(pair, visitor, *(this->GetMap()));
+    cell.Visit(pair, visitor, *(this->GetMap()), *this, fMaxSearchRange);
 }
 
 void WorldObject::GetCreatureListWithEntryInGrid(std::list<Creature*>& lList, uint32 uiEntry, float fMaxSearchRange)
 {
     CellPair pair(MaNGOS::ComputeCellPair(this->GetPositionX(), this->GetPositionY()));
     Cell cell(pair);
-    cell.data.Part.reserved = ALL_DISTRICT;
     cell.SetNoCreate();
 
     MaNGOS::AllCreaturesOfEntryInRange check(this, uiEntry, fMaxSearchRange);
     MaNGOS::CreatureListSearcher<MaNGOS::AllCreaturesOfEntryInRange> searcher(lList, check);
     TypeContainerVisitor<MaNGOS::CreatureListSearcher<MaNGOS::AllCreaturesOfEntryInRange>, GridTypeMapContainer> visitor(searcher);
 
-    cell.Visit(pair, visitor, *(this->GetMap()));
+    cell.Visit(pair, visitor, *(this->GetMap()), *this, fMaxSearchRange);
 }
 
 void WorldObject::UpdateObjectVisibility()
