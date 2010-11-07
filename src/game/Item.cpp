@@ -467,6 +467,16 @@ bool Item::LoadFromDB(uint32 guidLow, uint64 owner_guid, Field *fields)
             // also cleanup for sure gift table
             CharacterDatabase.PExecute("DELETE FROM character_gifts WHERE item_guid = '%u'", GetGUIDLow());
         }
+	}
+
+    // Insert to Refundable map
+    if(GetPlayedtimeField())
+    {
+        std::pair<uint64, uint32> ItemInfo;
+        ItemInfo.first = GetGUID();
+        ItemInfo.second = 0; // At this point we can't lookup modified extended cost
+
+        sObjectMgr.mItemRefundableMap.insert(ItemInfo);
     }
 
     if (need_save)                                          // normal item changed state set not work at loading
@@ -1223,4 +1233,30 @@ void Item::SetLootState( ItemLootUpdateState state )
 
     if (m_lootState != ITEM_LOOT_NONE && m_lootState != ITEM_LOOT_UNCHANGED && m_lootState != ITEM_LOOT_TEMPORARY)
         SetState(ITEM_CHANGED);
+}
+
+// "Stackable items (such as Frozen Orbs and gems) and 
+// charged items that can be purchased with an alternate currency are not eligible. "
+bool Item::IsEligibleForRefund()
+{
+    ItemPrototype const*proto = GetProto();
+
+    if (proto == NULL)
+        return false;
+
+    if (!(proto->Flags & ITEM_FLAG_REFUNDABLE))
+        return false;
+
+    if (proto->MaxCount > 1)
+        return false;
+
+    for(int i = 0; i < 5; ++i)
+    {
+        _Spell spell = proto->Spells[i];
+
+        if (spell.SpellCharges != -1  && spell.SpellCharges != 0)
+            return false;
+    }
+
+    return true;
 }
