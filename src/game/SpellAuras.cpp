@@ -2148,7 +2148,8 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                             MaNGOS::AnyUnitInObjectRangeCheck go_check(target, 15.0f); // 15 yards check
                             MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInObjectRangeCheck> go_search(creatureList, go_check);
                             TypeContainerVisitor<MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInObjectRangeCheck>, GridTypeMapContainer> go_visit(go_search);
-							cell.Visit(pair, go_visit, *(target->GetMap()), *target, 15.0f);
+							//cell.Visit(pair, go_visit, *(target->GetMap()), *target, 15.0f);
+							target->GetMap()->Visit(cell, go_visit);
                         }
 
                         if (!creatureList.empty())
