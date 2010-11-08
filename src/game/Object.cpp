@@ -103,20 +103,6 @@ void Object::_Create(uint32 guidlow, uint32 entry, HighGuid guidhigh)
     m_PackGUID.Set(guid);
 }
 
-void WorldObject::UpdateCall(uint32 newtime, uint32 diff)
-{
-    // use real time diff from last object update call
-    // this can have big diff from tick diff time for object returning to active zone)
-    int32 realDiff = getMSTimeDiff(m_lastUpdateTime, newtime);
-
-    if ( realDiff < 0)
-        realDiff = 0;
-
-    m_lastUpdateTime = newtime;
-
-    Update(uint32(realDiff), diff);
-}
-
 void Object::SetObjectScale(float newScale)
 {
     SetFloatValue(OBJECT_FIELD_SCALE_X, newScale);
