@@ -55,7 +55,7 @@ void GossipMenu::AddMenuItem(uint8 Icon, const std::string& Message, uint32 dtSe
         sLog.outError("Gossip menu item list overflow! Skipping adding item.");
 }
 
-void GossipMenu::AddGossipMenuItemData(uint32 action_menu, uint32 action_poi, uint32 action_script)
+void GossipMenu::AddGossipMenuItemData(int32 action_menu, uint32 action_poi, uint32 action_script)
 {
     GossipMenuItemData pItemData;
 
