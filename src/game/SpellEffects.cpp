@@ -6324,7 +6324,7 @@ void Spell::EffectHealMaxHealth(SpellEffectIndex /*eff_idx*/)
     m_healing += heal;
 }
 
-void Spell::EffectInterruptCast(SpellEffectIndex /*eff_idx*/)
+void Spell::EffectInterruptCast(SpellEffectIndex eff_idx)
 {
     if(!unitTarget)
         return;
@@ -6341,7 +6341,7 @@ void Spell::EffectInterruptCast(SpellEffectIndex /*eff_idx*/)
             // check if we can interrupt spell
             if ((curSpellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_INTERRUPT) && curSpellInfo->PreventionType == SPELL_PREVENTION_TYPE_SILENCE )
             {
-                unitTarget->ProhibitSpellSchool(GetSpellSchoolMask(curSpellInfo), GetSpellDuration(m_spellInfo));
+                unitTarget->ProhibitSpellSchool(GetSpellSchoolMask(curSpellInfo), unitTarget->CalculateSpellDuration(m_caster, GetSpellDuration(m_spellInfo), m_spellInfo, eff_idx));
                 unitTarget->InterruptSpell(CurrentSpellTypes(i),false);
             }
         }
@@ -7799,40 +7799,78 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     break;
                 }
-                case 46584:		 // Raise dead
+                // Raise dead script effect
+                case 46584:
                 {
-                    // We will get here ONLY when we have a corpse of humanoid that gives honor or XP.
-                    // If we have active pet, then we should not cast the spell again.
-                    if(m_caster->GetPet())
+                    if ( !unitTarget || m_caster->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    // If have 52143 spell - summoned pet from dummy effect
+                    // Another case summoned guardian from script effect
+                    uint32 triggered_spell_id;
+                    if (!m_caster->HasSpell(52143))
+                        triggered_spell_id = m_spellInfo->EffectBasePoints[eff_idx]+1;
+                    else
+                        triggered_spell_id = m_spellInfo->EffectBasePoints[EFFECT_INDEX_2]+1;
+
+                    float x,y,z;
+
+                    m_caster->GetClosePoint(x, y, z, m_caster->GetObjectBoundingRadius(), PET_FOLLOW_DIST);
+
+                    if ( unitTarget != m_caster )
                     {
-                        if (m_caster->GetTypeId()==TYPEID_PLAYER)
-                            ((Player*)m_caster)->RemoveSpellCooldown(m_spellInfo->Id,true);
-                        SendCastResult(SPELL_FAILED_ALREADY_HAVE_SUMMON);
+                        m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
+                        unitTarget->RemoveFromWorld();
+                    }
+                    else if (m_caster->HasAura(60200))
+                    {
+                        m_caster->CastSpell(x,y,z,triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
+                    }
+                    else  if (((Player*)m_caster)->HasItemCount(37201,1))
+                    {
+                        ((Player*)m_caster)->DestroyItemCount(37201,1,true);
+                        m_caster->CastSpell(x,y,z,triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
+                    }
+                    else
+                    {
+                        SendCastResult(SPELL_FAILED_REAGENTS);
+                        finish();
+                        CancelGlobalCooldown();
                         return;
                     }
-                    // Do we have talent Master of Ghouls?
-                    if(m_caster->HasSpell(52143))
-                        // Summon ghoul as a pet
-                        m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),52150,true);
-                    else
-                        // Summon ghoul as a guardian
-                     m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),46585,true);
-					((Creature*)unitTarget)->SetDeathState(ALIVE);
-                    // Used to prevent further EffectDummy execution
-                    finish();
-                    return;//break;	
+                    ((Player*)m_caster)->RemoveSpellCooldown(triggered_spell_id,true);
+                    break;
+                }
+                default:
+                    break;
+            }
+            break;
+        }
+       case SPELLFAMILY_WARRIOR:
+        {
+            switch(m_spellInfo->Id)
+            {
+                case 64380:                                 // Shattering Throw
+                {
+                    if (!unitTarget || !unitTarget->isAlive())
+                        return;
+
+                    // remove immunity effects
+                    m_caster->CastSpell(unitTarget, 39897, true);
+                    break;
                 }
             }
             break;
         }
     }
 
+
     // normal DB scripted effect
     if (!unitTarget)
         return;
 
     DEBUG_FILTER_LOG(LOG_FILTER_SPELL_CAST, "Spell ScriptStart spellid %u in EffectScriptEffect ", m_spellInfo->Id);
-    if(m_caster->IsInWorld())
+    if (m_caster->IsInWorld())
         m_caster->GetMap()->ScriptsStart(sSpellScripts, m_spellInfo->Id, m_caster, unitTarget);
 }
 
