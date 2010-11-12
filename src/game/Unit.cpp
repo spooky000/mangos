@@ -6754,6 +6754,8 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
                         break;
                     }
                 }
+                if(!found)
+                    break;
 
                 // search for Glacier Rot and  Improved Icy Touch dummy aura
                 bool isIcyTouch=(spellProto->SpellFamilyFlags & UI64LIT(0x0000000000000002));
@@ -6764,6 +6766,7 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
                         (isIcyTouch && (*i)->GetSpellProto()->SpellIconID == 2721))                       //Improved Icy Touch 
                     {
                         DoneTotalMod *= ((*i)->GetModifier()->m_amount+100.0f) / 100.0f;
+                        break;
                     }
                 }
             }
@@ -9137,21 +9140,22 @@ int32 Unit::CalculateSpellDamage(Unit const* target, SpellEntry const* spellProt
 }
 
 int32 Unit::CalculateBaseSpellDuration(SpellEntry const* spellProto, uint32* periodicTime)
- {
+{
     int32 duration = GetSpellDuration(spellProto);
- 
+
     if (duration < 0)
         return duration;
 
     if (GetTypeId() == TYPEID_PLAYER)
     {
         int32 maxduration = GetSpellMaxDuration(spellProto);
- 
+
         if (duration != maxduration)
             duration += int32((maxduration - duration) * ((Player*)this)->GetComboPoints() / 5);
     }
- 
+
     Player* modOwner = GetSpellModOwner();
+
     if (modOwner)
     {
         modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_DURATION, duration);
@@ -9159,9 +9163,10 @@ int32 Unit::CalculateBaseSpellDuration(SpellEntry const* spellProto, uint32* per
         if (duration <= 0)
             return 0;
     }
- 
+
     bool applyHaste = (spellProto->AttributesEx5 & SPELL_ATTR_EX5_AFFECTED_BY_HASTE) != 0;
- 
+
+
     if (!applyHaste)
     {
         Unit::AuraList const& mModByHaste = GetAurasByType(SPELL_AURA_MOD_PERIODIC_HASTE);
@@ -9196,11 +9201,11 @@ int32 Unit::CalculateBaseSpellDuration(SpellEntry const* spellProto, uint32* per
         }
 
         *periodicTime = _periodicTime;
-     }
- 
-     return duration;
- }
- 
+    }
+
+    return duration;
+}
+
 uint32 Unit::CalculateSpellDuration(Unit const* caster, uint32 baseDuration, SpellEntry const* spellProto, SpellEffectIndex effect_index)
 {
     int32 mechanic = GetEffectMechanic(spellProto, effect_index);
@@ -9213,7 +9218,7 @@ uint32 Unit::CalculateSpellDuration(Unit const* caster, uint32 baseDuration, Spe
     int32 durationMod_not_stack = GetMaxNegativeAuraModifierByMiscValue(SPELL_AURA_MECHANIC_DURATION_MOD_NOT_STACK, mechanic);
 
     if (!IsPositiveSpell(spellProto->Id))
-        durationMod_always += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_DURATION_OF_MAGIC_EFFECTS, spellProto->DmgClass);
+        durationMod_always += GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_DURATION_OF_MAGIC_EFFECTS, spellProto->Dispel);
 
     int32 durationMod = 0;
 
@@ -9223,53 +9228,56 @@ uint32 Unit::CalculateSpellDuration(Unit const* caster, uint32 baseDuration, Spe
     else
         durationMod = durationMod_always;
 
-    int32 duration = baseDuration;
+    if (caster == this)
+    {
+        switch(spellProto->SpellFamilyName)
+    	{
+        	case SPELLFAMILY_POTION:
+        	{
+            	// Mixology
+            	if (HasAura(53042))
+                	duration *= 2;
+
+            	break;
+        	}
+            case SPELLFAMILY_DRUID:
+        	{
+                if (spellProto->SpellFamilyFlags & UI64LIT(0x100))
+                {
+                    // Glyph of Thorns
+                    if (Aura *aur = GetAura(57862, EFFECT_INDEX_0))
+                        baseDuration += aur->GetModifier()->m_amount * MINUTE * IN_MILLISECONDS;
+                }
+                break;
+        	}
+            case SPELLFAMILY_PALADIN:
+        	{
+                if (spellProto->SpellIconID == 298 && spellProto->SpellFamilyFlags & UI64LIT(0x00000002))
+                {
+                    // Glyph of Blessing of Might
+                    if (Aura *aur = GetAura(57958, EFFECT_INDEX_0))
+                        baseDuration += aur->GetModifier()->m_amount * MINUTE * IN_MILLISECONDS;
+                }
+                else if (spellProto->SpellIconID == 306 && spellProto->SpellFamilyFlags & UI64LIT(0x00010000))
+                {
+                    // Glyph of Blessing of Wisdom
+                    if (Aura *aur = GetAura(57979, EFFECT_INDEX_0))
+                        baseDuration += aur->GetModifier()->m_amount * MINUTE * IN_MILLISECONDS;
+                }
+                break;
+			}
+            default:
+                break;
+        }
+    }
+
     if (durationMod != 0)
     {
-        duration = int32(int64(duration) * (100+durationMod) / 100);
-        if(duration < 0)
-            duration = 0;
+        int32 duration = int32(int64(baseDuration) * (100+durationMod) / 100);
+        return duration < 0 ? 0 : duration;
     }
 
-    switch(spellProto->SpellFamilyName)
-    {
-        case SPELLFAMILY_POTION:
-        {
-            // Mixology
-            if (HasAura(53042))
-                duration *= 2;
-
-            break;
-        }
-        case SPELLFAMILY_DRUID:
-        {
-            if (spellProto->SpellFamilyFlags & UI64LIT(0x100))
-            {
-                // Glyph of Thorns
-                if (Aura * aur = GetAura(57862, EFFECT_INDEX_0))
-                    duration += aur->GetModifier()->m_amount * MINUTE * IN_MILLISECONDS;
-            }
-            break;
-        }
-        case SPELLFAMILY_PALADIN:
-        {
-            if (spellProto->SpellFamilyFlags & UI64LIT(0x00000002))
-            {
-                // Glyph of Blessing of Might
-                if (Aura * aur = GetAura(57958, EFFECT_INDEX_0))
-                    duration += aur->GetModifier()->m_amount * MINUTE * IN_MILLISECONDS;
-            }
-            else if (spellProto->SpellFamilyFlags & UI64LIT(0x00010000))
-            {
-                // Glyph of Blessing of Wisdom
-                if (Aura * aur = GetAura(57979, EFFECT_INDEX_0))
-                    duration += aur->GetModifier()->m_amount * MINUTE * IN_MILLISECONDS;
-            }
-            break;
-        }
-    }
-
-    return duration;
+    return baseDuration;
 }
 
 DiminishingLevels Unit::GetDiminishing(DiminishingGroup group)
