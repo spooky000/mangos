@@ -36,6 +36,7 @@
 #include "MapManager.h"
 #include "BattleGround.h"
 #include "BattleGroundAB.h"
+#include "BattleGroundAV.h"
 #include "Map.h"
 #include "InstanceData.h"
 
@@ -98,6 +99,8 @@ bool AchievementCriteriaRequirement::IsValid(AchievementCriteriaEntry const* cri
         case ACHIEVEMENT_CRITERIA_TYPE_CAST_SPELL2:
         case ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET:
         case ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET2:
+        case ACHIEVEMENT_CRITERIA_TYPE_HONORABLE_KILL:
+        case ACHIEVEMENT_CRITERIA_TYPE_GET_KILLING_BLOWS:
             break;
         default:
             sLog.outErrorDb( "Table `achievement_criteria_requirement` have data for not supported criteria type (Entry: %u Type: %u), ignore.", criteria->ID, criteria->requiredType);
@@ -961,6 +964,10 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                 if (achievementCriteria->win_bg.bgMapID != GetPlayer()->GetMapId())
                     continue;
 
+                BattleGround* bg = GetPlayer()->GetBattleGround();
+                if (!bg)
+                    continue;
+
                 if (achievementCriteria->win_bg.additionalRequirement1_type || achievementCriteria->win_bg.additionalRequirement2_type)
                 {
                     // some hardcoded requirements
@@ -971,14 +978,23 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                         case 159:              // AB, win under 6 minutes
                         {
                             // set 8 minutes because there is 2 minutes long preparation
-                            if(GetPlayer()->GetBattleGround()->GetStartTime() > (8 * MINUTE * IN_MILLISECONDS))
+                            if(bg->GetStartTime() > (8 * MINUTE * IN_MILLISECONDS))
                                 continue;     
                             break;
                         }
                         case 201:              // WS, win under 7 minutes
                         {
                             // set 9 minutes because there is 2 minutes long preparation
-                            if(GetPlayer()->GetBattleGround()->GetStartTime() > (9 * MINUTE * IN_MILLISECONDS))
+                            if(bg->GetStartTime() > (9 * MINUTE * IN_MILLISECONDS))
+                                continue;
+                            break;
+                        }
+                        case 1164:             // AV, own both mines (horde)
+                        case 225:              // AV, own both mines (alliance)
+                        {
+
+                            int8 team = bg->GetTeamIndexByTeamId(GetPlayer()->GetTeam());
+                            if(!((BattleGroundAV*)bg)->IsMineOwnedBy(BG_AV_NORTH_MINE,team) || !((BattleGroundAV*)bg)->IsMineOwnedBy(BG_AV_SOUTH_MINE,team))
                                 continue;
                             break;
                         }
@@ -995,9 +1011,6 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                 // some hardcoded requirements
                 else
                 {
-                    BattleGround* bg = GetPlayer()->GetBattleGround();
-                    if (!bg)
-                        continue;
 
                     switch(achievementCriteria->referredAchievement)
                     {
@@ -1727,24 +1740,40 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
             case ACHIEVEMENT_CRITERIA_TYPE_HONORABLE_KILL:
             case ACHIEVEMENT_CRITERIA_TYPE_GET_KILLING_BLOWS:
             {	
-                BattleGround* bg = GetPlayer()->GetBattleGround();
-                if (!bg || !miscvalue1 || GetPlayer()->GetMapId() != achievementCriteria->healing_done.mapid)
+                if (!miscvalue1)
                     continue;
 
+                // those requirements couldn't be found in the dbc
+                AchievementCriteriaRequirementSet const* data = sAchievementMgr.GetCriteriaRequirementSet(achievementCriteria);
+
+                if(achievementCriteria->healing_done.flag != 0)
+                {
+                    if(GetPlayer()->GetMapId() != achievementCriteria->healing_done.mapid)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        if(data && !data->Meets(GetPlayer(),unit))
+                            continue;
+                    }
+                }
+                else
+                {
+                    if(!data)
+                        continue;
+
+                    if(!data->Meets(GetPlayer(),unit))
+                        continue;
+                }
+
+                BattleGround* bg = GetPlayer()->GetBattleGround();
                 // some hardcoded requirements
                 switch(achievementCriteria->referredAchievement)
                 {
                     case 231:					// Wrecking Ball
                     {
-                        if(bg->GetPlayerScore(GetPlayer(),SCORE_DEATHS) != 0)
-                            continue;
-                        break;
-                    }
-                    case 233:					// Bloodthirsty Berserker
-                    {
-                        if(bg->GetTypeID(true) != BATTLEGROUND_EY)
-                            continue;
-                        if(!GetPlayer()->HasAura(23505))
+                        if(!bg || bg->GetPlayerScore(GetPlayer(),SCORE_DEATHS) != 0)
                             continue;
                         break;
                     }
@@ -1764,121 +1793,35 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
             case ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE:
             {
                 BattleGround* bg = GetPlayer()->GetBattleGround();
-                if (!miscvalue1 || !bg)
+                if (!miscvalue1 || !miscvalue2 || !bg)
+                    continue;
+
+                if(achievementCriteria->objective_capture.captureID != miscvalue2)
                     continue;
 
                 // some hardcoded requirements
-                switch(achievementCriteria->objective_capture.captureID)
+                switch(achievementCriteria->referredAchievement)
                 {
-                    case 42:							// WS, capture a flag
+                    case 204:					// WS, capture 3 flags without dying
                     {
-                        if(bg->GetTypeID(true) != BATTLEGROUND_WS)
-                            continue;
-
-                        if(miscvalue2 == 1)
-                            continue;
-
-                        switch(achievementCriteria->referredAchievement)
-                        {
-                            case 204:					// WS, capture 3 flags without dying
-                            {
-                                if(bg->GetPlayerScore(GetPlayer(),SCORE_DEATHS) != 0)
-                                    continue;
-                                break;
-                            }
-                        }
-			break;
-                    }
-                    case 44:                           // WS, return a flag
-                    {
-                        if(bg->GetTypeID(true) != BATTLEGROUND_WS)
+                        if(bg->GetPlayerScore(GetPlayer(),SCORE_DEATHS) != 0)
                             continue;
                         break;
                     }
-                    case 183:							// EY, capture a flag
-                    {
-                        if(bg->GetTypeID(true) != BATTLEGROUND_EY)
-                            continue;
-
-                        switch(achievementCriteria->referredAchievement)
-                        {
-                            case 211:					// EY, capture flag while controling all 4 bases
-                            {
-                                if(!bg->IsAllNodesConrolledByTeam(GetPlayer()->GetTeam()))
-                                    continue;
-                                break;
-                            }
-                            case 216:					// EY, capture 3 flags without dying
-                            {
-                                if(bg->GetPlayerScore(GetPlayer(),SCORE_DEATHS) != 0)
-                                    continue;
-                                break;
-                            }
-                        }
-                        break;
-                    }
-                    case 122:                           // AB, assault a base
-                    {
-                        if(bg->GetTypeID(true) != BATTLEGROUND_AB)
-                            continue;
-                        
-                        if(miscvalue2 == 1)
-                            continue;
-
-                        break;
-                    }
-                    case 123:                           // AB, defend a base
-                    {
-                        if(bg->GetTypeID(true) != BATTLEGROUND_AB)
-                            continue;
-                        
-                        if(miscvalue2 == 0)
-                            continue;
-
-                        break;
-                    }
-                    case 61:							// AV, assault a tower
-                    {
-                        if(bg->GetTypeID(true) != BATTLEGROUND_AV)
-                            continue;
-                        
-                        if(miscvalue2 == 1)
-                            continue;
-
-                        break;
-                    }
-                    case 63:	                        // AV, take a graveyard
-                    {
-                        if(bg->GetTypeID(true) != BATTLEGROUND_AV)
-                            continue;
-                        
-                        if(miscvalue2 == 1)
-                            continue;
-
-                        break;
-                    }
-                    case 64:	                        // AV, defend a tower
-                    {
-                        if(bg->GetTypeID(true) != BATTLEGROUND_AV)
-                            continue;
-                        
-                        if(miscvalue2 == 0)
-                            continue;
-
-                        break;
-                    }
-                    case 65:	                        // AV, defend a graveyard
-                    {
-                        if(bg->GetTypeID(true) != BATTLEGROUND_AV)
-                            continue;
-                        
-                        if(miscvalue2 == 0)
-                            continue;
-
-                        break;
-                    }
-
+	                case 211:					// EY, capture flag while controling all 4 bases
+	                {
+	                    if(!bg->IsAllNodesConrolledByTeam(GetPlayer()->GetTeam()))
+	                        continue;
+	                    break;
+	                }
+	                case 216:					// EY, capture 3 flags without dying
+	                {
+	                    if(bg->GetPlayerScore(GetPlayer(),SCORE_DEATHS) != 0)
+	                        continue;
+	                    break;
+	                }
                 }
+
                 SetCriteriaProgress(achievementCriteria, achievement, miscvalue1, PROGRESS_ACCUMULATE);
 				break;
 			}
@@ -1903,6 +1846,28 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                 progressType = PROGRESS_HIGHEST;
                 break;
             }
+            case ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_TEAM_RATING:
+            {
+            	if(!miscvalue1 || achievementCriteria->highest_team_rating.teamtype != miscvalue1)
+            	    continue;
+
+                change = miscvalue2;
+                progressType = PROGRESS_HIGHEST;
+                break;
+            }
+            case ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_PERSONAL_RATING:
+            {
+            	if(!miscvalue1 || achievementCriteria->highest_personal_rating.teamtype != miscvalue1)
+            	    continue;
+
+            	if(achievementCriteria->highest_personal_rating.teamrating != 0 && achievementCriteria->highest_personal_rating.teamrating > miscvalue2)
+            	    continue;
+
+                change = miscvalue2;
+                progressType = PROGRESS_HIGHEST;
+                break;
+            }
+            
             // std case: not exist in DBC, not triggered in code as result
             case ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_HEALTH:
             case ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_SPELLPOWER:
@@ -2904,3 +2869,4 @@ void AchievementGlobalMgr::LoadRewardLocales()
     sLog.outString();
     sLog.outString( ">> Loaded %lu achievement reward locale strings", (unsigned long)m_achievementRewardLocales.size() );
 }
+

@@ -841,8 +841,7 @@ void BattleGround::EndBattleGround(uint32 winner)
 
                 winner_arena_team->MemberWon(plr,loser_rating);
 
-                if (member)
-                {
+                if (member) {
                     plr->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_PERSONAL_RATING, GetArenaType(), member->personal_rating);
                     plr->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_TEAM_RATING, GetArenaType(), winner_arena_team->GetStats().rating);
                 }
