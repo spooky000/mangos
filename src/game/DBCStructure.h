@@ -1824,7 +1824,6 @@ struct VehicleSeatEntry
     bool IsUsable() const { return m_flags & SEAT_FLAG_USABLE; }
 };
 
-
 struct WMOAreaTableEntry
 {
     uint32 Id;                                              // 0 index
