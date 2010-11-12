@@ -9236,7 +9236,7 @@ uint32 Unit::CalculateSpellDuration(Unit const* caster, uint32 baseDuration, Spe
         	{
             	// Mixology
             	if (HasAura(53042))
-                	duration *= 2;
+                	baseDuration *= 2;
 
             	break;
         	}
