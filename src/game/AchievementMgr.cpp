@@ -1846,28 +1846,6 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                 progressType = PROGRESS_HIGHEST;
                 break;
             }
-            case ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_TEAM_RATING:
-            {
-            	if(!miscvalue1 || achievementCriteria->highest_team_rating.teamtype != miscvalue1)
-            	    continue;
-
-                change = miscvalue2;
-                progressType = PROGRESS_HIGHEST;
-                break;
-            }
-            case ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_PERSONAL_RATING:
-            {
-            	if(!miscvalue1 || achievementCriteria->highest_personal_rating.teamtype != miscvalue1)
-            	    continue;
-
-            	if(achievementCriteria->highest_personal_rating.teamrating != 0 && achievementCriteria->highest_personal_rating.teamrating > miscvalue2)
-            	    continue;
-
-                change = miscvalue2;
-                progressType = PROGRESS_HIGHEST;
-                break;
-            }
-            
             // std case: not exist in DBC, not triggered in code as result
             case ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_HEALTH:
             case ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_SPELLPOWER:
