@@ -1972,6 +1972,9 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                     // Garrote-Silence -> Garrote (multi-family check)
                     if (spellInfo_1->SpellIconID == 498 && spellInfo_1->SpellVisual[0] == 0 && spellInfo_2->SpellIconID == 498)
                         return false;
+                    // Honor Among Thieves dummy auras (multi-family check)
+                    if (spellId_1 == 51699 && spellId_2 == 52916)
+                        return false;
 
                     // Honor Among Thieves dummy auras (multi-family check)
                     if (spellId_1 == 51699 && spellId_2 == 52916)
