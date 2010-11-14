@@ -644,7 +644,7 @@ bool Player::Create( uint32 guidlow, const std::string& name, uint8 race, uint8 
 {
     //FIXME: outfitId not used in player creating
 
-    Object::_Create(guidlow, 0, HIGHGUID_PLAYER);
+    Object::_Create(ObjectGuid(HIGHGUID_PLAYER, guidlow));
 
     m_name = name;
 
@@ -15444,7 +15444,7 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder )
         return false;
     }
 
-    Object::_Create( guid, 0, HIGHGUID_PLAYER );
+    Object::_Create(ObjectGuid(HIGHGUID_PLAYER, guid));
 
     m_name = fields[2].GetCppString();
 
@@ -16139,7 +16139,7 @@ void Player::_LoadAuras(QueryResult *result, uint32 timediff)
         do
         {
             Field *fields = result->Fetch();
-            uint64 caster_guid = fields[0].GetUInt64();
+            ObjectGuid caster_guid = fields[0].GetUInt64();
             uint32 item_lowguid = fields[1].GetUInt64();
             uint32 spellid = fields[2].GetUInt32();
             uint32 stackcount = fields[3].GetUInt32();
@@ -16199,7 +16199,7 @@ void Player::_LoadAuras(QueryResult *result, uint32 timediff)
             if (!holder->IsEmptyHolder())
             {
                 // reset stolen single target auras
-                if (caster_guid != GetGUID() && holder->IsSingleTarget())
+                if (caster_guid.GetRawValue() != GetGUID() && holder->IsSingleTarget())
                     holder->SetIsSingleTarget(false);
 
                 holder->SetLoadedState(caster_guid, ObjectGuid(HIGHGUID_ITEM, item_lowguid), stackcount, remaincharges);
