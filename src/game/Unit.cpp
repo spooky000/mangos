@@ -1308,7 +1308,7 @@ void Unit::CastCustomSpell(Unit* Victim, SpellEntry const *spellInfo, int32 cons
             sLog.outError("CastCustomSpell: unknown spell by caster: %s", GetObjectGuid().GetString().c_str());
         return;
     }
-
+	
     if(sObjectMgr.IsSpellDisabled(spellInfo->Id))
         return;
 
@@ -1368,7 +1368,7 @@ void Unit::CastSpell(float x, float y, float z, SpellEntry const *spellInfo, boo
             sLog.outError("CastSpell(x,y,z): unknown spell by caster: %s", GetObjectGuid().GetString().c_str());
         return;
     }
-
+	
     if(sObjectMgr.IsSpellDisabled(spellInfo->Id))
         return;
 
@@ -1531,7 +1531,7 @@ void Unit::DealSpellDamage(SpellNonMeleeDamage *damageInfo, bool durabilityLoss)
     if( spellProto->AttributesEx3 & SPELL_ATTR_EX3_UNK16 )
         hasWeaponDmgEffect = false;
 
-    if (!(damageInfo->HitInfo & HITINFO_MISS) && hasWeaponDmgEffect)
+    if (!(damageInfo->HitInfo & HITINFO_MISS) && hasWeaponDmgEffect) 
     {
         WeaponAttackType attType = GetWeaponAttackType(spellProto);
         // on weapon hit casts
@@ -8039,7 +8039,7 @@ void Unit::Unmount()
 
 void Unit::SetInCombatWith(Unit* enemy)
 {
-    Unit* eOwner = enemy->GetCharmerOrOwner();
+    Unit* eOwner = enemy->GetCharmerOrOwnerOrSelf();
     if (eOwner->IsPvP())
     {
         SetInCombatState(true,enemy);
@@ -8049,7 +8049,7 @@ void Unit::SetInCombatWith(Unit* enemy)
     //check for duel
     if (eOwner->GetTypeId() == TYPEID_PLAYER && ((Player*)eOwner)->duel)
     {
-        Unit const* myOwner = GetCharmerOrOwner();
+        Unit const* myOwner = GetCharmerOrOwnerOrSelf();
         if(((Player const*)eOwner)->duel->opponent == myOwner)
         {
             SetInCombatState(true,enemy);
