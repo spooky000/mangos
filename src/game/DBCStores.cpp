@@ -502,8 +502,8 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix2 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(60936));
     sfix2->DurationIndex = 28;
 
-    /*//Lifebloom final heal
-    SpellEntry *sfix3 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(33778));
+    //Lifebloom final heal
+    /*SpellEntry *sfix3 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(33778));
     sfix3->DmgClass = SPELL_DAMAGE_CLASS_MAGIC;*/
 
     //Twilight Torment - relly dunno what blizzard intended to do

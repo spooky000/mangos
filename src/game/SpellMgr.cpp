@@ -1346,7 +1346,7 @@ void SpellMgr::LoadSpellBonuses()
 
     // load DBC data EffectCoeffs[] fields
     // NOTE : only direct_damage/dot_damage data, there's no ap_bonus
-    /*for(uint32 entry = 1; entry < sSpellStore.GetNumRows(); ++entry)
+    for(uint32 entry = 1; entry < sSpellStore.GetNumRows(); ++entry)
     {
         SpellEntry const* spell = sSpellStore.LookupEntry(entry);
         if (spell)
@@ -1410,7 +1410,7 @@ void SpellMgr::LoadSpellBonuses()
 
             // DO not add to other ranks! data vary per rank on some spells
         }
-    }*/
+    }
 
     // Load data from database
     uint32 count = 0;
