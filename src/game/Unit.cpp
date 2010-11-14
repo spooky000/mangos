@@ -5559,10 +5559,15 @@ void Unit::setPowerType(Powers new_powertype)
         if(((Player*)this)->GetGroup())
             ((Player*)this)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_POWER_TYPE);
     }
-    else if(Unit* owner = GetCharmerOrOwner())
+    else if(((Creature*)this)->IsPet())
     {
-        if((owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
-            ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_POWER_TYPE);
+        Pet *pet = ((Pet*)this);
+        if(pet->isControlled())
+        {
+            Unit *owner = GetCharmerOrOwner();
+            if(owner && (owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
+                ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_POWER_TYPE);
+        }
     }
 
     switch(new_powertype)
@@ -6186,7 +6191,10 @@ Pet* Unit::GetPet() const
 
 Pet* Unit::_GetPet(ObjectGuid guid) const
 {
-    return GetMap()->GetPet(guid);
+    if (Map* pMap = GetMap())
+        return pMap->GetPet(guid);
+    else
+        return NULL;
 }
 
 Unit* Unit::GetCharm() const
@@ -6210,6 +6218,7 @@ void Unit::Uncharm()
     {
         charm->RemoveSpellsCausingAura(SPELL_AURA_MOD_CHARM);
         charm->RemoveSpellsCausingAura(SPELL_AURA_MOD_POSSESS);
+        charm->SetCharmerGuid(ObjectGuid());
     }
 }
 
