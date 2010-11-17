@@ -442,7 +442,7 @@ WorldObject* Spell::FindCorpseUsing()
     return result;
 }
 
-bool Spell::FillCustomTargetMap(uint32 i, UnitList &targetUnitMap)
+bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
 {
     float radius;
 
@@ -591,14 +591,13 @@ void Spell::FillTargetMap()
                     case TARGET_POINT_AT_NW:
                     case TARGET_POINT_AT_SE:
                     case TARGET_POINT_AT_SW:
-                    case TARGET_RANDOM_NEARBY_DEST:
                         // need some target for processing
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetA[i], tmpUnitMap);
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetB[i], tmpUnitMap);
                         break;
                     case TARGET_AREAEFFECT_CUSTOM:
                     case TARGET_ALL_ENEMY_IN_AREA_INSTANT:
-                        if (FillCustomTargetMap(i,tmpUnitMap)) break;
+                        if (FillCustomTargetMap(SpellEffectIndex(i),tmpUnitMap)) break;
                     default:
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetB[i], tmpUnitMap);
                         break;
@@ -678,6 +677,8 @@ void Spell::FillTargetMap()
                         break;
                 }
                 break;
+            case TARGET_AREAEFFECT_CUSTOM:
+                if (FillCustomTargetMap(SpellEffectIndex(i),tmpUnitMap)) break;
             default:
                 switch(m_spellInfo->EffectImplicitTargetB[i])
                 {
@@ -1480,7 +1481,7 @@ void Spell::InitializeDamageMultipliers()
     }
 }
 
-bool Spell::isAliveUnitPresentInTargetList()
+bool Spell::IsAliveUnitPresentInTargetList()
 {
     // Not need check return true
     if (m_needAliveTargetMask == 0)
@@ -1869,7 +1870,13 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
         {
             Pet* tmpUnit = m_caster->GetPet();
             if (!tmpUnit) break;
-            targetUnitMap.push_back(tmpUnit);
+            GroupPetList m_groupPets = m_caster->GetPets();
+            if (!m_groupPets.empty())
+            {
+                for (GroupPetList::const_iterator itr = m_groupPets.begin(); itr != m_groupPets.end(); ++itr)
+                    if (Pet* _pet = m_caster->GetMap()->GetPet(*itr))
+                        targetUnitMap.push_back(_pet);
+            }
             break;
         }
         case TARGET_CHAIN_DAMAGE:
@@ -2349,8 +2356,16 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                             targetUnitMap.push_back(Target);
 
                         if(Pet* pet = Target->GetPet())
-                            if( pTarget->IsWithinDistInMap(pet, radius) )
-                                targetUnitMap.push_back(pet);
+                        {
+                            GroupPetList m_groupPets = Target->GetPets();
+                            if (!m_groupPets.empty())
+                            {
+                                for (GroupPetList::const_iterator itr = m_groupPets.begin(); itr != m_groupPets.end(); ++itr)
+                                    if (Pet* _pet = Target->GetMap()->GetPet(*itr))
+                                        if( pTarget->IsWithinDistInMap(_pet, radius) )
+                                            targetUnitMap.push_back(_pet);
+                            }
+                        }
                     }
                 }
             }
@@ -3072,6 +3087,9 @@ void Spell::cast(bool skipCheck)
             else if ((m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000020000000000)) && m_spellInfo->Category==1209)
                 if (m_caster->HasAura(58375))               // Glyph of Blocking
                     AddTriggeredSpell(58374);               // Glyph of Blocking
+            // Shattering Throw
+            else if (m_spellInfo->Id == 64382)
+                AddTriggeredSpell(64380);                     // Shattering Throw
             break;
         }
         case SPELLFAMILY_PRIEST:
@@ -3448,7 +3466,7 @@ void Spell::update(uint32 difftime)
                 }
 
                 // check if there are alive targets left
-                if (!isAliveUnitPresentInTargetList())
+                if (!IsAliveUnitPresentInTargetList())
                 {
                     SendChannelUpdate(0);
                     finish();
@@ -3780,7 +3798,7 @@ void Spell::SendSpellGo()
     data << m_targets;
 
     if ( castFlags & CAST_FLAG_UNKNOWN6 )                   // unknown wotlk, predicted power?
-        data << uint32(0);
+        data << uint32(m_caster->GetPower(m_caster->getPowerType())); // Yes, it is really predicted power.
 
     if ( castFlags & CAST_FLAG_UNKNOWN7 )                   // rune cooldowns list
     {
@@ -4328,7 +4346,10 @@ SpellCastResult Spell::CheckOrTakeRunePower(bool take)
                 --runeCost[rune];
 
                 if (take)
+                {
                     plr->ConvertRune(i, plr->GetBaseRune(i));
+                    plr->ClearConvertedBy(i);
+                }
             }
         }
 
@@ -4757,7 +4778,7 @@ SpellCastResult Spell::CheckCast(bool strict)
             }
             // TODO: this check can be applied and for player to prevent cheating when IsPositiveSpell will return always correct result.
             // check target for pet/charmed casts (not self targeted), self targeted cast used for area effects and etc
-            if (!explicit_target_mode && m_caster->GetTypeId() == TYPEID_UNIT && !m_caster->GetCharmerOrOwnerGuid().IsEmpty())
+            if (!explicit_target_mode && m_caster->GetTypeId() == TYPEID_UNIT && !m_caster->GetCharmerOrOwnerGuid().IsEmpty() && !IsDispelSpell(m_spellInfo))
             {
                 // check correctness positive/negative cast target (pet cast real check and cheating check)
                 if(IsPositiveSpell(m_spellInfo->Id))
@@ -5426,9 +5447,14 @@ SpellCastResult Spell::CheckCast(bool strict)
             {
                 // not allow use this effect at battleground until battleground start
                 if(m_caster->GetTypeId() == TYPEID_PLAYER)
+                {
                     if(BattleGround const *bg = ((Player*)m_caster)->GetBattleGround())
                         if(bg->GetStatus() != STATUS_IN_PROGRESS)
                             return SPELL_FAILED_TRY_AGAIN;
+
+                    if(((Player*)m_caster)->HasMovementFlag(MOVEFLAG_ONTRANSPORT))
+                        return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
+                }
                 break;
             }
             case SPELL_EFFECT_STEAL_BENEFICIAL_BUFF:
@@ -7028,9 +7054,17 @@ void Spell::FillRaidOrPartyTargets(UnitList &targetUnitMap, Unit* member, Unit* 
 
                 if (withPets)
                     if (Pet* pet = Target->GetPet())
-                        if ((pet == center || center->IsWithinDistInMap(pet, radius)) &&
-                            (withcaster || pet != m_caster))
-                            targetUnitMap.push_back(pet);
+                    {
+                        GroupPetList m_groupPets = Target->GetPets();
+                        if (!m_groupPets.empty())
+                        {
+                            for (GroupPetList::const_iterator itr = m_groupPets.begin(); itr != m_groupPets.end(); ++itr)
+                                if (Pet* _pet = Target->GetMap()->GetPet(*itr))
+                                    if ((_pet == center || center->IsWithinDistInMap(_pet, radius)) &&
+                                    (withcaster || _pet != m_caster))
+                                         targetUnitMap.push_back(_pet);
+                        }
+                    }
             }
         }
     }
@@ -7171,6 +7205,57 @@ void Spell::ClearCastItem()
         m_targets.setItemTarget(NULL);
 
     m_CastItem = NULL;
+}
+
+// Used only for snake trap
+void Spell::DoSummonSnakes(SpellEffectIndex eff_idx)
+{
+    uint32 creature_entry = m_spellInfo->EffectMiscValue[eff_idx];
+    if (!creature_entry || !m_caster)
+        return;
+
+    // Find trap GO and get it coordinates to spawn snakes
+    GameObject* pTrap = m_caster->GetMap()->GetGameObject(m_originalCasterGUID);
+    if (!pTrap)
+    {
+        sLog.outError("EffectSummonSnakes faild to find trap for caster %s (GUID: %u)",m_caster->GetName(),m_caster->GetGUID());
+        return;
+    }
+
+    float position_x, position_y, position_z;
+    pTrap->GetPosition(position_x, position_y, position_z);
+
+    // Find summon duration based on DBC
+    int32 duration = GetSpellDuration(m_spellInfo);
+    if(Player* modOwner = m_caster->GetSpellModOwner())
+        modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_DURATION, duration);
+
+    int32 amount = damage > 0 ? damage : 1;
+
+    for(int32 count = 0; count < amount; ++count)
+    {
+        // Summon snakes
+        Creature *pSummon = m_caster->SummonCreature(creature_entry, position_x, position_y, position_z, m_caster->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN, duration);
+        if (!pSummon)
+            return;
+        // Valid position
+        if (!pSummon->IsPositionValid())
+        {
+            sLog.outError("EffectSummonSnakes failed to summon snakes for Unit %s (GUID: %u) bacause of invalid position (x = %f, y = %f, z = %f map = %u)"
+                ,m_caster->GetName(),m_caster->GetGUID(), position_x, position_y, position_z, m_caster->GetMap());
+            delete pSummon;
+            continue;
+        }
+
+        // Apply stats
+        pSummon->SetUInt32Value(UNIT_CREATED_BY_SPELL, m_spellInfo->Id);
+        pSummon->SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE | UNIT_FLAG_PET_IN_COMBAT | UNIT_FLAG_PVP);
+        pSummon->SetCreatorGuid(m_caster->GetObjectGuid());
+        pSummon->SetOwnerGuid(m_caster->GetObjectGuid());
+        pSummon->setFaction(m_caster->getFaction());
+        pSummon->SetLevel(m_caster->getLevel());
+        pSummon->SetMaxHealth(m_caster->getLevel()+ urand(20,30));
+    }
 }
 
 bool Spell::HasGlobalCooldown()

@@ -257,6 +257,7 @@ class Spell
         void EffectProficiency(SpellEffectIndex eff_idx);
         void EffectApplyAreaAura(SpellEffectIndex eff_idx);
         void EffectSummonType(SpellEffectIndex eff_idx);
+        void EffectSummonPossessed(SpellEffectIndex eff_idx);
         void EffectLearnSpell(SpellEffectIndex eff_idx);
         void EffectDispel(SpellEffectIndex eff_idx);
         void EffectDualWield(SpellEffectIndex eff_idx);
@@ -346,7 +347,6 @@ class Spell
         void EffectPlayMusic(SpellEffectIndex eff_idx);
         void EffectSpecCount(SpellEffectIndex eff_idx);
         void EffectActivateSpec(SpellEffectIndex eff_idx);
-        void EffectSummonSnakes(SpellEffectIndex eff_idx);
 
         Spell(Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid originalCasterGUID = ObjectGuid(), SpellEntry const* triggeredBy = NULL);
         ~Spell();
@@ -390,11 +390,12 @@ class Spell
         void setState(uint32 state) { m_spellState = state; }
 
         void DoCreateItem(SpellEffectIndex eff_idx, uint32 itemtype);
-        void DoSummon(SpellEffectIndex eff_idx);
+        void DoSummonGroupPets(SpellEffectIndex eff_idx);
         void DoSummonWild(SpellEffectIndex eff_idx, uint32 forceFaction = 0);
         void DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction = 0);
         void DoSummonTotem(SpellEffectIndex eff_idx, uint8 slot_dbc = 0);
         void DoSummonCritter(SpellEffectIndex eff_idx, uint32 forceFaction = 0);
+        void DoSummonSnakes(SpellEffectIndex eff_idx);
         void DoSummonVehicle(SpellEffectIndex eff_idx, uint32 forceFaction = 0);
 
         void WriteSpellGoTargets( WorldPacket * data );
@@ -402,7 +403,7 @@ class Spell
 
         typedef std::list<Unit*> UnitList;
         void FillTargetMap();
-        bool FillCustomTargetMap(uint32 i, UnitList &targetUnitMap); 
+        bool FillCustomTargetMap(SpellEffectIndex effIndex, UnitList &targetUnitMap); 
         void SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList &targetUnitMap);
 
         void FillAreaTargets(UnitList &targetUnitMap, float x, float y, float radius, SpellNotifyPushType pushType, SpellTargets spellTargets, WorldObject* originalCaster = NULL);
@@ -617,7 +618,7 @@ class Spell
         void DoSpellHitOnUnit(Unit *unit, uint32 effectMask);
         void DoAllEffectOnTarget(GOTargetInfo *target);
         void DoAllEffectOnTarget(ItemTargetInfo *target);
-        bool isAliveUnitPresentInTargetList();
+        bool IsAliveUnitPresentInTargetList();
         SpellCastResult CanOpenLock(SpellEffectIndex effIndex, uint32 lockid, SkillType& skillid, int32& reqSkillValue, int32& skillValue);
         // -------------------------------------------
 

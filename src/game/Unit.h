@@ -300,6 +300,7 @@ class Creature;
 class Spell;
 class DynamicObject;
 class GameObject;
+class SpellCastTargets;
 class Item;
 class Pet;
 class PetAura;
@@ -411,7 +412,8 @@ enum DeathState
     CORPSE         = 2,                                     // corpse state, for player this also meaning that player not leave corpse
     DEAD           = 3,                                     // for creature despawned state (corpse despawned), for player CORPSE/DEAD not clear way switches (FIXME), and use m_deathtimer > 0 check for real corpse state
     JUST_ALIVED    = 4,                                     // temporary state at resurrection, for creature auto converted to ALIVE, for player at next update call
-    CORPSE_FALLING = 5                                      // corpse state in case when corpse still falling to ground
+    CORPSE_FALLING = 5,                                     // corpse state in case when corpse still falling to ground
+    GHOULED        = 6
 };
 
 // internal state flags for some auras and movement generators, other.
@@ -1144,6 +1146,7 @@ enum ReactiveType
 #define MAX_REACTIVE 3
 
 typedef std::set<uint64> GuardianPetList;
+typedef std::set<uint64> GroupPetList;
 
 // delay time next attack to prevent client attack animation problems
 #define ATTACK_DISPLAY_DELAY 200
@@ -1196,6 +1199,23 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         uint32 getAttackTimer(WeaponAttackType type) const { return m_attackTimer[type]; }
         bool isAttackReady(WeaponAttackType type = BASE_ATTACK) const { return m_attackTimer[type] == 0; }
         bool haveOffhandWeapon() const;
+        bool IsUseEquippedWeapon(WeaponAttackType attackType) const
+        {
+            bool disarmed = false;
+            switch(attackType)
+            {
+                case BASE_ATTACK:
+                    disarmed = HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISARMED);
+                break;
+                case OFF_ATTACK:
+                    disarmed = HasFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_DISARM_OFFHAND);
+                break;
+                case RANGED_ATTACK:
+                    disarmed = HasFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_DISARM_RANGED);
+                break;
+            }
+            return !IsInFeralForm() && !disarmed;
+        }
         bool canReachWithAttack(Unit *pVictim) const;
         uint32 m_extraAttacks;
 
@@ -1528,6 +1548,12 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         ObjectGuid const& GetChannelObjectGuid() const { return GetGuidValue(UNIT_FIELD_CHANNEL_OBJECT); }
         void SetChannelObjectGuid(ObjectGuid targetGuid) { SetGuidValue(UNIT_FIELD_CHANNEL_OBJECT, targetGuid); }
 
+        void SetCritterGUID(uint64 critter) { SetUInt64Value(UNIT_FIELD_CRITTER, critter); }
+        uint64 GetCritterGUID() const { return GetUInt64Value(UNIT_FIELD_CRITTER); }
+        void RemoveMiniPet();
+        Pet* GetMiniPet() const;
+        void SetMiniPet(Unit* pet) { SetCritterGUID(pet->GetGUID()); }
+
         ObjectGuid const& GetCharmerOrOwnerGuid() const { return !GetCharmerGuid().IsEmpty() ? GetCharmerGuid() : GetOwnerGuid(); }
         ObjectGuid const& GetCharmerOrOwnerOrOwnGuid() const
         {
@@ -1561,17 +1587,20 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void SetPet(Pet* pet);
         void SetCharm(Unit* pet);
 
+        void AddPetToList(Pet* pet);
+        void RemovePetFromList(Pet* pet);
+        GroupPetList const& GetPets() { return m_groupPets; }
+
         void AddGuardian(Pet* pet);
         void RemoveGuardian(Pet* pet);
         void RemoveGuardians();
         Pet* FindGuardianWithEntry(uint32 entry);
+        GuardianPetList const& GetGuardians() const { return m_guardianPets; }
 
         bool isCharmed() const { return !GetCharmerGuid().IsEmpty(); }
 
         CharmInfo* GetCharmInfo() { return m_charmInfo; }
         CharmInfo* InitCharmInfo(Unit* charm);
-
-        Pet* CreateTamedPetFrom(Creature* creatureTarget,uint32 spell_id = 0);
 
         uint64 const& GetTotemGUID(TotemSlot slot) const { return m_TotemSlot[slot]; }
         Totem* GetTotem(TotemSlot slot) const;
@@ -1581,9 +1610,9 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void _RemoveTotem(Totem* totem);                    // only for call from Totem class
 
         template<typename Func>
-        void CallForAllControlledUnits(Func const& func, bool withTotems, bool withGuardians, bool withCharms);
+        void CallForAllControlledUnits(Func const& func, bool withTotems, bool withGuardians, bool withCharms, bool withMiniPet = false);
         template<typename Func>
-        bool CheckAllControlledUnits(Func const& func, bool withTotems, bool withGuardians, bool withCharms) const;
+        bool CheckAllControlledUnits(Func const& func, bool withTotems, bool withGuardians, bool withCharms, bool withMiniPet = false) const;
 
         bool AddSpellAuraHolder(SpellAuraHolder *holder);
         void AddAuraToModList(Aura *aura);
@@ -1943,6 +1972,8 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void SendPetTalk (uint32 pettalk);
         void SendPetAIReaction();
         ///----------End of Pet responses methods----------
+        void DoPetAction (Player* owner, uint8 flag, uint32 spellid, ObjectGuid petGuid, ObjectGuid targetGuid);
+        void DoPetCastSpell (Player *owner, uint8 cast_count, SpellCastTargets* targets, SpellEntry const* spellInfo);
 
         void propagateSpeedChange() { GetMotionMaster()->propagateSpeedChange(); }
 
@@ -2071,19 +2102,27 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         ComboPointHolderSet m_ComboPointHolders;
 
-        uint32 m_ThreatRedirectionPercent;
-        uint64 m_misdirectionTargetGUID;
+        GroupPetList m_groupPets;
 
         GuardianPetList m_guardianPets;
+        uint32 m_ThreatRedirectionPercent;
+        uint64 m_misdirectionTargetGUID;
 
         uint64 m_TotemSlot[MAX_TOTEM_SLOT];
 };
 
 template<typename Func>
-void Unit::CallForAllControlledUnits(Func const& func, bool withTotems, bool withGuardians, bool withCharms)
+void Unit::CallForAllControlledUnits(Func const& func, bool withTotems, bool withGuardians, bool withCharms, bool withMiniPet)
 {
-    if (Pet* pet = GetPet())
-        func(pet);
+    if (!m_groupPets.empty())
+    {
+        GroupPetList m_groupPetsTmp = GetPets();  // Original list may be modified in this function
+        for (GroupPetList::const_iterator itr = m_groupPetsTmp.begin(); itr != m_groupPetsTmp.end(); ++itr)
+        {
+            if (Pet* pet = _GetPet(*itr))
+                func(pet);
+        }
+    }
 
     if (withGuardians)
     {
@@ -2102,15 +2141,20 @@ void Unit::CallForAllControlledUnits(Func const& func, bool withTotems, bool wit
     if (withCharms)
         if (Unit* charm = GetCharm())
             func(charm);
+
+    if (withMiniPet)
+        if(Unit* mini = GetMiniPet())
+            func(mini);
 }
 
-
 template<typename Func>
-bool Unit::CheckAllControlledUnits(Func const& func, bool withTotems, bool withGuardians, bool withCharms) const
+bool Unit::CheckAllControlledUnits(Func const& func, bool withTotems, bool withGuardians, bool withCharms, bool withMiniPet) const
 {
-    if (Pet const* pet = GetPet())
-        if (func(pet))
-            return true;
+
+   for (GroupPetList::const_iterator itr = m_groupPets.begin(); itr != m_groupPets.end(); ++itr)
+       if (Pet* pet = _GetPet(*itr))
+           if (func(pet))
+               return true;
 
     if (withGuardians)
     {
@@ -2132,6 +2176,11 @@ bool Unit::CheckAllControlledUnits(Func const& func, bool withTotems, bool withG
     if (withCharms)
         if (Unit const* charm = GetCharm())
             if (func(charm))
+                return true;
+
+    if (withMiniPet)
+        if(Unit const* mini = GetMiniPet())
+            if (func(mini))
                 return true;
 
     return false;

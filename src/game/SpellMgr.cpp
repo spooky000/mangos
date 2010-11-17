@@ -3300,6 +3300,14 @@ void SpellMgr::LoadSpellPetAuras()
         uint32 pet = fields[2].GetUInt32();
         uint32 aura = fields[3].GetUInt32();
 
+        if (!spell)
+        {
+            // Creating lists of pet passive auras (spell == 0)
+            PetAura pa(pet, aura, eff, 0);
+            mSpellPetPassiveAuraMap[pet].push_back(pa);
+            continue;
+        }
+
         if (eff >= MAX_EFFECT_INDEX)
         {
             sLog.outErrorDb("Spell %u listed in `spell_pet_auras` with wrong spell effect index (%u)", spell, eff);
@@ -3947,6 +3955,11 @@ SpellCastResult SpellMgr::GetSpellAllowedInLocationError(SpellEntry const *spell
             BattleGround* bg = player->GetBattleGround();
             return bg && bg->GetStatus()==STATUS_WAIT_JOIN ? SPELL_CAST_OK : SPELL_FAILED_ONLY_IN_ARENA;
         }
+        case 69065:                                         // Impaled
+        case 69126:                                         // Pungent blight - first aura
+        case 69152:                                         // Gazeous blight - first aura
+        case 72293:                                         // Mark of the Fallen Champion
+            return map_id == 631 ? SPELL_CAST_OK : SPELL_FAILED_INCORRECT_AREA;
     }
 
     return SPELL_CAST_OK;
@@ -4485,6 +4498,12 @@ SpellEntry const* GetSpellEntryByDifficulty(uint32 id, Difficulty difficulty)
 
     if (!spellDiff->spellId[difficulty])
         return NULL;
+
+    sLog.outDebug("Searching spell %u in SpellDifficulty.dbc: Result is: %u/%u/%u/%u ",id, 
+    spellDiff->spellId[RAID_DIFFICULTY_10MAN_NORMAL],
+    spellDiff->spellId[RAID_DIFFICULTY_25MAN_NORMAL],
+    spellDiff->spellId[RAID_DIFFICULTY_10MAN_HEROIC],
+    spellDiff->spellId[RAID_DIFFICULTY_25MAN_HEROIC]);
 
     SpellEntry const* spellEntry = sSpellStore.LookupEntry(spellDiff->spellId[difficulty]);
     return spellEntry;

@@ -580,7 +580,6 @@ Player::Player (WorldSession *session): Unit(), m_mover(this), m_camera(this), m
 
     m_mover_in_queve = NULL;
 
-    m_miniPet = 0;
     m_contestedPvPTimer = 0;
 
     m_declinedname = NULL;
@@ -1497,7 +1496,11 @@ void Player::SetDeathState(DeathState s)
         // remove form before other mods to prevent incorrect stats calculation
         RemoveAurasDueToSpell(m_ShapeShiftFormSpellId);
 
-        //FIXME: is pet dismissed at dying or releasing spirit? if second, add SetDeathState(DEAD) to HandleRepopRequestOpcode and define pet unsummon here with (s == DEAD)
+        //FIXME: is pet dismissed at dying or releasing spirit? if second, add setDeathState(DEAD) to HandleRepopRequestOpcode and define pet unsummon here with (s == DEAD)
+        if (Pet* pet = GetPet())
+            if(pet->isControlled())
+                SetTemporaryUnsummonedPetNumber(pet->GetCharmInfo()->GetPetNumber());
+
         RemovePet(NULL, PET_SAVE_NOT_IN_SLOT, true);
 
         // remove uncontrolled pets
@@ -2165,6 +2168,22 @@ void Player::Regenerate(Powers power, uint32 diff)
                             cd_diff = cd_diff * ((*i)->GetModifier()->m_amount + 100) / 100;
 
                     SetRuneCooldown(rune, (cd < cd_diff) ? 0 : cd - cd_diff);
+
+                    // check if we don't have cooldown, need convert and that our rune wasn't already converted
+                    if (cd < cd_diff && m_runes->IsRuneNeedsConvert(rune) && GetBaseRune(rune) == GetCurrentRune(rune))
+                    {
+                        // currently all delayed rune converts happen with rune death
+                        // ConvertedBy was initialized at proc
+                        ConvertRune(rune, RUNE_DEATH);
+                        SetNeedConvertRune(rune, false);
+                    }
+                }
+                else if (m_runes->IsRuneNeedsConvert(rune) && GetBaseRune(rune) == GetCurrentRune(rune))
+                {
+                    // currently all delayed rune converts happen with rune death
+                    // ConvertedBy was initialized at proc
+                    ConvertRune(rune, RUNE_DEATH);
+                    SetNeedConvertRune(rune, false);
                 }
             }
         }   break;
@@ -2531,13 +2550,17 @@ void Player::GiveXP(uint32 xp, Unit* victim)
     if(!isAlive() && !GetBattleGroundId())
         return;
 
+    if(HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_XP_USER_DISABLED))
+        return;
+
     uint32 level = getLevel();
+
+    //prevent Northrend Level Leeching :P
+    if(level < 66 && GetMapId() == 571)
+        return;
 
     // XP to money conversion processed in Player::RewardQuest
     if(level >= sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
-        return;
-
-    if(HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_XP_USER_DISABLED))
         return;
 
     if(victim)
@@ -4881,7 +4904,7 @@ void Player::RepopAtGraveyard()
     AreaTableEntry const *zone = GetAreaEntryByAreaID(GetAreaId());
 
     // Such zones are considered unreachable as a ghost and the player must be automatically revived
-    if ((!isAlive() && zone && zone->flags & AREA_FLAG_NEED_FLY) || GetTransport())
+    if ((!isAlive() && zone && zone->flags & AREA_FLAG_NEED_FLY) || GetTransport() || GetPositionZ() < -500.0f)
     {
         ResurrectPlayer(0.5f);
         SpawnCorpseBones();
@@ -7424,7 +7447,7 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
             ApplyFeralAPBonus(feral_bonus, apply);
     }
 
-    if(!IsUseEquippedWeapon(attType))
+    if (!IsUseEquippedWeapon(attType))
         return;
 
     if (proto->Delay)
@@ -9351,10 +9374,10 @@ Item* Player::GetShield(bool useable) const
     if (!item || item->GetProto()->Class != ITEM_CLASS_ARMOR)
         return NULL;
 
-    if(!useable)
+    if (!useable)
         return item;
 
-    if(item->IsBroken() || !IsUseEquippedWeapon(OFF_ATTACK))
+    if (item->IsBroken() || !IsUseEquippedWeapon(OFF_ATTACK))
         return NULL;
 
     return item;
@@ -12624,6 +12647,11 @@ void Player::ApplyEnchantment(Item *item, EnchantmentSlot slot, bool apply, bool
         return;
 
     if (!item->IsEquipped())
+        return;
+
+    // Don't apply ANY enchantment if item is broken! It's offlike and avoid many exploits with broken items.
+    // Not removing enchantments from broken items - not need.
+    if (item->IsBroken())
         return;
 
     if (slot >= MAX_ENCHANTMENT_SLOT)
@@ -18181,86 +18209,35 @@ void Player::RemovePet(Pet* pet, PetSaveMode mode, bool returnreagent)
     if (pet && m_temporaryUnsummonedPetNumber && m_temporaryUnsummonedPetNumber != pet->GetCharmInfo()->GetPetNumber() && mode == PET_SAVE_AS_CURRENT)
         mode = PET_SAVE_NOT_IN_SLOT;
 
-    if (returnreagent && pet && mode != PET_SAVE_AS_CURRENT)
+    if (pet && mode != PET_SAVE_AS_CURRENT && !InBattleGround())
     {
-        //returning of reagents only for players, so best done here
-        uint32 spellId = pet->GetUInt32Value(UNIT_CREATED_BY_SPELL);
-        SpellEntry const *spellInfo = sSpellStore.LookupEntry(spellId);
-
-        if(spellInfo)
+        if(SpellEntry const *spellInfo = sSpellStore.LookupEntry(pet->GetCreateSpellID()))
         {
-            for(uint32 i = 0; i < MAX_SPELL_REAGENTS; ++i)
+            // returning of reagents
+            if (returnreagent)
             {
-                if(spellInfo->Reagent[i] > 0)
+                for(uint32 i = 0; i < MAX_SPELL_REAGENTS; ++i)
                 {
-                    ItemPosCountVec dest;                   //for succubus, voidwalker, felhunter and felguard credit soulshard when despawn reason other than death (out of range, logout)
-                    uint8 msg = CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, spellInfo->Reagent[i], spellInfo->ReagentCount[i] );
-                    if( msg == EQUIP_ERR_OK )
+                    if(spellInfo->Reagent[i] > 0)
                     {
-                        Item* item = StoreNewItem( dest, spellInfo->Reagent[i], true);
-                        if(IsInWorld())
-                            SendNewItem(item,spellInfo->ReagentCount[i],true,false);
+                        ItemPosCountVec dest;                   //for succubus, voidwalker, felhunter and felguard credit soulshard when despawn reason other than death (out of range, logout)
+                        uint8 msg = CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, spellInfo->Reagent[i], spellInfo->ReagentCount[i] );
+                        if( msg == EQUIP_ERR_OK )
+                        {
+                            Item* item = StoreNewItem( dest, spellInfo->Reagent[i], true);
+                            if(IsInWorld())
+                                SendNewItem(item,spellInfo->ReagentCount[i],true,false);
+                        }
                     }
                 }
             }
             // cooldown, only if pet is not death already (corpse)
-            if (spellInfo->Attributes & SPELL_ATTR_DISABLED_WHILE_ACTIVE && pet->getDeathState() != CORPSE)
-            {
+            if (spellInfo->Attributes & SPELL_ATTR_DISABLED_WHILE_ACTIVE && (!m_temporaryUnsummonedPetNumber || m_temporaryUnsummonedPetNumber != pet->GetCharmInfo()->GetPetNumber()))
                 SendCooldownEvent(spellInfo);
-                // Raise Dead hack
-                if (spellInfo->SpellFamilyName == SPELLFAMILY_DEATHKNIGHT && spellInfo->SpellFamilyFlags & 0x1000)
-                    if (spellInfo = sSpellStore.LookupEntry(46584))
-                        SendCooldownEvent(spellInfo);
-            }
         }
     }
 
-    // only if current pet in slot
-    switch(pet->getPetType())
-    {
-        case MINI_PET:
-            m_miniPet = 0;
-            break;
-        case GUARDIAN_PET:
-            RemoveGuardian(pet);
-            break;
-        default:
-            if (GetPetGuid() == pet->GetObjectGuid())
-                SetPet(NULL);
-            break;
-    }
-
-    pet->CombatStop();
-
-    pet->SavePetToDB(mode);
-
-    pet->AddObjectToRemoveList();
-    pet->m_removed = true;
-
-    if (pet->isControlled())
-    {
-        RemovePetActionBar();
-
-        if(GetGroup())
-            SetGroupUpdateFlag(GROUP_UPDATE_PET);
-    }
-}
-
-void Player::RemoveMiniPet()
-{
-    if (Pet* pet = GetMiniPet())
-    {
-        pet->Remove(PET_SAVE_AS_DELETED);
-        m_miniPet = 0;
-    }
-}
-
-Pet* Player::GetMiniPet() const
-{
-    if (!m_miniPet)
-        return NULL;
-
-    return GetMap()->GetPet(m_miniPet);
+    pet->_Remove(mode, returnreagent);
 }
 
 void Player::BuildPlayerChat(WorldPacket *data, uint8 msgtype, const std::string& text, uint32 language) const
@@ -20260,7 +20237,7 @@ void Player::SendUpdateToOutOfRangeGroupMembers()
 
     m_groupUpdateMask = GROUP_UPDATE_FLAG_NONE;
     m_auraUpdateMask = 0;
-    if(Unit *pet = GetPet())
+    if(Pet *pet = GetPet())
         pet->ResetAuraUpdateMask();
 }
 
@@ -21565,9 +21542,12 @@ void Player::SetTitle(CharTitlesEntry const* title, bool lost)
     GetSession()->SendPacket(&data);
 }
 
-void Player::ConvertRune(uint8 index, RuneType newType)
+void Player::ConvertRune(uint8 index, RuneType newType, uint32 spellid)
 {
     SetCurrentRune(index, newType);
+
+    if (spellid != 0)
+        SetConvertedBy(index, spellid);
 
     WorldPacket data(SMSG_CONVERT_RUNE, 2);
     data << uint8(index);
@@ -22226,11 +22206,17 @@ void Player::UpdateFallInformationIfNeed( MovementInfo const& minfo,uint16 opcod
 
 void Player::UnsummonPetTemporaryIfAny()
 {
+
+    Pet* minipet = GetMiniPet();
+
+    if (minipet)
+        minipet->Remove(PET_SAVE_AS_DELETED);
+
     Pet* pet = GetPet();
     if(!pet)
         return;
 
-    if(!m_temporaryUnsummonedPetNumber && pet->isControlled() && !pet->IsTemporarySummoned() )
+    if(!m_temporaryUnsummonedPetNumber && pet->isControlled() && !pet->isTemporarySummoned() )
         m_temporaryUnsummonedPetNumber = pet->GetCharmInfo()->GetPetNumber();
 
     RemovePet(pet, PET_SAVE_AS_CURRENT);
@@ -22249,6 +22235,7 @@ void Player::ResummonPetTemporaryUnSummonedIfAny()
         return;
 
     Pet* NewPet = new Pet;
+    NewPet->SetPetCounter(0);
     if(!NewPet->LoadPetFromDB(this, 0, m_temporaryUnsummonedPetNumber, true))
         delete NewPet;
 
@@ -22593,7 +22580,11 @@ void Player::ActivateSpec(uint8 specNum)
     if (GetBattleGround() && GetBattleGround()->GetStatus() == STATUS_IN_PROGRESS)
         return;
 
-    UnsummonPetTemporaryIfAny();
+    if (getClass() == CLASS_HUNTER || getClass() == CLASS_WARLOCK)
+        UnsummonPetTemporaryIfAny();
+    else if (Pet* pet = GetPet())
+        pet->Remove(PET_SAVE_NOT_IN_SLOT, true);
+
     UnsummonAllTotems();
     ClearComboPointHolders(); 	
     ClearAllReactives();
@@ -22913,6 +22904,20 @@ void Player::SetRestType( RestType n_r_type, uint32 areaTriggerId /*= 0*/)
         if(sWorld.IsFFAPvPRealm())
             SetFFAPvP(false);
     }
+}
+
+std::string Player::GetKnownPetName(uint32 petnumber)
+{
+    KnownPetNames::const_iterator itr = m_knownPetNames.find(petnumber);
+    if (itr != m_knownPetNames.end())
+        return itr->second;
+
+    return "";
+}
+
+void Player::AddKnownPetName(uint32 petnumber, std::string name)
+{
+    m_knownPetNames[petnumber] = name;
 }
 
 void Player::CompletedAchievement(AchievementEntry const* entry)

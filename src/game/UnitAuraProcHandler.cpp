@@ -941,6 +941,18 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     target = this;
                     break;
                 }
+                // Health Leech (used by Bloodworms)
+                case 50453:
+                {
+                    Unit *owner = GetOwner();
+                    if (!owner)
+                        return SPELL_AURA_PROC_FAILED;
+
+                    triggered_spell_id = 50454;
+                    basepoints[0] = int32(damage*1.69);
+                    target = owner;
+                    break;
+                }
                 // Vampiric Touch (generic, used by some boss)
                 case 52723:
                 case 60501:
@@ -1309,6 +1321,27 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     basepoints[0] = int32(damage*triggerAmount/100);
                     target = this;
                     triggered_spell_id = 30294;
+
+                    // check for Improved Soul Leech
+                    AuraList const& pDummyAuras = GetAurasByType(SPELL_AURA_DUMMY);
+                    for (AuraList::const_iterator itr = pDummyAuras.begin(); itr != pDummyAuras.end(); ++itr)
+                    {
+                       SpellEntry const* spellInfo = (*itr)->GetSpellProto();
+                       if (spellInfo->SpellFamilyName != SPELLFAMILY_WARLOCK || (*itr)->GetSpellProto()->SpellIconID != 3176)
+                            continue;
+                       if ((*itr)->GetEffIndex() == SpellEffectIndex(0))
+                       {
+                           // energize Proc pet (implicit target is pet)
+                           CastCustomSpell(this, 59118, &((*itr)->GetModifier()->m_amount), NULL, NULL, true, NULL, (*itr));
+                           // energize Proc master
+                           CastCustomSpell(this, 59117, &((*itr)->GetModifier()->m_amount), NULL, NULL, true, NULL, (*itr));
+                       }
+                       else if (roll_chance_i((*itr)->GetModifier()->m_amount))
+                       {
+                       // Replenishment proc
+                            CastSpell(this, 57669, true, NULL, (*itr));
+                        }
+                    }
                     break;
                 }
                 // Shadowflame (Voidheart Raiment set bonus)
@@ -1863,6 +1896,15 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
             {
                 triggered_spell_id = 35079;                 // 4 sec buff on self
                 target = this;
+                break;
+            }
+            // Guard Dog
+            else if (dummySpell->SpellIconID == 201 && procSpell->SpellIconID == 201)
+            {
+                triggered_spell_id = 54445;
+                target = this;
+                if (pVictim)
+                    pVictim->AddThreat(this,procSpell->EffectBasePoints[0] * triggerAmount / 100.0f);
                 break;
             }
             break;
@@ -2784,6 +2826,24 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     return SPELL_AURA_PROC_FAILED;
 
                 // triggered_spell_id in spell data
+                break;
+            }
+            break;
+        }
+        case SPELLFAMILY_PET:
+        {
+            // Improved Cower
+            if (dummySpell->SpellIconID == 958 && procSpell->SpellIconID == 958)
+            {
+                triggered_spell_id = dummySpell->Id == 53180 ? 54200 : 54201;
+                target = this;
+                break;
+            }
+            // Silverback
+            if (dummySpell->SpellIconID == 1582 && procSpell->SpellIconID == 201)
+            {
+                triggered_spell_id = dummySpell->Id == 62764 ? 62800 : 62801;
+                target = this;
                 break;
             }
             break;
