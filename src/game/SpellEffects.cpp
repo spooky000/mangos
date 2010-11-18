@@ -847,11 +847,9 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     float ap = m_caster->GetTotalAttackPowerValue(RANGED_ATTACK);
                     ap += unitTarget->GetTotalAuraModifier(SPELL_AURA_RANGED_ATTACK_POWER_ATTACKER_BONUS);
                     ap += m_caster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_RANGED_ATTACK_POWER_VERSUS, unitTarget->GetCreatureTypeMask());
-
                     if(m_caster->GetTypeId()==TYPEID_PLAYER)
-                        damage += int32(float(base)/m_caster->GetAttackTime(RANGED_ATTACK)*2800 + ap*0.1f + ((Player*)m_caster)->GetAmmoDPS()*2.8f);
-                    else 
-                        damage += int32(float(base)/m_caster->GetAttackTime(RANGED_ATTACK)*2800 + ap*0.1f);
+                        base += ((Player*)m_caster)->GetAmmoDPS();
+                    damage += int32(float(base)/m_caster->GetAttackTime(RANGED_ATTACK)*2800 + ap*0.1f);
                 }
                 // Explosive Trap Effect
                 else if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x00000004))
@@ -6536,36 +6534,6 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     }
                     return;
                 }
-                // Stoneclaw Totem absorb 
-                case 55278:
-                case 55328:
-                case 55329:
-                case 55330:
-                case 55332:
-                case 55333:
-                case 55335:
-                case 58589:
-                case 58590:
-                case 58591:
-                {
-                    if(!unitTarget)
-                        return;
-
-                    for(int slot = 0;  slot < MAX_TOTEM_SLOT; ++slot)
-                    {
-                        if(Totem * totem = unitTarget->GetTotem((TotemSlot)slot))
-                            totem->CastCustomSpell(totem, 55277, &damage, NULL, NULL, true);
-                    }
-                    
-                    // Glyph of Stoneclaw Totem
-                    if (Aura *aur = unitTarget->GetAura(63298, EFFECT_INDEX_0))
-                    {
-                        int32 totalAbsorb = aur->GetModifier()->m_amount * damage;
-                        if (totalAbsorb)
-                            unitTarget->CastCustomSpell(unitTarget, 55277, &totalAbsorb, NULL, NULL, true);
-                    }
-                    return;
-                }
                 case 20589:                                 // Escape artist
                 {
                     if (!unitTarget)
@@ -7216,6 +7184,31 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_DECREASE_SPEED);
                     unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_STALKED);
                     unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_STUN);
+                    return;
+                }
+                case 55328:                                    // Stoneclaw Totem I
+                case 55329:                                    // Stoneclaw Totem II
+                case 55330:                                    // Stoneclaw Totem III
+                case 55332:                                    // Stoneclaw Totem IV
+                case 55333:                                    // Stoneclaw Totem V
+                case 55335:                                    // Stoneclaw Totem VI
+                case 55278:                                    // Stoneclaw Totem VII
+                case 58589:                                    // Stoneclaw Totem VIII
+                case 58590:                                    // Stoneclaw Totem IX
+                case 58591:                                    // Stoneclaw Totem X
+                {
+                    if (!unitTarget)    // Stoneclaw Totem owner
+                        return;
+                    // Absorb shield for totems
+                    for(int itr = 0; itr < MAX_TOTEM_SLOT; ++itr)
+                        if (Totem* totem = unitTarget->GetTotem(TotemSlot(itr)))
+                            m_caster->CastCustomSpell(totem, 55277, &damage, NULL, NULL, true);
+                    // Glyph of Stoneclaw Totem
+                    if(Aura* auraGlyph = unitTarget->GetAura(63298, EFFECT_INDEX_0))
+                    {
+                        int32 playerAbsorb = damage * auraGlyph->GetModifier()->m_amount;
+                        m_caster->CastCustomSpell(unitTarget, 55277, &playerAbsorb, NULL, NULL, true);
+                    }
                     return;
                 }
                 case 55693:                                 // Remove Collapsing Cave Aura

@@ -2140,11 +2140,6 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                     case 48025:                             // Headless Horseman's Mount
                         Spell::SelectMountByAreaAndSkill(target, 51621, 48024, 51617, 48023, 0);
                         return;
-                    case 51405:                             // Digging for Treasure
-                        target->HandleEmote(EMOTE_STATE_WORK);
-                        // Pet will be following owner, this makes him stop
-                        target->addUnitState(UNIT_STAT_STUNNED);
-                        return;
                     case 62061:                             // Festive Holiday Mount
                         if (target->HasAuraType(SPELL_AURA_MOUNTED))
                             // Reindeer Transformation
