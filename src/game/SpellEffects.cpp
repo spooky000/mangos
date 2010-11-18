@@ -8572,110 +8572,78 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
 
     if( m_spellInfo->rangeIndex == 1)                       //self range
     {
-        const float lenght2d = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
+        TerrainInfo const* map = unitTarget->GetTerrain();
+        float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
+        //For glyph of blink
+        if(m_caster->GetTypeId() == TYPEID_PLAYER)
+            ((Player*)m_caster)->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RADIUS, dis, this);
 
-        const float losH  = 1.2f;            // LoS height
-        const float dl_2d = 0.7f;
-        uint32 n_itrs = uint32(lenght2d/dl_2d);
-        if(n_itrs == 0)
-            return;
- 
+        // Start Info //
         float cx,cy,cz;
+        float dx,dy,dz;
+        float angle = unitTarget->GetOrientation();
         unitTarget->GetPosition(cx,cy,cz);
-        const float  angle = unitTarget->GetOrientation();
-        const uint32 mapId = unitTarget->GetMapId();
+          
+        //Check use of vmaps//
+        bool useVmap = false;
+        bool swapZone = true;
 
-        const float dx = dl_2d*cos(angle);
-        const float dy = dl_2d*sin(angle);
+        if (map->GetHeight(cx, cy, cz, false) < map->GetHeight(cx, cy, cz, true))
+            useVmap = true;
 
-        std::vector<float> mapData;
-        mapData.resize(n_itrs);
-        float x_i = cx, y_i = cy, z_i = cz;
-        Map const* map = MapManager::Instance().CreateBaseMap(unitTarget->GetMapId());
-        bool above_map = cz+losH >= map->GetHeight(cx,cy,MAX_HEIGHT,false) ? true : false;
-        bool isFallorFly = unitTarget->GetTypeId() == TYPEID_PLAYER
-                               && ((Player*)unitTarget)->m_movementInfo.HasMovementFlag(
-                                MovementFlags(MOVEFLAG_FALLING | MOVEFLAG_FALLINGFAR | MOVEFLAG_SWIMMING |
-                                                MOVEFLAG_FLYING | MOVEFLAG_WATERWALKING ));
-        for(uint32 itr = 0; itr < n_itrs; ++itr)
+        const int itr = int(dis/0.5f);
+        const float _dx = 0.5f * cos(angle);
+        const float _dy = 0.5f * sin(angle);
+        dx = cx;
+        dy = cy;
+
+        //Going foward 0.5f until max distance
+        for (float i=0.5f; i<dis; i+=0.5f)
         {
-            MaNGOS::NormalizeMapCoord(x_i+=dx);
-            MaNGOS::NormalizeMapCoord(y_i+=dy);
-            float mapHeight = map->GetHeight(x_i, y_i, MAX_HEIGHT, false);
-            if ((above_map && z_i+losH < mapHeight) || (!above_map && z_i+losH > mapHeight))
+            //unitTarget->GetNearPoint2D(dx,dy,i,angle);
+            dx += _dx;
+            dy += _dy;
+            MaNGOS::NormalizeMapCoord(dx);
+            MaNGOS::NormalizeMapCoord(dy);
+            dz = cz;
+             
+            //Prevent climbing and go around object maybe 2.0f is to small? use 3.0f?
+            if (map->IsNextZcoordOK(dx, dy, dz, 3.0f) && (unitTarget->IsWithinLOS(dx, dy, dz)))
             {
-                MaNGOS::NormalizeMapCoord(x_i-=dx);
-                MaNGOS::NormalizeMapCoord(y_i-=dy);
-                break;
-            }
-            if(!isFallorFly)
-              mapData[itr] = mapHeight;
-        }
- 
-        float v_x, v_y, v_z;
-        VMAP::IVMapManager *vmgr = VMAP::VMapFactory::createOrGetVMapManager();
-        if(vmgr->getObjectHitPos(mapId, cx,cy,cz+losH, x_i,y_i,z_i+losH, v_x,v_y,v_z,0))
-        {
-            const float objSize = unitTarget->GetObjectBoundingRadius()/dl_2d;
-            v_x -= dx*objSize, v_y -= dy*objSize;
-            if(!isFallorFly)
-                n_itrs = uint32( sqrtf((v_x-cx)*(v_x-cx)+(v_y-cy)*(v_y-cy))/dl_2d );
-        }
- 
-        if(isFallorFly)
-        {
-            const float mapH   = map->GetHeight(v_x,v_y,v_z,false);
-            const float vmapH  = vmgr->getHeight(unitTarget->GetMapId(),v_x,v_y,v_z,lenght2d);
-            const float ground = vmapH > mapH ? vmapH : mapH;
-
-            if(unitTarget->GetTypeId() == TYPEID_PLAYER
-               && ((Player*)unitTarget)->m_movementInfo.HasMovementFlag(MovementFlags(MOVEFLAG_FALLING | MOVEFLAG_FALLINGFAR)))
-            {
-                Player *pl = (Player*)unitTarget;
-                SafePosition lpos = pl->m_safeposition;
-                uint32 fallTime = pl->m_movementInfo.GetFallTime();
-                if(lpos.z - ground > 14.0f)
-                {
-                    if(fallTime < 2500)        //when near the last safe pos
-                        v_x = lpos.x,v_y = lpos.y,v_z = lpos.z;
-                    else
-                        v_z = cz;        //normal falling
-                }
-                else if(fallTime > 2500)
-                        v_z = ground;
+                //No climb, the z differenze between this and prev step is ok. Store this destination for future use or check.
+                cx = dx;
+                cy = dy;
+                unitTarget->UpdateGroundPositionZ(cx, cy, cz, 3.0f);
             }
             else
-                v_z = cz > ground ? cz : ground;
-        }
-        else
-         {
-            uint32 i = 0;
-            x_i = cx, y_i = cy, v_z = cz;
-            for(std::vector<float>::const_iterator j = mapData.begin(); i < n_itrs && j != mapData.end(); ++j)
             {
-                MaNGOS::NormalizeMapCoord(x_i += dx);
-                MaNGOS::NormalizeMapCoord(y_i += dy);
-                float ray = v_z > *j ? v_z + 2.0f - *j : 10.0f;
-                float height = vmgr->getHeight(mapId,x_i,y_i,v_z+2.0f,ray > 10.0f ? 10.0f:ray);
-
-                if( !(height > INVALID_HEIGHT && (height > *j || fabs(*j-cz+losH) > fabs(height-cz+losH))) )
-                    height = *j;
-
-                if(fabs(v_z - height)/dl_2d > 2.7475f)        // >tan(70)
+                //Something wrong with los or z differenze... maybe we are going from outer world inside a building or viceversa
+                if(swapZone)
                 {
-                    const float objSize = unitTarget->GetObjectBoundingRadius()/dl_2d;
-                    v_x = x_i-dx*objSize, v_y = y_i-dy*objSize;
-                    MaNGOS::NormalizeMapCoord(v_x);
-                    MaNGOS::NormalizeMapCoord(v_y);
+                    //so... change use of vamp and go back 1 step backward and recheck again.
+                    swapZone = false;
+                    useVmap = !useVmap;
+                    //i-=0.5f;
+                    --i;
+                    dx -= _dx;
+                    dy -= _dy;
+                }
+                else
+                {
+                    //bad recheck result... so break this and use last good coord for teleport player...
+                    dz += 0.5f;
                     break;
                 }
-                v_z = height;
-                ++i;
             }
         }
 
-        unitTarget->UpdateAllowedPositionZ(v_x, v_y, v_z);
-        unitTarget->NearTeleportTo(v_x, v_y, v_z, angle,unitTarget==m_caster);
+        //Prevent Falling during swap building/outerspace
+        unitTarget->UpdateGroundPositionZ(cx, cy, cz);
+
+        if(unitTarget->GetTypeId() == TYPEID_PLAYER)
+            ((Player*)unitTarget)->TeleportTo(map->GetMapId(), cx, cy, cz, unitTarget->GetOrientation(), TELE_TO_NOT_LEAVE_COMBAT | TELE_TO_NOT_UNSUMMON_PET | (unitTarget==m_caster ? TELE_TO_SPELL : 0));
+        else
+            unitTarget->GetMap()->CreatureRelocation((Creature*)unitTarget, cx, cy, cz, unitTarget->GetOrientation());
     }
 }
 
@@ -8788,6 +8756,9 @@ void Spell::EffectCharge(SpellEffectIndex /*eff_idx*/)
     float x, y, z;
     unitTarget->GetContactPoint(m_caster, x, y, z, 3.6f);
 
+    // Try to normalize Z coord cuz GetContactPoint do nothing with Z axis
+    unitTarget->UpdateGroundPositionZ(x, y, z, 5.0f);
+
     if (unitTarget->GetTypeId() != TYPEID_PLAYER)
         ((Creature *)unitTarget)->StopMoving();
 
@@ -8816,9 +8787,12 @@ void Spell::EffectCharge2(SpellEffectIndex /*eff_idx*/)
             ((Creature *)unitTarget)->StopMoving();
     }
     else if (unitTarget && unitTarget != m_caster)
-        unitTarget->GetContactPoint(m_caster, x, y, z, 3.666666f);
+        unitTarget->GetContactPoint(m_caster, x, y, z, 3.6f);
     else
         return;
+
+    // Try to normalize Z coord cuz GetContactPoint do nothing with Z axis
+    unitTarget->UpdateGroundPositionZ(x, y, z, 5.0f);
 
     // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
     m_caster->MonsterMove(x, y, z, 1);

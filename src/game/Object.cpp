@@ -1499,9 +1499,9 @@ void WorldObject::UpdateGroundPositionZ(float x, float y, float &z, float maxDif
     if ( GetTerrain()->GetHeight(x, y, z+2.0f, false) <  GetTerrain()->GetHeight(x, y, z+2.0f, true) ) // check use of vmaps
         useVmaps = true;
 
-    float normalizedZ = GetTerrain()->GetHeight(x, y, z+2.0f, useVmaps);
+    float normalizedZ = GetTerrain()->GetHeight(x, y, z, useVmaps);
     // check if its reacheable
-    if (normalizedZ <= INVALID_HEIGHT || fabs(normalizedZ-z) > maxDiff)
+    if(normalizedZ <= INVALID_HEIGHT || fabs(normalizedZ-z) > maxDiff)
     {
         useVmaps = !useVmaps;                                // try change vmap use
         normalizedZ = GetTerrain()->GetHeight(x, y, z+2.0f, useVmaps);
