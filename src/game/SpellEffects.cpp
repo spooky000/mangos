@@ -4745,10 +4745,11 @@ void Spell::EffectSummonType(SpellEffectIndex eff_idx)
                     DoSummonTotem(eff_idx, summon_prop->Slot);
                     break;
                 case SUMMON_PROP_TYPE_CRITTER:
-                    DoSummonCritter(eff_idx, summon_prop->FactionId);
-                    // TODO: differenciate between regular 'critter' types and 'critter' that are fighting.
-                    // prop_id == 387 are expected to be fighting (but they have postfix 'companion').
-                    // Note: summon_prop->Slot==6 may be related to how selection are done for this type (need more research)
+                    // slot 6 set for critters that can help to player in fighting
+                    if (summon_prop->Slot == 6)
+                        DoSummonGuardian(eff_idx, summon_prop->FactionId);
+                    else
+                        DoSummonCritter(eff_idx, summon_prop->FactionId);
                     break;
                 case SUMMON_PROP_TYPE_PHASING:
                 case SUMMON_PROP_TYPE_LIGHTWELL:
@@ -5319,6 +5320,10 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
     if (!pet_entry)
         return;
 
+    SummonPropertiesEntry const* propEntry = sSummonPropertiesStore.LookupEntry(m_spellInfo->EffectMiscValueB[eff_idx]);
+    if (!propEntry)
+        return;
+
     // in another case summon new
     uint32 level = m_caster->getLevel();
 
@@ -5365,7 +5370,7 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
 
     for(int32 count = 0; count < amount; ++count)
     {
-        Pet* spawnCreature = new Pet(GUARDIAN_PET);
+        Pet* spawnCreature = new Pet(propEntry->Type == SUMMON_PROP_TYPE_CRITTER ? PROTECTOR_PET : GUARDIAN_PET);
 
         spawnCreature->SetCreateSpellID(originalSpellID);
         spawnCreature->SetDuration(duration);

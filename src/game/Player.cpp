@@ -18195,47 +18195,10 @@ void Player::UpdateDuelFlag(time_t currTime)
     duel->opponent->duel->startTime  = currTime;
 }
 
-void Player::RemovePet(Pet* pet, PetSaveMode mode, bool returnreagent)
+void Player::RemovePet(PetSaveMode mode)
 {
-    if (!pet)
-        pet = GetPet();
-
-    if (!pet || pet->GetOwnerGuid() != GetObjectGuid())
-        return;
-
-    // not save secondary permanent pet as current
-    if (pet && m_temporaryUnsummonedPetNumber && m_temporaryUnsummonedPetNumber != pet->GetCharmInfo()->GetPetNumber() && mode == PET_SAVE_AS_CURRENT)
-        mode = PET_SAVE_NOT_IN_SLOT;
-
-    if (pet && mode != PET_SAVE_AS_CURRENT && !InBattleGround())
-    {
-        if(SpellEntry const *spellInfo = sSpellStore.LookupEntry(pet->GetCreateSpellID()))
-        {
-            // returning of reagents
-            if (returnreagent)
-            {
-                for(uint32 i = 0; i < MAX_SPELL_REAGENTS; ++i)
-                {
-                    if(spellInfo->Reagent[i] > 0)
-                    {
-                        ItemPosCountVec dest;                   //for succubus, voidwalker, felhunter and felguard credit soulshard when despawn reason other than death (out of range, logout)
-                        uint8 msg = CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, spellInfo->Reagent[i], spellInfo->ReagentCount[i] );
-                        if( msg == EQUIP_ERR_OK )
-                        {
-                            Item* item = StoreNewItem( dest, spellInfo->Reagent[i], true);
-                            if(IsInWorld())
-                                SendNewItem(item,spellInfo->ReagentCount[i],true,false);
-                        }
-                    }
-                }
-            }
-            // cooldown, only if pet is not death already (corpse)
-            if (spellInfo->Attributes & SPELL_ATTR_DISABLED_WHILE_ACTIVE && (!m_temporaryUnsummonedPetNumber || m_temporaryUnsummonedPetNumber != pet->GetCharmInfo()->GetPetNumber()))
-                SendCooldownEvent(spellInfo);
-        }
-    }
-
-    pet->_Remove(mode, returnreagent);
+    if (Pet* pet = GetPet())
+        pet->Unsummon(mode, this);
 }
 
 void Player::BuildPlayerChat(WorldPacket *data, uint8 msgtype, const std::string& text, uint32 language) const
