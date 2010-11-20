@@ -1868,8 +1868,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
             }
 
             // remove pet on map change
-            if (pet)
-                UnsummonPetTemporaryIfAny();
+            UnsummonPetTemporaryIfAny();
 
             // remove all dyn objects
             RemoveAllDynObjects();
@@ -16233,7 +16232,7 @@ void Player::_LoadAuras(QueryResult *result, uint32 timediff)
             if (!holder->IsEmptyHolder())
             {
                 // reset stolen single target auras
-                if (caster_guid.GetRawValue() != GetGUID() && holder->IsSingleTarget())
+                if (caster_guid != GetObjectGuid() && holder->IsSingleTarget())
                     holder->SetIsSingleTarget(false);
 
                 holder->SetLoadedState(caster_guid, ObjectGuid(HIGHGUID_ITEM, item_lowguid), stackcount, remaincharges);
