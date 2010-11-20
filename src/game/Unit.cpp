@@ -6359,9 +6359,8 @@ void Unit::RemoveGuardians()
     {
         uint64 guid = *m_guardianPets.begin();
         if(Pet* pet = GetMap()->GetPet(guid))
-        {
-            pet->_Remove(PET_SAVE_AS_DELETED);
-        }
+            pet->Unsummon(PET_SAVE_AS_DELETED, this);
+
         m_guardianPets.erase(guid);
     }
     m_guardianPets.clear();
@@ -6371,12 +6370,11 @@ Pet* Unit::FindGuardianWithEntry(uint32 entry)
 {
     for(GuardianPetList::const_iterator itr = m_guardianPets.begin(); itr != m_guardianPets.end(); ++itr)
         if(Pet* pet = GetMap()->GetPet(*itr))
-            if (pet->getPetType() == entry)
+            if (pet->GetEntry() == entry)
                 return pet;
 
     return NULL;
 }
-
 
 Pet* Unit::GetProtectorPet()
 {
