@@ -2541,7 +2541,7 @@ void Player::SendLogXPGain(uint32 GivenXP, Unit* victim, uint32 RestXP)
 
 void Player::GiveXP(uint32 xp, Unit* victim)
 {
-    if(xp < 1)
+    if ( xp < 1 )
         return;
 
     if(!isAlive() && !GetBattleGroundId())
@@ -21575,12 +21575,14 @@ void Player::InitRunes()
     m_runes = new Runes;
 
     m_runes->runeState = 0;
+    m_runes->needConvert = 0;
 
     for(uint32 i = 0; i < MAX_RUNES; ++i)
     {
         SetBaseRune(i, runeSlotTypes[i]);                   // init base types
         SetCurrentRune(i, runeSlotTypes[i]);                // init current types
         SetRuneCooldown(i, 0);                              // reset cooldowns
+        SetConvertedBy(i, 0);                               // init spellid
         m_runes->SetRuneState(i);
     }
 
@@ -22178,7 +22180,7 @@ void Player::UnsummonPetTemporaryIfAny()
     Pet* minipet = GetMiniPet();
 
     if (minipet)
-        minipet->Remove(PET_SAVE_AS_DELETED);
+        minipet->Unsummon(PET_SAVE_AS_DELETED, this);
 
     Pet* pet = GetPet();
     if(!pet)
@@ -22551,7 +22553,7 @@ void Player::ActivateSpec(uint8 specNum)
     if (getClass() == CLASS_HUNTER || getClass() == CLASS_WARLOCK)
         UnsummonPetTemporaryIfAny();
     else if (Pet* pet = GetPet())
-        pet->Remove(PET_SAVE_NOT_IN_SLOT, true);
+        pet->Unsummon(PET_SAVE_NOT_IN_SLOT, this);
 
     UnsummonAllTotems();
     ClearComboPointHolders(); 	

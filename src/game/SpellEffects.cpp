@@ -2389,7 +2389,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 {
                     if (m_caster->GetTypeId() == TYPEID_PLAYER && unitTarget->GetTypeId() != TYPEID_PLAYER && unitTarget->GetEntry() == 26321)
                     {
-                        unitTarget->MonsterTextEmote("The Lothalor Acient gives you its thanks.", 0);
+                        unitTarget->MonsterTextEmote("The Lothalor Acient gives you its thanks.", ObjectGuid());
                         ((Player*)m_caster)->KilledMonsterCredit(26321);
                     }
                     return;

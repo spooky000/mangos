@@ -6258,14 +6258,17 @@ Pet* Unit::_GetPet(ObjectGuid guid) const
 void Unit::RemoveMiniPet()
 {
     if (Pet* pet = GetMiniPet())
-        pet->Remove(PET_SAVE_AS_DELETED);
+        pet->Unsummon(PET_SAVE_AS_DELETED,this);
     else
-        SetCritterGUID(0);
+        SetCritterGuid(ObjectGuid());
 }
 
 Pet* Unit::GetMiniPet() const
 {
-    return GetMap()->GetPet(GetCritterGUID());
+    if (GetCritterGuid().IsEmpty())
+        return NULL;
+
+    return GetMap()->GetPet(GetCritterGuid());
 }
 
 Unit* Unit::GetCharm() const
@@ -10326,7 +10329,7 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                     {
                         Pet* p = (Pet*)this;
                         if(p->getPetType() == HUNTER_PET)
-                            p->Remove(PET_SAVE_AS_DELETED);
+                            p->Unsummon(PET_SAVE_AS_DELETED, owner);
                         else
                             //dismissing a summoned pet is like killing them (this prevents returning a soulshard...)
                             p->SetDeathState(CORPSE);
@@ -11508,7 +11511,7 @@ void Unit::EnterVehicle(VehicleKit *vehicle, int8 seatId)
     m_pVehicle = vehicle;
 
     if (Pet *pet = GetPet())
-        pet->Remove(PET_SAVE_AS_CURRENT);
+        pet->Unsummon(PET_SAVE_AS_CURRENT,this);
 
     if (GetTypeId() == TYPEID_PLAYER)
     {

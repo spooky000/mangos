@@ -2743,9 +2743,9 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                     {
                         switch(urand(0, 3))
                         {
-                            case 0: target->MonsterYell("I don't feel so good...", LANG_UNIVERSAL, 0); break;
-                            case 1: target->MonsterYell("That liquid... it reeks!", LANG_UNIVERSAL, 0); break;
-                            case 2: target->MonsterYell("Someone shoot that bat down!", LANG_UNIVERSAL, 0); break;
+                            case 0: target->MonsterYell("I don't feel so good...", LANG_UNIVERSAL, ObjectGuid()); break;
+                            case 1: target->MonsterYell("That liquid... it reeks!", LANG_UNIVERSAL, ObjectGuid()); break;
+                            case 2: target->MonsterYell("Someone shoot that bat down!", LANG_UNIVERSAL, ObjectGuid()); break;
                         }
                         if (Unit* caster = GetCaster())
                             if (caster->GetTypeId() == TYPEID_PLAYER)

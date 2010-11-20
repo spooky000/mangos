@@ -34,8 +34,6 @@ enum PetType
     MAX_PET_TYPE            = 5
 };
 
-extern char const* petTypeSuffix[MAX_PET_TYPE];
-
 #define MAX_PET_STABLES         4
 
 // stored in character_pet.slot
@@ -301,7 +299,6 @@ class Pet : public Creature
         bool Create (uint32 guidlow, Map *map, uint32 phaseMask, uint32 Entry, uint32 pet_number, Unit* owner);
         bool Create (Unit* owner, uint32 Entry);
         bool IsInWorld() const { return ( !m_loading && !m_removed && Object::IsInWorld()); }
-        void _Remove(PetSaveMode mode, bool returnreagent = false);
 
         // overwrite Creature function for name localization back to WorldObject version without localization
         const char* GetNameForLocaleIdx(int32 locale_idx) const { return WorldObject::GetNameForLocaleIdx(locale_idx); }
