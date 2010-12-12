@@ -223,6 +223,11 @@ Unit::Unit()
 
     m_Visibility = VISIBILITY_ON;
 
+    m_notify_sheduled = false;
+    m_last_notified_position.x = 0;
+    m_last_notified_position.y = 0;
+    m_last_notified_position.z = 0;
+
     m_detectInvisibilityMask = 0;
     m_invisibilityMask = 0;
     m_transform = 0;
@@ -3223,14 +3228,10 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit *pVictim, SpellEntry const *spell)
     // Ranged attack cannot be parry/dodge only deflect
     if (attType == RANGED_ATTACK)
     {
-        // only if in front
-        if (pVictim->HasInArc(M_PI_F,this))
-        {
-            int32 deflect_chance = pVictim->GetTotalAuraModifier(SPELL_AURA_DEFLECT_SPELLS)*100;
-            tmp+=deflect_chance;
-            if (roll < tmp)
-                return SPELL_MISS_DEFLECT;
-        }
+        int32 deflect_chance = pVictim->GetTotalAuraModifier(SPELL_AURA_DEFLECT_SPELLS)*100;
+        tmp+=deflect_chance;
+        if (roll < tmp)
+            return SPELL_MISS_DEFLECT;
         return SPELL_MISS_NONE;
     }
 
@@ -3375,14 +3376,10 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit *pVictim, SpellEntry const *spell)
     if (rand < tmp)
         return SPELL_MISS_MISS;
 
-    // cast by caster in front of victim
-    if (pVictim->HasInArc(M_PI_F,this))
-    {
-        int32 deflect_chance = pVictim->GetTotalAuraModifier(SPELL_AURA_DEFLECT_SPELLS)*100;
-        tmp+=deflect_chance;
-        if (rand < tmp)
-            return SPELL_MISS_DEFLECT;
-    }
+    int32 deflect_chance = pVictim->GetTotalAuraModifier(SPELL_AURA_DEFLECT_SPELLS)*100;
+    tmp+=deflect_chance;
+    if (rand < tmp)
+        return SPELL_MISS_DEFLECT;
 
     return SPELL_MISS_NONE;
 }
@@ -3439,6 +3436,14 @@ SpellMissInfo Unit::SpellHitResult(Unit *pVictim, SpellEntry const *spell, bool 
         for(Unit::AuraList::const_iterator i = mReflectSpellsSchool.begin(); i != mReflectSpellsSchool.end(); ++i)
             if((*i)->GetModifier()->m_miscvalue & GetSpellSchoolMask(spell))
                 reflectchance += (*i)->GetModifier()->m_amount;
+
+        // Improved Spell Reflection
+        // HACK! tooltip says 20yards, but no such spell in dbc with such data :/
+        if (Aura *aura = pVictim->GetAura(59725, EFFECT_INDEX_0))
+            if (Unit *aura_caster = GetMap()->GetUnit(aura->GetCasterGUID()))
+                if (!pVictim->IsInRange(aura_caster, 0.0f, 20.0f))
+                    reflectchance -= aura->GetModifier()->m_amount;
+
         if (reflectchance > 0 && roll_chance_i(reflectchance))
         {
             // Start triggers for remove charges if need (trigger only for victim, and mark as active spell)
@@ -6392,6 +6397,7 @@ void Unit::Uncharm()
     {
         charm->RemoveSpellsCausingAura(SPELL_AURA_MOD_CHARM);
         charm->RemoveSpellsCausingAura(SPELL_AURA_MOD_POSSESS);
+        charm->RemoveSpellsCausingAura(SPELL_AURA_MOD_POSSESS_PET);
         charm->SetCharmerGuid(ObjectGuid());
     }
 }
@@ -6870,22 +6876,6 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
             {
                 if (pVictim->GetAura(SPELL_AURA_MOD_STALKED, SPELLFAMILY_HUNTER, UI64LIT(0x0000000000000400)))
                     DoneTotalMod *= ((*i)->GetModifier()->m_amount+100.0f)/100.0f;
-                break;
-            }
-        }
-    }
-
-    // custom scripted mod from dummy
-    AuraList const& mDummy = owner->GetAurasByType(SPELL_AURA_DUMMY);
-    for(AuraList::const_iterator i = mDummy.begin(); i != mDummy.end(); ++i)
-    {
-        SpellEntry const *spell = (*i)->GetSpellProto();
-        //Fire and Brimstone
-        if (spell->SpellFamilyName == SPELLFAMILY_WARLOCK && spell->SpellIconID == 3173)
-        {
-            if (pVictim->HasAuraState(AURA_STATE_CONFLAGRATE) && (spellProto->SpellFamilyName == SPELLFAMILY_WARLOCK && spellProto->SpellFamilyFlags & UI64LIT(0x0002004000000000)))
-            {
-                DoneTotalMod *= ((*i)->GetModifier()->m_amount+100.0f) / 100.0f;
                 break;
             }
         }
@@ -7748,17 +7738,26 @@ bool Unit::IsImmuneToSpell(SpellEntry const* spellInfo)
                 return true;
     }
 
-    if(uint32 mechanic = spellInfo->Mechanic)
+    if(uint32 mechanic = spellInfo->Mechanic) // should whole spell be stopped here, not only effect ?
     {
         SpellImmuneList const& mechanicList = m_spellImmune[IMMUNITY_MECHANIC];
         for(SpellImmuneList::const_iterator itr = mechanicList.begin(); itr != mechanicList.end(); ++itr)
             if (itr->type == mechanic)
+            {
+                if (spellInfo->Id == 49560) // Death Grip hack 
+                    continue;
+
                 return true;
+            }
 
         AuraList const& immuneAuraApply = GetAurasByType(SPELL_AURA_MECHANIC_IMMUNITY_MASK);
         for(AuraList::const_iterator iter = immuneAuraApply.begin(); iter != immuneAuraApply.end(); ++iter)
             if ((*iter)->GetModifier()->m_miscvalue & (1 << (mechanic-1)))
+            {
+                if((*iter)->GetId() == 46924 && (1 << (mechanic-1) == 4)) // Hack to remove Bladestorm disarm immunity
+                    continue;
                 return true;
+            }
     }
 
     return false;
@@ -7801,14 +7800,21 @@ bool Unit::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex i
                 !IsPositiveEffect(spellInfo->Id, index))                                  // Harmful
                 return true;
 
+        
         AuraList const& immuneMechanicAuraApply = GetAurasByType(SPELL_AURA_MECHANIC_IMMUNITY_MASK);
         for(AuraList::const_iterator i = immuneMechanicAuraApply.begin(); i != immuneMechanicAuraApply.end(); ++i)
             if ((spellInfo->EffectMechanic[index] & (*i)->GetMiscValue() ||
                 spellInfo->Mechanic & (*i)->GetMiscValue()) ||
-                ((*i)->GetId() == 46924 &&                                                // Bladestorm Immunity
+                ((*i)->GetId() == 46924 && // Bladestorm Immunity
                 spellInfo->EffectMechanic[index] & IMMUNE_TO_MOVEMENT_IMPAIRMENT_AND_LOSS_CONTROL_MASK ||
                 spellInfo->Mechanic & IMMUNE_TO_MOVEMENT_IMPAIRMENT_AND_LOSS_CONTROL_MASK))
+            {
+                // Additional Bladestorm Immunity check (not immuned to disarm / bleed)
+                if((*i)->GetId() == 46924 && (spellInfo->Mechanic == MECHANIC_DISARM || spellInfo->Mechanic == MECHANIC_BLEED))
+                    continue;
+
                 return true;
+            }
     }
 
     return false;
@@ -8747,12 +8753,9 @@ void Unit::SetVisibility(UnitVisibility x)
             }
         }
 
-        Map *m = GetMap();
-
-        if(GetTypeId()==TYPEID_PLAYER)
-            m->PlayerRelocation((Player*)this,GetPositionX(),GetPositionY(),GetPositionZ(),GetOrientation());
-        else
-            m->CreatureRelocation((Creature*)this,GetPositionX(),GetPositionY(),GetPositionZ(),GetOrientation());
+        GetViewPoint().Call_UpdateVisibilityForOwner();
+        UpdateObjectVisibility();
+        SheduleAINotify(0);
 
         GetViewPoint().Event_ViewPointVisibilityChanged();
     }
@@ -10868,9 +10871,9 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
                 if (Group* group = ((Player*)pImpSRCaster)->GetGroup())
                     for(GroupReference *itr = group->GetFirstMember(); itr != NULL; itr = itr->next())
                         if (Player* member = itr->getSource())
-                            if (Aura* pAura = member->GetAura(59725, EFFECT_INDEX_0) )
-                                if (pAura->GetCaster() == pImpSRCaster)
-                                    member->RemoveAura(pAura);
+                            if (SpellAuraHolder* pAuraHolder = member->GetSpellAuraHolder(59725, 0) )
+                                if (pAuraHolder->GetCaster() && pAuraHolder->GetCaster()->GetGUID() == pImpSRCaster->GetGUID() )
+                                    member->RemoveSpellAuraHolder(pAuraHolder);
 
         triggeredByHolder->SetInUse(false);
     }
@@ -11959,6 +11962,84 @@ SpellAuraHolder* Unit::GetSpellAuraHolder (uint32 spellid, uint64 casterGUID)
             return iter->second;
 
     return NULL;
+}
+
+class RelocationNotifyEvent : public BasicEvent
+{
+    public:
+        RelocationNotifyEvent(Unit& owner) : BasicEvent(), m_owner(owner)
+        {
+            m_owner.m_notify_sheduled |= AI_Notify_Sheduled;
+        }
+
+        bool Execute(uint64, uint32)
+        {
+            float radius = MAX_CREATURE_ATTACK_RADIUS * sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_AGGRO);
+
+            if (m_owner.GetTypeId() == TYPEID_PLAYER)
+            {
+                MaNGOS::PlayerRelocationNotifier notify((Player&)m_owner);
+                Cell::VisitAllObjects(&m_owner,notify,radius);
+            } 
+            else //if(m_owner.GetTypeId() == TYPEID_UNIT)
+            {
+                MaNGOS::CreatureRelocationNotifier notify((Creature&)m_owner);
+                Cell::VisitAllObjects(&m_owner,notify,radius);
+            }
+            m_owner.m_notify_sheduled &= ~AI_Notify_Sheduled;
+            return true;
+        }
+
+        void Abort(uint64)
+        {
+            m_owner.m_notify_sheduled &= ~AI_Notify_Sheduled;
+        }
+
+    private:
+        Unit& m_owner;
+};
+
+class UpdateVisibilityEvent : public BasicEvent
+{
+    public:
+        UpdateVisibilityEvent(Unit& owner) : BasicEvent(), m_owner(owner)
+        {
+            m_owner.m_notify_sheduled |= Visibility_Update_Sheduled;
+        }
+
+        bool Execute(uint64, uint32)
+        {
+            m_owner.GetViewPoint().Call_UpdateVisibilityForOwner();
+            m_owner.UpdateObjectVisibility();
+            m_owner.m_notify_sheduled &= ~Visibility_Update_Sheduled;
+            return true;
+        }
+
+        void Abort(uint64)
+        {
+            m_owner.m_notify_sheduled &= ~Visibility_Update_Sheduled;
+        }
+
+    private:
+        Unit& m_owner;
+};
+
+void Unit::SheduleAINotify(uint32 delay)
+{
+    if (m_notify_sheduled & AI_Notify_Sheduled)
+        return;
+
+    RelocationNotifyEvent *notify = new RelocationNotifyEvent(*this);
+    m_Events.AddEvent(notify, m_Events.CalculateTime(delay));
+}
+
+void Unit::SheduleVisibilityUpdate()
+{
+    if (m_notify_sheduled & Visibility_Update_Sheduled)
+        return;
+
+    UpdateVisibilityEvent *notify = new UpdateVisibilityEvent(*this);
+    m_Events.AddEvent(notify, m_Events.CalculateTime(0));
 }
 
 bool Unit::IsAllowedDamageInArea(Unit* pVictim) const

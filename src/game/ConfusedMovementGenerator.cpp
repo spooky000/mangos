@@ -60,7 +60,8 @@ ConfusedMovementGenerator<T>::Initialize(T &unit)
 
         bool is_water = map->IsInWater(i_waypoints[idx][0],i_waypoints[idx][1],z);
         // if generated wrong path just ignore
-        if ((is_water && !is_water_ok) || (!is_water && !is_land_ok))
+        if ((is_water && !is_water_ok) || (!is_water && !is_land_ok) ||
+            !map->IsNextZcoordOK(i_waypoints[idx][0], i_waypoints[idx][1], z))  // check if not under map
         {
             i_waypoints[idx][0] = idx > 0 ? i_waypoints[idx-1][0] : x;
             i_waypoints[idx][1] = idx > 0 ? i_waypoints[idx-1][1] : y;
@@ -161,6 +162,7 @@ bool ConfusedMovementGenerator<T>::Update(T &unit, const uint32 &diff)
 template<>
 void ConfusedMovementGenerator<Player>::Finalize(Player &unit)
 {
+    unit.StopMoving();
     unit.clearUnitState(UNIT_STAT_CONFUSED|UNIT_STAT_CONFUSED_MOVE);
 }
 

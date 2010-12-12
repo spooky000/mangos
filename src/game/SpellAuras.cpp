@@ -2287,36 +2287,41 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                 // Honor Among Thieves
                 if (GetId() == 52916)
                 {
-                    // Get Honor Among Thieves party aura
-                    Unit::AuraList const &procTriggerSpellAuras = target->GetAurasByType(SPELL_AURA_PROC_TRIGGER_SPELL);
-                    for (Unit::AuraList::const_iterator i = procTriggerSpellAuras.begin(); i != procTriggerSpellAuras.end(); ++i)
+                    if (!target)
+                        return;
+
+                    if (target->HasAura(51699, EFFECT_INDEX_1) ||
+                        target->GetTypeId() != TYPEID_PLAYER || target->getClass() != CLASS_ROGUE)
+                        return;
+
+                    Player *p_target = (Player*)target;
+
+                    Unit::AuraList const &aury = p_target->GetAurasByType(SPELL_AURA_PROC_TRIGGER_SPELL);
+                    for (Unit::AuraList::const_iterator i = aury.begin(); i != aury.end(); i++)
                     {
                         SpellEntry const *spellInfo = (*i)->GetSpellProto();
 
                         if (!spellInfo)
                             continue;
 
-                        if (spellInfo->EffectTriggerSpell[0] == 52916)
+                        if (spellInfo->EffectTriggerSpell[EFFECT_INDEX_0] == 52916)
                         {
-                            // Get caster of aura
-                            if(!(*i)->GetCaster() || (*i)->GetCaster()->GetTypeId() != TYPEID_PLAYER)
-                                continue;
+                            if (roll_chance_i(spellInfo->CalculateSimpleValue(EFFECT_INDEX_0)) )
+                            {
+                                Unit *pVictim = p_target->GetMap()->GetUnit(p_target->GetComboTargetGuid());
 
-                            Player *pCaster = (Player*)((*i)->GetCaster());
+                                if (!pVictim)
+                                    pVictim = target->getVictim();
 
-                            // do not proc if player has CD, or if player has no target, or if player's target is not valid
-                            if (pCaster->HasAura(51699, EFFECT_INDEX_1) || !pCaster->getVictim() || pCaster->IsFriendlyTo(pCaster->getVictim()))
-                                continue;
-                            // give combo point and aura for cooldown on success
-                            else if (roll_chance_i(spellInfo->CalculateSimpleValue(EFFECT_INDEX_0)))
-                                pCaster->CastSpell(pCaster->getVictim(), 51699, true);
+                                if (pVictim)
+                                    target->CastSpell(pVictim, 51699, true );
+
+                                return;
+                            }
                         }
                     }
-
-                    // return after loop to make sure all rogues with Honor Among Thieves get the benefit of this proc rather than only first
                     return;
                 }
-                break;
             }
             case SPELLFAMILY_MAGE:
             {
@@ -2356,6 +2361,19 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         }
                     }
                     return;
+                }
+                break;
+            }
+            case SPELLFAMILY_DEATHKNIGHT:
+            {
+                // Hungering Cold - disease apply
+                if(GetId() == 51209)
+                {
+                    Unit *caster = GetCaster();
+                    if(!caster)
+                        return;
+
+                    caster->CastSpell(target, 55095, true);
                 }
                 break;
             }
@@ -3896,7 +3914,7 @@ void Aura::HandleAuraTrackStealthed(bool apply, bool /*Real*/)
     if(apply)
         GetTarget()->RemoveNoStackAurasDueToAuraHolder(GetHolder());
 
-    GetTarget()->ApplyModFlag(PLAYER_FIELD_BYTES, PLAYER_FIELD_BYTE_TRACK_STEALTHED, apply);
+    GetTarget()->ApplyModByteFlag(PLAYER_FIELD_BYTES, 0, PLAYER_FIELD_BYTE_TRACK_STEALTHED, apply);
 }
 
 void Aura::HandleAuraModScale(bool apply, bool /*Real*/)
@@ -4113,6 +4131,7 @@ void Aura::HandleModCharm(bool apply, bool Real)
         // is it really need after spell check checks?
         target->RemoveSpellsCausingAura(SPELL_AURA_MOD_CHARM, GetHolder());
         target->RemoveSpellsCausingAura(SPELL_AURA_MOD_POSSESS, GetHolder());
+        target->RemoveSpellsCausingAura(SPELL_AURA_MOD_POSSESS_PET, GetHolder());
 
         target->SetCharmerGuid(GetCasterGuid());
         target->setFaction(caster->getFaction());
@@ -6576,6 +6595,7 @@ void Aura::HandleShapeshiftBoosts(bool apply)
             break;
         case FORM_SHADOW:
             spellId1 = 49868;
+            spellId2 = 71167;
 
             if(target->GetTypeId() == TYPEID_PLAYER)      // Spell 49868 have same category as main form spell and share cooldown
                 ((Player*)target)->RemoveSpellCooldown(49868);
@@ -8293,7 +8313,7 @@ void Aura::HandleAuraControlVehicle(bool apply, bool Real)
         // some SPELL_AURA_CONTROL_VEHICLE auras have a dummy effect on the player - remove them
         caster->RemoveAurasDueToSpell(GetId());
 
-        if (caster->GetVehicle() == pVehicle)
+        if (caster->GetVehicleKit() == pVehicle)
             caster->ExitVehicle();
     }
 }
@@ -9834,7 +9854,7 @@ bool Aura::IsEffectStacking()
         case SPELL_AURA_MOD_HEALING_DONE:                               // Demonic Pact
         case SPELL_AURA_MOD_DAMAGE_DONE:                                // Demonic Pact
         case SPELL_AURA_HASTE_ALL:                                      // Imp. Moonkin Aur / Swift Retribution
-        case SPELL_AURA_MOD_MELEE_HASTE:                                      // Improved Icy Talons
+        case SPELL_AURA_MOD_MELEE_HASTE:                                // Improved Icy Talons
         case SPELL_AURA_MOD_ATTACK_POWER_PCT:                           // Abomination's Might / Unleashed Rage
         case SPELL_AURA_MOD_RANGED_ATTACK_POWER_PCT:
         case SPELL_AURA_MOD_ATTACK_POWER:                               // (Greater) Blessing of Might / Battle Shout

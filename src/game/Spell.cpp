@@ -795,6 +795,11 @@ void Spell::prepareDataForTriggerSystem()
                 if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0001000900B80400))
                     m_canTrigger = true;
                 break;
+            case SPELLFAMILY_WARRIOR:
+                //For Whirlwind triggers need do it
+                if (m_spellInfo->Id== 50622)
+                    m_canTrigger = true;
+                break;
             default:
                 break;
         }
@@ -1763,7 +1768,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
         case TARGET_TOTEM_FIRE:
         case TARGET_SELF:
         case TARGET_SELF2:
-        case TARGET_AREAEFFECT_CUSTOM_2:
             targetUnitMap.push_back(m_caster);
             break;
         case TARGET_RANDOM_ENEMY_CHAIN_IN_AREA:
@@ -2072,6 +2076,37 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
             }
             break;
         }
+        case TARGET_AREAEFFECT_GO_AROUND_DEST:
+        {
+            // It may be possible to fill targets for some spell effects
+            // automatically (SPELL_EFFECT_WMO_REPAIR(88) for example) but
+            // for some/most spells we clearly need/want to limit with spell_target_script
+
+            // Some spells untested, for affected GO type 33. May need further adjustments for spells related.
+
+            SpellScriptTargetBounds bounds = sSpellMgr.GetSpellScriptTargetBounds(m_spellInfo->Id);
+
+            std::list<GameObject*> tempTargetGOList;
+
+            for(SpellScriptTarget::const_iterator i_spellST = bounds.first; i_spellST != bounds.second; ++i_spellST)
+            {
+                if (i_spellST->second.type == SPELL_TARGET_TYPE_GAMEOBJECT)
+                {
+                    // search all GO's with entry, within range of m_destN
+                    MaNGOS::GameObjectEntryInPosRangeCheck go_check(*m_caster, i_spellST->second.targetEntry, m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, radius);
+                    MaNGOS::GameObjectListSearcher<MaNGOS::GameObjectEntryInPosRangeCheck> checker(tempTargetGOList, go_check);
+                    Cell::VisitGridObjects(m_caster, checker, radius);
+                }
+            }
+
+            if (!tempTargetGOList.empty())
+            {
+                for(std::list<GameObject*>::iterator iter = tempTargetGOList.begin(); iter != tempTargetGOList.end(); ++iter)
+                    AddGOTarget(*iter, effIndex);
+            }
+
+            break;
+        }
         case TARGET_ALL_ENEMY_IN_AREA_INSTANT:
         {
             // targets the ground, not the units in the area
@@ -2136,19 +2171,17 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
             else if (m_spellInfo->Id == 59725)              // Improved Spell Reflection
             {
                 if (m_caster->HasAura(23920, EFFECT_INDEX_0) )
-                    m_caster->RemoveAurasDueToSpell(23920); // will be replaced by imp. spell refl. aura
+                    m_caster->RemoveAurasDueToSpell(23920);                     // remove single-target reflect aura
 
                 Unit::AuraList const& lDummyAuras = m_caster->GetAurasByType(SPELL_AURA_DUMMY);
                 for(Unit::AuraList::const_iterator i = lDummyAuras.begin(); i != lDummyAuras.end(); ++i)
                 {
                     if((*i)->GetSpellProto()->SpellIconID == 1935)
                     {
-                        unMaxTargets = (*i)->GetModifier()->m_amount + 1;   // +1 because we are also applying this to the caster
+                        unMaxTargets = (*i)->GetModifier()->m_amount + 1;       // +1 because we are also applying this to the caster
                         break;
                     }
                 }
-
-                radius = 20.0f;     // as mentioned in the spell's tooltip (data doesn't appear in dbc)
 
                 FillRaidOrPartyTargets(targetUnitMap, m_caster, m_caster, radius, false, false, true);
                 targetUnitMap.sort(TargetDistanceOrder(m_caster));
@@ -4295,6 +4328,26 @@ void Spell::TakePower()
     if(m_CastItem || m_triggeredByAuraSpell)
         return;
 
+    bool hit = true;
+    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+    {
+        if (m_spellInfo->powerType == POWER_RAGE || m_spellInfo->powerType == POWER_ENERGY)
+            if (uint64 targetGUID = m_targets.getUnitTargetGUID())
+                for (std::list<TargetInfo>::iterator ihit= m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
+                    if (ihit->targetGUID == targetGUID)
+                    {
+                        if (ihit->missCondition != SPELL_MISS_NONE && ihit->missCondition != SPELL_MISS_MISS/* && ihit->targetGUID != m_caster->GetGUID()*/)
+                            hit = false;
+                        if (ihit->missCondition != SPELL_MISS_NONE)
+                        {
+                            //lower spell cost on fail (by talent aura)
+                            if (Player *modOwner = ((Player*)m_caster)->GetSpellModOwner())
+                                modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_SPELL_COST_REFUND_ON_FAIL, m_powerCost);
+                        }
+                        break;
+                    }
+    }
+
     // health as power used
     if(m_spellInfo->powerType == POWER_HEALTH)
     {
@@ -4310,7 +4363,7 @@ void Spell::TakePower()
 
     Powers powerType = Powers(m_spellInfo->powerType);
 
-    if(powerType == POWER_RUNE)
+    if(hit && powerType == POWER_RUNE)
     {
         CheckOrTakeRunePower(true);
         return;
@@ -5712,7 +5765,13 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
         return SPELL_FAILED_CASTER_DEAD;
 
     if(m_caster->IsNonMeleeSpellCasted(false))              //prevent spellcast interruption by another spellcast
-        return SPELL_FAILED_SPELL_IN_PROGRESS;
+    {
+        if(this->m_spellInfo->Id == 33395) // Water Elemental's Freeze should overcast Waterbolt
+            m_caster->InterruptNonMeleeSpells(false);
+        else
+            return SPELL_FAILED_SPELL_IN_PROGRESS;     
+    }
+
     if(m_caster->isInCombat() && IsNonCombatSpell(m_spellInfo))
         return SPELL_FAILED_AFFECTING_COMBAT;
 

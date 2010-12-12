@@ -1294,9 +1294,10 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 {
                     if (unitTarget && unitTarget->GetTypeId() == TYPEID_PLAYER)
                     {
-                        unitTarget->RemoveAurasDueToSpell(28084);
-                        unitTarget->RemoveAurasDueToSpell(28059);
-                        unitTarget->CastSpell(unitTarget, (roll_chance_i(50) ? 28059 : 28084), true);
+		    	uint32 toCast = (roll_chance_i(50) ? 28059 : 28084);
+			unitTarget->RemoveAurasDueToSpell( (toCast == 28059)? 28084 : 28059 );
+			unitTarget->CastSpell(unitTarget, toCast, true);
+			unitTarget->RemoveAurasDueToSpell( (toCast == 28059)? 29660 : 29659 );
                     }
                     break;
                 }
@@ -1449,6 +1450,17 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 {
                     // Towers of Certain Doom: Tower Caster Instakill
                     m_caster->CastSpell(m_caster, 43072, true);
+                    return;
+                }
+                case 43572:                                 // Send Them Packing: On /Raise Emote Dummy to Player
+                {
+                    if (!unitTarget)
+                        return;
+
+                    // m_caster (creature) should start walking back to it's "home" here, no clear way how to do that
+
+                    // Send Them Packing: On Successful Dummy Spell Kill Credit
+                    m_caster->CastSpell(unitTarget, 42721, true);
                     return;
                 }
                 // Demon Broiled Surprise
@@ -2635,7 +2647,12 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     return;
 
                 // dummy cast itself ignored by client in logs
-                m_caster->CastCustomSpell(unitTarget,50782,&damage,NULL,NULL,true);
+                if(const SpellEntry* spellInfo = sSpellStore.LookupEntry(50782))
+                {
+                    const_cast<SpellEntry*>(spellInfo)->manaCost = 0;
+                    const_cast<SpellEntry*>(spellInfo)->CastingTimeIndex = 1;
+                    m_caster->CastCustomSpell(unitTarget,50782,&damage,NULL,NULL,true);
+                }
                 return;
             }
             // Concussion Blow
@@ -5403,7 +5420,7 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
     PetType petType = propEntry->Title == UNITNAME_SUMMON_TITLE_COMPANION ? PROTECTOR_PET : GUARDIAN_PET;
 
     // second cast unsummon guardian(s) (guardians without like functionality have cooldown > spawn time)
-    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+    if (m_caster->GetTypeId() == TYPEID_PLAYER && m_CastItem)
     {
         bool found = false;
         // including protector
@@ -5418,7 +5435,7 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
     }
 
     // protectors allowed only in single amount
-    if (petType = PROTECTOR_PET)
+    if (petType == PROTECTOR_PET && m_CastItem)
         if (Pet* old_protector = m_caster->GetProtectorPet())
             old_protector->Unsummon(PET_SAVE_AS_DELETED, m_caster);
 

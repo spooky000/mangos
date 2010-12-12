@@ -116,7 +116,9 @@ enum SpellModOp
     // spellmod 25 unused
     SPELLMOD_FREQUENCY_OF_SUCCESS   = 26,                   // Only used with SPELL_AURA_ADD_PCT_MODIFIER and affects used on proc spells
     SPELLMOD_MULTIPLE_VALUE         = 27,
-    SPELLMOD_RESIST_DISPEL_CHANCE   = 28
+    SPELLMOD_RESIST_DISPEL_CHANCE   = 28,
+    SPELLMOD_CRIT_DAMAGE_BONUS_2    = 29, //one not used spell
+    SPELLMOD_SPELL_COST_REFUND_ON_FAIL = 30
 };
 
 #define MAX_SPELLMOD 32
@@ -852,6 +854,13 @@ inline ByteBuffer& operator>> (ByteBuffer& buf, MovementInfo& mi)
     mi.Read(buf);
     return buf;
 }
+
+enum RelocationOperations
+{
+    AI_Notify_Sheduled          = 0x01,
+    AI_Notify_Execution         = 0x02,
+    Visibility_Update_Sheduled  = 0x04,
+};
 
 enum DiminishingLevels
 {
@@ -2061,6 +2070,15 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         VehicleKit* GetVehicleKit() const { return m_pVehicleKit; }
         bool CreateVehicleKit(uint32 vehicleId);
         void RemoveVehicleKit();
+
+        void SheduleAINotify(uint32 delay);
+        void SheduleVisibilityUpdate();
+
+        uint8 m_notify_sheduled;
+        struct 
+        {
+            float x, y, z;
+        } m_last_notified_position;
 
     protected:
         explicit Unit ();
