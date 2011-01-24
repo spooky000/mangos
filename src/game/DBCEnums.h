@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+* Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -483,6 +483,7 @@ enum VehicleSeatFlags
     SEAT_FLAG_CAN_CONTROL           = 0x00000800,           // Lua_UnitInVehicleControlSeat
     SEAT_FLAG_UNCONTROLLED          = 0x00002000,           // Seat uncontrolled for passenger?
     SEAT_FLAG_CAN_ATTACK            = 0x00004000,           // Can attack, cast spells and use items from vehicle?
+    SEAT_FLAG_UNATTACKABLE          = 0x00008000,           // Passenger is not attackable?
     SEAT_FLAG_USABLE                = 0x02000000,           // Lua_CanExitVehicle
     SEAT_FLAG_CAN_SWITCH            = 0x04000000,           // Lua_CanSwitchVehicleSeats
     SEAT_FLAG_CAN_CAST              = 0x20000000,           // Lua_UnitHasVehicleUI

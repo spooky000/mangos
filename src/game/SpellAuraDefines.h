@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -289,7 +289,7 @@ enum AuraType
     SPELL_AURA_MOD_ENEMY_DODGE = 251,
     SPELL_AURA_SLOW_ALL = 252,
     SPELL_AURA_MOD_BLOCK_CRIT_CHANCE = 253,
-    SPELL_AURA_MOD_DISARM_SHIELD = 254,
+    SPELL_AURA_MOD_DISARM_OFFHAND = 254,
     SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT = 255,
     SPELL_AURA_NO_REAGENT_USE = 256,
     SPELL_AURA_MOD_TARGET_RESIST_BY_SPELL_CLASS = 257,
@@ -319,7 +319,7 @@ enum AuraType
     SPELL_AURA_MOD_HONOR_GAIN = 281,
     SPELL_AURA_MOD_BASE_HEALTH_PCT = 282,
     SPELL_AURA_MOD_HEALING_RECEIVED = 283,                  // Possibly only for some spell family class spells
-    SPELL_AURA_284,
+    SPELL_AURA_LINKED = 284,
     SPELL_AURA_MOD_ATTACK_POWER_OF_ARMOR = 285,
     SPELL_AURA_ABILITY_PERIODIC_CRIT = 286,
     SPELL_AURA_DEFLECT_SPELLS = 287,

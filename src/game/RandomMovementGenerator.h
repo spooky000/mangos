@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ class MANGOS_DLL_SPEC RandomMovementGenerator
 : public MovementGeneratorMedium< T, RandomMovementGenerator<T> >
 {
     public:
-        explicit RandomMovementGenerator(const Unit &) : i_nextMoveTime(0) {}
+        explicit RandomMovementGenerator(const Unit &, float spawn_dist = 0.0f) : i_nextMoveTime(0), set_wander_distance(spawn_dist) {}
 
         void _setRandomLocation(T &);
         void Initialize(T &);
@@ -47,6 +47,7 @@ class MANGOS_DLL_SPEC RandomMovementGenerator
         ShortTimeTracker i_nextMoveTime;
 
         DestinationHolder< Traveller<T> > i_destinationHolder;
+        float set_wander_distance;
         uint32 i_nextMove;
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 #include "ProgressBar.h"
 #include "SharedDefines.h"
 #include "ObjectGuid.h"
+#include "SpellMgr.h"
 
 #include "DBCfmt.h"
 
@@ -70,6 +71,7 @@ DBCStorage <ChrClassesEntry> sChrClassesStore(ChrClassesEntryfmt);
 DBCStorage <ChrRacesEntry> sChrRacesStore(ChrRacesEntryfmt);
 DBCStorage <CinematicSequencesEntry> sCinematicSequencesStore(CinematicSequencesEntryfmt);
 DBCStorage <CreatureDisplayInfoEntry> sCreatureDisplayInfoStore(CreatureDisplayInfofmt);
+DBCStorage <CreatureDisplayInfoExtraEntry> sCreatureDisplayInfoExtraStore(CreatureDisplayInfoExtrafmt);
 DBCStorage <CreatureFamilyEntry> sCreatureFamilyStore(CreatureFamilyfmt);
 DBCStorage <CreatureSpellDataEntry> sCreatureSpellDataStore(CreatureSpellDatafmt);
 DBCStorage <CreatureTypeEntry> sCreatureTypeStore(CreatureTypefmt);
@@ -369,7 +371,7 @@ void LoadDBCStores(const std::string& dataPath)
         exit(1);
     }
 
-    const uint32 DBCFilesCount = 90;
+    const uint32 DBCFilesCount = 91;
 
     barGoLink bar( (int)DBCFilesCount );
 
@@ -408,6 +410,7 @@ void LoadDBCStores(const std::string& dataPath)
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sChrRacesStore,            dbcPath,"ChrRaces.dbc");
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sCinematicSequencesStore,  dbcPath,"CinematicSequences.dbc");
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sCreatureDisplayInfoStore, dbcPath,"CreatureDisplayInfo.dbc");
+    LoadDBC(availableDbcLocales,bar,bad_dbc_files,sCreatureDisplayInfoExtraStore,dbcPath,"CreatureDisplayInfoExtra.dbc");
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sCreatureFamilyStore,      dbcPath,"CreatureFamily.dbc");
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sCreatureSpellDataStore,   dbcPath,"CreatureSpellData.dbc");
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sCreatureTypeStore,        dbcPath,"CreatureType.dbc");
@@ -429,6 +432,19 @@ void LoadDBCStores(const std::string& dataPath)
 
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sFactionTemplateStore,     dbcPath,"FactionTemplate.dbc");
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sGameObjectDisplayInfoStore,dbcPath,"GameObjectDisplayInfo.dbc");
+    for (uint32 i = 0; i < sGameObjectDisplayInfoStore.GetNumRows(); ++i)
+    {
+        if (GameObjectDisplayInfoEntry *info = const_cast<GameObjectDisplayInfoEntry*>(sGameObjectDisplayInfoStore.LookupEntry(i)))
+        {
+            if (info->maxX < info->minX)
+                std::swap(info->maxX, info->minX);
+            if (info->maxY < info->minY)
+                std::swap(info->maxY, info->minY);
+            if (info->maxZ < info->minZ)
+                std::swap(info->maxZ, info->minZ);
+        }
+    }
+
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sGemPropertiesStore,       dbcPath,"GemProperties.dbc");
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sGlyphPropertiesStore,     dbcPath,"GlyphProperties.dbc");
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sGlyphSlotStore,           dbcPath,"GlyphSlot.dbc");
@@ -498,6 +514,47 @@ void LoadDBCStores(const std::string& dataPath)
         std::swap(*((uint32*)(&spell->SpellFamilyFlags)),*(((uint32*)(&spell->SpellFamilyFlags))+1));
         #endif
     }
+
+    // DBC Hacks
+
+    //Lifebloom final heal
+    SpellEntry *sfix2 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(33778));
+    sfix2->DmgClass = SPELL_DAMAGE_CLASS_MAGIC;
+
+    //Throw Passanger
+    SpellEntry *sfix3 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(62324));
+    sfix3->Targets |= TARGET_FLAG_UNIT_UNK;
+
+    //Twilight Torment - relly dunno what blizzard intended to do
+    SpellEntry *sfix4 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(57935));
+    sfix4->AttributesEx = 0;
+    sfix4->AttributesEx4 = SPELL_ATTR_EX4_NOT_STEALABLE;
+    sfix4->CastingTimeIndex = 1;
+    sfix4->RecoveryTime = 0;
+    sfix4->procFlags = (PROC_FLAG_TAKEN_MELEE_HIT | PROC_FLAG_TAKEN_MELEE_SPELL_HIT | PROC_FLAG_TAKEN_RANGED_HIT | PROC_FLAG_TAKEN_RANGED_SPELL_HIT | PROC_FLAG_TAKEN_NEGATIVE_SPELL_HIT);
+    sfix4->procChance = 100;
+    sfix4->procCharges = 0;
+    sfix4->rangeIndex = 1;
+    sfix4->StackAmount = 0;
+    sfix4->Effect[EFFECT_INDEX_1] = 0;
+    sfix4->EffectDieSides[EFFECT_INDEX_1] = 0;
+    sfix4->EffectBasePoints[EFFECT_INDEX_0] = -1;
+    sfix4->EffectImplicitTargetA[EFFECT_INDEX_0] = 6;
+    sfix4->EffectImplicitTargetA[EFFECT_INDEX_1] = 0;
+    sfix4->EffectImplicitTargetB[EFFECT_INDEX_0] = 0;
+    sfix4->EffectImplicitTargetB[EFFECT_INDEX_1] = 0;
+    sfix4->EffectRadiusIndex[EFFECT_INDEX_0] = 0;
+    sfix4->EffectRadiusIndex[EFFECT_INDEX_1] = 0;
+    sfix4->EffectApplyAuraName[EFFECT_INDEX_0] = SPELL_AURA_PROC_TRIGGER_SPELL;
+    sfix4->EffectApplyAuraName[EFFECT_INDEX_1] = 0;
+    sfix4->EffectAmplitude[EFFECT_INDEX_0] = 0;
+    sfix4->EffectAmplitude[EFFECT_INDEX_1] = 0;
+    sfix4->EffectMiscValue[EFFECT_INDEX_0] = 0;
+    sfix4->EffectMiscValue[EFFECT_INDEX_1] = 0;
+    sfix4->EffectMiscValueB[EFFECT_INDEX_0] = 0;
+    sfix4->EffectMiscValueB[EFFECT_INDEX_1] = 0;
+    sfix4->EffectTriggerSpell[EFFECT_INDEX_0] = 57988;
+    sfix4->EffectTriggerSpell[EFFECT_INDEX_1] = 0;
 
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
@@ -968,6 +1025,15 @@ bool IsPointInAreaTriggerZone(AreaTriggerEntry const* atEntry, uint32 mapid, flo
     }
 
     return true;
+}
+
+uint32 GetCreatureModelRace(uint32 model_id)
+{
+    CreatureDisplayInfoEntry const* displayEntry = sCreatureDisplayInfoStore.LookupEntry(model_id);
+    if (!displayEntry)
+        return 0;
+    CreatureDisplayInfoExtraEntry const* extraEntry = sCreatureDisplayInfoExtraStore.LookupEntry(displayEntry->ExtendedDisplayInfoID);
+    return extraEntry ? extraEntry->Race : 0;
 }
 
 // script support functions

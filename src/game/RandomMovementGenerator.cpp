@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ RandomMovementGenerator<Creature>::_setRandomLocation(Creature &creature)
     bool is_air_ok = creature.CanFly();
 
     const float angle = rand_norm_f() * (M_PI_F*2.0f);
-    const float range = rand_norm_f() * wander_distance;
+    const float range = rand_norm_f() * set_wander_distance ? set_wander_distance : wander_distance;
     const float distanceX = range * cos(angle);
     const float distanceY = range * sin(angle);
 

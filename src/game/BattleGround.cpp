@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -268,6 +268,8 @@ BattleGround::BattleGround()
     m_PrematureCountDown = false;
     m_PrematureCountDownTimer = 0;
 
+    m_ArenaEnded = false;
+
     m_StartDelayTimes[BG_STARTING_EVENT_FIRST]  = BG_START_DELAY_2M;
     m_StartDelayTimes[BG_STARTING_EVENT_SECOND] = BG_START_DELAY_1M;
     m_StartDelayTimes[BG_STARTING_EVENT_THIRD]  = BG_START_DELAY_30S;
@@ -460,17 +462,34 @@ void BattleGround::Update(uint32 diff)
             {
                 //TODO : add arena sound PlaySoundToAll(SOUND_ARENA_START);
 
+                // remove auras with duration lower than 30s and arena preparation
                 for(BattleGroundPlayerMap::const_iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
                     if (Player *plr = sObjectMgr.GetPlayer(itr->first))
                     {
-                        for(Unit::SpellAuraHolderMap::const_iterator iter = plr->GetSpellAuraHolderMap().begin(); iter != plr->GetSpellAuraHolderMap().end(); ++iter)
+                        // BG Status packet
+                        WorldPacket status;
+                        BattleGroundQueueTypeId bgQueueTypeId = BattleGroundMgr::BGQueueTypeId(m_TypeID, GetArenaType());
+                        uint32 queueSlot = plr->GetBattleGroundQueueIndex(bgQueueTypeId);
+                        sBattleGroundMgr.BuildBattleGroundStatusPacket(&status, this, queueSlot, GetStatus(), 0, GetStartTime(), GetArenaType());
+                        plr->GetSession()->SendPacket(&status);
+
+                        /*for(Unit::SpellAuraHolderMap::iterator iter = plr->GetSpellAuraHolderMap().begin(); iter != plr->GetSpellAuraHolderMap().end();)
                         {
                             if (!iter->second->IsPassive() && iter->second->IsPositive() && iter->second->GetId() != 32612)
+                            {
                                 for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
                                     if (Aura *aura = iter->second->GetAuraByEffectIndex(SpellEffectIndex(i)))
                                         if (uint32(aura->GetAuraMaxDuration()) < 30000)
+                                        {
                                              plr->RemoveAurasDueToSpell(iter->second->GetId());
-                        }
+                                             iter = plr->GetSpellAuraHolderMap().begin();
+                                        }
+                                        else
+                                            ++iter;
+                            }
+                            else
+                                ++iter;
+                        }*/
 
                         plr->RemoveAurasDueToSpell(SPELL_ARENA_PREPARATION);
                     }
@@ -514,6 +533,24 @@ void BattleGround::Update(uint32 diff)
                 RemovePlayerAtLeave(itr->first, true, true);// remove player from BG
                 // do not change any battleground's private variables
             }
+        }
+    }
+
+    // Arena time limit
+    if(isArena() && !m_ArenaEnded)
+    {
+        if(m_StartTime > uint32(ARENA_TIME_LIMIT))
+        {
+            Team winner;
+            // winner is team with higher damage
+            if(GetDamageDoneForTeam(ALLIANCE) > GetDamageDoneForTeam(HORDE))
+                winner = ALLIANCE;
+            else if (GetDamageDoneForTeam(HORDE) > GetDamageDoneForTeam(ALLIANCE))
+                winner = HORDE;
+            else
+                winner = TEAM_NONE;
+            EndBattleGround(winner);
+           m_ArenaEnded = true;
         }
     }
 
@@ -788,7 +825,7 @@ void BattleGround::EndBattleGround(Team winner)
                     loser_ids += _buf;
             }
 
-            CharacterDatabase.PExecute("INSERT INTO `arena_logs` (`team1`,`team1_members`,`team1_rating_change`,`team2`,`team2_members`,`team2_rating_change`,`winner`,`timestamp`) VALUES ('%u','%s','%u','%u','%s','%u','%u','%u')",
+            CharacterDatabase.PExecute("INSERT INTO `arena_logs` (`team1`,`team1_members`,`team1_rating_change`,`team2`,`team2_members`,`team2_rating_change`,`winner`,`timestamp`) VALUES ('%u','%s','%i','%u','%s','%i','%u','%u')",
                                         winner_arena_team->GetId(), winner_ids.c_str(), winner_change,
                                         loser_arena_team->GetId(), loser_ids.c_str(), loser_change,
                                         winner_arena_team->GetId(), time(NULL) );
@@ -1286,7 +1323,7 @@ void BattleGround::AddPlayer(Player *plr)
     {
         plr->RemoveArenaSpellCooldowns();
         plr->RemoveArenaAuras();
-        plr->RemoveAllEnchantments(TEMP_ENCHANTMENT_SLOT);
+        plr->RemoveAllEnchantments(TEMP_ENCHANTMENT_SLOT, true);
         if (team == ALLIANCE)                               // gold
         {
             if (plr->GetTeam() == HORDE)
@@ -1715,12 +1752,16 @@ void BattleGround::SpawnBGObject(ObjectGuid guid, uint32 respawntime)
             obj->SetLootState(GO_READY);
         obj->SetRespawnTime(0);
         map->Add(obj);
+        if (obj->GetGOInfo()->type == GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
+            obj->Rebuild(NULL);
     }
     else
     {
         map->Add(obj);
         obj->SetRespawnTime(respawntime);
         obj->SetLootState(GO_JUST_DEACTIVATED);
+        if (obj->GetGOInfo()->type == GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
+            obj->Rebuild(NULL);
     }
 }
 
@@ -1807,6 +1848,42 @@ void BattleGround::SendYell2ToAll(int32 entry, uint32 language, ObjectGuid guid,
     MaNGOS::BattleGround2YellBuilder bg_builder(language, entry, source, arg1, arg2);
     MaNGOS::LocalizedPacketDo<MaNGOS::BattleGround2YellBuilder> bg_do(bg_builder);
     BroadcastWorker(bg_do);
+}
+
+void BattleGround::SendWarningToAll(int32 entry, ...)
+{
+    const char *format = sObjectMgr.GetMangosStringForDBCLocale(entry);
+    va_list ap;
+    char str [1024];
+    va_start(ap, entry);
+    vsnprintf(str,1024,format, ap);
+    va_end(ap);
+    std::string msg = (std::string)str;
+
+    WorldPacket data(SMSG_MESSAGECHAT, 200);
+
+    data << (uint8)CHAT_MSG_RAID_BOSS_EMOTE;
+    data << (uint32)LANG_UNIVERSAL;
+    data << (uint64)0;
+    data << (uint32)0;                                     // 2.1.0
+    data << (uint32)1;
+    data << (uint8)0;
+    data << (uint64)0;
+    data << (uint32)(strlen(msg.c_str())+1);
+    data << msg.c_str();
+    data << (uint8)0;
+    uint8 control = 0;
+    for (BattleGroundPlayerMap::const_iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+    {
+        if (control == 40)  // More than 40 iterations? This is imposible, so, break me!
+            break;
+
+        if (Player *plr = ObjectAccessor::FindPlayer(ObjectGuid(itr->first)))
+            if (plr->GetSession())
+                plr->GetSession()->SendPacket(&data);
+
+        ++control;
+    }
 }
 
 void BattleGround::EndNow()
@@ -1996,4 +2073,12 @@ void BattleGround::SetBracket( PvPDifficultyEntry const* bracketEntry )
 {
     m_BracketId  = bracketEntry->GetBracketId();
     SetLevelRange(bracketEntry->minLevel,bracketEntry->maxLevel);
+}
+
+GameObject* BattleGround::GetBGObject(uint32 type)
+{
+    GameObject *obj = GetBgMap()->GetGameObject(m_BgObjects[type]);
+    if (!obj)
+        sLog.outError("couldn't get gameobject %i",type);
+    return obj;
 }

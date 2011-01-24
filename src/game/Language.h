@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,7 +88,9 @@ enum MangosStrings
     LANG_RA_PASS                        = 62,
     LANG_GM_ACCEPTS_WHISPER             = 63,
     LANG_GM_NO_WHISPER                  = 64,
-    // Room for more level 0              65-99 not used
+    LANG_USING_SCRIPT_LIB_UNKNOWN       = 65,
+    LANG_USING_SCRIPT_LIB_NONE          = 66,
+    // Room for more level 0              67-99 not used
 
     // level 1 chat
     LANG_GLOBAL_NOTIFY                  = 100,
@@ -367,7 +369,7 @@ enum MangosStrings
     // Room for more level 2              376-399 not used
 
     // level 3 chat
-    LANG_SCRIPTS_RELOADED               = 400,
+    LANG_SCRIPTS_RELOADED_ANNOUNCE      = 400,
     LANG_YOU_CHANGE_SECURITY            = 401,
     LANG_YOURS_SECURITY_CHANGED         = 402,
     LANG_YOURS_SECURITY_IS_LOW          = 403,
@@ -885,7 +887,11 @@ enum MangosStrings
     LANG_ACHIEVEMENT_NOT_EXIST          = 1163,
     LANG_ACHIEVEMENT_CRITERIA_NOT_EXIST = 1164,
     LANG_SPELL_NO_HAVE_AURAS            = 1165,
-    // Room for more level 3              1166-1199 not used
+    LANG_SCRIPTS_NOT_FOUND              = 1166,
+    LANG_SCRIPTS_WRONG_API              = 1167,
+    LANG_SCRIPTS_RELOADED_OK            = 1168,
+    LANG_SCRIPTS_OUTDATED               = 1169,
+    // Room for more level 3              1170-1199 not used
 
     // Debug commands
     LANG_CINEMATIC_NOT_EXIST            = 1200,
@@ -902,6 +908,70 @@ enum MangosStrings
     //                                    10000-10999
 
     // Use for custom patches             11000-11999
+
+    LANG_BG_SA_START_TWO_MINUTE             = 20000,
+    LANG_BG_SA_START_ONE_MINUTE             = 20001,
+    LANG_BG_SA_START_HALF_MINUTE            = 20002,
+    LANG_BG_SA_HAS_BEGUN                    = 20003,
+
+    LANG_BG_SA_GATE_ATTACK                  = 20004,
+    LANG_BG_SA_GATE_DAMAGE                  = 20005,
+    LANG_BG_SA_GATE_DETROYED                = 20006,
+
+    LANG_BG_SA_GATE_GREEN_EMERALD           = 20007,
+    LANG_BG_SA_GATE_BLUE_SAPHIRE            = 20008,
+    LANG_BG_SA_GATE_MAUVE_AMETHYST          = 20009,
+    LANG_BG_SA_GATE_RED_SUN_                = 20010,
+    LANG_BG_SA_GATE_YELLOW_MOON             = 20011,
+    LANG_BG_SA_GATE_ROOM_ANCIENT_SHRINE     = 20012,
+
+    LANG_BG_SA_AH_PRECIPITATES_GRAVEYARD    = 20013,
+    LANG_BG_SA_AH_SEIZES_GRAVEYARD          = 20014,
+
+    LANG_BG_SA_EAST_GRAVEYARD               = 20015,
+    LANG_BG_SA_WEST_GRAVEYARD               = 20016,
+    LANG_BG_SA_SOUTH_GRAVEYARD              = 20017,
+
+    LANG_BG_SA_INSTALL_BOMB                 = 20018,
+
+    LANG_BG_SA_ALLIANCE_END_1ROUND          = 20019,
+    LANG_BG_SA_HORDE_END_1ROUND             = 20020,
+    LANG_BG_SA_ALLIANCE_END_2ROUND          = 20021,
+    LANG_BG_SA_HORDE_END_2ROUND             = 20022,
+    /*##############################################
+    #          Strings for SendWarningToAll        #
+    ##############################################*/
+    LANG_BG_SA_HORDE_EAST_CLAIMED           = 20024,
+    LANG_BG_SA_HORDE_WEST_CLAIMED           = 20025,
+    LANG_BG_SA_HORDE_SOUTH_CLAIMED          = 20026,
+    LANG_BG_SA_ALLIANCE_EAST_CLAIMED        = 20027,
+    LANG_BG_SA_ALLIANCE_WEST_CLAIMED        = 20028,
+    LANG_BG_SA_ALLIANCE_SOUTH_CLAIMED       = 20029,
+    LANG_BG_SA_HORDE_EAST_CONQUESTED        = 20030,
+    LANG_BG_SA_HORDE_WEST_CONQUESTED        = 20031,
+    LANG_BG_SA_HORDE_SOUTH_CONQUESTED       = 20032,
+    LANG_BG_SA_ALLIANCE_EAST_CONQUESTED     = 20033,
+    LANG_BG_SA_ALLIANCE_WEST_CONQUESTED     = 20034,
+    LANG_BG_SA_ALLIANCE_SOUTH_CONQUESTED    = 20035,
+    
+    LANG_BG_SA_GATE_ROOM_ANCIENT_SHRINE_DESTROYED = 20036,
+    LANG_BG_SA_GATE_GREEN_EMERALD_DESTROYED       = 20037,
+    LANG_BG_SA_GATE_BLUE_SAPHIRE_DESTROYED        = 20038,
+    LANG_BG_SA_GATE_MAUVE_AMETHYST_DESTROYED      = 20039,
+    LANG_BG_SA_GATE_RED_SUN_DESTROYED             = 20040,
+    LANG_BG_SA_GATE_YELLOW_MOON_DESTROYED         = 20041,
+    LANG_BG_SA_GATE_ROOM_ANCIENT_SHRINE_DAMAGED   = 20042,
+    LANG_BG_SA_GATE_GREEN_EMERALD_DAMAGED         = 20043,
+    LANG_BG_SA_GATE_BLUE_SAPHIRE_DAMAGED          = 20044,
+    LANG_BG_SA_GATE_MAUVE_AMETHYST_DAMAGED        = 20045,
+    LANG_BG_SA_GATE_RED_SUN_DAMAGED               = 20046,
+    LANG_BG_SA_GATE_YELLOW_MOON_DAMAGED           = 20047,
+    // Additions after edits
+    LANG_BG_SA_HORDE_TIMEOUT_END_1ROUND             = 20048,
+    LANG_BG_SA_ALLIANCE_TIMEOUT_END_1ROUND          = 20049,
+
+    LANG_BG_SA_HORDE_TIMEOUT_END_2ROUND             = 20050,
+    LANG_BG_SA_ALLIANCE_TIMEOUT_END_2ROUND          = 20051,
 
     // NOT RESERVED IDS                   12000-1999999999
     // `db_script_string` table index     2000000000-2000009999 (MIN_DB_SCRIPT_STRING_ID-MAX_DB_SCRIPT_STRING_ID)

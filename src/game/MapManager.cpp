@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -159,12 +159,14 @@ Map* MapManager::FindMap(uint32 mapid, uint32 instanceId) const
 bool MapManager::CanPlayerEnter(uint32 mapid, Player* player)
 {
     const MapEntry *entry = sMapStore.LookupEntry(mapid);
-    if(!entry) return false;
+    if(!entry)
+        return false;
+
     const char *mapName = entry->name[player->GetSession()->GetSessionDbcLocale()];
 
-    if(entry->map_type == MAP_INSTANCE || entry->map_type == MAP_RAID)
+    if(entry->IsDungeon())
     {
-        if (entry->map_type == MAP_RAID)
+        if (entry->IsRaid())
         {
             // GMs can avoid raid limitations
             if(!player->isGameMaster() && !sWorld.getConfig(CONFIG_BOOL_INSTANCE_IGNORE_RAID))
@@ -225,18 +227,9 @@ bool MapManager::CanPlayerEnter(uint32 mapid, Player* player)
                 DEBUG_LOG("Map::CanEnter - player '%s' is dead but doesn't have a corpse!", player->GetName());
             }
         }
-
-        // TODO: move this to a map dependent location
-        /*if(i_data && i_data->IsEncounterInProgress())
-        {
-            DEBUG_LOG("MAP: Player '%s' can't enter instance '%s' while an encounter is in progress.", player->GetName(), GetMapName());
-            player->SendTransferAborted(GetId(), TRANSFER_ABORT_ZONE_IN_COMBAT);
-            return(false);
-        }*/
-        return true;
     }
-    else
-        return true;
+
+    return true;
 }
 
 void MapManager::DeleteInstance(uint32 mapid, uint32 instanceId)
@@ -276,7 +269,10 @@ MapManager::Update(uint32 diff)
         m_updater.wait();
 
     for (TransportSet::iterator iter = m_Transports.begin(); iter != m_Transports.end(); ++iter)
-        (*iter)->Update((uint32)i_timer.GetCurrent());
+    {
+        WorldObject::UpdateHelper helper((*iter));
+        helper.Update((uint32)i_timer.GetCurrent());
+    }
 
     //remove all maps which can be unloaded
     MapMapType::iterator iter = i_maps.begin();

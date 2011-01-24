@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -188,8 +188,19 @@ ObjectUpdater::Visit(GridRefManager<T> &m)
 {
     for(typename GridRefManager<T>::iterator iter = m.begin(); iter != m.end(); ++iter)
     {
-        iter->getSource()->Update(i_timeDiff);
+        WorldObject::UpdateHelper helper(iter->getSource());
+        helper.Update(i_timeDiff);
     }
+}
+
+bool RaiseDeadObjectCheck::operator()(Corpse* u)
+{
+    // ignore bones
+    if(u->GetType() == CORPSE_BONES)
+        return false;
+    if (Player* owner = ObjectAccessor::FindPlayer(u->GetOwnerGuid()))
+        return i_fobj->IsWithinDistInMap(u, i_range);
+    else return false;
 }
 
 bool CannibalizeObjectCheck::operator()(Corpse* u)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -254,6 +254,7 @@ class MANGOS_DLL_SPEC WorldSession
 
         void SendTrainerList(ObjectGuid guid);
         void SendTrainerList(ObjectGuid guid, const std::string& strTitle );
+
         void SendListInventory(ObjectGuid guid);
         bool CheckBanker(ObjectGuid guid);
         void SendShowBank(ObjectGuid guid);
@@ -749,6 +750,7 @@ class MANGOS_DLL_SPEC WorldSession
         void HandleWhoisOpcode(WorldPacket& recv_data);
         void HandleResetInstancesOpcode(WorldPacket& recv_data);
         void HandleHearthandResurrect(WorldPacket & recv_data);
+        void HandleInstanceLockResponse(WorldPacket& recv_data);
 
         // Arena Team
         void HandleInspectArenaTeamsOpcode(WorldPacket& recv_data);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -521,7 +521,7 @@ bool ChatHandler::HandleGoCreatureCommand(char* args)
             if (!tEntry)
                 return false;
 
-            if (!sObjectMgr.GetCreatureTemplate(tEntry))
+            if (!ObjectMgr::GetCreatureTemplate(tEntry))
             {
                 SendSysMessage(LANG_COMMAND_GOCREATNOTFOUND);
                 SetSentErrorMessage(true);
@@ -666,7 +666,7 @@ bool ChatHandler::HandleGoObjectCommand(char* args)
             if (!tEntry)
                 return false;
 
-            if (!sObjectMgr.GetGameObjectInfo(tEntry))
+            if (!ObjectMgr::GetGameObjectInfo(tEntry))
             {
                 SendSysMessage(LANG_COMMAND_GOOBJNOTFOUND);
                 SetSentErrorMessage(true);
@@ -1773,14 +1773,7 @@ bool ChatHandler::HandleNpcChangeLevelCommand(char* args)
     }
 
     if (pCreature->IsPet())
-    {
-        if (((Pet*)pCreature)->getPetType()==HUNTER_PET)
-        {
-            pCreature->SetUInt32Value(UNIT_FIELD_PETNEXTLEVELEXP, sObjectMgr.GetXPForPetLevel(lvl));
-            pCreature->SetUInt32Value(UNIT_FIELD_PETEXPERIENCE, 0);
-        }
         ((Pet*)pCreature)->GivePetLevel(lvl);
-    }
     else
     {
         pCreature->SetMaxHealth(100 + 30*lvl);
@@ -1973,6 +1966,9 @@ bool ChatHandler::HandleNpcSetMoveTypeCommand(char* args)
 
     MovementGeneratorType move_type;
     char* type_str = ExtractLiteralArg(&args);
+    if (!type_str)
+        return false;
+
     if (strncmp(type_str, "stay", strlen(type_str)) == 0)
         move_type = IDLE_MOTION_TYPE;
     else if (strncmp(type_str, "random", strlen(type_str)) == 0)

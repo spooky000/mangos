@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@
 #include "Player.h"
 #include "ObjectMgr.h"
 #include "SpellMgr.h"
+#include "SpellAuras.h"
 #include "CreatureAI.h"
 
 Totem::Totem() : Creature(CREATURE_SUBTYPE_TOTEM)
@@ -31,7 +32,7 @@ Totem::Totem() : Creature(CREATURE_SUBTYPE_TOTEM)
     m_type = TOTEM_PASSIVE;
 }
 
-void Totem::Update( uint32 time )
+void Totem::Update(uint32 update_diff, uint32 time )
 {
     Unit *owner = GetOwner();
     if (!owner || !owner->isAlive() || !isAlive())
@@ -40,15 +41,15 @@ void Totem::Update( uint32 time )
         return;
     }
 
-    if (m_duration <= time)
+    if (m_duration <= update_diff)
     {
         UnSummon();                                         // remove self
         return;
     }
     else
-        m_duration -= time;
+        m_duration -= update_diff;
 
-    Creature::Update( time );
+    Creature::Update( update_diff, time );
 }
 
 void Totem::Summon(Unit* owner)
@@ -66,8 +67,27 @@ void Totem::Summon(Unit* owner)
     switch(m_type)
     {
         case TOTEM_PASSIVE:
-            CastSpell(this, GetSpell(), true);
+        {
+            if(GetEntry() == 28306) // Anti-Magic Zone
+            {
+                SpellEntry const *spellInfo = sSpellStore.LookupEntry(GetSpell());
+                if(!spellInfo)
+                    return;
+
+                int basePoints = spellInfo->CalculateSimpleValue(EFFECT_INDEX_0);
+
+                //Search for Magic Suppression
+                Unit::AuraList const& auras = GetOwner()->GetAurasByType(SPELL_AURA_ADD_FLAT_MODIFIER);
+                for(Unit::AuraList::const_iterator i = auras.begin(); i != auras.end(); ++i)
+                    if ((*i)->GetSpellProto()->SpellIconID == 99)
+                        basePoints += (*i)->GetModifier()->m_amount;
+
+                CastCustomSpell(this, spellInfo, &basePoints, NULL, NULL, true);
+            }
+            else
+                CastSpell(this, GetSpell(), true);
             break;
+        }
         case TOTEM_STATUE:
             CastSpell(GetOwner(), GetSpell(), true);
             break;

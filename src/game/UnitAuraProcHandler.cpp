@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,6 @@
 #include "Creature.h"
 #include "Formulas.h"
 #include "CreatureAI.h"
-#include "ScriptCalls.h"
 #include "Util.h"
 
 pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
@@ -140,7 +139,7 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
     &Unit::HandleNULLProc,                                  //104 SPELL_AURA_WATER_WALK
     &Unit::HandleNULLProc,                                  //105 SPELL_AURA_FEATHER_FALL
     &Unit::HandleNULLProc,                                  //106 SPELL_AURA_HOVER
-    &Unit::HandleNULLProc,                                  //107 SPELL_AURA_ADD_FLAT_MODIFIER
+    &Unit::HandleAddFlatModifierAuraProc,                   //107 SPELL_AURA_ADD_FLAT_MODIFIER
     &Unit::HandleAddPctModifierAuraProc,                    //108 SPELL_AURA_ADD_PCT_MODIFIER
     &Unit::HandleNULLProc,                                  //109 SPELL_AURA_ADD_TARGET_TRIGGER
     &Unit::HandleNULLProc,                                  //110 SPELL_AURA_MOD_POWER_REGEN_PERCENT
@@ -222,7 +221,7 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
     &Unit::HandleNULLProc,                                  //186 SPELL_AURA_MOD_ATTACKER_SPELL_HIT_CHANCE
     &Unit::HandleNULLProc,                                  //187 SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_CHANCE
     &Unit::HandleNULLProc,                                  //188 SPELL_AURA_MOD_ATTACKER_RANGED_CRIT_CHANCE
-    &Unit::HandleNULLProc,                                  //189 SPELL_AURA_MOD_RATING
+    &Unit::HandleModRating,                                 //189 SPELL_AURA_MOD_RATING
     &Unit::HandleNULLProc,                                  //190 SPELL_AURA_MOD_FACTION_REPUTATION_GAIN
     &Unit::HandleNULLProc,                                  //191 SPELL_AURA_USE_NORMAL_MOVEMENT_SPEED
     &Unit::HandleNULLProc,                                  //192 SPELL_AURA_HASTE_MELEE
@@ -305,7 +304,7 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
     &Unit::HandleNULLProc,                                  //269 SPELL_AURA_MOD_IGNORE_DAMAGE_REDUCTION_SCHOOL
     &Unit::HandleNULLProc,                                  //270 SPELL_AURA_MOD_IGNORE_TARGET_RESIST (unused in 3.2.2a)
     &Unit::HandleModDamageFromCasterAuraProc,               //271 SPELL_AURA_MOD_DAMAGE_FROM_CASTER
-    &Unit::HandleMaelstromWeaponAuraProc,                   //272 SPELL_AURA_MAELSTROM_WEAPON (unclear use for aura, it used in (3.2.2a...3.3.0) in single spell 53817 that spellmode stacked and charged spell expected to be drop as stack
+    &Unit::HandleNULLProc,                                  //272 SPELL_AURA_MAELSTROM_WEAPON (unclear use for aura, it used in (3.2.2a...3.3.0) in single spell 53817 that spellmode stacked and charged spell expected to be drop as stack
     &Unit::HandleNULLProc,                                  //273 SPELL_AURA_X_RAY (client side implementation)
     &Unit::HandleNULLProc,                                  //274 proc free shot?
     &Unit::HandleNULLProc,                                  //275 SPELL_AURA_MOD_IGNORE_SHAPESHIFT Use SpellClassMask for spell select
@@ -408,7 +407,7 @@ bool Unit::IsTriggeredAtSpellProcEvent(Unit *pVictim, SpellAuraHolder* holder, S
         {
             // Check if player is wearing shield
             Item *item = ((Player*)this)->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
-            if(!item || item->IsBroken() || item->GetProto()->Class != ITEM_CLASS_ARMOR || !((1<<item->GetProto()->SubClass) & spellProto->EquippedItemSubClassMask))
+            if(!item || item->IsBroken() || !CanUseEquippedWeapon(OFF_ATTACK) || item->GetProto()->Class != ITEM_CLASS_ARMOR || !((1<<item->GetProto()->SubClass) & spellProto->EquippedItemSubClassMask))
                 return false;
         }
     }
@@ -583,6 +582,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
     uint32 triggered_spell_id = dummySpell->EffectApplyAuraName[effIndex] == SPELL_AURA_DUMMY ? dummySpell->EffectTriggerSpell[effIndex] : 0;
     Unit* target = pVictim;
     int32  basepoints[MAX_EFFECT_INDEX] = {0, 0, 0};
+    ObjectGuid originalCaster = ObjectGuid();
 
     switch(dummySpell->SpellFamilyName)
     {
@@ -969,6 +969,17 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     owner->CastSpell(owner,58227,true,castItem,triggeredByAura);
                     return SPELL_AURA_PROC_OK;
                 }
+                // Kill Command, pet aura
+                case 58914:
+                {
+                    // also decrease owner buff stack
+                    if (Unit* owner = GetOwner())
+                        owner->RemoveAuraHolderFromStack(34027);
+
+                    // Remove only single aura from stack
+                    if (triggeredByAura->GetStackAmount() > 1 && !triggeredByAura->GetHolder()->ModStackAmount(-1))
+                        return SPELL_AURA_PROC_CANT_TRIGGER;
+                }
                 // Glyph of Life Tap
                 case 63320:
                     triggered_spell_id = 63321;
@@ -1045,7 +1056,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
             // Arcane Potency
             if (dummySpell->SpellIconID == 2120)
             {
-                if(!procSpell)
+                if(!procSpell || procSpell->Id == 44401)
                     return SPELL_AURA_PROC_FAILED;
 
                 target = this;
@@ -1178,6 +1189,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
 
                     pVictim->RemoveSpellsCausingAura(SPELL_AURA_PERIODIC_DAMAGE);
                     pVictim->RemoveSpellsCausingAura(SPELL_AURA_PERIODIC_DAMAGE_PERCENT);
+                    pVictim->RemoveSpellsCausingAura(SPELL_AURA_PERIODIC_LEECH);
                     return SPELL_AURA_PROC_OK;
                 }
                 // Glyph of Icy Veins
@@ -1803,6 +1815,13 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
         {
             switch(dummySpell->Id)
             {
+                // Clean Escape
+                case 23582:
+                    // triggered spell have same masks and etc with main Vanish spell
+                    if (!procSpell || procSpell->Effect[EFFECT_INDEX_0] == SPELL_EFFECT_NONE)
+                        return SPELL_AURA_PROC_FAILED;
+                    triggered_spell_id = 23583;
+                    break;
                 // Deadly Throw Interrupt
                 case 32748:
                 {
@@ -1836,8 +1855,12 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 // Tricks of the trade
                 case 57934:
                 {
-                    triggered_spell_id = 59628;             // 6 sec buff on self
-                    target = this;
+                    triggered_spell_id = 57933;             // Tricks of the Trade, increased damage buff
+                    target = getHostileRefManager().GetThreatRedirectionTarget();
+                    if (!target)
+                        return SPELL_AURA_PROC_FAILED;
+
+                    CastSpell(this, 59628, true);           // Tricks of the Trade (caster timer)
                     break;
                 }
             }
@@ -1896,6 +1919,17 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
 
                 // mana cost save
                 int32 mana = procSpell->manaCost + procSpell->ManaCostPercentage * GetCreateMana() / 100;
+                // Explosive Shot returns only 1/3 of 40% per critical
+                if (procSpell->Id == 53352)
+                {
+                    // All ranks have same cost
+                    SpellEntry const* explosiveShot = sSpellStore.LookupEntry(53301);
+                    if (!explosiveShot)
+                        return SPELL_AURA_PROC_FAILED;
+                    mana = explosiveShot->manaCost + explosiveShot->ManaCostPercentage * GetCreateMana() / 100;
+                    mana /= 3;
+                }
+
                 basepoints[0] = mana * 40/100;
                 if (basepoints[0] <= 0)
                     return SPELL_AURA_PROC_FAILED;
@@ -2292,6 +2326,38 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
 
                     break;
                 }
+                // Heartpierce, Item - Icecrown 25 Normal Dagger Proc
+                case 71880:
+                {
+                    if(GetTypeId() != TYPEID_PLAYER)
+                        return SPELL_AURA_PROC_FAILED;
+
+                    switch (this->getPowerType())
+                    {
+                        case POWER_ENERGY: triggered_spell_id = 71882; break;
+                        case POWER_RAGE:   triggered_spell_id = 71883; break;
+                        case POWER_MANA:   triggered_spell_id = 71881; break;
+                        default:
+                            return SPELL_AURA_PROC_FAILED;
+                    }
+                    break;
+                }
+                // Heartpierce, Item - Icecrown 25 Heroic Dagger Proc
+                case 71892:
+                {
+                    if(GetTypeId() != TYPEID_PLAYER)
+                        return SPELL_AURA_PROC_FAILED;
+
+                    switch (this->getPowerType())
+                    {
+                        case POWER_ENERGY: triggered_spell_id = 71887; break;
+                        case POWER_RAGE:   triggered_spell_id = 71886; break;
+                        case POWER_MANA:   triggered_spell_id = 71888; break;
+                        default:
+                            return SPELL_AURA_PROC_FAILED;
+                    }
+                    break;
+                }
             }
             break;
         }
@@ -2564,6 +2630,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
             // Earth Shield
             if (dummySpell->SpellFamilyFlags & UI64LIT(0x0000040000000000))
             {
+                originalCaster = triggeredByAura->GetCasterGuid();
                 target = this;
                 basepoints[0] = triggerAmount;
 
@@ -2606,6 +2673,11 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 if(!procSpell || GetTypeId() != TYPEID_PLAYER || !pVictim )
                     return SPELL_AURA_PROC_FAILED;
 
+                // proc for main target only
+                if (Spell *currSpell = GetCurrentSpell(CURRENT_GENERIC_SPELL))
+                    if (currSpell->m_targets.getUnitTarget() != pVictim)
+                        return SPELL_AURA_PROC_FAILED;
+
                 // custom cooldown processing case
                 if( cooldown && GetTypeId()==TYPEID_PLAYER && ((Player*)this)->HasSpellCooldown(dummySpell->Id))
                     return SPELL_AURA_PROC_FAILED;
@@ -2642,11 +2714,13 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                         sLog.outError("Unit::HandleDummyAuraProc: non handled spell id: %u (LO)", procSpell->Id);
                         return SPELL_AURA_PROC_FAILED;
                 }
-                // No thread generated mod
+                // No threat generated mod, also add only half of SpellPower as BonusDamage
                 // TODO: exist special flag in spell attributes for this, need found and use!
-                SpellModifier *mod = new SpellModifier(SPELLMOD_THREAT,SPELLMOD_PCT,-100,triggeredByAura);
+                SpellModifier *modThreat = new SpellModifier(SPELLMOD_THREAT,SPELLMOD_PCT,-100,triggeredByAura);
+                SpellModifier *modBonusDmg = new SpellModifier(SPELLMOD_SPELL_BONUS_DAMAGE, SPELLMOD_PCT, -50, triggeredByAura);
 
-                ((Player*)this)->AddSpellMod(mod, true);
+                ((Player*)this)->AddSpellMod(modThreat, true);
+                ((Player*)this)->AddSpellMod(modBonusDmg, true);
 
                 // Remove cooldown (Chain Lightning - have Category Recovery time)
                 if (procSpell->SpellFamilyFlags & UI64LIT(0x0000000000000002))
@@ -2654,7 +2728,8 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
 
                 CastSpell(pVictim, spellId, true, castItem, triggeredByAura);
 
-                ((Player*)this)->AddSpellMod(mod, false);
+                ((Player*)this)->AddSpellMod(modThreat, false);
+                ((Player*)this)->AddSpellMod(modBonusDmg, false);
 
                 if( cooldown && GetTypeId()==TYPEID_PLAYER )
                     ((Player*)this)->AddSpellCooldown(dummySpell->Id,0,time(NULL) + cooldown);
@@ -2735,20 +2810,16 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     return SPELL_AURA_PROC_FAILED;
 
                 Pet* runeBlade = FindGuardianWithEntry(27893);
-                if(!runeBlade)
-                    return SPELL_AURA_PROC_FAILED;
-                runeBlade->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
-                runeBlade->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-                if (runeBlade && runeBlade->getVictim() && damage && procSpell)
+
+                if (runeBlade && pVictim && damage && procSpell)
                 {
-                    uint32 procDmg = damage / 2;
-                    runeBlade->SendSpellNonMeleeDamageLog(runeBlade->getVictim(),procSpell->Id,procDmg,GetSpellSchoolMask(procSpell),0,0,false,0,false);
-                    runeBlade->DealDamage(runeBlade->getVictim(),procDmg,NULL,SPELL_DIRECT_DAMAGE,GetSpellSchoolMask(procSpell),procSpell,true);
+                    int32 procDmg = damage * 0.5;
+                    runeBlade->CastCustomSpell(pVictim, procSpell->Id, &procDmg, NULL, NULL, true, NULL, NULL, runeBlade->GetGUID());
+                    SendSpellNonMeleeDamageLog(pVictim, procSpell->Id, procDmg, SPELL_SCHOOL_MASK_NORMAL, 0, 0, false, 0, false);
                     break;
                 }
-                else 
+                else
                     return SPELL_AURA_PROC_FAILED;
-                return SPELL_AURA_PROC_FAILED;
             }
             // Mark of Blood
             if (dummySpell->Id == 49005)
@@ -2980,7 +3051,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
             basepoints[EFFECT_INDEX_0] ? &basepoints[EFFECT_INDEX_0] : NULL,
             basepoints[EFFECT_INDEX_1] ? &basepoints[EFFECT_INDEX_1] : NULL,
             basepoints[EFFECT_INDEX_2] ? &basepoints[EFFECT_INDEX_2] : NULL,
-            true, castItem, triggeredByAura);
+            true, castItem, triggeredByAura, originalCaster);
     else
         CastSpell(target, triggered_spell_id, true, castItem, triggeredByAura);
 
@@ -3117,6 +3188,11 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 //case 54072: break;                        // Knockback Ball Passive
                 //case 54476: break;                        // Blood Presence
                 //case 54775: break;                        // Abandon Vehicle on Poly
+                case 56702:                                 // Shadow Sickle
+                {
+                    trigger_spell_id = 56701;
+                    break;
+                }
                 case 57345:                                 // Darkmoon Card: Greatness
                 {
                     float stat = 0.0f;
@@ -3145,6 +3221,16 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                         return SPELL_AURA_PROC_FAILED;
                     break;
                 }
+                case 64440:                                 // Blade Warding
+                {
+                    trigger_spell_id = 64442;
+
+                    // need scale damage base at stack size
+                    if (SpellEntry const* trigEntry = sSpellStore.LookupEntry(trigger_spell_id))
+                        basepoints[EFFECT_INDEX_0] = trigEntry->CalculateSimpleValue(EFFECT_INDEX_0) * triggeredByAura->GetStackAmount();
+
+                    break;
+                }
                 case 67702:                                 // Death's Choice, Item - Coliseum 25 Normal Melee Trinket
                 {
                     float stat = 0.0f;
@@ -3169,6 +3255,14 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                     // Do not summont our knights if we arent fighting specific enemy
                     if( GetTypeId() != TYPEID_PLAYER || pVictim->GetEntry() != 19457)
                         return SPELL_AURA_PROC_FAILED;
+                }
+                case 51121: // Time Bomb
+                case 59376:
+                {
+                    target = pVictim;
+                    trigger_spell_id = 51132;
+                    basepoints[0] = pVictim->GetMaxHealth() - pVictim->GetHealth();
+                    break;
                 }
             }
             break;
@@ -3743,6 +3837,13 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
             if (!(procFlags & PROC_FLAG_ON_TRAP_ACTIVATION) || !procSpell ||
                 !(procSpell->SchoolMask & SPELL_SCHOOL_MASK_FROST) || !roll_chance_i(triggerAmount))
                 return SPELL_AURA_PROC_FAILED;
+        }
+        // Glyph of Death Grip
+        case 58628:
+        {
+            // remove cooldown of Death Grip
+            if (GetTypeId() == TYPEID_PLAYER)
+                ((Player*)this)->RemoveSpellCooldown(49576, true);
             break;
         }
         // Freezing Fog (Rime triggered)
@@ -3890,40 +3991,6 @@ SpellAuraProcResult Unit::HandleOverrideClassScriptAuraProc(Unit *pVictim, uint3
             }
             break;
         }
-        case 7282:                                          // Crypt Fever & Ebon Plaguebringer
-        {
-            if (!procSpell || pVictim == this)
-                return SPELL_AURA_PROC_FAILED;
-
-            bool HasEP = false;
-            Unit::AuraList const& scriptAuras = GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
-            for(Unit::AuraList::const_iterator i = scriptAuras.begin(); i != scriptAuras.end(); ++i)
-            {
-                if ((*i)->GetSpellProto()->SpellIconID == 1766)
-                {
-                    HasEP = true;
-                    break;
-                }
-            }
-
-            if (!HasEP)
-                switch(triggeredByAura->GetId())
-                {
-                    case 49032: triggered_spell_id = 50508; break;
-                    case 49631: triggered_spell_id = 50509; break;
-                    case 49632: triggered_spell_id = 50510; break;
-                    default: return SPELL_AURA_PROC_FAILED;
-                }
-            else
-                switch(triggeredByAura->GetId())
-                {
-                    case 51099: triggered_spell_id = 51726; break;
-                    case 51160: triggered_spell_id = 51734; break;
-                    case 51161: triggered_spell_id = 51735; break;
-                    default: return SPELL_AURA_PROC_FAILED;
-                }
-            break;
-        }
     }
 
     // not processed
@@ -4032,10 +4099,17 @@ SpellAuraProcResult Unit::HandleModDamageFromCasterAuraProc(Unit* pVictim, uint3
     return triggeredByAura->GetCasterGuid() == pVictim->GetObjectGuid() ? SPELL_AURA_PROC_OK : SPELL_AURA_PROC_FAILED;
 }
 
-SpellAuraProcResult Unit::HandleMaelstromWeaponAuraProc(Unit* /*pVictim*/, uint32 /*damage*/, Aura* triggeredByAura, SpellEntry const* /*procSpell*/, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/)
+SpellAuraProcResult Unit::HandleAddFlatModifierAuraProc(Unit* /*pVictim*/, uint32 /*damage*/, Aura* triggeredByAura, SpellEntry const * /*procSpell*/, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/)
 {
-    // remove all stack;
-    RemoveSpellsCausingAura(SPELL_AURA_MAELSTROM_WEAPON);
+    SpellEntry const *spellInfo = triggeredByAura->GetSpellProto();
+
+    if (spellInfo->Id == 55166)                             // Tidal Force
+    {
+        // Remove only single aura from stack
+        if (triggeredByAura->GetStackAmount() > 1 && !triggeredByAura->GetHolder()->ModStackAmount(-1))
+            return SPELL_AURA_PROC_CANT_TRIGGER;
+    }
+
     return SPELL_AURA_PROC_OK;
 }
 
@@ -4119,7 +4193,7 @@ SpellAuraProcResult Unit::HandleModDamagePercentDoneAuraProc(Unit* /*pVictim*/, 
     return SPELL_AURA_PROC_OK;
 }
 
-SpellAuraProcResult Unit::HandlePeriodicDummyAuraProc(Unit* /*pVictim*/, uint32 /*damage*/, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/)
+SpellAuraProcResult Unit::HandlePeriodicDummyAuraProc(Unit* pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/)
 {
     if (!triggeredByAura)
         return SPELL_AURA_PROC_FAILED;
@@ -4130,6 +4204,17 @@ SpellAuraProcResult Unit::HandlePeriodicDummyAuraProc(Unit* /*pVictim*/, uint32 
 
     switch (spellProto->SpellFamilyName)
     {
+        case SPELLFAMILY_GENERIC:
+        {
+            switch (spellProto->Id)
+            {
+                case 63018:                                 // Searing Light (XT-002)
+                case 65121:                                 // Searing Light (h) (XT-002)
+                    pVictim->DealDamage(pVictim, damage, NULL, DOT, SPELL_SCHOOL_MASK_ARCANE, spellProto, true);
+                    break;
+            }
+            break;
+        }
         case SPELLFAMILY_DEATHKNIGHT:
         {
             switch (spellProto->SpellIconID)
@@ -4194,5 +4279,20 @@ SpellAuraProcResult Unit::HandlePeriodicDummyAuraProc(Unit* /*pVictim*/, uint32 
         default:
             break;
     }
+
+    return SPELL_AURA_PROC_OK;
+}
+
+SpellAuraProcResult Unit::HandleModRating(Unit* /*pVictim*/, uint32 /*damage*/, Aura* triggeredByAura, SpellEntry const * /*procSpell*/, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/)
+{
+    SpellEntry const *spellInfo = triggeredByAura->GetSpellProto();
+
+    if (spellInfo->Id == 71564)                             // Deadly Precision
+    {
+        // Remove only single aura from stack
+        if (triggeredByAura->GetStackAmount() > 1 && !triggeredByAura->GetHolder()->ModStackAmount(-1))
+            return SPELL_AURA_PROC_CANT_TRIGGER;
+    }
+
     return SPELL_AURA_PROC_OK;
 }

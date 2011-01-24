@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,11 +24,13 @@
 #include <string>
 #include <vector>
 
-typedef std::vector<std::string> Tokens;
+struct Tokens: public std::vector<char*>
+{
+    Tokens(const std::string &src, const char sep, uint32 vectorReserve = 0);
+    ~Tokens() { delete[] m_str; }
 
-Tokens StrSplit(const std::string &src, const std::string &sep);
-uint32 GetUInt32ValueFromArray(Tokens const& data, uint16 index);
-float GetFloatValueFromArray(Tokens const& data, uint16 index);
+    char* m_str;
+};
 
 void stripLineInvisibleChars(std::string &src);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1091,5 +1091,30 @@ bool ChatHandler::HandleDebugSpellModsCommand(char* args)
     data << int32(value);
     chr->GetSession()->SendPacket(&data);
 
+    return true;
+}
+
+bool ChatHandler::HandleDebugEnterVehicleCommand(char* args)
+{
+    Unit* target = getSelectedUnit();
+    if (!target)
+    {
+        SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    if (!target->GetVehicleKit())
+        return false;
+
+    if (!*args)
+        return false;
+
+    uint32 seat = atoi(args);
+
+    if (!target->GetVehicleKit()->HasEmptySeat(seat))
+        return false;
+    
+    m_session->GetPlayer()->EnterVehicle(target->GetVehicleKit(), seat);
     return true;
 }

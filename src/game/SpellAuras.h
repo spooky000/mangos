@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,7 +78,7 @@ class MANGOS_DLL_SPEC SpellAuraHolder
         void SetTarget(Unit* target) { m_target = target; }
 
         bool IsPermanent() const { return m_permanent; }
-        void SetPermanent (bool permanent) { m_permanent = permanent; }
+        void SetPermanent(bool permanent) { m_permanent = permanent; }
         bool IsPassive() const { return m_isPassive; }
         bool IsDeathPersistent() const { return m_isDeathPersist; }
         bool IsPersistent() const;
@@ -130,12 +130,6 @@ class MANGOS_DLL_SPEC SpellAuraHolder
         {
             if (m_procCharges == 0)
                 return false;
-
-            // exist spells that have maxStack > 1 and m_procCharges > 0 (==1 in fact)
-            // all like stacks have 1 value in one from this fields
-            // so return true for allow remove one aura from stacks as expired
-            if (GetStackAmount() > 1)
-                return true;
 
             m_procCharges--;
             SendAuraUpdate(false);
@@ -369,6 +363,8 @@ class MANGOS_DLL_SPEC Aura
         void HandleCharmConvert(bool apply, bool Real);
         void HandleAuraMirrorImage(bool Apply, bool Real);
         void HandleAuraAddMechanicAbilities(bool apply, bool Real);
+        void HandleAuraLinked(bool apply, bool Real);
+        void HandleAuraSetVehicle(bool apply, bool Real);
 
         virtual ~Aura();
 

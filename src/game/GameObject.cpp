@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@
 #include "BattleGround.h"
 #include "BattleGroundAV.h"
 #include "Util.h"
-#include "ScriptCalls.h"
+#include "ScriptMgr.h"
 
 bool ForcedDeleteDelayEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
 {
@@ -112,14 +112,14 @@ bool GameObject::Create(uint32 guidlow, uint32 name_id, Map *map, uint32 phaseMa
 
     if(!IsPositionValid())
     {
-        sLog.outError("Gameobject (GUID: %u Entry: %u ) not created. Suggested coordinates isn't valid (X: %f Y: %f)",guidlow,name_id,x,y);
+        sLog.outError("Gameobject (GUID: %u Entry: %u ) not created. Suggested coordinates are invalid (X: %f Y: %f)",guidlow,name_id,x,y);
         return false;
     }
 
     GameObjectInfo const* goinfo = ObjectMgr::GetGameObjectInfo(name_id);
     if (!goinfo)
     {
-        sLog.outErrorDb("Gameobject (GUID: %u Entry: %u) not created: it have not exist entry in `gameobject_template`. Map: %u  (X: %f Y: %f Z: %f) ang: %f rotation0: %f rotation1: %f rotation2: %f rotation3: %f",guidlow, name_id, map->GetId(), x, y, z, ang, rotation0, rotation1, rotation2, rotation3);
+        sLog.outErrorDb("Gameobject (GUID: %u) not created: Entry %u does not exist in `gameobject_template`. Map: %u  (X: %f Y: %f Z: %f) ang: %f rotation0: %f rotation1: %f rotation2: %f rotation3: %f",guidlow, name_id, map->GetId(), x, y, z, ang, rotation0, rotation1, rotation2, rotation3);
         return false;
     }
 
@@ -129,7 +129,7 @@ bool GameObject::Create(uint32 guidlow, uint32 name_id, Map *map, uint32 phaseMa
 
     if (goinfo->type >= MAX_GAMEOBJECT_TYPE)
     {
-        sLog.outErrorDb("Gameobject (GUID: %u Entry: %u) not created: it have not exist GO type '%u' in `gameobject_template`. It's will crash client if created.",guidlow,name_id,goinfo->type);
+        sLog.outErrorDb("Gameobject (GUID: %u) not created: Entry %u has invalid type %u in `gameobject_template`. It may crash client if created.",guidlow,name_id,goinfo->type);
         return false;
     }
 
@@ -181,7 +181,7 @@ bool GameObject::Create(uint32 guidlow, uint32 name_id, Map *map, uint32 phaseMa
     return true;
 }
 
-void GameObject::Update(uint32 p_time)
+void GameObject::Update(uint32 update_diff, uint32 p_time)
 {
     if (IsInWorld())
         m_ObjectEvents.Update(p_time);
@@ -445,7 +445,7 @@ void GameObject::Update(uint32 p_time)
             m_respawnTime = m_spawnedByDefault ? time(NULL) + m_respawnDelayTime : 0;
 
             // if option not set then object will be saved at grid unload
-            if (sWorld.getConfig(CONFIG_BOOL_SAVE_RESPAWN_TIME_IMMEDIATLY))
+            if (sWorld.getConfig(CONFIG_BOOL_SAVE_RESPAWN_TIME_IMMEDIATELY))
                 SaveRespawnTime();
 
             // if part of pool, let pool system schedule new spawn instead of just scheduling respawn
@@ -740,12 +740,17 @@ bool GameObject::isVisibleForInState(Player const* u, WorldObject const* viewPoi
             return false;
 
         // special invisibility cases
-        /* TODO: implement trap stealth, take look at spell 2836
-        if(GetGOInfo()->type == GAMEOBJECT_TYPE_TRAP && GetGOInfo()->trap.stealthed && u->IsHostileTo(GetOwner()))
+        if(GetGOInfo()->type == GAMEOBJECT_TYPE_TRAP && GetGOInfo()->trap.stealthed)
         {
-            if(check stuff here)
+            if(u->HasAura(2836) && u->isInFront(this, 15.0f))   // hack, maybe values are wrong
+                return true;
+
+            if (GetOwner() && u->IsFriendlyTo(GetOwner()))
+                return true;
+
+            if(m_lootState == GO_READY)
                 return false;
-        }*/
+        }
     }
 
     // check distance
@@ -762,7 +767,7 @@ void GameObject::Respawn()
     }
 }
 
-bool GameObject::ActivateToQuest(Player *pTarget)const
+bool GameObject::ActivateToQuest(Player *pTarget) const
 {
     // if GO is ReqCreatureOrGoN for quest
     if (pTarget->HasQuestForGO(GetEntry()))
@@ -854,7 +859,6 @@ void GameObject::SummonLinkedTrapIfAny()
          GetPhaseMask(), GetPositionX(), GetPositionY(), GetPositionZ(), GetOrientation(), 0.0f, 0.0f, 0.0f, 0.0f, GO_ANIMPROGRESS_DEFAULT, GO_STATE_READY))
     {
         delete linkedGO;
-        linkedGO = NULL;
         return;
     }
 
@@ -870,10 +874,15 @@ void GameObject::SummonLinkedTrapIfAny()
     GetMap()->Add(linkedGO);
 }
 
-void GameObject::TriggeringLinkedGameObject( uint32 trapEntry, Unit* target)
+void GameObject::TriggerLinkedGameObject(Unit* target)
 {
+    uint32 trapEntry = GetGOInfo()->GetLinkedGameObjectEntry();
+
+    if (!trapEntry)
+        return;
+
     GameObjectInfo const* trapInfo = sGOStorage.LookupEntry<GameObjectInfo>(trapEntry);
-    if(!trapInfo || trapInfo->type!=GAMEOBJECT_TYPE_TRAP)
+    if (!trapInfo || trapInfo->type != GAMEOBJECT_TYPE_TRAP)
         return;
 
     SpellEntry const* trapSpell = sSpellStore.LookupEntry(trapInfo->trap.spellId);
@@ -957,12 +966,12 @@ void GameObject::Use(Unit* user)
     uint32 spellId = 0;
     bool triggered = false;
 
-    if (user->GetTypeId() == TYPEID_PLAYER && Script->GOHello((Player*)user, this))
+    if (user->GetTypeId() == TYPEID_PLAYER && sScriptMgr.OnGameObjectUse((Player*)user, this))
         return;
 
     switch(GetGoType())
     {
-        case GAMEOBJECT_TYPE_DOOR:                          //0
+        case GAMEOBJECT_TYPE_DOOR:                          // 0
         {
             //doors never really despawn, only reset to default state/flags
             UseDoorOrButton();
@@ -971,7 +980,7 @@ void GameObject::Use(Unit* user)
             GetMap()->ScriptsStart(sGameObjectScripts, GetDBTableGUIDLow(), spellCaster, this);
             return;
         }
-        case GAMEOBJECT_TYPE_BUTTON:                        //1
+        case GAMEOBJECT_TYPE_BUTTON:                        // 1
         {
             //buttons never really despawn, only reset to default state/flags
             UseDoorOrButton();
@@ -979,20 +988,17 @@ void GameObject::Use(Unit* user)
             // activate script
             GetMap()->ScriptsStart(sGameObjectScripts, GetDBTableGUIDLow(), spellCaster, this);
 
-            // triggering linked GO
-            if (uint32 trapEntry = GetGOInfo()->button.linkedTrapId)
-                TriggeringLinkedGameObject(trapEntry, user);
-
+            TriggerLinkedGameObject(user);
             return;
         }
-        case GAMEOBJECT_TYPE_QUESTGIVER:                    //2
+        case GAMEOBJECT_TYPE_QUESTGIVER:                    // 2
         {
             if (user->GetTypeId() != TYPEID_PLAYER)
                 return;
 
             Player* player = (Player*)user;
 
-            if (!Script->GOGossipHello(player, this))
+            if (!sScriptMgr.OnGossipHello(player, this))
             {
                 player->PrepareGossipMenu(this, GetGOInfo()->questgiver.gossipID);
                 player->SendPreparedGossip(this);
@@ -1000,7 +1006,7 @@ void GameObject::Use(Unit* user)
 
             return;
         }
-        case GAMEOBJECT_TYPE_CHEST:
+        case GAMEOBJECT_TYPE_CHEST:                         // 3
         {
             if (user->GetTypeId() != TYPEID_PLAYER)
                 return;
@@ -1010,14 +1016,11 @@ void GameObject::Use(Unit* user)
             {
                 DEBUG_LOG("Chest ScriptStart id %u for GO %u", GetGOInfo()->chest.eventId, GetDBTableGUIDLow());
 
-                if (!Script->ProcessEventId(GetGOInfo()->chest.eventId, user, this, true))
+                if (!sScriptMgr.OnProcessEvent(GetGOInfo()->chest.eventId, user, this, true))
                     GetMap()->ScriptsStart(sEventScripts, GetGOInfo()->chest.eventId, user, this);
             }
 
-            // triggering linked GO
-            if (uint32 trapEntry = GetGOInfo()->chest.linkedTrapId)
-                TriggeringLinkedGameObject(trapEntry, user);
-
+            TriggerLinkedGameObject(user);
             return;
         }
         case GAMEOBJECT_TYPE_GENERIC:                       // 5
@@ -1029,7 +1032,7 @@ void GameObject::Use(Unit* user)
         case GAMEOBJECT_TYPE_TRAP:                          // 6
         {
             // Currently we do not expect trap code below to be Use()
-            // directly (except from spell effect). Code here will be called by TriggeringLinkedGameObject.
+            // directly (except from spell effect). Code here will be called by TriggerLinkedGameObject.
 
             // FIXME: when GO casting will be implemented trap must cast spell to target
             if (uint32 spellId = GetGOInfo()->trap.spellId)
@@ -1100,11 +1103,9 @@ void GameObject::Use(Unit* user)
             player->SetStandState(UNIT_STAND_STATE_SIT_LOW_CHAIR+info->chair.height);
             return;
         }
-        case GAMEOBJECT_TYPE_SPELL_FOCUS:
+        case GAMEOBJECT_TYPE_SPELL_FOCUS:                   // 8
         {
-            // triggering linked GO
-            if (uint32 trapEntry = GetGOInfo()->spellFocus.linkedTrapId)
-                TriggeringLinkedGameObject(trapEntry, user);
+            TriggerLinkedGameObject(user);
 
             // some may be activated in addition? Conditions for this? (ex: entry 181616)
             break;
@@ -1125,7 +1126,7 @@ void GameObject::Use(Unit* user)
                 }
                 else if (info->goober.gossipID)             // ...or gossip, if page does not exist
                 {
-                    if (!Script->GOGossipHello(player, this))
+                    if (!sScriptMgr.OnGossipHello(player, this))
                     {
                         player->PrepareGossipMenu(this, info->goober.gossipID);
                         player->SendPreparedGossip(this);
@@ -1136,8 +1137,13 @@ void GameObject::Use(Unit* user)
                 {
                     DEBUG_FILTER_LOG(LOG_FILTER_AI_AND_MOVEGENSS, "Goober ScriptStart id %u for GO entry %u (GUID %u).", info->goober.eventId, GetEntry(), GetDBTableGUIDLow());
 
-                    if (!Script->ProcessEventId(info->goober.eventId, player, this, true))
+                    if (!sScriptMgr.OnProcessEvent(info->goober.eventId, player, this, true))
                         GetMap()->ScriptsStart(sEventScripts, info->goober.eventId, player, this);
+
+                    if (player->CanUseBattleGroundObject())
+                        if (BattleGround *bg = player->GetBattleGround())
+                            if (bg->GetTypeID(true) == BATTLEGROUND_SA)
+                                bg->EventPlayerDamageGO(player, this, info->goober.eventId);
                 }
 
                 // possible quest objective for active quests
@@ -1152,8 +1158,7 @@ void GameObject::Use(Unit* user)
 
             }
 
-            if (uint32 trapEntry = info->goober.linkedTrapId)
-                TriggeringLinkedGameObject(trapEntry, user);
+            TriggerLinkedGameObject(user);
 
             SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_IN_USE);
             SetLootState(GO_ACTIVATED);
@@ -1199,7 +1204,7 @@ void GameObject::Use(Unit* user)
 
             if (info->camera.eventID)
             {
-                if (!Script->ProcessEventId(info->camera.eventID, player, this, true))
+                if (!sScriptMgr.OnProcessEvent(info->camera.eventID, player, this, true))
                     GetMap()->ScriptsStart(sEventScripts, info->camera.eventID, player, this);
             }
 
@@ -1240,24 +1245,43 @@ void GameObject::Use(Unit* user)
 
                     DEBUG_LOG("Fishing check (skill: %i zone min skill: %i chance %i roll: %i",skill,zone_skill,chance,roll);
 
-                    if (skill >= zone_skill && chance >= roll)
+                    // normal chance
+                    bool success = skill >= zone_skill && chance >= roll;
+                    GameObject* fishingHole = NULL;
+
+                    // overwrite fail in case fishhole if allowed (after 3.3.0)
+                    if (!success)
+                    {
+                        if (!sWorld.getConfig(CONFIG_BOOL_SKILL_FAIL_POSSIBLE_FISHINGPOOL))
+                        {
+                            //TODO: find reasonable value for fishing hole search
+                            fishingHole = LookupFishingHoleAround(20.0f + CONTACT_DISTANCE);
+                            if (fishingHole)
+                                success = true;
+                        }
+                    }
+                    // just search fishhole for success case
+                    else
+                        //TODO: find reasonable value for fishing hole search
+                        fishingHole = LookupFishingHoleAround(20.0f + CONTACT_DISTANCE);
+
+                    if (success || sWorld.getConfig(CONFIG_BOOL_SKILL_FAIL_GAIN_FISHING))
+                        player->UpdateFishingSkill();
+
+                    // fish catch or fail and junk allowed (after 3.1.0)
+                    if (success || sWorld.getConfig(CONFIG_BOOL_SKILL_FAIL_LOOT_FISHING))
                     {
                         // prevent removing GO at spell cancel
                         player->RemoveGameObject(this,false);
                         SetOwnerGuid(player->GetObjectGuid());
 
-                        //fish catched
-                        player->UpdateFishingSkill();
-
-                        //TODO: find reasonable value for fishing hole search
-                        GameObject* ok = LookupFishingHoleAround(20.0f + CONTACT_DISTANCE);
-                        if (ok)
+                        if (fishingHole)                    // will set at success only
                         {
-                            ok->Use(player);
+                            fishingHole->Use(player);
                             SetLootState(GO_JUST_DEACTIVATED);
                         }
                         else
-                            player->SendLoot(GetObjectGuid(),LOOT_FISHING);
+                            player->SendLoot(GetObjectGuid(), success ? LOOT_FISHING : LOOT_FISHING_FAIL);
                     }
                     else
                     {
@@ -1341,7 +1365,10 @@ void GameObject::Use(Unit* user)
             if (GetUniqueUseCount() < info->summoningRitual.reqParticipants)
                 return;
 
-            spellCaster = GetMap()->GetPlayer(m_firstUser);
+            // owner is first user for non-wild GO objects, if it offline value already set to current user
+            if (GetOwnerGuid().IsEmpty())
+                if (Player* firstUser = GetMap()->GetPlayer(m_firstUser))
+                    spellCaster = firstUser;
 
             spellId = info->summoningRitual.spellId;
 
@@ -1384,6 +1411,7 @@ void GameObject::Use(Unit* user)
                     return;
             }
 
+            user->RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
             spellId = info->spellcaster.spellId;
 
             AddUse();
@@ -1540,7 +1568,7 @@ void GameObject::Use(Unit* user)
         return;
     }
 
-    Spell *spell = new Spell(spellCaster, spellInfo, triggered,GetGUID());
+    Spell *spell = new Spell(spellCaster, spellInfo, triggered, GetObjectGuid());
 
     // spell target is user of GO
     SpellCastTargets targets;
@@ -1554,10 +1582,25 @@ void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage)
     if (GetGoType() != GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING || !m_health)
         return;
 
+    Player* pWho = NULL;
+    if (pDoneBy && pDoneBy->GetTypeId() == TYPEID_PLAYER)
+        pWho = (Player*)pDoneBy;
+
+    if(pDoneBy && ((Creature*)pDoneBy)->GetVehicleKit())
+        pWho = (Player*)pDoneBy->GetCharmerOrOwner();
+
+
     DEBUG_FILTER_LOG(LOG_FILTER_DAMAGE, "GO damage taken: %u to health %u", damage, m_health);
 
     if (m_health > damage)
+    {
         m_health -= damage;
+
+        // For Strand of the Ancients and probably Isle of Conquest
+        if (pWho)
+            if (BattleGround *bg = pWho->GetBattleGround())
+                bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.damageEvent);
+    }
     else
         m_health = 0;
 
@@ -1568,6 +1611,14 @@ void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage)
             RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED);
             SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DESTROYED);
             SetUInt32Value(GAMEOBJECT_DISPLAYID, m_goInfo->destructibleBuilding.destroyedDisplayId);
+
+            if (pWho)
+            {
+                //sScriptMgr.OnGameObjectDestroyed(pWho, this, m_goInfo->destructibleBuilding.destroyedEvent);
+
+                if (BattleGround *bg = pWho->GetBattleGround())
+                    bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.destroyedEvent);
+            }
         }
     }
     else                                            // from intact to damaged
@@ -1586,6 +1637,10 @@ void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage)
             // otherwise we just handle it as "destroyed"
             else
                 m_health = 0;
+
+            if (pWho)       
+                if (BattleGround *bg = pWho->GetBattleGround())
+                    bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.damagedEvent);
          }
     }
     SetGoAnimProgress(m_health * 255 / GetMaxHealth());
@@ -1741,7 +1796,7 @@ float GameObject::GetObjectBoundingRadius() const
     // 1. This is clearly hack way because GameObjectDisplayInfoEntry have 6 floats related to GO sizes, but better that use DEFAULT_WORLD_OBJECT_SIZE
     // 2. In some cases this must be only interactive size, not GO size, current way can affect creature target point auto-selection in strange ways for big underground/virtual GOs
     if (GameObjectDisplayInfoEntry const* dispEntry = sGameObjectDisplayInfoStore.LookupEntry(GetGOInfo()->displayId))
-        return fabs(dispEntry->unknown12) * GetObjectScale();
+        return fabs(dispEntry->minX) * GetObjectScale();
 
     return DEFAULT_WORLD_OBJECT_SIZE;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -538,14 +538,7 @@ namespace MaNGOS
 
                 return i_fobj->IsWithinDistInMap(u, i_range);
             }
-            bool operator()(Corpse* u)
-            {
-                // ignore bones
-                if(u->GetType() == CORPSE_BONES)
-                    return false;
-
-                return i_fobj->IsWithinDistInMap(u, i_range);
-            }
+            bool operator()(Corpse* u);
             bool operator()(Creature* u)
             {
                 if ( u->isAlive() || u->IsDeadByDefault() || u->IsTaxiFlying() ||

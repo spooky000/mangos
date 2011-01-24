@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,6 +88,12 @@ namespace VMAP
             bool isMapLoadingEnabled() const { return(iEnableLineOfSightCalc || iEnableHeightCalc  ); }
 
             virtual std::string getDirFileName(unsigned int pMapId, int x, int y) const =0;
+            /**
+            Block maps from being used.
+            parameter: String of map ids. Delimiter = ","
+            e.g.: "0,1,530"
+            */
+            virtual void preventMapsFromBeingUsed(const char* pMapIdString) =0;
             /**
             Query world model area info.
             \param z gets adjusted to the ground height for which this are info is valid

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -136,7 +136,7 @@ enum ItemPrototypeFlags
     ITEM_FLAG_ENCHANT_SCROLL                  = 0x10000000, // for enchant scrolls
     ITEM_FLAG_MILLABLE                        = 0x20000000, // item can have milling loot
     ITEM_FLAG_UNK30                           = 0x04000000,
-    ITEM_FLAG_BOP_TRADEABLE                   = 0x80000000, // bound item that can be traded
+    ITEM_FLAG_UNK31                           = 0x80000000, // bound item that can be traded
 };
 
 enum ItemPrototypeFlags2

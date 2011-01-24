@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
  */
 
 #include "Util.h"
+#include "Timer.h"
 
 #include "utf8cpp/utf8.h"
 #include "mersennetwister/MersenneTwister.h"
@@ -26,6 +27,60 @@
 typedef ACE_TSS<MTRand> MTRandTSS;
 static MTRandTSS mtRand;
 
+static ACE_Time_Value g_SystemTickTime = ACE_OS::gettimeofday();
+
+uint32 WorldTimer::m_iTime = 0;
+uint32 WorldTimer::m_iPrevTime = 0;
+
+uint32 WorldTimer::tickTime() { return m_iTime; }
+uint32 WorldTimer::tickPrevTime() { return m_iPrevTime; }
+
+uint32 WorldTimer::tick()
+{
+    //save previous world tick time
+    m_iPrevTime = m_iTime;
+
+    //get the new one and don't forget to persist current system time in m_SystemTickTime
+    m_iTime = WorldTimer::getMSTime_internal(true);
+
+    //return tick diff
+    return getMSTimeDiff(m_iPrevTime, m_iTime);
+}
+
+uint32 WorldTimer::getMSTime()
+{
+    return getMSTime_internal();
+}
+
+uint32 WorldTimer::getMSTime_internal(bool savetime /*= false*/)
+{
+    //get current time
+    const ACE_Time_Value currTime = ACE_OS::gettimeofday();
+    //calculate time diff between two world ticks
+    //special case: curr_time < old_time - we suppose that our time has not ticked at all
+    //this should be constant value otherwise it is possible that our time can start ticking backwards until next world tick!!!
+    uint32 diff = 0;
+    //regular case: curr_time >= old_time
+    if(currTime > g_SystemTickTime)
+        diff = (currTime - g_SystemTickTime).msec();
+
+    //reset last system time value
+    if(savetime)
+        g_SystemTickTime = currTime;
+
+    //lets calculate current world time
+    uint32 iRes = m_iTime;
+    //normalize world time
+    const uint32 tmp = uint32(0xFFFFFFFF) - iRes;
+    if(tmp < diff)
+        iRes = diff - tmp;
+    else
+        iRes += diff;
+
+    return iRes;
+}
+
+//////////////////////////////////////////////////////////////////////////
 int32 irand (int32 min, int32 max)
 {
     return int32 (mtRand->randInt (max - min)) + min;
@@ -66,41 +121,38 @@ float rand_chance_f(void)
     return (float)mtRand->randExc (100.0);
 }
 
-Tokens StrSplit(const std::string &src, const std::string &sep)
+Tokens::Tokens(const std::string &src, const char sep, uint32 vectorReserve)
 {
-    Tokens r;
-    std::string s;
-    for (std::string::const_iterator i = src.begin(); i != src.end(); i++)
+    m_str = new char[src.length() + 1];
+    memcpy(m_str, src.c_str(), src.length() + 1);
+
+    if (vectorReserve)
+        reserve(vectorReserve);
+
+    char* posold = m_str;
+    char* posnew = m_str;
+
+    for (;;)
     {
-        if (sep.find(*i) != std::string::npos)
+        if (*posnew == sep)
         {
-            if (s.length()) r.push_back(s);
-            s = "";
+            push_back(posold);
+            posold = posnew + 1;
+
+            *posnew = 0x00;
         }
-        else
+        else if (*posnew == 0x00)
         {
-            s += *i;
+            // Hack like, but the old code accepted these kind of broken strings,
+            // so changing it would break other things
+            if (posold != posnew)
+                push_back(posold);
+
+            break;
         }
+
+        ++posnew;
     }
-    if (s.length()) r.push_back(s);
-    return r;
-}
-
-uint32 GetUInt32ValueFromArray(Tokens const& data, uint16 index)
-{
-    if(index >= data.size())
-        return 0;
-
-    return (uint32)atoi(data[index].c_str());
-}
-
-float GetFloatValueFromArray(Tokens const& data, uint16 index)
-{
-    float result;
-    uint32 temp = GetUInt32ValueFromArray(data,index);
-    memcpy(&result, &temp, sizeof(result));
-
-    return result;
 }
 
 void stripLineInvisibleChars(std::string &str)

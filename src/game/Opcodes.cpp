@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -345,7 +345,7 @@ OpcodeHandler opcodeTable[NUM_MSG_TYPES] =
     /*0x13C*/ { "SMSG_AI_REACTION",                             STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_ServerSide               },
     /*0x13D*/ { "CMSG_SET_SELECTION",                           STATUS_LOGGEDIN, PROCESS_INPLACE,      &WorldSession::HandleSetSelectionOpcode        },
     /*0x13E*/ { "CMSG_EQUIPMENT_SET_DELETE",                    STATUS_LOGGEDIN, PROCESS_THREADUNSAFE, &WorldSession::HandleEquipmentSetDeleteOpcode  },
-    /*0x13F*/ { "CMSG_INSTANCE_LOCK_WARNING_RESPONSE",          STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_NULL                     },
+    /*0x13F*/ { "CMSG_INSTANCE_LOCK_WARNING_RESPONSE",          STATUS_LOGGEDIN, PROCESS_THREADUNSAFE, &WorldSession::HandleInstanceLockResponse      },
     /*0x140*/ { "CMSG_UNUSED2",                                 STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_NULL                     },
     /*0x141*/ { "CMSG_ATTACKSWING",                             STATUS_LOGGEDIN, PROCESS_INPLACE,      &WorldSession::HandleAttackSwingOpcode         },
     /*0x142*/ { "CMSG_ATTACKSTOP",                              STATUS_LOGGEDIN, PROCESS_INPLACE,      &WorldSession::HandleAttackStopOpcode          },
@@ -1230,7 +1230,7 @@ OpcodeHandler opcodeTable[NUM_MSG_TYPES] =
     /*0x4B1*/ { "UMSG_UNKNOWN_1201",                            STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_NULL                     },
     /*0x4B2*/ { "SMSG_ITEM_REFUND_INFO_RESPONSE",               STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_ServerSide               },
     /*0x4B3*/ { "CMSG_ITEM_REFUND_INFO",                        STATUS_LOGGEDIN, PROCESS_THREADUNSAFE, &WorldSession::HandleItemRefundInfoRequest     },
-    /*0x4B4*/ { "CMSG_ITEM_REFUND",                             STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_NULL                     },
+    /*0x4B4*/ { "CMSG_ITEM_REFUND",                             STATUS_LOGGEDIN, PROCESS_THREADUNSAFE, &WorldSession::HandleItemRefundRequest         },
     /*0x4B5*/ { "SMSG_ITEM_REFUND_RESULT",                      STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_ServerSide               },
     /*0x4B6*/ { "CMSG_CORPSE_MAP_POSITION_QUERY",               STATUS_LOGGEDIN, PROCESS_THREADUNSAFE, &WorldSession::HandleCorpseMapPositionQueryOpcode},
     /*0x4B7*/ { "SMSG_CORPSE_MAP_POSITION_QUERY_RESPONSE",      STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_ServerSide               },
@@ -1333,4 +1333,8 @@ OpcodeHandler opcodeTable[NUM_MSG_TYPES] =
     /*0x518*/ { "SMSG_UNKNOWN_1304",                            STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_ServerSide               },
     /*0x519*/ { "UMSG_UNKNOWN_1305",                            STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_NULL                     },
     /*0x51A*/ { "UMSG_UNKNOWN_1306",                            STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_NULL                     },
+    /*0x51B*/ { "CMSG_COMMENTATOR_SKIRMISH_QUEUE_COMMAND",      STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_NULL                     },
+    /*0x51C*/ { "SMSG_UNKNOWN_1308",                            STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_ServerSide               },
+    /*0x51D*/ { "SMSG_UNKNOWN_1309",                            STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_ServerSide               },
+    /*0x51E*/ { "SMSG_UNKNOWN_1310",                            STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_ServerSide               },
 };
