@@ -348,6 +348,9 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
             {
                 switch(m_spellInfo->Id)                     // better way to check unknown
                 {
+                    case 56578:
+                        damage = unitTarget->GetMaxHealth() * m_spellInfo->CalculateSimpleValue(EFFECT_INDEX_0) / 100; // Deal 26% HP
+                    break;
                     // Positive/Negative Charge
                     case 28062:
                     case 28085:
@@ -993,6 +996,44 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
         {
             switch(m_spellInfo->Id)
             {
+                case 49266:                                 // Dangle Wild Carrot
+                {
+                    if (!unitTarget)
+                        return;
+
+                    if(unitTarget->GetEntry() == 26472)
+                        unitTarget->setFaction(35);
+                    return;
+                }
+                case 49134:                                 // Tranquilizer Dart
+                {
+                    if (!unitTarget)
+                        return;
+
+                    if(unitTarget->GetEntry() == 27627)
+                        if(unitTarget->GetVehicle())
+                        {
+                            ((Creature*)unitTarget)->UpdateEntry(27632);
+                            unitTarget->GetVehicle()->GetBase()->setFaction(35);
+                        }
+                    return;
+                }
+                case 7769:                                  // Strafe Jotunheim Building
+                {
+                    if(Unit * pCaster = GetCaster())
+                    {
+                        if(Creature * pBuilding = pCaster->GetClosestCreatureWithEntry(pCaster, 30599, 50))
+                        {
+                            if(!pBuilding->HasAura(7448)) // Do not give credit for already burning buildings
+                            {
+                                if(pCaster->GetCharmerOrOwnerPlayerOrPlayerItself())
+                                    pCaster->GetCharmerOrOwnerPlayerOrPlayerItself()->KilledMonsterCredit(30576);
+                                pBuilding->CastSpell(pBuilding, 7448, true);
+                            }
+                        }
+                    }
+                    return;
+                }
                 case 7671:                                  // Transformation (human<->worgen)
                 {
                     if (!unitTarget)
@@ -1043,6 +1084,17 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                         return;
 
                     ((Creature*)unitTarget)->SetDeathState(JUST_ALIVED);
+                    return;
+                }
+                case 9976:                                  // Polly Eats the E.C.A.C.
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
+                        return;
+
+                    // Summon Polly Jr.
+                    unitTarget->CastSpell(unitTarget, 9998, true);
+
+                    ((Creature*)unitTarget)->ForcedDespawn(100);
                     return;
                 }
                 case 10254:                                 // Stone Dwarf Awaken Visual
@@ -2266,6 +2318,13 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                         }
                     return;
                 }
+                case 49550:                                 // Call Out Injured Soldier
+                {
+                    if (Player * pPlayer = m_caster->GetCharmerOrOwnerPlayerOrPlayerItself())
+                        if (Creature * pSpawnPoint = m_caster->GetClosestCreatureWithEntry(m_caster, 27795, 65))
+                            pPlayer->SummonCreature(27788, pSpawnPoint->GetPositionX(), pSpawnPoint->GetPositionY(), pSpawnPoint->GetPositionZ(), 0, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 60000, false, true);
+                    return;
+                }
                 case 38173:                                 // Q: On Spirit's Wings
                 {
                     uint32 questId = 10714;
@@ -2485,9 +2544,10 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 case 48610:                                 // Q:Shredder Repair
                 case 52264:                                 // Q:Grand Theft Palomino
                 case 45877:                                 // Q:Bring 'Em Back Alive
+                case 49285:                                 // Q:Mounting Up
                 {
                    if(m_caster->GetObjectGuid().IsVehicle())
-                        ((Creature*)m_caster)->ForcedDespawn();
+                        ((Creature*)m_caster)->ForcedDespawn(500);
                     return;
                 }
 
@@ -4378,10 +4438,23 @@ void Spell::EffectHealthLeech(SpellEffectIndex eff_idx)
 
 void Spell::DoCreateItem(SpellEffectIndex eff_idx, uint32 itemtype)
 {
-    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+    if (!unitTarget)
         return;
 
-    Player* player = (Player*)unitTarget;
+    Player* player = NULL;
+
+    if(unitTarget->GetTypeId() != TYPEID_PLAYER)
+    {
+        if(unitTarget->GetObjectGuid().IsVehicle())
+            if (Unit *unit = m_caster->GetVehicleKit()->GetPassenger(0))
+                if (unit->GetTypeId() == TYPEID_PLAYER)
+                    player = (Player*)unit;
+    }
+    else
+        player = (Player*)unitTarget;
+
+    if (!player)
+        return;
 
     uint32 newitemid = itemtype;
     ItemPrototype const *pProto = ObjectMgr::GetItemPrototype( newitemid );
@@ -5069,11 +5142,9 @@ void Spell::DoSummonGroupPets(SpellEffectIndex eff_idx)
 
     int32 duration = GetSpellDuration(m_spellInfo);
 
-    if (pet_entry == 37994)    // Mage: Water Elemental from Glyph
-        duration = 86400000;   // 24 hours
-
-    if(Player* modOwner = m_caster->GetSpellModOwner())
-        modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_DURATION, duration);
+    if (duration > 0)
+        if (Player* modOwner = m_caster->GetSpellModOwner())
+            modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_DURATION, duration);
 
     uint32 amount = damage;
 
@@ -5541,12 +5612,28 @@ void Spell::DoSummonWild(SpellEffectIndex eff_idx, uint32 forceFaction)
         }
         // Summon if dest location not present near caster
         else
-            m_caster->GetClosePoint(px, py, pz, 3.0f);
+        {
+            if (radius > 0.0f)
+            {
+                // not using bounding radius of caster here
+                m_caster->GetClosePoint(px, py, pz, 0.0f, radius);
+            }
+            else
+            {
+                // EffectRadiusIndex 0 or 36
+                px = m_caster->GetPositionX();
+                py = m_caster->GetPositionY();
+                pz = m_caster->GetPositionZ();
+            }
+        }
 
         if(Creature *summon = m_caster->SummonCreature(creature_entry, px, py, pz, m_caster->GetOrientation(), summonType, duration))
         {
             summon->SetUInt32Value(UNIT_CREATED_BY_SPELL, m_spellInfo->Id);
-            summon->SetCreatorGuid(m_caster->GetObjectGuid());
+
+            // UNIT_FIELD_CREATEDBY are not set for these kind of spells.
+            // Does exceptions exist? If so, what are they?
+            // summon->SetCreatorGuid(m_caster->GetObjectGuid());
 
             if(forceFaction)
                 summon->setFaction(forceFaction);
@@ -5613,8 +5700,9 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
 
     float radius = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
     int32 duration = GetSpellDuration(m_spellInfo);
-    if(Player* modOwner = m_caster->GetSpellModOwner())
-        modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_DURATION, duration);
+    if (duration > 0)
+        if (Player* modOwner = m_caster->GetSpellModOwner())
+            modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_DURATION, duration);
 
     uint32 originalSpellID = (m_IsTriggeredSpell && m_triggeredBySpellInfo) ? m_triggeredBySpellInfo->Id : m_spellInfo->Id;
 
@@ -5633,7 +5721,7 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
         }
     }
 
-    for(int32 count = 0; count < amount; ++count)
+    for (int32 count = 0; count < amount; ++count)
     {
         Pet* spawnCreature = new Pet(petType);
 
@@ -5708,9 +5796,11 @@ void Spell::DoSummonVehicle(SpellEffectIndex eff_idx, uint32 forceFaction)
     if (!vehicle_entry)
         return;
 
-    uint32 mountSpellID = (m_spellInfo->EffectBasePoints[eff_idx] <= 1) ?
-                           46598 : m_spellInfo->EffectBasePoints[eff_idx]+1;
-    // Used MiscValue mount spell, if not present - hardcoded (by Blzz).
+    SpellEntry const* m_mountspell = sSpellStore.LookupEntry(m_spellInfo->EffectBasePoints[eff_idx] != 0 ? m_spellInfo->CalculateSimpleValue(eff_idx) : 46598);
+
+    if (!m_mountspell)
+        m_mountspell = sSpellStore.LookupEntry(46598);
+    // Used BasePoint mount spell, if not present - hardcoded (by Blzz).
 
     float px, py, pz;
     // If dest location present
@@ -5739,8 +5829,8 @@ void Spell::DoSummonVehicle(SpellEffectIndex eff_idx, uint32 forceFaction)
     {
         vehicle->setFaction(forceFaction ? forceFaction : m_caster->getFaction());
         vehicle->SetUInt32Value(UNIT_CREATED_BY_SPELL,m_spellInfo->Id);
-        m_caster->CastSpell(vehicle, mountSpellID, true);
-        DEBUG_LOG("Caster (guidlow %d) summon vehicle (guidlow %d, entry %d) and mounted with spell %d ", m_caster->GetGUIDLow(), vehicle->GetGUIDLow(), vehicle->GetEntry(), mountSpellID);
+        m_caster->CastSpell(vehicle, m_mountspell, true);
+        DEBUG_LOG("Caster (guidlow %d) summon vehicle (guidlow %d, entry %d) and mounted with spell %d ", m_caster->GetGUIDLow(), vehicle->GetGUIDLow(), vehicle->GetEntry(), m_mountspell->Id);
     }
     else
         sLog.outError("Vehicle (guidlow %d, entry %d) NOT summoned by undefined reason. ", vehicle->GetGUIDLow(), vehicle->GetEntry());
@@ -7387,8 +7477,66 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, damage, false);
                     break;
                 }
-                // Q: The Denouncement
-                case 48724:
+                case 47962:                                 // Rescue Injured Soldier
+                {
+                    for(int i = 0; i < 3; ++i)
+                        if (Creature * pInjured = m_caster->GetClosestCreatureWithEntry(m_caster, 27106+i, 10))
+                        {
+                            if (m_caster->GetCharmerOrOwner())
+                                if (m_caster->GetCharmerOrOwner()->GetTypeId() == TYPEID_PLAYER)
+                                    ((Player*)m_caster->GetCharmerOrOwner())->KilledMonsterCredit(27109);
+                            pInjured->CastSpell(m_caster, 49242, true); // Enter Vehicle
+                        }
+
+                    if (Creature * pInjured = m_caster->GetClosestCreatureWithEntry(m_caster, 27110, 10))
+                    {
+                        if (m_caster->GetCharmerOrOwner())
+                            if (m_caster->GetCharmerOrOwner()->GetTypeId() == TYPEID_PLAYER)
+                            ((Player*)m_caster->GetCharmerOrOwner())->KilledMonsterCredit(27109);
+                        pInjured->CastSpell(m_caster, 49242, true); // Enter Vehicle
+                    }
+                }
+                case 49109:                                 // Drop Off Gnome
+                {
+                    m_caster->CastSpell(m_caster, 49122, true); // Kill Credit for caster
+
+                    if(Creature * pWagon = m_caster->GetClosestCreatureWithEntry(m_caster, 27607, 10))
+                    {
+                        if(pWagon->isAlive())
+                        {
+                            float x,y,z;
+                            pWagon->GetClosePoint(x,y,z, pWagon->GetObjectBoundingRadius(), 5);
+                            if(Creature * pEngineer = unitTarget->SummonCreature(27163, x,y,z, 0, TEMPSUMMON_TIMED_DESPAWN, 10000))
+                            {
+                                char * text = "";
+                                switch(urand(0, 4))
+                                {
+                                    case 0: text = "Hey, do any of you know McGoyver over at Valgarde? He's my uncle. You know what his title is? Pro. Yea, just Pro. I want to be a pro too."; break;
+                                    case 1: text = "When I'm done with this plague wagon it'll look like a goblin built it!"; break;
+                                    case 2: text = "I hear you single handedly airlifted our villagers out of this hell-hole. Is that true?"; break;
+                                    case 3: text = "Something straight up stinks in here! it's definitely not me. Gnomes smell like butter and sunshine. Not like those dwarves that smell like they were born from a trogg's armpit! None of you are dwarves, are you?"; break;
+                                    case 4: text = "It doesn't make any sense. Why don't they just fly Naxxramas over Wintergarde Keep and blow it up? I mean, that's what I would do if I were Kel'Thuzad."; break;
+                                }
+                                pEngineer->MonsterSay(text, LANG_UNIVERSAL);
+
+                                pEngineer->GetMotionMaster()->MovePoint(0, pWagon->GetPositionX(), pWagon->GetPositionY(), pWagon->GetPositionZ());
+                                pEngineer->DealDamage(pWagon, pWagon->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+                            }
+                        }
+                    }
+                }
+                case 49081:                                 //Drop Off Soldier
+                {
+                    if (!unitTarget)
+                        return;
+
+                   
+                    for(int i = 0; i < 5; ++i)
+                        unitTarget->SummonCreature(27588, 3704.239f+irand(-5, 5),-1188.2666f,121.054f, 4.259f, TEMPSUMMON_TIMED_DESPAWN, 10000);
+
+                    return;
+                }
+                case 48724:                                 // Q: The Denouncement
                 case 48726:
                 case 48728:
                 case 48730:
@@ -7399,8 +7547,8 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, damage, true);
                     return;
                 }
-                // Q: In Service of Blood/Unholy/Frost
-                case 50252:
+                
+                case 50252:                                 // Q: In Service of Blood/Unholy/Frost
                 case 47724:
                 case 47703:
                 {
@@ -7420,7 +7568,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     caster->CastSpell(caster, damage, true);
                     return;
                 }
-                case 32580:
+                case 32580:                                 // Wicked Strong Fetish
                 {
                     uint32 toSummon = 0;
                     if (unitTarget->GetClosestCreatureWithEntry(unitTarget, 21351, 10))
@@ -7855,6 +8003,9 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                 case 52510:
                 {
                     Unit * pCaster = GetCaster();
+                    if (!pCaster || pCaster->GetTypeId() != TYPEID_UNIT)
+                        return;
+
                     // Iterate for all creatures around cast place
                     CellPair pair(MaNGOS::ComputeCellPair(pCaster->GetPositionX(), pCaster->GetPositionY()));
                     Cell cell(pair);
@@ -7874,22 +8025,24 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         {
                             if((*itr)->GetEntry() == 28844)
                             {
-                                if (Unit * pOwner = GetCaster()->GetOwner())
+                                if (Unit * pOwner = pCaster->GetCharmer())
+                                {
                                     if (pOwner->GetTypeId() == TYPEID_PLAYER)
                                     {
                                         ((Player*)pOwner)->KilledMonsterCredit(29099);
                                         QuestStatusData& q_status = ((Player*)pOwner)->getQuestStatusMap()[12690]; // Fuel for the Fire
-                                        if (q_status.m_status == QUEST_STATUS_INCOMPLETE && (q_status.m_creatureOrGOcount[0] % 20) < 3)
+                                        if (q_status.m_status == QUEST_STATUS_INCOMPLETE && (q_status.m_creatureOrGOcount[0] % 20) == 0)
                                         {
                                             float x,y,z;
                                             (*itr)->GetPosition(x,y,z);
-                                            (*itr)->SummonCreature(28873, x,y,z, 0, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 60000);
+                                            (*itr)->SummonCreature(28873, x,y,z, 0, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 10000);
                                             ((Player*)pOwner)->KilledMonsterCredit(28873);
                                         }
+                                        ((Creature*)pCaster)->ForcedDespawn();
                                     }
-
+                                }
+                                
                                 (*itr)->CastSpell((*itr), 52508, true);
-                                //unitTarget->DealDamage((*itr), (*itr)->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
                             }
                         }
 
@@ -8584,7 +8737,7 @@ void Spell::DoSummonTotem(SpellEffectIndex eff_idx, uint8 slot_dbc)
     int slot = slot_dbc ? slot_dbc - 1 : TOTEM_SLOT_NONE;
 
     // unsummon old totem
-    if(slot < MAX_TOTEM_SLOT)
+    if (slot < MAX_TOTEM_SLOT)
         if (Totem *OldTotem = m_caster->GetTotem(TotemSlot(slot)))
             OldTotem->UnSummon();
 
@@ -8594,8 +8747,8 @@ void Spell::DoSummonTotem(SpellEffectIndex eff_idx, uint8 slot_dbc)
 
     Totem* pTotem = new Totem;
 
-    if(!pTotem->Create(sObjectMgr.GenerateLowGuid(HIGHGUID_UNIT), m_caster->GetMap(), m_caster->GetPhaseMask(),
-        m_spellInfo->EffectMiscValue[eff_idx], team ))
+    if (!pTotem->Create(sObjectMgr.GenerateLowGuid(HIGHGUID_UNIT), m_caster->GetMap(), m_caster->GetPhaseMask(),
+        m_spellInfo->EffectMiscValue[eff_idx], team))
     {
         delete pTotem;
         return;
@@ -8614,7 +8767,7 @@ void Spell::DoSummonTotem(SpellEffectIndex eff_idx, uint8 slot_dbc)
     m_caster->GetClosePoint(x, y, z, pTotem->GetObjectBoundingRadius(), 2.0f, angle);
 
     // totem must be at same Z in case swimming caster and etc.
-    if( fabs( z - m_caster->GetPositionZ() ) > 5 )
+    if (fabs( z - m_caster->GetPositionZ() ) > 5)
         z = m_caster->GetPositionZ();
 
     pTotem->Relocate(x, y, z, m_caster->GetOrientation());
@@ -8628,8 +8781,9 @@ void Spell::DoSummonTotem(SpellEffectIndex eff_idx, uint8 slot_dbc)
     pTotem->SetTypeBySummonSpell(m_spellInfo);              // must be after Create call where m_spells initialized
 
     int32 duration=GetSpellDuration(m_spellInfo);
-    if (Player* modOwner = m_caster->GetSpellModOwner())
-        modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_DURATION, duration);
+    if (duration > 0)
+        if (Player* modOwner = m_caster->GetSpellModOwner())
+            modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_DURATION, duration);
     pTotem->SetDuration(duration);
 
     if (m_spellInfo->Id == 16190)
@@ -8643,13 +8797,13 @@ void Spell::DoSummonTotem(SpellEffectIndex eff_idx, uint8 slot_dbc)
 
     pTotem->SetUInt32Value(UNIT_CREATED_BY_SPELL, m_spellInfo->Id);
 
-    if(m_caster->GetTypeId() == TYPEID_PLAYER)
+    if (m_caster->GetTypeId() == TYPEID_PLAYER)
         pTotem->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
 
-    if(m_caster->IsPvP())
+    if (m_caster->IsPvP())
         pTotem->SetPvP(true);
 
-    if(m_caster->IsFFAPvP())
+    if (m_caster->IsFFAPvP())
         pTotem->SetFFAPvP(true);
 
     pTotem->Summon(m_caster);
@@ -9734,10 +9888,24 @@ void Spell::EffectStealBeneficialBuff(SpellEffectIndex eff_idx)
 
 void Spell::EffectKillCreditPersonal(SpellEffectIndex eff_idx)
 {
-    if(!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+    if (!unitTarget)
         return;
 
-    ((Player*)unitTarget)->KilledMonsterCredit(m_spellInfo->EffectMiscValue[eff_idx]);
+    Player * player = NULL;
+
+    if (unitTarget->GetTypeId() != TYPEID_PLAYER)
+        if (unitTarget->GetObjectGuid().IsVehicle())
+            if (Unit *unit = unitTarget->GetVehicleKit()->GetPassenger(0))
+                if (unit->GetTypeId() == TYPEID_PLAYER)
+                    player = (Player*)unit;
+
+    if (!player)
+        if(unitTarget->GetTypeId() == TYPEID_PLAYER)
+            player = (Player*)unitTarget;
+        else
+            return;
+
+    player->KilledMonsterCredit(m_spellInfo->EffectMiscValue[eff_idx]);
 }
 
 void Spell::EffectKillCreditGroup(SpellEffectIndex eff_idx)
