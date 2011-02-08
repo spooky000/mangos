@@ -67,6 +67,12 @@ struct InstanceTemplate
     uint32 script_id;
 };
 
+struct WorldTemplate
+{
+    uint32 map;                                             // non-instance map
+    uint32 script_id;
+};
+
 enum LevelRequirementVsMode
 {
     LEVELREQUIREMENT_HEROIC = 70
@@ -237,6 +243,9 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         //get corresponding TerrainData object for this particular map
         const TerrainInfo * GetTerrain() const { return m_TerrainData; }
 
+        void CreateInstanceData(bool load);
+        InstanceData* GetInstanceData() { return i_data; }
+        uint32 GetScriptId() const { return i_script_id; }
     private:
         void LoadMapAndVMap(int gx, int gy);
 
@@ -307,6 +316,9 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         std::set<WorldObject *> i_objectsToRemove;
         std::multimap<time_t, ScriptAction> m_scriptSchedule;
 
+        InstanceData* i_data;
+        uint32 i_script_id;
+
         // Map local low guid counters
         ObjectGuidGenerator<HIGHGUID_DYNAMICOBJECT> m_DynObjectGuids;
         ObjectGuidGenerator<HIGHGUID_PET> m_PetGuids;
@@ -330,10 +342,7 @@ class MANGOS_DLL_SPEC InstanceMap : public Map
         bool Add(Player *);
         void Remove(Player *, bool);
         void Update(const uint32&);
-        void CreateInstanceData(bool load);
         bool Reset(InstanceResetMethod method);
-        uint32 GetScriptId() const { return i_script_id; }
-        InstanceData* GetInstanceData() { return i_data; }
         void PermBindAllPlayers(Player *player);
         void UnloadAll(bool pForce);
         bool CanEnter(Player* player);
@@ -344,8 +353,6 @@ class MANGOS_DLL_SPEC InstanceMap : public Map
     private:
         bool m_resetAfterUnload;
         bool m_unloadWhenEmpty;
-        InstanceData* i_data;
-        uint32 i_script_id;
 };
 
 class MANGOS_DLL_SPEC BattleGroundMap : public Map
