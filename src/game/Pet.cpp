@@ -47,11 +47,10 @@ m_petFollowAngle(PET_FOLLOW_ANGLE), m_needSave(true), m_petCounter(0), m_PetScal
 
     if (type == MINI_PET)                                    // always passive
         GetCharmInfo()->SetReactState(REACT_PASSIVE);
-    else if(type == PROTECTOR_PET)                          // always defensive 
+    else if (type == PROTECTOR_PET)                          // always defensive
         GetCharmInfo()->SetReactState(REACT_DEFENSIVE);
     else if (type == GUARDIAN_PET)                           // always aggressive
         GetCharmInfo()->SetReactState(REACT_AGGRESSIVE);
-
 }
 
 Pet::~Pet()
@@ -1884,6 +1883,8 @@ bool Pet::IsPermanentPetFor(Player* owner)
         case SUMMON_PET:
             switch(owner->getClass())
             {
+                // oddly enough, Mage's Water Elemental is still treated as temporary pet with Glyph of Eternal Water
+                // i.e. does not unsummon at mounting, gets dismissed at teleport etc.
                 case CLASS_WARLOCK:
                     return GetCreatureInfo()->type == CREATURE_TYPE_DEMON;
                 case CLASS_DEATH_KNIGHT:
@@ -2004,6 +2005,9 @@ void Pet::CastPetAura(PetAura const* aura)
     uint32 auraId = aura->GetAura(GetEntry());
     if(!auraId)
         return;
+
+    if(auraId == 43630)
+        sLog.outError("Feanor: CastPetAura: pet casted aura 43630 on itself");
 
     if(auraId == 35696)                                       // Demonic Knowledge
     {
@@ -3022,6 +3026,9 @@ void Pet::CastPetPassiveAuras(bool current)
             RemoveAurasDueToSpell(auraID);
         else if (current && !HasAura(auraID))
         {
+            if(auraID == 43630)
+                sLog.outError("Feanor: CastPetPassiveAuras: pet casted aura 43630 on itself");
+
             CastSpell(this, auraID, true);
             DEBUG_LOG("Cast passive pet aura %u", auraID);
         }
@@ -3175,7 +3182,7 @@ void Pet::Regenerate(Powers power, uint32 diff)
 
     if (curValue < 0)
         curValue = 0;
-    else if (curValue > maxValue)
+    else if (curValue > (int)maxValue)
         curValue = maxValue;
 
     SetPower(power, curValue);

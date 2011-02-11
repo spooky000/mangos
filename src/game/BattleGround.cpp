@@ -290,16 +290,6 @@ BattleGround::~BattleGround()
     for(int i = 0; i < size; ++i)
         DelObject(i);
 
-    if (GetInstanceID())                                    // not spam by useless queries in case BG templates
-    {
-        // delete creature and go respawn times
-        CharacterDatabase.PExecute("DELETE FROM creature_respawn WHERE instance = '%u'", GetInstanceID());
-        CharacterDatabase.PExecute("DELETE FROM gameobject_respawn WHERE instance = '%u'", GetInstanceID());
-        // delete instance from db
-        CharacterDatabase.PExecute("DELETE FROM instance WHERE id = '%u'",GetInstanceID());
-        // remove from battlegrounds
-    }
-
     sBattleGroundMgr.RemoveBattleGround(GetInstanceID(), GetTypeID());
     sBattleGroundMgr.DeleteClientVisibleInstanceId(GetTypeID(), GetBracketId(), GetClientInstanceID());
 
@@ -1969,6 +1959,7 @@ void BattleGround::HandleKillPlayer( Player *player, Player *killer )
             if (plr->GetTeam() == killer->GetTeam() && plr->IsAtGroupRewardDistance(player))
             {
                 UpdatePlayerScore(plr, SCORE_HONORABLE_KILLS, 1);
+                plr->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_SPECIAL_PVP_KILL,1);
                 plr->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HONORABLE_KILL,1);
                 plr->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HONORABLE_KILL_AT_AREA,1);
             }

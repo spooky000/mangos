@@ -2714,12 +2714,9 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                         sLog.outError("Unit::HandleDummyAuraProc: non handled spell id: %u (LO)", procSpell->Id);
                         return SPELL_AURA_PROC_FAILED;
                 }
-                // No threat generated mod, also add only half of SpellPower as BonusDamage
-                // TODO: exist special flag in spell attributes for this, need found and use!
-                SpellModifier *modThreat = new SpellModifier(SPELLMOD_THREAT,SPELLMOD_PCT,-100,triggeredByAura);
-                SpellModifier *modBonusDmg = new SpellModifier(SPELLMOD_SPELL_BONUS_DAMAGE, SPELLMOD_PCT, -50, triggeredByAura);
 
-                ((Player*)this)->AddSpellMod(modThreat, true);
+                // TODO: exist special flag in spell attributes for this, need found and use!
+                SpellModifier *modBonusDmg = new SpellModifier(SPELLMOD_SPELL_BONUS_DAMAGE, SPELLMOD_PCT, -50, triggeredByAura);
                 ((Player*)this)->AddSpellMod(modBonusDmg, true);
 
                 // Remove cooldown (Chain Lightning - have Category Recovery time)
@@ -2728,11 +2725,10 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
 
                 CastSpell(pVictim, spellId, true, castItem, triggeredByAura);
 
-                ((Player*)this)->AddSpellMod(modThreat, false);
                 ((Player*)this)->AddSpellMod(modBonusDmg, false);
 
-                if( cooldown && GetTypeId()==TYPEID_PLAYER )
-                    ((Player*)this)->AddSpellCooldown(dummySpell->Id,0,time(NULL) + cooldown);
+                if (cooldown && GetTypeId() == TYPEID_PLAYER)
+                    ((Player*)this)->AddSpellCooldown(dummySpell->Id, 0, time(NULL) + cooldown);
 
                 return SPELL_AURA_PROC_OK;
             }
@@ -3047,13 +3043,13 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
         return SPELL_AURA_PROC_FAILED;
 
     if (basepoints[EFFECT_INDEX_0] || basepoints[EFFECT_INDEX_1] || basepoints[EFFECT_INDEX_2])
-        CastCustomSpell(target, triggered_spell_id,
+        CastCustomSpell(target, triggerEntry,
             basepoints[EFFECT_INDEX_0] ? &basepoints[EFFECT_INDEX_0] : NULL,
             basepoints[EFFECT_INDEX_1] ? &basepoints[EFFECT_INDEX_1] : NULL,
             basepoints[EFFECT_INDEX_2] ? &basepoints[EFFECT_INDEX_2] : NULL,
             true, castItem, triggeredByAura, originalCaster);
     else
-        CastSpell(target, triggered_spell_id, true, castItem, triggeredByAura);
+        CastSpell(target, triggerEntry, true, castItem, triggeredByAura);
 
     if (cooldown && GetTypeId()==TYPEID_PLAYER)
         ((Player*)this)->AddSpellCooldown(triggered_spell_id,0,time(NULL) + cooldown);
@@ -3873,14 +3869,22 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
     if (!target || (target != this && !target->isAlive()))
         return SPELL_AURA_PROC_FAILED;
 
-    if (basepoints[EFFECT_INDEX_0] || basepoints[EFFECT_INDEX_1] || basepoints[EFFECT_INDEX_2])
-        CastCustomSpell(target,trigger_spell_id,
-            basepoints[EFFECT_INDEX_0] ? &basepoints[EFFECT_INDEX_0] : NULL,
-            basepoints[EFFECT_INDEX_1] ? &basepoints[EFFECT_INDEX_1] : NULL,
-            basepoints[EFFECT_INDEX_2] ? &basepoints[EFFECT_INDEX_2] : NULL,
-            true, castItem, triggeredByAura);
+    if (SpellEntry const* triggeredSpellInfo = sSpellStore.LookupEntry(trigger_spell_id))
+    {
+        if (basepoints[EFFECT_INDEX_0] || basepoints[EFFECT_INDEX_1] || basepoints[EFFECT_INDEX_2])
+            CastCustomSpell(target,triggeredSpellInfo,
+                basepoints[EFFECT_INDEX_0] ? &basepoints[EFFECT_INDEX_0] : NULL,
+                basepoints[EFFECT_INDEX_1] ? &basepoints[EFFECT_INDEX_1] : NULL,
+                basepoints[EFFECT_INDEX_2] ? &basepoints[EFFECT_INDEX_2] : NULL,
+                true, castItem, triggeredByAura);
+        else
+            CastSpell(target,triggeredSpellInfo,true,castItem,triggeredByAura);
+    }
     else
-        CastSpell(target,trigger_spell_id,true,castItem,triggeredByAura);
+    {
+        sLog.outError("HandleProcTriggerSpellAuraProc: unknown spell id %u by caster: %s triggered by aura %u (eff %u)", trigger_spell_id, GetGuidStr().c_str(), triggeredByAura->GetId(), triggeredByAura->GetEffIndex());
+        return SPELL_AURA_PROC_FAILED;
+    }
 
     if (cooldown && GetTypeId()==TYPEID_PLAYER)
         ((Player*)this)->AddSpellCooldown(trigger_spell_id,0,time(NULL) + cooldown);

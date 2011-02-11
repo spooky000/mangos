@@ -97,7 +97,7 @@ Map* MapManager::CreateMap(uint32 id, const WorldObject* obj)
     MANGOS_ASSERT(obj);
     //if(!obj->IsInWorld()) sLog.outError("GetMap: called for map %d with object (typeid %d, guid %d, mapid %d, instanceid %d) who is not in world!", id, obj->GetTypeId(), obj->GetGUIDLow(), obj->GetMapId(), obj->GetInstanceId());
     Guard _guard(*this);
-    
+
     Map * m = NULL;
 
     const MapEntry* entry = sMapStore.LookupEntry(id);
@@ -120,6 +120,9 @@ Map* MapManager::CreateMap(uint32 id, const WorldObject* obj)
             m = new Map(id, i_gridCleanUpDelay, 0, REGULAR_DIFFICULTY);
             //add map into container
             i_maps[MapID(id)] = m;
+
+            // non-instanceable maps always expected have saved state
+            m->CreateInstanceData(true);
         }
     }
 
@@ -141,7 +144,7 @@ Map* MapManager::FindMap(uint32 mapid, uint32 instanceId) const
     MapMapType::const_iterator iter = i_maps.find(MapID(mapid, instanceId));
     if(iter == i_maps.end())
         return NULL;
-    
+
     //this is a small workaround for transports
     if(instanceId == 0 && iter->second->Instanceable())
     {
@@ -432,6 +435,7 @@ InstanceMap* MapManager::CreateInstanceMap(uint32 id, uint32 InstanceId, Difficu
     InstanceMap *map = new InstanceMap(id, i_gridCleanUpDelay, InstanceId, difficulty);
     MANGOS_ASSERT(map->IsDungeon());
 
+    // Dungeons can have saved instance data
     bool load_data = save != NULL;
     map->CreateInstanceData(load_data);
 
@@ -453,6 +457,9 @@ BattleGroundMap* MapManager::CreateBattleGroundMap(uint32 id, uint32 InstanceId,
 
     //add map into map container
     i_maps[MapID(id, InstanceId)] = map;
+
+    // BGs/Arenas not have saved instance data
+    map->CreateInstanceData(false);
 
     return map;
 }

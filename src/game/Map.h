@@ -67,6 +67,12 @@ struct InstanceTemplate
     uint32 script_id;
 };
 
+struct WorldTemplate
+{
+    uint32 map;                                             // non-instance map
+    uint32 script_id;
+};
+
 enum LevelRequirementVsMode
 {
     LEVELREQUIREMENT_HEROIC = 70
@@ -181,6 +187,7 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         bool IsBattleArena() const { return i_mapEntry && i_mapEntry->IsBattleArena(); }
         bool IsBattleGroundOrArena() const { return i_mapEntry && i_mapEntry->IsBattleGroundOrArena(); }
 
+        // can't be NULL for loaded map
         InstanceSave* GetInstanceSave() const { return m_instanceSave; }
 
         void AddObjectToRemoveList(WorldObject *obj);
@@ -231,15 +238,15 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
             i_objectsToClientUpdate.erase( obj );
         }
 
-        static float  relocation_lower_limit_sq;
-        static uint32 relocation_ai_notify_delay;
-
         // DynObjects currently
         uint32 GenerateLocalLowGuid(HighGuid guidhigh);
 
         //get corresponding TerrainData object for this particular map
         const TerrainInfo * GetTerrain() const { return m_TerrainData; }
 
+        void CreateInstanceData(bool load);
+        InstanceData* GetInstanceData() { return i_data; }
+        uint32 GetScriptId() const { return i_script_id; }
     private:
         void LoadMapAndVMap(int gx, int gy);
 
@@ -287,7 +294,7 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         uint32 i_InstanceId;
         uint32 m_unloadTimer;
         float m_VisibleDistance;
-        InstanceSave* m_instanceSave;                       // can be NULL for non dungeons...
+        InstanceSave* m_instanceSave;
 
         MapRefManager m_mapRefManager;
         MapRefManager::iterator m_mapRefIter;
@@ -309,6 +316,9 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
 
         std::set<WorldObject *> i_objectsToRemove;
         std::multimap<time_t, ScriptAction> m_scriptSchedule;
+
+        InstanceData* i_data;
+        uint32 i_script_id;
 
         // Map local low guid counters
         ObjectGuidGenerator<HIGHGUID_DYNAMICOBJECT> m_DynObjectGuids;
@@ -333,10 +343,7 @@ class MANGOS_DLL_SPEC InstanceMap : public Map
         bool Add(Player *);
         void Remove(Player *, bool);
         void Update(const uint32&);
-        void CreateInstanceData(bool load);
         bool Reset(InstanceResetMethod method);
-        uint32 GetScriptId() const { return i_script_id; }
-        InstanceData* GetInstanceData() { return i_data; }
         void PermBindAllPlayers(Player *player);
         void UnloadAll(bool pForce);
         bool CanEnter(Player* player);
@@ -347,8 +354,6 @@ class MANGOS_DLL_SPEC InstanceMap : public Map
     private:
         bool m_resetAfterUnload;
         bool m_unloadWhenEmpty;
-        InstanceData* i_data;
-        uint32 i_script_id;
 };
 
 class MANGOS_DLL_SPEC BattleGroundMap : public Map

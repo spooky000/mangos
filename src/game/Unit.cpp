@@ -222,11 +222,7 @@ Unit::Unit()
     m_AuraFlags = 0;
 
     m_Visibility = VISIBILITY_ON;
-
-    m_notify_sheduled = false;
-    m_last_notified_position.x = 0;
-    m_last_notified_position.y = 0;
-    m_last_notified_position.z = 0;
+    m_sheduled_visibility_updates = VisibilityUpdateFlag_None;
 
     m_detectInvisibilityMask = 0;
     m_invisibilityMask = 0;
@@ -597,13 +593,24 @@ void Unit::resetAttackTimer(WeaponAttackType type)
     m_attackTimer[type] = uint32(GetAttackTime(type) * m_modAttackSpeedPct[type]);
 }
 
-bool Unit::canReachWithAttack(Unit *pVictim) const
+bool Unit::CanReachWithMeleeAttack(Unit* pVictim, float flat_mod /*= 0.0f*/) const
 {
-    MANGOS_ASSERT(pVictim);
-    float reach = GetFloatValue(UNIT_FIELD_COMBATREACH);
-    if( reach <= 0.0f )
-        reach = 1.0f;
-    return IsWithinDistInMap(pVictim, reach);
+    if (!pVictim)
+        return false;
+
+    // The measured values show BASE_MELEE_OFFSET in (1.3224, 1.342)
+    float reach = GetFloatValue(UNIT_FIELD_COMBATREACH) + pVictim->GetFloatValue(UNIT_FIELD_COMBATREACH) +
+        BASE_MELEERANGE_OFFSET + flat_mod;
+
+    if (reach < ATTACK_DISTANCE)
+        reach = ATTACK_DISTANCE;
+
+    // This check is not related to bounding radius
+    float dx = GetPositionX() - pVictim->GetPositionX();
+    float dy = GetPositionY() - pVictim->GetPositionY();
+    float dz = GetPositionZ() - pVictim->GetPositionZ();
+
+    return dx*dx + dy*dy + dz*dz < reach*reach;
 }
 
 void Unit::RemoveSpellsCausingAura(AuraType auraType, bool negative, bool positive)
@@ -1065,9 +1072,8 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
                         // the reset time is set but not added to the scheduler
                         // until the players leave the instance
                         time_t resettime = cVictim->GetRespawnTimeEx() + 2 * HOUR;
-                        if (InstanceSave *save = m->GetInstanceSave())
-                            if (save->GetResetTime() < resettime)
-                                save->SetResetTime(resettime);
+                        if (m->GetInstanceSave()->GetResetTime() < resettime)
+                            m->GetInstanceSave()->SetResetTime(resettime);
                     }
                 }
             }
@@ -8205,8 +8211,10 @@ uint32 Unit::MeleeDamageBonusTaken(Unit *pCaster, uint32 pdamage,WeaponAttackTyp
 
     // .. taken (dummy auras)
     AuraList const& mDummyAuras = GetAurasByType(SPELL_AURA_DUMMY);
+    if (!mDummyAuras.empty())
     for(AuraList::const_iterator i = mDummyAuras.begin(); i != mDummyAuras.end(); ++i)
     {
+      if ((*i)->GetId())
         switch((*i)->GetSpellProto()->SpellIconID)
         {
             //Cheat Death
@@ -8373,7 +8381,7 @@ void Unit::Mount(uint32 mount, uint32 spellId, uint32 vehicleId, uint32 creature
     }
 }
 
-void Unit::Unmount()
+void Unit::Unmount(bool from_aura)
 {
     if (!IsMounted())
         return;
@@ -8383,9 +8391,13 @@ void Unit::Unmount()
     SetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID, 0);
     RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_MOUNT);
 
-    WorldPacket data(SMSG_DISMOUNT, 8);
-    data << GetPackGUID();
-    SendMessageToSet(&data, true);
+    // Called NOT by Taxi system / GM command
+    if (from_aura)
+    {
+        WorldPacket data(SMSG_DISMOUNT, 8);
+        data << GetPackGUID();
+        SendMessageToSet(&data, true);
+    }
 
     // only resummon old pet if the player is already added to a map
     // this prevents adding a pet to a not created map which would otherwise cause a crash
@@ -8470,7 +8482,7 @@ void Unit::SetInCombatState(bool PvP, Unit* enemy)
             pCreature->AI()->EnterCombat(enemy);
 
         // Some bosses are set into combat with zone
-        if (GetMap()->IsDungeon() && (pCreature->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_AGGRO_ZONE))
+        if (GetMap()->IsDungeon() && (pCreature->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_AGGRO_ZONE) && enemy && enemy->IsControlledByPlayer())
             pCreature->SetInCombatWithZone();
 
         if (InstanceData* mapInstance = GetInstanceData())
@@ -10564,9 +10576,6 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
     {
         case ACT_COMMAND:                                   //0x07
        // Maybe exists some flag that disable it at client side
-            if (petGuid.IsVehicle())
-                return;
-
             switch(spellid)
             {
                 case COMMAND_STAY:                          //flat=1792  //STAY
@@ -10576,12 +10585,20 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                     GetCharmInfo()->SetCommandState( COMMAND_STAY );
                     break;
                 case COMMAND_FOLLOW:                        //spellid=1792  //FOLLOW
+                    if (petGuid.IsVehicle())
+                        return;
                     AttackStop();
                     GetMotionMaster()->MoveFollow(owner,PET_FOLLOW_DIST,((Pet*)this)->GetPetFollowAngle());
                     GetCharmInfo()->SetCommandState( COMMAND_FOLLOW );
                     break;
                 case COMMAND_ATTACK:                        //spellid=1792  //ATTACK
                 {
+                    if (petGuid.IsVehicle())
+                    {
+                         VehicleSeatEntry const* seatInfo = GetVehicleKit()->GetSeatInfo(owner);
+                         if (!seatInfo || !(seatInfo->m_flags & SEAT_FLAG_ATTACK_TEST))
+                             return;
+                    }
                     Unit *TargetUnit = owner->GetMap()->GetUnit(targetGuid);
                     if(!TargetUnit)
                         return;
@@ -10625,6 +10642,9 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                     break;
                 }
                 case COMMAND_ABANDON:                       // abandon (hunter pet) or dismiss (summoned pet)
+                    if (petGuid.IsVehicle())
+                        return;
+
                     if(((Creature*)this)->IsPet())
                     {
                         Pet* p = (Pet*)this;
@@ -10785,7 +10805,14 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
     }
     else
     {
-        pet->SendPetCastFail(spellInfo->Id, result);
+        if(GetObjectGuid().IsVehicle())
+        {
+            Spell::SendCastResult(owner,spellInfo,0,result);
+            spell->SendInterrupted(0);
+        }
+        else
+            pet->SendPetCastFail(spellInfo->Id, result);
+
         if (!pet->HasSpellCooldown(spellInfo->Id))
             owner->SendClearCooldown(spellInfo->Id, pet);
 
@@ -10942,14 +10969,14 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
         return;
 
     // Handle effects proceed this time
-    for(ProcTriggeredList::const_iterator i = procTriggered.begin(); i != procTriggered.end(); ++i)
+    for(ProcTriggeredList::const_iterator itr = procTriggered.begin(); itr != procTriggered.end(); ++itr)
     {
         // Some auras can be deleted in function called in this loop (except first, ofc)
-        SpellAuraHolder *triggeredByHolder = i->triggeredByHolder;
+        SpellAuraHolder *triggeredByHolder = itr->triggeredByHolder;
         if(triggeredByHolder->IsDeleted())
             continue;
 
-        SpellProcEventEntry const *spellProcEvent = i->spellProcEvent;
+        SpellProcEventEntry const *spellProcEvent = itr->spellProcEvent;
         bool useCharges = triggeredByHolder->GetAuraCharges() > 0;
         bool procSuccess = true;
         bool anyAuraProc = false;
@@ -12115,16 +12142,35 @@ SpellAuraHolder* Unit::GetSpellAuraHolder (uint32 spellid, uint64 casterGUID)
 
 class RelocationNotifyEvent : public BasicEvent
 {
-    public:
-        RelocationNotifyEvent(Unit& owner) : BasicEvent(), m_owner(owner)
+public:
+    RelocationNotifyEvent(Unit& owner) : BasicEvent(), m_owner(owner)
+    {
+        m_owner._AddVisibilityUpdateFlag(VisibilityUpdateFlag_AI_Sheduled);
+    }
+
+#ifdef KEEP_THINGS_SIMPLE
+    bool Execute(uint64 e_time, uint32 /*p_time*/)
+    {
+        float radius = MAX_CREATURE_ATTACK_RADIUS * sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_AGGRO);
+        if (m_owner.GetTypeId() == TYPEID_PLAYER)
         {
-            m_owner.m_notify_sheduled |= AI_Notify_Sheduled;
+            MaNGOS::PlayerRelocationNotifier notify((Player&)m_owner);
+            Cell::VisitAllObjects(&m_owner,notify,radius);
+        } 
+        else //if(m_owner.GetTypeId() == TYPEID_UNIT)
+        {
+            MaNGOS::CreatureRelocationNotifier notify((Creature&)m_owner);
+            Cell::VisitAllObjects(&m_owner,notify,radius);
         }
-
-        bool Execute(uint64, uint32)
+        m_owner._RemoveVisibilityUpdateFlag(VisibilityUpdateFlag_AI_Sheduled | VisibilityUpdateFlag_AI_Now);
+        return true;
+    }
+#else
+    bool Execute(uint64 e_time, uint32 /*p_time*/)
+    {
+        float radius = MAX_CREATURE_ATTACK_RADIUS * sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_AGGRO);
+        if (m_owner.isVisibilityUpdatePending(VisibilityUpdateFlag_AI_Now))
         {
-            float radius = MAX_CREATURE_ATTACK_RADIUS * sWorld.getConfig(CONFIG_FLOAT_RATE_CREATURE_AGGRO);
-
             if (m_owner.GetTypeId() == TYPEID_PLAYER)
             {
                 MaNGOS::PlayerRelocationNotifier notify((Player&)m_owner);
@@ -12135,60 +12181,79 @@ class RelocationNotifyEvent : public BasicEvent
                 MaNGOS::CreatureRelocationNotifier notify((Creature&)m_owner);
                 Cell::VisitAllObjects(&m_owner,notify,radius);
             }
-            m_owner.m_notify_sheduled &= ~AI_Notify_Sheduled;
+            m_owner._RemoveVisibilityUpdateFlag(VisibilityUpdateFlag_AI_Sheduled | VisibilityUpdateFlag_AI_Now);
             return true;
         }
-
-        void Abort(uint64)
+        else
         {
-            m_owner.m_notify_sheduled &= ~AI_Notify_Sheduled;
+            m_owner._AddVisibilityUpdateFlag(VisibilityUpdateFlag_AI_Now);
+            m_owner.m_Events.AddEvent(this, e_time + 1, false);
+            return false;
         }
+    }
+#endif
 
-    private:
-        Unit& m_owner;
+    void Abort(uint64)
+    {
+        m_owner._RemoveVisibilityUpdateFlag(VisibilityUpdateFlag_AI_Sheduled | VisibilityUpdateFlag_AI_Now);
+    }
+
+private:
+    Unit& m_owner;
 };
 
 class UpdateVisibilityEvent : public BasicEvent
 {
-    public:
-        UpdateVisibilityEvent(Unit& owner) : BasicEvent(), m_owner(owner)
-        {
-            m_owner.m_notify_sheduled |= Visibility_Update_Sheduled;
-        }
+public:
+    UpdateVisibilityEvent(Unit& owner) : BasicEvent(), m_owner(owner)
+    {
+        m_owner._AddVisibilityUpdateFlag(VisibilityUpdateFlag_Client);
+    }
 
-        bool Execute(uint64, uint32)
-        {
-            m_owner.GetViewPoint().Call_UpdateVisibilityForOwner();
-            m_owner.UpdateObjectVisibility();
-            m_owner.m_notify_sheduled &= ~Visibility_Update_Sheduled;
-            return true;
-        }
+    bool Execute(uint64, uint32)
+    {
+        m_owner.GetViewPoint().Call_UpdateVisibilityForOwner();
+        m_owner.UpdateObjectVisibility();
+        m_owner._RemoveVisibilityUpdateFlag(VisibilityUpdateFlag_Client);
+        return true;
+    }
 
-        void Abort(uint64)
-        {
-            m_owner.m_notify_sheduled &= ~Visibility_Update_Sheduled;
-        }
+    void Abort(uint64)
+    {
+        m_owner._RemoveVisibilityUpdateFlag(VisibilityUpdateFlag_Client);
+    }
 
-    private:
-        Unit& m_owner;
+private:
+    Unit& m_owner;
 };
 
 void Unit::SheduleAINotify(uint32 delay)
 {
-    if (m_notify_sheduled & AI_Notify_Sheduled)
-        return;
-
-    RelocationNotifyEvent *notify = new RelocationNotifyEvent(*this);
-    m_Events.AddEvent(notify, m_Events.CalculateTime(delay));
+    if (!isVisibilityUpdatePending(VisibilityUpdateFlag_AI_Sheduled))
+        m_Events.AddEvent(new RelocationNotifyEvent(*this), m_Events.CalculateTime(delay));
 }
 
 void Unit::SheduleVisibilityUpdate()
 {
-    if (m_notify_sheduled & Visibility_Update_Sheduled)
-        return;
+    if (!isVisibilityUpdatePending(VisibilityUpdateFlag_Client))
+        m_Events.AddEvent(new UpdateVisibilityEvent(*this), m_Events.CalculateTime(0));
+}
 
-    UpdateVisibilityEvent *notify = new UpdateVisibilityEvent(*this);
-    m_Events.AddEvent(notify, m_Events.CalculateTime(0));
+void Unit::OnRelocated()
+{
+    // switch to use G3D::Vector3 is good idea, maybe
+    float dx = m_last_notified_position.x - GetPositionX();
+    float dy = m_last_notified_position.y - GetPositionY();
+    float dz = m_last_notified_position.z - GetPositionZ();
+    float distsq = dx*dx+dy*dy+dz*dz;
+    if (distsq > World::GetRelocationLowerLimitSq())
+    {
+        m_last_notified_position.x = GetPositionX();
+        m_last_notified_position.y = GetPositionY();
+        m_last_notified_position.z = GetPositionZ();
+        SheduleVisibilityUpdate();
+    }
+    SheduleAINotify(World::GetRelocationAINotifyDelay());
 }
 
 void Unit::_AddAura(uint32 spellID, uint32 duration, Unit * caster)

@@ -566,6 +566,20 @@ void Spell::FillTargetMap()
                     case TARGET_EFFECT_SELECT:
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetA[i], tmpUnitMap);
                         break;
+                    // dest point setup required
+                    case TARGET_AREAEFFECT_INSTANT:
+                    case TARGET_ALL_ENEMY_IN_AREA:
+                    case TARGET_ALL_ENEMY_IN_AREA_CHANNELED:
+                    case TARGET_ALL_FRIENDLY_UNITS_IN_AREA:
+                    case TARGET_AREAEFFECT_GO_AROUND_DEST:
+                    case TARGET_RANDOM_NEARBY_DEST:
+                        // triggered spells get dest point from default target set, ignore it
+                        if (!(m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION) || m_IsTriggeredSpell)
+                            if (WorldObject* castObject = GetAffectiveCasterObject())
+                                m_targets.setDestination(castObject->GetPositionX(), castObject->GetPositionY(), castObject->GetPositionZ());
+                        SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetB[i], tmpUnitMap);
+                        break;
+                    // target pre-selection required
                     case TARGET_INNKEEPER_COORDINATES:
                     case TARGET_TABLE_X_Y_Z_COORDINATES:
                     case TARGET_CASTER_COORDINATES:
@@ -581,7 +595,6 @@ void Spell::FillTargetMap()
                     case TARGET_POINT_AT_NW:
                     case TARGET_POINT_AT_SE:
                     case TARGET_POINT_AT_SW:
-                    case TARGET_RANDOM_NEARBY_DEST:
                         // need some target for processing
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetA[i], tmpUnitMap);
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetB[i], tmpUnitMap);
@@ -1307,7 +1320,7 @@ void Spell::DoSpellHitOnUnit(Unit *unit, const uint32 effectMask)
     {
         // Recheck  UNIT_FLAG_NON_ATTACKABLE for delayed spells
         if (m_spellInfo->speed > 0.0f &&
-            unit->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE) &&
+            unit->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE) && !unit->GetVehicle() &&
             unit->GetCharmerOrOwnerGuid() != m_caster->GetObjectGuid())
         {
             realCaster->SendSpellMiss(unit, m_spellInfo->Id, SPELL_MISS_EVADE);
@@ -2765,6 +2778,14 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
         {
             if (!(m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION))
             {
+                // General override, we don't want to use max spell range here.
+                // Note: 0.0 radius is also for index 36. It is possible that 36 must be defined as
+                // "at the base of", in difference to 0 which appear to be "directly in front of".
+                // TODO: some summoned will make caster be half inside summoned object. Need to fix
+                // that in the below code (nearpoint vs closepoint, etc).
+                if (m_spellInfo->EffectRadiusIndex[effIndex] == 0)
+                    radius = 0.0f;
+
                 if (m_spellInfo->Id == 50019)               // Hawk Hunting, problematic 50K radius
                     radius = 10.0f;
 
@@ -3588,7 +3609,7 @@ void Spell::_handle_immediate_phase()
             continue;
 
         // apply Send Event effect to ground in case empty target lists
-        if( m_spellInfo->Effect[j] == SPELL_EFFECT_SEND_EVENT && !HaveTargetsForEffect(SpellEffectIndex(j)) )
+        if((m_spellInfo->Effect[j] == SPELL_EFFECT_SEND_EVENT || m_spellInfo->Effect[j] == SPELL_EFFECT_DUMMY) && !HaveTargetsForEffect(SpellEffectIndex(j)) )
         {
             HandleEffects(NULL, NULL, NULL, SpellEffectIndex(j));
             continue;
@@ -4835,6 +4856,7 @@ SpellCastResult Spell::CheckCast(bool strict)
         return SPELL_FAILED_AFFECTING_COMBAT;
 
     if (m_caster->GetTypeId() == TYPEID_PLAYER && !((Player*)m_caster)->isGameMaster() &&
+        sWorld.getConfig(CONFIG_BOOL_VMAP_INDOOR_CHECK) &&
         VMAP::VMapFactory::createOrGetVMapManager()->isLineOfSightCalcEnabled())
     {
         if (m_spellInfo->Attributes & SPELL_ATTR_OUTDOORS_ONLY &&
@@ -5158,7 +5180,7 @@ SpellCastResult Spell::CheckCast(bool strict)
     bool castOnVehicleAllowed = false;
 
     if (m_caster->GetVehicle())
-        if ( VehicleSeatEntry const* seatInfo = m_caster->GetVehicle()->GetSeatInfo(m_caster))
+        if (VehicleSeatEntry const* seatInfo = m_caster->GetVehicle()->GetSeatInfo(m_caster))
             if (seatInfo->m_flags & SEAT_FLAG_CAN_CAST || seatInfo->m_flags & SEAT_FLAG_CAN_ATTACK)
                 castOnVehicleAllowed = true;
 
@@ -5989,7 +6011,7 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
         if(this->m_spellInfo->Id == 33395) // Water Elemental's Freeze should overcast Waterbolt
             m_caster->InterruptNonMeleeSpells(false);
         else
-            return SPELL_FAILED_SPELL_IN_PROGRESS;     
+            return SPELL_FAILED_SPELL_IN_PROGRESS;
     }
 
     if(m_caster->isInCombat() && IsNonCombatSpell(m_spellInfo))
@@ -6036,6 +6058,20 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
                                                             //cooldown
         if(((Creature*)m_caster)->HasSpellCooldown(m_spellInfo->Id))
             return SPELL_FAILED_NOT_READY;
+    }
+
+    // check spell focus object
+    if(m_spellInfo->RequiresSpellFocus)
+    {
+        GameObject* ok = NULL;
+        MaNGOS::GameObjectFocusCheck go_check(m_caster,m_spellInfo->RequiresSpellFocus);
+        MaNGOS::GameObjectSearcher<MaNGOS::GameObjectFocusCheck> checker(ok, go_check);
+        Cell::VisitGridObjects(m_caster, checker, m_caster->GetMap()->GetVisibilityDistance());
+
+        if(!ok)
+            return SPELL_FAILED_REQUIRES_SPELL_FOCUS;
+
+        focusObject = ok;                                   // game object found in range
     }
 
     return CheckCast(true);
@@ -6239,19 +6275,38 @@ bool Spell::CanAutoCast(Unit* target)
 
 SpellCastResult Spell::CheckRange(bool strict)
 {
-    float range_mod;
+    Unit *target = m_targets.getUnitTarget();
 
-    // self cast doesn't need range checking -- also for Starshards fix
-    if (m_spellInfo->rangeIndex == 1)
-        return SPELL_CAST_OK;
+    // special range cases
+    switch(m_spellInfo->rangeIndex)
+    {
+        // self cast doesn't need range checking -- also for Starshards fix
+        case SPELL_RANGE_IDX_SELF_ONLY:
+            return SPELL_CAST_OK;
+        // combat range spells are treated differently
+        case SPELL_RANGE_IDX_COMBAT:
+        {
+            if (target)
+            {
+                if (target == m_caster)
+                    return SPELL_CAST_OK;
 
-    if (strict)                                             //add radius of caster
-        range_mod = 1.25;
-    else                                                    //add radius of caster and ~5 yds "give"
-        range_mod = 6.25;
+                // with additional 5 dist for non stricted case (some melee spells have delay in apply
+                float range_mod = strict ? 0.0f : 5.0f;
+                float base = ATTACK_DISTANCE;
+                if (Player* modOwner = m_caster->GetSpellModOwner())
+                    range_mod += modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RANGE, base, this);
+
+                return m_caster->CanReachWithMeleeAttack(target, range_mod) ? SPELL_CAST_OK : SPELL_FAILED_OUT_OF_RANGE;
+            }
+            break;                                          // let continue in generic way for no target
+        }
+    }
+
+    //add radius of caster and ~5 yds "give" for non stricred (landing) check
+    float range_mod = strict ? 1.25f : 6.25;
 
     SpellRangeEntry const* srange = sSpellRangeStore.LookupEntry(m_spellInfo->rangeIndex);
-    Unit *target = m_targets.getUnitTarget();
     bool friendly = target ? target->IsFriendlyTo(m_caster) : false;
     float max_range = GetSpellMaxRange(srange, friendly) + range_mod;
     float min_range = GetSpellMinRange(srange, friendly);
@@ -6273,6 +6328,7 @@ SpellCastResult Spell::CheckRange(bool strict)
             return SPELL_FAILED_UNIT_NOT_INFRONT;
     }
 
+    // TODO verify that such spells really use bounding radius
     if(m_targets.m_targetMask == TARGET_FLAG_DEST_LOCATION && m_targets.m_destX != 0 && m_targets.m_destY != 0 && m_targets.m_destZ != 0)
     {
         if(!m_caster->IsWithinDist3d(m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, max_range))
@@ -7124,7 +7180,9 @@ bool Spell::IsNeedSendToClient() const
 
 bool Spell::IsTriggeredSpellWithRedundentData() const
 {
-    return m_IsTriggeredSpell && (m_spellInfo->manaCost || m_spellInfo->ManaCostPercentage);
+    return m_triggeredByAuraSpell || m_triggeredBySpellInfo ||
+        // possible not need after above check?
+        m_IsTriggeredSpell && (m_spellInfo->manaCost || m_spellInfo->ManaCostPercentage);
 }
 
 bool Spell::HaveTargetsForEffect(SpellEffectIndex effect) const
@@ -7467,7 +7525,7 @@ void Spell::ResetEffectDamageAndHeal()
     m_healing = 0;
 }
 
-void Spell::SelectMountByAreaAndSkill(Unit* target, uint32 spellId75, uint32 spellId150, uint32 spellId225, uint32 spellId300, uint32 spellIdSpecial)
+void Spell::SelectMountByAreaAndSkill(Unit* target, SpellEntry const* parentSpell, uint32 spellId75, uint32 spellId150, uint32 spellId225, uint32 spellId300, uint32 spellIdSpecial)
 {
     if (!target || target->GetTypeId() != TYPEID_PLAYER)
         return;
@@ -7482,13 +7540,19 @@ void Spell::SelectMountByAreaAndSkill(Unit* target, uint32 spellId75, uint32 spe
     {
         uint32 spellid = skillval >= 300 ? spellId300 : spellId225;
         SpellEntry const *pSpell = sSpellStore.LookupEntry(spellid);
+        if (!pSpell)
+        {
+            sLog.outError("SelectMountByAreaAndSkill: unknown spell id %i by caster: %s", spellid, target->GetGuidStr().c_str());
+            return;
+        }
+
         // zone check
         uint32 zone, area;
         target->GetZoneAndAreaId(zone, area);
 
         SpellCastResult locRes= sSpellMgr.GetSpellAllowedInLocationError(pSpell, target->GetMapId(), zone, area, target->GetCharmerOrOwnerPlayerOrPlayerItself());
         if (locRes != SPELL_CAST_OK || !((Player*)target)->CanStartFlyInArea(target->GetMapId(), zone, area))
-            target->CastSpell(target, spellId150, true);
+            target->CastSpell(target, spellId150, true, NULL, NULL, ObjectGuid(), parentSpell);
         else if (spellIdSpecial > 0)
         {
             for (PlayerSpellMap::const_iterator iter = ((Player*)target)->GetSpellMap().begin(); iter != ((Player*)target)->GetSpellMap().end(); ++iter)
@@ -7505,22 +7569,22 @@ void Spell::SelectMountByAreaAndSkill(Unit* target, uint32 spellId75, uint32 spe
                             // speed higher than 280 replace it
                             if (mountSpeed > 280)
                             {
-                                target->CastSpell(target, spellIdSpecial, true);
+                                target->CastSpell(target, spellIdSpecial, true, NULL, NULL, ObjectGuid(), parentSpell);
                                 return;
                             }
                         }
                     }
                 }
             }
-            target->CastSpell(target, pSpell, true);
+            target->CastSpell(target, pSpell, true, NULL, NULL, ObjectGuid(), parentSpell);
         }
         else
-            target->CastSpell(target, pSpell, true);
+            target->CastSpell(target, pSpell, true, NULL, NULL, ObjectGuid(), parentSpell);
     }
     else if (skillval >= 150 && spellId150 > 0)
-        target->CastSpell(target, spellId150, true);
+        target->CastSpell(target, spellId150, true, NULL, NULL, ObjectGuid(), parentSpell);
     else if (spellId75 > 0)
-        target->CastSpell(target, spellId75, true);
+        target->CastSpell(target, spellId75, true, NULL, NULL, ObjectGuid(), parentSpell);
 
     return;
 }

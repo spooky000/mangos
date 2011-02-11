@@ -21,6 +21,7 @@
 #include "ObjectGuid.h"
 #include "ProgressBar.h"
 #include "Log.h"
+#include "InstanceSaveMgr.h"
 #include "MapManager.h"
 #include "World.h"
 #include "Policies/SingletonImp.h"
@@ -158,7 +159,7 @@ bool PoolGroup<T>::CheckPool() const
     return true;
 }
 
-// Method to check event linking 
+// Method to check event linking
 template <class T>
 void PoolGroup<T>::CheckEventLinkAndReport(int16 event_id, std::map<uint32, int16> const& creature2event, std::map<uint32, int16> const& go2event) const
 {
@@ -400,7 +401,7 @@ void PoolGroup<Creature>::Spawn1Object(PoolObject* obj, bool instantly)
             // for not loaded grid just update respawn time (avoid work for instances until implemented support)
             else if(!instantly)
             {
-                sObjectMgr.SaveCreatureRespawnTime(obj->guid, 0 /*map->GetInstanceId()*/, time(NULL) + data->spawntimesecs);
+                map->GetInstanceSave()->SaveCreatureRespawnTime(obj->guid, time(NULL) + data->spawntimesecs);
             }
         }
     }
@@ -452,7 +453,7 @@ void PoolGroup<GameObject>::Spawn1Object(PoolObject* obj, bool instantly)
             {
                 // for spawned by default object only
                 if (data->spawntimesecs >= 0)
-                    sObjectMgr.SaveGORespawnTime(obj->guid, 0 /*map->GetInstanceId()*/, time(NULL) + data->spawntimesecs);
+                    map->GetInstanceSave()->SaveGORespawnTime(obj->guid, time(NULL) + data->spawntimesecs);
             }
         }
     }
