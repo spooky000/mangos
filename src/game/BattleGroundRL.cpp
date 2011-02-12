@@ -119,6 +119,9 @@ void BattleGroundRL::HandleAreaTrigger(Player *Source, uint32 Trigger)
         case 4696:                                          // buff trigger?
         case 4697:                                          // buff trigger?
             break;
+        case 4941:                                          // Falling down
+            Source->TeleportTo(GetMapId(), Source->GetPositionX(), Source->GetPositionX(), (Source->GetTerrain()->GetHeight(obj->GetPositionX(), obj->GetPositionY(), MAX_HEIGHT) + 3), Source->GetOrientation());
+            break;
         default:
             sLog.outError("WARNING: Unhandled AreaTrigger in Battleground: %u", Trigger);
             Source->GetSession()->SendAreaTriggerMessage("Warning: Unhandled AreaTrigger in Battleground: %u", Trigger);
