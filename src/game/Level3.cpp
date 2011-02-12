@@ -6341,6 +6341,12 @@ bool ChatHandler::HandleInstanceSetDataCommand(char * args)
 
 
     InstanceData* iData = map->GetInstanceData();
+    if (!iData)
+    {
+        PSendSysMessage("Map has no instance data.");
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     char* field_str = strtok ((char*) args, " ");
     char* value_str = strtok (NULL, "");
@@ -6366,6 +6372,12 @@ bool ChatHandler::HandleInstanceGetDataCommand(char * args)
     Map* map = pl->GetMap();
 
     InstanceData* iData = map->GetInstanceData();
+    if (!iData)
+    {
+        PSendSysMessage("Map has no instance data.");
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     int32 field = atoi (args);
 
