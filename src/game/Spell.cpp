@@ -1143,18 +1143,21 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
         if (target->reflectResult == SPELL_MISS_NONE)       // If reflected spell hit caster -> do all effect on him
             DoSpellHitOnUnit(m_caster, mask);
     }
-
-    if(missInfo == SPELL_MISS_MISS || missInfo == SPELL_MISS_RESIST)
+    else if(missInfo == SPELL_MISS_MISS || missInfo == SPELL_MISS_RESIST)
     {
-        Unit* realCaster = GetAffectiveCaster();
-        if(realCaster && realCaster != unit)
+        if(real_caster && real_caster != unit)
         {
-            if (!unit->isInCombat() && unit->GetTypeId() != TYPEID_PLAYER && ((Creature*)unit)->AI())
-                ((Creature*)unit)->AI()->AttackedBy(realCaster);
+            // can cause back attack (if detected)
+            if (!(m_spellInfo->AttributesEx3 & SPELL_ATTR_EX3_NO_INITIAL_AGGRO) && !IsPositiveSpell(m_spellInfo->Id) &&
+                m_caster->isVisibleForOrDetect(unit, unit, false))
+            {
+                if (!unit->isInCombat() && unit->GetTypeId() != TYPEID_PLAYER && ((Creature*)unit)->AI())
+                    ((Creature*)unit)->AI()->AttackedBy(real_caster);
 
-            unit->AddThreat(realCaster);
-            unit->SetInCombatWith(realCaster);
-            realCaster->SetInCombatWith(unit);
+                unit->AddThreat(real_caster);
+                unit->SetInCombatWith(real_caster);
+                real_caster->SetInCombatWith(unit);
+            }
         }
     }
 
@@ -6149,7 +6152,7 @@ SpellCastResult Spell::CheckCasterAuras() const
     uint32 unitflag = m_caster->GetUInt32Value(UNIT_FIELD_FLAGS);     // Get unit state
     if (unitflag & UNIT_FLAG_STUNNED)
     {
-        // spell is usable while stunned, check if aura has mechanic stun
+        // spell is usable while stunned, check if caster has only mechanic stun auras, another stun types must prevent cast spell
         if (m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_STUNNED)
         {
             bool is_stun_mechanic = true;
@@ -7182,9 +7185,7 @@ bool Spell::CheckTarget( Unit* target, SpellEffectIndex eff )
             // Get GO cast coordinates if original caster -> GO
             if (target != m_caster)
                 if (WorldObject *caster = GetCastingObject())
-                    if (m_targets.m_targetMask != (TARGET_FLAG_UNIT | TARGET_FLAG_DEST_LOCATION) && 
-                        m_spellInfo->EffectImplicitTargetB[eff] != TARGET_ALL_ENEMY_IN_AREA_INSTANT && 
-                        !target->IsWithinLOSInMap(caster))
+                    if (!target->IsWithinLOSInMap(caster))
                         return false;
             break;
     }
