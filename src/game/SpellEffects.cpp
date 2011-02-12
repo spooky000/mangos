@@ -563,6 +563,20 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         damage = (distance > radius) ? 0 : int32(m_spellInfo->EffectBasePoints[0]*distance);
                         break;
                     }
+                    //Magic Bane normal (Forge of Souls - Bronjahm)
+                    case 68793:
+                    {
+                        damage += uint32(unitTarget->GetMaxPower(POWER_MANA) / 2);
+                        damage = std::min(damage, 10000);
+                        break;
+                    }
+                    //Magic Bane heroic (Forge of Souls - Bronjahm)
+                    case 69050:
+                    {
+                        damage += uint32(unitTarget->GetMaxPower(POWER_MANA) / 2);
+                        damage = std::min(damage, 15000);
+                        break;
+                    }
                 }
                 break;
             }
@@ -1066,6 +1080,16 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                             }
                         }
                     }
+                    return;
+                }
+                case 3360:                                  // Curse of the Eye
+                {
+                    if(!unitTarget)
+                        return;
+
+                    uint32 spell_id = (unitTarget->getGender() == GENDER_MALE) ? 10651: 10653;
+
+                    m_caster->CastSpell(unitTarget, spell_id, true);
                     return;
                 }
                 case 7671:                                  // Transformation (human<->worgen)
