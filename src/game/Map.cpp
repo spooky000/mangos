@@ -3183,6 +3183,7 @@ uint32 Map::GenerateLocalLowGuid(HighGuid guidhigh)
     switch(guidhigh)
     {
         case HIGHGUID_UNIT:
+        case HIGHGUID_VEHICLE:
             return m_CreatureGuids.Generate();
         case HIGHGUID_GAMEOBJECT:
             return m_GameObjectGuids.Generate();
