@@ -1452,7 +1452,8 @@ void Creature::DeleteFromDB()
         return;
     }
 
-    sMapPersistentStateMgr.DoForAllStatesWithMapId(GetMapId(), CreatureRespawnDeleteWorker(m_DBTableGuid));
+    CreatureRespawnDeleteWorker worker (m_DBTableGuid);
+    sMapPersistentStateMgr.DoForAllStatesWithMapId(GetMapId(), worker);
 
     sObjectMgr.DeleteCreatureData(m_DBTableGuid);
 
@@ -2468,4 +2469,19 @@ void Creature::ApplyGameEventSpells(GameEventCreatureData const* eventData, bool
 
     if (cast_spell)
         CastSpell(this, cast_spell, true);
+}
+
+void Creature::FillGuidsListFromThreatList( std::vector<ObjectGuid>& guids, uint32 maxamount /*= 0*/ )
+{
+    if (!CanHaveThreatList())
+        return;
+
+    ThreatList const& threats = getThreatManager().getThreatList();
+
+    maxamount = maxamount > 0 ? std::min(maxamount,uint32(threats.size())) : threats.size();
+
+    guids.reserve(guids.size() + maxamount);
+
+    for (ThreatList::const_iterator itr = threats.begin(); maxamount && itr != threats.end(); ++itr, --maxamount)
+        guids.push_back((*itr)->getUnitGuid());
 }
