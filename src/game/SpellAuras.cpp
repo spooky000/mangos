@@ -2078,6 +2078,15 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
             {
                 switch(GetId())
                 {
+                    case 52607: //Enraged Mammoth: Trample Aura for On Death Kill Credit
+                    {
+                        if(target->GetEntry() == 28861 && target->GetHealth() < 4300)
+                            if(Unit * caster = GetCaster())
+                                if(Player * player = caster->GetCharmerOrOwnerPlayerOrPlayerItself())
+                                    player->KilledMonsterCredit(28876);
+
+                        return;
+                    }
                     case 1515:                              // Tame beast
                         // FIX_ME: this is 2.0.12 threat effect replaced in 2.1.x by dummy aura, must be checked for correctness
                         if (target->CanHaveThreatList())

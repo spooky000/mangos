@@ -1044,6 +1044,14 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
         {
             switch(m_spellInfo->Id)
             {
+                case 52596:                                 // Medallion of Mam'toth
+                {
+                    if (!unitTarget || unitTarget->GetEntry() != 28851)
+                        return;
+
+                    m_caster->CastSpell(unitTarget, 52600, true);
+                    return;
+                }
                 case 49266:                                 // Dangle Wild Carrot
                 {
                     if (!unitTarget)
