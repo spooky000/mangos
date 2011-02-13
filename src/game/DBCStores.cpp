@@ -583,6 +583,13 @@ void LoadDBCStores(const std::string& dataPath)
     for(int i = 0; i < 2; ++i)
          sfix8->EffectImplicitTargetA[i] = TARGET_SELF;
 
+    // Hand Over Reins
+    SpellEntry *sfix9 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(48297));
+    sfix9->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
+    sfix9->Effect[EFFECT_INDEX_1] = SPELL_EFFECT_DUMMY;
+    for(int i = 0; i < 2; ++i)
+         sfix9->EffectImplicitTargetA[i] = TARGET_SELF;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);

@@ -2617,6 +2617,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 case 52264:                                 // Q:Grand Theft Palomino
                 case 45877:                                 // Q:Bring 'Em Back Alive
                 case 49285:                                 // Q:Mounting Up
+                case 48297:                                 // Q:Fresh Remounts
                 {
                    if(m_caster->GetObjectGuid().IsVehicle())
                         ((Creature*)m_caster)->ForcedDespawn(500);
