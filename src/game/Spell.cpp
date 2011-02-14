@@ -6150,7 +6150,9 @@ SpellCastResult Spell::CheckCasterAuras() const
     SpellCastResult prevented_reason = SPELL_CAST_OK;
     // Have to check if there is a stun aura. Otherwise will have problems with ghost aura apply while logging out
     uint32 unitflag = m_caster->GetUInt32Value(UNIT_FIELD_FLAGS);     // Get unit state
-    if (unitflag & UNIT_FLAG_STUNNED)
+    if (unitflag & UNIT_FLAG_STUNNED && !(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_STUNNED))
+        prevented_reason = SPELL_FAILED_STUNNED;
+    /*if (unitflag & UNIT_FLAG_STUNNED)
     {
         // spell is usable while stunned, check if caster has only mechanic stun auras, another stun types must prevent cast spell
         if (m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_STUNNED)
@@ -6168,7 +6170,7 @@ SpellCastResult Spell::CheckCasterAuras() const
         }
         else
             prevented_reason = SPELL_FAILED_STUNNED;
-    }
+    }*/
     else if (unitflag & UNIT_FLAG_CONFUSED && !(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_CONFUSED))
         prevented_reason = SPELL_FAILED_CONFUSED;
     else if (unitflag & UNIT_FLAG_FLEEING && !(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_FEARED))
@@ -6217,7 +6219,7 @@ SpellCastResult Spell::CheckCasterAuras() const
                         switch(aura->GetModifier()->m_auraname)
                         {
                             case SPELL_AURA_MOD_STUN:
-                                if (!(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_STUNNED) || !aura->HasMechanic(MECHANIC_STUN))
+                                if (!(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_STUNNED)/* || !aura->HasMechanic(MECHANIC_STUN)*/)
                                     return SPELL_FAILED_STUNNED;
                                 break;
                             case SPELL_AURA_MOD_CONFUSE:
