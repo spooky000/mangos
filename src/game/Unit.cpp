@@ -10541,6 +10541,9 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                 {
                     if (petGuid.IsVehicle())
                     {
+                        if (!GetVehicleKit())
+                            return;
+
                          VehicleSeatEntry const* seatInfo = GetVehicleKit()->GetSeatInfo(owner);
                          if (!seatInfo || !(seatInfo->m_flags & SEAT_FLAG_ATTACK_TEST))
                              return;
