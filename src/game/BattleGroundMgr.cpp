@@ -1509,16 +1509,16 @@ BattleGround * BattleGroundMgr::CreateNewBattleGround(BattleGroundTypeId bgTypeI
     if(bgTypeId==BATTLEGROUND_RB)
     {
         int count = 0;
-        if (!sBattleGroundMgr.isTesting())
-        {
-            for(World::SessionMap::const_iterator itr = sWorld.GetSessions().begin(); itr != sWorld.GetSessions().end(); ++itr)
-            {
-                if (!itr->second || !itr->second->GetPlayer())
-                    continue;
 
-                if (itr->second->GetPlayer()->getLevel() == 80)
-                    ++count;
-            }
+        World::SessionMap sessions = sWorld.GetSessions();
+
+        for(World::SessionMap::iterator itr = sessions.begin(); itr != sessions.end(); itr++)
+        {
+            if (!itr->second || !itr->second->GetPlayer())
+                continue;
+
+            if (itr->second->GetPlayer()->getLevel() == 80)
+                ++count;
         }
 
         bgTypeId = BATTLEGROUND_AB; // Default initialization
