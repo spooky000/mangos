@@ -64,19 +64,19 @@ BattleGroundSA::~BattleGroundSA()
 void BattleGroundSA::FillInitialWorldStates(WorldPacket& data, uint32& count)
 {
     if (GetDefender() == HORDE)
-	{
+    {
         UpdateWorldState(BG_SA_ALLY_ATTACKS, 1);
         UpdateWorldState(BG_SA_HORDE_ATTACKS, 0);
         UpdateWorldState(BG_SA_HORDE_DEFENCE_TOKEN,1);
         UpdateWorldState(BG_SA_ALLIANCE_DEFENCE_TOKEN,0);
-	}
+    }
     else
-	{
+    {
         UpdateWorldState(BG_SA_HORDE_ATTACKS, 1);
         UpdateWorldState(BG_SA_ALLY_ATTACKS, 0);
         UpdateWorldState(BG_SA_HORDE_DEFENCE_TOKEN,0);
         UpdateWorldState(BG_SA_ALLIANCE_DEFENCE_TOKEN,1);
-	}
+    }
 
     for (uint32 z = 0; z <= BG_SA_GATE_MAX; ++z)
         FillInitialWorldState(data, count, BG_SA_GateStatus[z], GateStatus[z]);
