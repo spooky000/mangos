@@ -640,9 +640,7 @@ void Pet::Unsummon(PetSaveMode mode, Unit* owner /*= NULL*/)
 
     if (!owner)
         owner = GetOwner();
-
-    m_removed = true;
-
+	
     CombatStop();
 
     if (owner)
@@ -722,7 +720,7 @@ void Pet::Unsummon(PetSaveMode mode, Unit* owner /*= NULL*/)
     }
 
     AddObjectToRemoveList();
-
+    m_removed = true;
 }
 
 void Pet::GivePetXP(uint32 xp)
