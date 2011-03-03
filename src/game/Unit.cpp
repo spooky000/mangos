@@ -1723,17 +1723,6 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
         case MELEE_HIT_NORMAL:
             damageInfo->TargetState = VICTIMSTATE_NORMAL;
             damageInfo->procEx|=PROC_EX_NORMAL_HIT;
-            
-            // Resilience - reduce damage
-            uint32 redunction_affected_damage = CalcNotIgnoreDamageRedunction(damageInfo->damage,damageInfo->damageSchoolMask);
-            uint32 resilienceReduction;
-            if (attackType != RANGED_ATTACK)
-                resilienceReduction = pVictim->GetMeleeDamageReduction(redunction_affected_damage);
-            else
-                resilienceReduction = pVictim->GetRangedDamageReduction(redunction_affected_damage);
-
-            damageInfo->damage      -= resilienceReduction;
-            damageInfo->cleanDamage += resilienceReduction;
             break;
         case MELEE_HIT_CRIT:
         {
@@ -1876,8 +1865,8 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
             break;
     }
 
-    // only from players
-    if (GetTypeId() == TYPEID_PLAYER)
+    // only from players and their pets
+    if (GetTypeId() == TYPEID_PLAYER || IsPet())
     {
         uint32 redunction_affected_damage = CalcNotIgnoreDamageRedunction(damageInfo->damage,damageInfo->damageSchoolMask);
         uint32 resilienceReduction;
