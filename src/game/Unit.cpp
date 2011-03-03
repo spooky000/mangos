@@ -1866,7 +1866,7 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
     }
 
     // only from players and their pets
-    if (GetTypeId() == TYPEID_PLAYER || IsPet())
+    if (GetTypeId() == TYPEID_PLAYER || ((Creature*)this)->IsPet())
     {
         uint32 redunction_affected_damage = CalcNotIgnoreDamageRedunction(damageInfo->damage,damageInfo->damageSchoolMask);
         uint32 resilienceReduction;
