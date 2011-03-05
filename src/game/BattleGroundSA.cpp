@@ -673,10 +673,8 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
             switch (eventId)
             {
                 case 21630:
-                    SendMessageSA(player, BG_SA_ATTACK, _GatesName(target_obj));
                     break;
                 case 19836:
-                    // SendMessageSA(player, BG_SA_DAMAGE, _GatesName(target_obj));
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type);
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DAMAGE);
                     break;
@@ -697,10 +695,8 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
             switch (eventId)
             {
                 case 21630:
-                    SendMessageSA(player, BG_SA_ATTACK, _GatesName(target_obj));
                     break;
                 case 19041:
-                    // SendMessageSA(player, BG_SA_DAMAGE, _GatesName(target_obj));
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type);
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DAMAGE);
                     break;
@@ -720,10 +716,8 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
             switch (eventId)
             {
                 case 21630:
-                    SendMessageSA(player, BG_SA_ATTACK, _GatesName(target_obj));
                     break;
                 case 19040:
-                    // SendMessageSA(player, BG_SA_DAMAGE, _GatesName(target_obj));
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type);
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DAMAGE);
                     break;
@@ -743,10 +737,8 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
             switch (eventId)
             {
                 case 21630:
-                    SendMessageSA(player, BG_SA_ATTACK, _GatesName(target_obj));
                     break;
                 case 19043:
-                    // SendMessageSA(player, BG_SA_DAMAGE, _GatesName(target_obj));
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type);
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DAMAGE);
                     break;
@@ -766,10 +758,8 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
             switch (eventId)
             {
                 case 21630:
-                    SendMessageSA(player, BG_SA_ATTACK, _GatesName(target_obj));
                     break;
                 case 19042:
-                    // SendMessageSA(player, BG_SA_DAMAGE, _GatesName(target_obj));
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type);
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DAMAGE);
                     break;
@@ -789,10 +779,8 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
             switch (eventId)
             {
                 case 21630:
-                    SendMessageSA(player, BG_SA_ATTACK, _GatesName(target_obj));
                     break;
                 case 19044:
-                    // SendMessageSA(player, BG_SA_DAMAGE, _GatesName(target_obj));
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type);
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DAMAGE);
                     break;
