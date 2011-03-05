@@ -206,7 +206,6 @@ void BattleGroundSA::Update(uint32 diff)
                     m_Gyd[gyd] += 2;
                     // create new occupied banner
                     _CreateBanner(gyd, BG_SA_GARVE_TYPE_OCCUPIED, teamIndex, true);
-                    //_SendNodeUpdate(node);
                     _GydOccupied(gyd,(teamIndex == 0) ? ALLIANCE:HORDE);
                     // Message to chatlog
                     RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
@@ -439,7 +438,7 @@ void BattleGroundSA::UpdatePhase()
         m_prevGyd[i] = 0;
         m_GydTimers[i] = 0;
         m_BannerTimers[i].timer = 0;
-        SpawnEvent(i, (GetDefender() == ALLIANCE ? 1 : 2), true); 
+        SpawnEvent(i, 3, true); 
         m_Gyd[i] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_OCCUPIED : BG_SA_GARVE_STATUS_HORDE_OCCUPIED;
         m_ActiveEvents[i] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_OCCUPIED : BG_SA_GARVE_STATUS_HORDE_OCCUPIED;
         _GydOccupied(i,GetDefender() == ALLIANCE ? ALLIANCE : HORDE);
@@ -541,12 +540,10 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
         // If last state is NOT occupied, change node to enemy-contested
         if (m_prevGyd[gyd] < BG_SA_GARVE_TYPE_OCCUPIED)
         {
-            //UpdatePlayerScore(source, SCORE_BASES_ASSAULTED, 1);
             m_prevGyd[gyd] = m_Gyd[gyd];
             m_Gyd[gyd] = teamIndex + BG_SA_GARVE_TYPE_CONTESTED;
             // create new contested banner
             _CreateBanner(gyd, BG_SA_GARVE_TYPE_CONTESTED, teamIndex, true);
-            //_SendNodeUpdate(node);
             m_GydTimers[gyd] = BG_SA_FLAG_CAPTURING_TIME;
 
             if (teamIndex == BG_TEAM_ALLIANCE)
@@ -563,12 +560,10 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
         // If contested, change back to occupied
         else
         {
-            UpdatePlayerScore(source, SCORE_BASES_DEFENDED, 1);
             m_prevGyd[gyd] = m_Gyd[gyd];
             m_Gyd[gyd] = teamIndex + BG_SA_GARVE_TYPE_OCCUPIED;
             // create new occupied banner
             _CreateBanner(gyd, BG_SA_GARVE_TYPE_OCCUPIED, teamIndex, true);
-            //_SendNodeUpdate(node);
             m_GydTimers[gyd] = 0;
             //_NodeOccupied(node,(teamIndex == BG_TEAM_ALLIANCE) ? ALLIANCE:HORDE);
 
@@ -590,12 +585,10 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
     {
         if (m_Gyd[gyd] == BG_SA_GARVE_STATUS_HORDE_OCCUPIED)
         {
-            //UpdatePlayerScore(source, SCORE_BASES_ASSAULTED, 1);
             m_prevGyd[gyd] = m_Gyd[gyd];
             m_Gyd[gyd] = teamIndex + BG_SA_GARVE_TYPE_CONTESTED;
             // create new contested banner
             _CreateBanner(gyd, BG_SA_GARVE_TYPE_CONTESTED, teamIndex, true);
-            //_SendNodeUpdate(node);
             m_GydTimers[gyd] = BG_SA_FLAG_CAPTURING_TIME;
 
             if (teamIndex == BG_TEAM_ALLIANCE)
@@ -615,12 +608,10 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
     {
         if (m_Gyd[gyd] == BG_SA_GARVE_STATUS_ALLY_OCCUPIED)
         {
-            //UpdatePlayerScore(source, SCORE_BASES_ASSAULTED, 1);
             m_prevGyd[gyd] = m_Gyd[gyd];
             m_Gyd[gyd] = teamIndex + BG_SA_GARVE_TYPE_CONTESTED;
             // create new contested banner
             _CreateBanner(gyd, BG_SA_GARVE_TYPE_CONTESTED, teamIndex, true);
-            //_SendNodeUpdate(node);
             m_GydTimers[gyd] = BG_SA_FLAG_CAPTURING_TIME;
 
             if (teamIndex == BG_TEAM_ALLIANCE)
