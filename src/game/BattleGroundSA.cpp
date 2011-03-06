@@ -192,43 +192,6 @@ void BattleGroundSA::Update(uint32 diff)
                     _CreateBanner(gyd, m_BannerTimers[gyd].type, m_BannerTimers[gyd].teamIndex, false);
                 }
             }
-            // 1-minute to occupy a node from contested state
-            if (m_GydTimers[gyd])
-            {
-                if (m_GydTimers[gyd] > diff)
-                    m_GydTimers[gyd] -= diff;
-                else
-                {
-                    m_GydTimers[gyd] = 0;
-                    // Change from contested to occupied !
-                    uint8 teamIndex = m_Gyd[gyd]-1;
-                    m_prevGyd[gyd] = m_Gyd[gyd];
-                    m_Gyd[gyd] += 2;
-                    // create new occupied banner
-                    _CreateBanner(gyd, BG_SA_GARVE_TYPE_OCCUPIED, teamIndex, true);
-                    _GydOccupied(gyd,(teamIndex == 0) ? ALLIANCE:HORDE);
-                    // Message to chatlog
-                    RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
-                    RewardXpToTeam(0, 0.6f, (teamIndex == 0) ? ALLIANCE:HORDE);
-                    switch(gyd)
-                    {
-                        case 0: SpawnEvent(SA_EVENT_ADD_VECH_W, 0, true);break;
-                        case 1: SpawnEvent(SA_EVENT_ADD_VECH_E, 0, true);break;
-                    }
-                    if (teamIndex == 0)
-                    {
-                        // SendMessage2ToAll(LANG_BG_SA_AH_SEIZES_GRAVEYARD,CHAT_MSG_BG_SYSTEM_ALLIANCE,NULL,LANG_BG_ALLY,_GydName(gyd));
-                        PlaySoundToAll(BG_SA_SOUND_GYD_CAPTURED_ALLIANCE);
-                        SendWarningToAllSA(gyd, STATUS_CONQUESTED, ALLIANCE);
-                    }
-                    else
-                    {
-                        // SendMessage2ToAll(LANG_BG_SA_AH_SEIZES_GRAVEYARD,CHAT_MSG_BG_SYSTEM_HORDE,NULL,LANG_BG_HORDE,_GydName(gyd));
-                        PlaySoundToAll(BG_SA_SOUND_GYD_CAPTURED_HORDE);
-                        SendWarningToAllSA(gyd, STATUS_CONQUESTED, HORDE);
-                    }
-                }
-            }
         }
         UpdateTimer();
     }
@@ -535,99 +498,33 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
         return;
     uint32 sound = 0;
 
-    if ((m_Gyd[gyd] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[gyd] == BG_SA_GARVE_STATUS_HORDE_CONTESTED))
+    if ((m_Gyd[gyd] == BG_SA_GARVE_STATUS_ALLY_OCCUPIED) || (m_Gyd[gyd] == BG_SA_GARVE_STATUS_HORDE_OCCUPIED))
     {
-        // If last state is NOT occupied, change node to enemy-contested
-        if (m_prevGyd[gyd] < BG_SA_GARVE_TYPE_OCCUPIED)
-        {
-            m_prevGyd[gyd] = m_Gyd[gyd];
-            m_Gyd[gyd] = teamIndex + BG_SA_GARVE_TYPE_CONTESTED;
-            // create new contested banner
-            _CreateBanner(gyd, BG_SA_GARVE_TYPE_CONTESTED, teamIndex, true);
-            m_GydTimers[gyd] = BG_SA_FLAG_CAPTURING_TIME;
+        m_Gyd[gyd] = teamIndex + BG_SA_GARVE_TYPE_OCCUPIED;
+        //make the new banner not capturable by defenders
+        m_Gyd[gyd] += 2;
+        // create new occupied banner (attacker faction)
+        _CreateBanner(gyd, BG_SA_GARVE_TYPE_OCCUPIED, teamIndex, true);
+        _GydOccupied(gyd,(teamIndex == 0) ? ALLIANCE:HORDE);
+        RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
+        RewardXpToTeam(0, 0.6f, (teamIndex == 0) ? ALLIANCE:HORDE);
 
-            if (teamIndex == BG_TEAM_ALLIANCE)
-            {
-                // SendMessage2ToAll(LANG_BG_SA_AH_PRECIPITATES_GRAVEYARD,CHAT_MSG_BG_SYSTEM_ALLIANCE, source, LANG_BG_ALLY, _GydName(gyd));
-                SendWarningToAllSA(gyd, STATUS_CLAIMED, ALLIANCE);
-            }
-            else
-            {
-                // SendMessage2ToAll(LANG_BG_SA_AH_PRECIPITATES_GRAVEYARD,CHAT_MSG_BG_SYSTEM_HORDE, source, LANG_BG_HORDE, _GydName(gyd));
-                SendWarningToAllSA(gyd, STATUS_CLAIMED, HORDE);
-            }
+        if (teamIndex == BG_TEAM_ALLIANCE)
+        {
+            SendWarningToAllSA(gyd, STATUS_CONQUESTED, ALLIANCE);
+            PlaySoundToAll(BG_SA_SOUND_GYD_CAPTURED_ALLIANCE);
         }
-        // If contested, change back to occupied
         else
         {
-            m_prevGyd[gyd] = m_Gyd[gyd];
-            m_Gyd[gyd] = teamIndex + BG_SA_GARVE_TYPE_OCCUPIED;
-            // create new occupied banner
-            _CreateBanner(gyd, BG_SA_GARVE_TYPE_OCCUPIED, teamIndex, true);
-            m_GydTimers[gyd] = 0;
-            //_NodeOccupied(node,(teamIndex == BG_TEAM_ALLIANCE) ? ALLIANCE:HORDE);
-
-            if (teamIndex == BG_TEAM_ALLIANCE)
-            {
-                // SendMessage2ToAll(LANG_BG_SA_AH_PRECIPITATES_GRAVEYARD,CHAT_MSG_BG_SYSTEM_ALLIANCE, source, LANG_BG_ALLY, _GydName(gyd));
-                SendWarningToAllSA(gyd, STATUS_CLAIMED, ALLIANCE);
-            }
-            else
-            {
-                // SendMessage2ToAll(LANG_BG_SA_AH_PRECIPITATES_GRAVEYARD,CHAT_MSG_BG_SYSTEM_HORDE, source, LANG_BG_HORDE, _GydName(gyd));
-                SendWarningToAllSA(gyd, STATUS_CLAIMED, HORDE);
-            }
+            SendWarningToAllSA(gyd, STATUS_CONQUESTED, HORDE);
+            PlaySoundToAll(BG_SA_SOUND_GYD_CAPTURED_HORDE);
         }
-        sound = (teamIndex == BG_TEAM_ALLIANCE) ? BG_SA_SOUND_GYD_ASSAULTED_ALLIANCE : BG_SA_SOUND_GYD_ASSAULTED_HORDE;
-    }
-    // If node is occupied, change to enemy-contested
-    else if (defender == HORDE)
-    {
-        if (m_Gyd[gyd] == BG_SA_GARVE_STATUS_HORDE_OCCUPIED)
+        switch(gyd)
         {
-            m_prevGyd[gyd] = m_Gyd[gyd];
-            m_Gyd[gyd] = teamIndex + BG_SA_GARVE_TYPE_CONTESTED;
-            // create new contested banner
-            _CreateBanner(gyd, BG_SA_GARVE_TYPE_CONTESTED, teamIndex, true);
-            m_GydTimers[gyd] = BG_SA_FLAG_CAPTURING_TIME;
-
-            if (teamIndex == BG_TEAM_ALLIANCE)
-            {
-                // SendMessage2ToAll(LANG_BG_SA_AH_PRECIPITATES_GRAVEYARD,CHAT_MSG_BG_SYSTEM_ALLIANCE, source, LANG_BG_ALLY, _GydName(gyd));
-                SendWarningToAllSA(gyd, STATUS_CLAIMED, ALLIANCE);
-            }
-            else
-            {
-                // SendMessage2ToAll(LANG_BG_SA_AH_PRECIPITATES_GRAVEYARD,CHAT_MSG_BG_SYSTEM_HORDE, source, LANG_BG_HORDE, _GydName(gyd));
-                SendWarningToAllSA(gyd, STATUS_CLAIMED, HORDE);
-            }
-            sound = (teamIndex == BG_TEAM_ALLIANCE) ? BG_SA_SOUND_GYD_ASSAULTED_ALLIANCE : BG_SA_SOUND_GYD_ASSAULTED_HORDE;
+            case 0: SpawnEvent(SA_EVENT_ADD_VECH_E, 0, true);break;
+            case 1: SpawnEvent(SA_EVENT_ADD_VECH_W, 0, true);break;
         }
     }
-    else if (defender == ALLIANCE)
-    {
-        if (m_Gyd[gyd] == BG_SA_GARVE_STATUS_ALLY_OCCUPIED)
-        {
-            m_prevGyd[gyd] = m_Gyd[gyd];
-            m_Gyd[gyd] = teamIndex + BG_SA_GARVE_TYPE_CONTESTED;
-            // create new contested banner
-            _CreateBanner(gyd, BG_SA_GARVE_TYPE_CONTESTED, teamIndex, true);
-            m_GydTimers[gyd] = BG_SA_FLAG_CAPTURING_TIME;
-
-            if (teamIndex == BG_TEAM_ALLIANCE)
-            {
-                // SendMessage2ToAll(LANG_BG_SA_AH_PRECIPITATES_GRAVEYARD,CHAT_MSG_BG_SYSTEM_ALLIANCE, source, LANG_BG_ALLY, _GydName(gyd));
-                SendWarningToAllSA(gyd, STATUS_CLAIMED, ALLIANCE);
-            }
-            else
-            {
-                // SendMessage2ToAll(LANG_BG_SA_AH_PRECIPITATES_GRAVEYARD,CHAT_MSG_BG_SYSTEM_HORDE, source, LANG_BG_HORDE, _GydName(gyd));
-                SendWarningToAllSA(gyd, STATUS_CLAIMED, HORDE);
-            }
-            sound = (teamIndex == BG_TEAM_ALLIANCE) ? BG_SA_SOUND_GYD_ASSAULTED_ALLIANCE : BG_SA_SOUND_GYD_ASSAULTED_HORDE;
-        }
-    }
-   PlaySoundToAll(sound);
 }
 
 void BattleGroundSA::EventSpawnGOSA(Player *owner, Creature* obj, float x, float y, float z)
@@ -935,33 +832,7 @@ void BattleGroundSA::SendWarningToAllSA(uint8 gyd, int status, Team team, bool i
 {
     if (!isDoor)
     {
-        switch(status)
-        {
-            case STATUS_CLAIMED:
-            {
-                if (team == HORDE)
-                {
-                    switch(gyd)
-                    {
-                        case 0: SendWarningToAll(LANG_BG_SA_HORDE_EAST_CLAIMED); break;
-                        case 1: SendWarningToAll(LANG_BG_SA_HORDE_WEST_CLAIMED); break;
-                        case 2: SendWarningToAll(LANG_BG_SA_HORDE_SOUTH_CLAIMED); break;
-                        default: sLog.outError("Error in SA strings: Unknow graveyard %s", gyd); break;
-                    }
-                }
-                else
-                {
-                    switch(gyd)
-                    {
-                        case 0: SendWarningToAll(LANG_BG_SA_ALLIANCE_EAST_CLAIMED); break;
-                        case 1: SendWarningToAll(LANG_BG_SA_ALLIANCE_WEST_CLAIMED); break;
-                        case 2: SendWarningToAll(LANG_BG_SA_ALLIANCE_SOUTH_CLAIMED); break;
-                        default: sLog.outError("Error in SA strings: Unknow graveyard %s", gyd); break;
-                    }
-                }
-                break;
-            }
-            case STATUS_CONQUESTED:
+        if (status == STATUS_CONQUESTED)
             {
                 if (team == HORDE)
                 {
@@ -983,10 +854,7 @@ void BattleGroundSA::SendWarningToAllSA(uint8 gyd, int status, Team team, bool i
                         default: sLog.outError("Error in SA strings: Unknow graveyard %s", gyd); break;
                     }
                 }
-                break;
             }
-            default:
-                sLog.outError("Error in SA strings: Unknow status %s", status); break;
         }
     }
     else

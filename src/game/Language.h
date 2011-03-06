@@ -941,12 +941,6 @@ enum MangosStrings
     /*##############################################
     #          Strings for SendWarningToAll        #
     ##############################################*/
-    LANG_BG_SA_HORDE_EAST_CLAIMED           = 20024,
-    LANG_BG_SA_HORDE_WEST_CLAIMED           = 20025,
-    LANG_BG_SA_HORDE_SOUTH_CLAIMED          = 20026,
-    LANG_BG_SA_ALLIANCE_EAST_CLAIMED        = 20027,
-    LANG_BG_SA_ALLIANCE_WEST_CLAIMED        = 20028,
-    LANG_BG_SA_ALLIANCE_SOUTH_CLAIMED       = 20029,
     LANG_BG_SA_HORDE_EAST_CONQUESTED        = 20030,
     LANG_BG_SA_HORDE_WEST_CONQUESTED        = 20031,
     LANG_BG_SA_HORDE_SOUTH_CONQUESTED       = 20032,

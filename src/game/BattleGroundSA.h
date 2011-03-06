@@ -109,7 +109,6 @@ enum BG_SA_GraveYard
 
 enum BG_SA_Timers
 {
-    BG_SA_FLAG_CAPTURING_TIME           = 60000,
     BG_SA_ROUNDLENGTH                   = 600000,
     BG_SA_BOAT_START                    = 60000
 };
@@ -193,12 +192,6 @@ enum VehicleFactions
     VEHICLE_FACTION_HORDE    = 6
 };
 
-/* Ships:
- * 193182 - ally
- * 193183 - horde
- * 193184 - horde
- * 193185 - ally
- */
 enum BG_SA_Boat
 {
     BG_SA_BOAT_ONE_A = 193182,
