@@ -825,26 +825,25 @@ void BattleGroundSA::SendWarningToAllSA(uint8 gyd, int status, Team team, bool i
     if (!isDoor)
     {
         if (status == STATUS_CONQUESTED)
+        {
+            if (team == HORDE)
             {
-                if (team == HORDE)
+                switch(gyd)
                 {
-                    switch(gyd)
-                    {
-                        case 0: SendWarningToAll(LANG_BG_SA_HORDE_EAST_CONQUESTED); break;
-                        case 1: SendWarningToAll(LANG_BG_SA_HORDE_WEST_CONQUESTED); break;
-                        case 2: SendWarningToAll(LANG_BG_SA_HORDE_SOUTH_CONQUESTED); break;
-                        default: sLog.outError("Error in SA strings: Unknow graveyard %s", gyd); break;
-                    }
+                    case 0: SendWarningToAll(LANG_BG_SA_HORDE_EAST_CONQUESTED); break;
+                    case 1: SendWarningToAll(LANG_BG_SA_HORDE_WEST_CONQUESTED); break;
+                    case 2: SendWarningToAll(LANG_BG_SA_HORDE_SOUTH_CONQUESTED); break;
+                    default: sLog.outError("Error in SA strings: Unknow graveyard %s", gyd); break;
                 }
-                else
+            }
+            else
+            {
+                switch(gyd)
                 {
-                    switch(gyd)
-                    {
-                        case 0: SendWarningToAll(LANG_BG_SA_ALLIANCE_EAST_CONQUESTED); break;
-                        case 1: SendWarningToAll(LANG_BG_SA_ALLIANCE_WEST_CONQUESTED); break;
-                        case 2: SendWarningToAll(LANG_BG_SA_ALLIANCE_SOUTH_CONQUESTED); break;
-                        default: sLog.outError("Error in SA strings: Unknow graveyard %s", gyd); break;
-                    }
+                    case 0: SendWarningToAll(LANG_BG_SA_ALLIANCE_EAST_CONQUESTED); break;
+                    case 1: SendWarningToAll(LANG_BG_SA_ALLIANCE_WEST_CONQUESTED); break;
+                    case 2: SendWarningToAll(LANG_BG_SA_ALLIANCE_SOUTH_CONQUESTED); break;
+                    default: sLog.outError("Error in SA strings: Unknow graveyard %s", gyd); break;
                 }
             }
         }
