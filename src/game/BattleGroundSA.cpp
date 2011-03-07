@@ -493,9 +493,6 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
 
     BattleGroundTeamIndex teamIndex = GetTeamIndexByTeamId(source->GetTeam());
 
-    // Check if player really could use this banner, not cheated
-    if (!(m_Gyd[gyd] == 0 || teamIndex == m_Gyd[gyd] % 2))
-        return;
     uint32 sound = 0;
 
     if ((m_Gyd[gyd] == BG_SA_GARVE_STATUS_ALLY_OCCUPIED) || (m_Gyd[gyd] == BG_SA_GARVE_STATUS_HORDE_OCCUPIED))
@@ -506,6 +503,7 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
         // create new occupied banner (attacker faction)
         _CreateBanner(gyd, BG_SA_GARVE_TYPE_OCCUPIED, teamIndex, true);
         _GydOccupied(gyd,(teamIndex == 0) ? ALLIANCE:HORDE);
+
         RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
         RewardXpToTeam(0, 0.6f, (teamIndex == 0) ? ALLIANCE:HORDE);
 
@@ -567,7 +565,6 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DAMAGE);
                     break;
                 case 19837:
-                    // SendMessageSA(player, BG_SA_DESTROY, _GatesName(target_obj));
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type, true);
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DESTROY);
                     UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
@@ -589,7 +586,6 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DAMAGE);
                     break;
                 case 19046:
-                    // SendMessageSA(player, BG_SA_DESTROY, _GatesName(target_obj));
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type, true);
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DESTROY);
                     UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
@@ -610,7 +606,6 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DAMAGE);
                     break;
                 case 19045:
-                    // SendMessageSA(player, BG_SA_DESTROY, _GatesName(target_obj));
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type, true);
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DESTROY);
                     UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
@@ -631,7 +626,6 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DAMAGE);
                     break;
                 case 19048:
-                    // SendMessageSA(player, BG_SA_DESTROY, _GatesName(target_obj));
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type, true);
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DESTROY);
                     UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
@@ -652,7 +646,6 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DAMAGE);
                     break;
                 case 19047:
-                    // SendMessageSA(player, BG_SA_DESTROY, _GatesName(target_obj));
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type, true);
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DESTROY);
                     UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
@@ -673,7 +666,6 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DAMAGE);
                     break;
                 case 19049:
-                    // SendMessageSA(player, BG_SA_DESTROY, _GatesName(target_obj));
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type, true);
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DESTROY);
                     UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
