@@ -213,7 +213,6 @@ void BattleGroundSA::Update(uint32 diff)
             ToggleTimer();
             SetStatus(STATUS_IN_PROGRESS); // Start round two
             PlaySoundToAll(SOUND_BG_START);
-            SendMessageToAll(LANG_BG_SA_HAS_BEGUN, CHAT_MSG_BG_SYSTEM_NEUTRAL, NULL);
             SendWarningToAll(LANG_BG_SA_HAS_BEGUN);
         }
         else
@@ -398,19 +397,18 @@ void BattleGroundSA::UpdatePhase()
         {
             SpawnEvent(i, z, false);
         }
-        m_prevGyd[i] = 0;
         m_GydTimers[i] = 0;
         m_BannerTimers[i].timer = 0;
-        SpawnEvent(i, 3, true); 
-        m_Gyd[i] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_OCCUPIED : BG_SA_GARVE_STATUS_HORDE_OCCUPIED;
-        m_ActiveEvents[i] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_OCCUPIED : BG_SA_GARVE_STATUS_HORDE_OCCUPIED;
+        SpawnEvent(i, (GetDefender() == ALLIANCE ? 1 : 2), true);  
+        m_Gyd[i] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED;
+        m_ActiveEvents[i] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED;
         _GydOccupied(i,GetDefender() == ALLIANCE ? ALLIANCE : HORDE);
     }
 
-    SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_HORDE_OCCUPIED, GetDefender() == ALLIANCE ? false : true);
-    SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_ALLY_OCCUPIED, GetDefender() == ALLIANCE ? true : false);
+    SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_HORDE_CONTESTED, GetDefender() == ALLIANCE ? false : true);
+    SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_ALLY_CONTESTED, GetDefender() == ALLIANCE ? true : false);
 
-    m_ActiveEvents[5] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_OCCUPIED : BG_SA_GARVE_STATUS_HORDE_OCCUPIED;
+    m_ActiveEvents[5] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED;
 
     for (uint32 z = 0; z <= BG_SA_GATE_MAX; ++z)
         UpdateWorldState(BG_SA_GateStatus[z], GateStatus[z]);
@@ -495,13 +493,12 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
 
     uint32 sound = 0;
 
-    if ((m_Gyd[gyd] == BG_SA_GARVE_STATUS_ALLY_OCCUPIED) || (m_Gyd[gyd] == BG_SA_GARVE_STATUS_HORDE_OCCUPIED))
+    if ((m_Gyd[gyd] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[gyd] == BG_SA_GARVE_STATUS_HORDE_CONTESTED))
     {
-        m_Gyd[gyd] = teamIndex + BG_SA_GARVE_TYPE_OCCUPIED;
         //make the new banner not capturable by defenders
-        m_Gyd[gyd] += 2;
+        m_Gyd[gyd] += (GetDefender() == ALLIANCE ? 3 : 1);
         // create new occupied banner (attacker faction)
-        _CreateBanner(gyd, BG_SA_GARVE_TYPE_OCCUPIED, teamIndex, true);
+        _CreateBanner(gyd, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_HORDE_OCCUPIED : BG_SA_GARVE_STATUS_ALLY_OCCUPIED), teamIndex, true);
         _GydOccupied(gyd,(teamIndex == 0) ? ALLIANCE:HORDE);
 
         RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
@@ -757,7 +754,8 @@ WorldSafeLocsEntry const* BattleGroundSA::GetClosestGraveYard(Player* player)
     // Is there any occupied node for this team?
     std::vector<uint8> gyd;
     for (uint8 i = 0; i < BG_SA_GRY_MAX; ++i)
-        if (m_Gyd[i] == teamIndex + 3)
+        // players should be able to ressurect at their faction's contested/occupied graveyards too
+        if ((m_Gyd[i] == teamIndex + 1) || (m_Gyd[i] == teamIndex + 3)) 
             gyd.push_back(i);
 
     WorldSafeLocsEntry const* good_entry = NULL;

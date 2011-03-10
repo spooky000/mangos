@@ -77,21 +77,16 @@ static int32 GrraveYardWS[3][2]=
 
 enum BG_SA_Sounds
 {
-    BG_SA_SOUND_GYD_CLAIMED            = 8192,
     BG_SA_SOUND_GYD_CAPTURED_ALLIANCE  = 8173,
     BG_SA_SOUND_GYD_CAPTURED_HORDE     = 8213,
-    BG_SA_SOUND_GYD_ASSAULTED_ALLIANCE = 8212,
-    BG_SA_SOUND_GYD_ASSAULTED_HORDE    = 8174,
     BG_SA_SOUND_GYD_VICTORY            = 8456
 };
 
 enum BG_SA_GraveYardStatus
 {
-    BG_SA_GARVE_TYPE_CONTESTED           = 1,
-    BG_SA_GARVE_STATUS_ALLY_CONTESTED    = 1,
+    BG_SA_GARVE_STATUS_ALLY_CONTESTED    = 1,   //owned by the Allies, clickable for Horde
     BG_SA_GARVE_STATUS_HORDE_CONTESTED   = 2,
-    BG_SA_GARVE_TYPE_OCCUPIED            = 3,
-    BG_SA_GARVE_STATUS_ALLY_OCCUPIED     = 3,
+    BG_SA_GARVE_STATUS_ALLY_OCCUPIED     = 3,   //captured by the Allies, not clickable by anyone
     BG_SA_GARVE_STATUS_HORDE_OCCUPIED    = 4
 };
 
