@@ -472,10 +472,6 @@ void BattleGroundSA::_CreateBanner(uint8 gry, uint8 type, uint8 teamIndex, bool 
         return;
     }
 
-    // cause the node-type is in the generic form
-    // please see in the headerfile for the ids
-    type += teamIndex;
-
     SpawnEvent(gry, type, true);                           // will automaticly despawn other events
 }
 
