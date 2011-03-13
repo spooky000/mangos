@@ -398,16 +398,16 @@ void BattleGroundSA::UpdatePhase()
         m_GydTimers[i] = 0;
         m_BannerTimers[i].timer = 0;
         SpawnEvent(i, (GetDefender() == ALLIANCE ? 1 : 2), true);  
-        m_Gyd[i] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED;
-        m_ActiveEvents[i] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED;
+        m_Gyd[i] = (GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED;
+        m_ActiveEvents[i] = (GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED;
         _GydOccupied(i, GetDefender());
     }
 
     SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_HORDE_CONTESTED, GetDefender() == ALLIANCE ? false : true);
     SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_ALLY_CONTESTED, GetDefender() == ALLIANCE ? true : false);
 
-    _GydOccupied(4, GetDefender() == HORDE ? ALLIANCE : HORDE);
-    m_ActiveEvents[4] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_HORDE_CONTESTED : BG_SA_GARVE_STATUS_ALLY_CONTESTED;
+    _GydOccupied(4, (GetDefender() == HORDE) ? ALLIANCE : HORDE);
+    m_ActiveEvents[4] = (GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_HORDE_CONTESTED : BG_SA_GARVE_STATUS_ALLY_CONTESTED;
 
     for (uint32 z = 0; z <= BG_SA_GATE_MAX; ++z)
         UpdateWorldState(BG_SA_GateStatus[z], GateStatus[z]);
@@ -491,7 +491,7 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
     if ((m_Gyd[gyd] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[gyd] == BG_SA_GARVE_STATUS_HORDE_CONTESTED))
     {
         //make the new banner not capturable by defenders
-        m_Gyd[gyd] += (GetDefender() == ALLIANCE ? 3 : 1);
+        m_Gyd[gyd] += (GetDefender() == ALLIANCE) ? 3 : 1;
         // create new occupied banner (attacker faction)
         _CreateBanner(gyd, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_HORDE_OCCUPIED : BG_SA_GARVE_STATUS_ALLY_OCCUPIED), teamIndex, true);
         _GydOccupied(gyd,(teamIndex == 0) ? ALLIANCE:HORDE);
