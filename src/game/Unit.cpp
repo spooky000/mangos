@@ -1546,8 +1546,8 @@ void Unit::CalculateSpellDamage(SpellNonMeleeDamage *damageInfo, int32 damage, S
         break;
     }
 
-    // only from players
-    if (GetTypeId() == TYPEID_PLAYER)
+    // only from players and their pets
+    if (GetTypeId() == TYPEID_PLAYER || GetObjectGuid().IsPet())
     {
         uint32 redunction_affected_damage = CalcNotIgnoreDamageRedunction(damage,damageSchoolMask);
         damage -= pVictim->GetSpellDamageReduction(redunction_affected_damage);
@@ -1866,7 +1866,7 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
     }
 
     // only from players and their pets
-    if (GetTypeId() == TYPEID_PLAYER || ((Creature*)this)->IsPet())
+    if (GetTypeId() == TYPEID_PLAYER || GetObjectGuid().IsPet())
     {
         uint32 redunction_affected_damage = CalcNotIgnoreDamageRedunction(damageInfo->damage,damageInfo->damageSchoolMask);
         uint32 resilienceReduction;
