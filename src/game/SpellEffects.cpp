@@ -8613,7 +8613,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (unitTarget != m_caster)
                     {
                         m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
-                        unitTarget->RemoveFromWorld();
+                        // unitTarget->RemoveFromWorld(); // TODO: corpse removal limitations (not a boss, don't freeze a player, etc.)
                     }
                     else if (m_caster->HasAura(60200))
                     {
