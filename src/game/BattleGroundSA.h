@@ -21,7 +21,7 @@
 
 class BattleGround;
 
-#define BG_SA_GRY_MAX   3
+#define BG_SA_GRY_MAX   4
 #define BG_SA_GATE_MAX  6
 #define BG_SA_MAX_WS    3
 
@@ -99,6 +99,8 @@ enum BG_SA_GraveYard
     BG_SA_GARVE_E                       = 0,
     BG_SA_GARVE_W                       = 1,
     BG_SA_GARVE_S                       = 2,
+    BG_SA_GARVE_T                       = 3,   // titan relic
+    BG_SA_GARVE_B                       = 4,   // beach
     BG_SA_GARVE_ERROR                   = 255
 };
 

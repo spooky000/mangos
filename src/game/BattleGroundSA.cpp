@@ -72,8 +72,8 @@ void BattleGroundSA::FillInitialWorldStates(WorldPacket& data, uint32& count)
     }
     else
     {
-        UpdateWorldState(BG_SA_HORDE_ATTACKS, 1);
         UpdateWorldState(BG_SA_ALLY_ATTACKS, 0);
+        UpdateWorldState(BG_SA_HORDE_ATTACKS, 1);
         UpdateWorldState(BG_SA_HORDE_DEFENCE_TOKEN,0);
         UpdateWorldState(BG_SA_ALLIANCE_DEFENCE_TOKEN,1);
     }
@@ -389,8 +389,6 @@ void BattleGroundSA::UpdatePhase()
 
     SpawnEvent(SA_EVENT_ADD_BOMB, (GetDefender() == ALLIANCE ? 1 : 0), true);
 
-    _GydOccupied(3, GetDefender() == HORDE ? ALLIANCE : HORDE);
-
     for (uint8 i = 0; i < BG_SA_GRY_MAX; ++i)
     {
         for (uint8 z = 1; z < 5; ++z)
@@ -402,13 +400,14 @@ void BattleGroundSA::UpdatePhase()
         SpawnEvent(i, (GetDefender() == ALLIANCE ? 1 : 2), true);  
         m_Gyd[i] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED;
         m_ActiveEvents[i] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED;
-        _GydOccupied(i,GetDefender() == ALLIANCE ? ALLIANCE : HORDE);
+        _GydOccupied(i, GetDefender());
     }
 
     SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_HORDE_CONTESTED, GetDefender() == ALLIANCE ? false : true);
     SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_ALLY_CONTESTED, GetDefender() == ALLIANCE ? true : false);
 
-    m_ActiveEvents[5] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED;
+    _GydOccupied(4, GetDefender() == HORDE ? ALLIANCE : HORDE);
+    m_ActiveEvents[4] = GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_HORDE_CONTESTED : BG_SA_GARVE_STATUS_ALLY_CONTESTED;
 
     for (uint32 z = 0; z <= BG_SA_GATE_MAX; ++z)
         UpdateWorldState(BG_SA_GateStatus[z], GateStatus[z]);
@@ -799,12 +798,12 @@ WorldSafeLocsEntry const* BattleGroundSA::GetClosestGraveYard(Player* player)
 
 void BattleGroundSA::_GydOccupied(uint8 node, Team team)
 {
-    if (node >= 0 && node < 3)
+    if (node >= 0 && node < 4)
     {
         UpdateWorldState(GrraveYardWS[node][0], team == HORDE ? 0 : 1);
         UpdateWorldState(GrraveYardWS[node][1], team == HORDE ? 1 : 0);
     }
-    else if (node == 3)
+    else if (node == 4)
     {
         for (int8 i = 0; i <= BG_SA_MAX_WS; ++i)
         {
