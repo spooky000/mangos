@@ -6618,12 +6618,11 @@ void Aura::HandleModMeleeSpeedPct(bool apply, bool /*Real*/)
 {
     Unit *target = GetTarget();
     
-
     if (IsStacking())
     {
         target->ApplyAttackTimePercentMod(BASE_ATTACK, float(m_modifier.m_amount), apply);
         target->ApplyAttackTimePercentMod(OFF_ATTACK, float(m_modifier.m_amount), apply);
-	}
+    }
     else
     {
         if(m_modifier.m_amount < target->m_modAttackSpeedPct[NONSTACKING_MOD_MELEE])
