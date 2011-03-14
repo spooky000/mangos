@@ -2004,6 +2004,21 @@ void Unit::DealMeleeDamage(CalcDamageInfo *damageInfo, bool durabilityLoss)
                 alreadyDone.insert(*i);
                 uint32 damage=(*i)->GetModifier()->m_amount;
                 SpellEntry const *i_spellProto = (*i)->GetSpellProto();
+                // Thorns
+                if (i_spellProto->SpellFamilyName == SPELLFAMILY_DRUID && i_spellProto->SpellFamilyFlags & UI64LIT(0x00000100))
+                {
+                    Unit::AuraList const& dummyList = pVictim->GetAurasByType(SPELL_AURA_DUMMY);
+                    for(Unit::AuraList::const_iterator iter = dummyList.begin(); iter != dummyList.end(); ++iter)
+                    {
+                        // Brambles
+                        if((*iter)->GetSpellProto()->SpellFamilyName == SPELLFAMILY_DRUID &&
+                            (*iter)->GetSpellProto()->SpellIconID == 53)
+                        {
+                            damage += uint32(damage * (*iter)->GetModifier()->m_amount / 100);
+                            break;
+                        }
+                    }
+                }
                 //Calculate absorb resist ??? no data in opcode for this possibly unable to absorb or resist?
                 //uint32 absorb;
                 //uint32 resist;
@@ -3256,7 +3271,7 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit *pVictim, SpellEntry const *spell)
     bool canDodge = true;
     bool canParry = true;
 
-    // Same spells cannot be parry/dodge
+    // Some spells cannot be parried/dodged
     if (spell->Attributes & SPELL_ATTR_IMPOSSIBLE_DODGE_PARRY_BLOCK)
         return SPELL_MISS_NONE;
 
@@ -4370,6 +4385,15 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
         return false;
     }
 
+    // Alterac Valley Marshals' and Warmasters' buffs should affect only mobs
+    if (this->GetTypeId() != TYPEID_UNIT &&
+        (holder->GetId() == 45828 || holder->GetId() == 45829 || holder->GetId() == 45831 || holder->GetId() == 45830 ||
+         holder->GetId() == 45826 || holder->GetId() == 45822 || holder->GetId() == 45823 || holder->GetId() == 45824))
+    {
+        delete holder;
+        return false;
+    }
+
     // passive and persistent auras can stack with themselves any number of times
     if ((!holder->IsPassive() && !holder->IsPersistent()) || holder->IsAreaAura())
     {
@@ -4479,7 +4503,6 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
                     case SPELL_AURA_OBS_MOD_MANA:
                     case SPELL_AURA_POWER_BURN_MANA:
                     case SPELL_AURA_MOD_DAMAGE_FROM_CASTER: // required for Serpent Sting (blizz hackfix?)
-//                    case SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE: // for Deadly Poison
                     case SPELL_AURA_MOD_MELEE_HASTE:  // for Icy Touch
                     case SPELL_AURA_MOD_RANGED_HASTE: // for Icy Touch
                     case SPELL_AURA_MOD_DAMAGE_TAKEN: // for Hemorrhage
@@ -4940,6 +4963,23 @@ void Unit::RemoveAuraHolderDueToSpellByDispel(uint32 spellId, int32 stackAmount,
 
                 CastCustomSpell(this, 64085, &bp0, NULL, NULL, true, NULL, NULL, casterGUID);
                 return;
+            }
+        }
+    }
+    // Lifebloom
+    else if (spellEntry->SpellFamilyName == SPELLFAMILY_DRUID && spellEntry->SpellFamilyFlags & UI64LIT(0x1000000000))
+    {
+        if (Aura* hot = GetAura(SPELL_AURA_DUMMY, SPELLFAMILY_DRUID, UI64LIT(0x1000000000), 0x00000000, casterGUID))
+        {
+            if (Unit* caster = hot->GetCaster())
+            {
+                // final heal
+                int32 healamount = hot->GetModifier()->m_amount/hot->GetStackAmount();
+                CastCustomSpell(this, 33778, &(healamount), NULL, NULL, true, NULL, hot, casterGUID);
+
+                // mana
+                int32 returnmana = (spellEntry->ManaCostPercentage * caster->GetCreateMana() / 100) / 2;
+                caster->CastCustomSpell(caster, 64372, &returnmana, NULL, NULL, true, NULL, hot, casterGUID);
             }
         }
     }
@@ -7214,6 +7254,10 @@ uint32 Unit::SpellDamageBonusTaken(Unit *pCaster, SpellEntry const *spellProto, 
     {
         if ((*i)->GetCasterGuid() == pCaster->GetObjectGuid() && (*i)->isAffectedOnSpell(spellProto))
             TakenTotalMod *= ((*i)->GetModifier()->m_amount + 100.0f) / 100.0f;
+        // Glyph of Salvation
+        if ((*i)->GetId() == 1038 && (*i)->GetCasterGUID() == GetGUID())
+            if (Aura *dummy = GetDummyAura(63225))
+                TakenTotalMod *= (-(dummy->GetModifier()->m_amount) + 100.0f) / 100.0f;    
     }
 
     // Mod damage from spell mechanic
@@ -11291,11 +11335,14 @@ void Unit::SetDisplayId(uint32 modelId)
 
     UpdateModelData();
 
-    if(Unit *owner = GetCharmerOrOwner())    
+    if(GetTypeId() == TYPEID_UNIT && ((Creature*)this)->IsPet())
     {
-        if((owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
-            if(owner && (owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
-                ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_MODEL_ID);
+        Pet *pet = ((Pet*)this);
+        if(!pet->isControlled())
+            return;
+        Unit *owner = GetOwner();
+        if(owner && (owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
+            ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_MODEL_ID);
     }
 }
 

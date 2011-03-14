@@ -280,7 +280,7 @@ pAuraHandler AuraHandler[TOTAL_AURAS]=
     &Aura::HandlePeriodicTriggerSpellWithValue,             //227 SPELL_AURA_PERIODIC_TRIGGER_SPELL_WITH_VALUE
     &Aura::HandleNoImmediateEffect,                         //228 SPELL_AURA_DETECT_STEALTH
     &Aura::HandleNoImmediateEffect,                         //229 SPELL_AURA_MOD_AOE_DAMAGE_AVOIDANCE        implemented in Unit::SpellDamageBonusTaken
-    &Aura::HandleAuraModIncreaseMaxHealth,                  //230 Commanding Shout
+    &Aura::HandleAuraModIncreaseMaxHealth,                  //230 SPELL_AURA_MOD_PARTY_MAX_HEALTH
     &Aura::HandleNoImmediateEffect,                         //231 SPELL_AURA_PROC_TRIGGER_SPELL_WITH_VALUE
     &Aura::HandleNoImmediateEffect,                         //232 SPELL_AURA_MECHANIC_DURATION_MOD           implement in Unit::CalculateSpellDuration
     &Aura::HandleNULL,                                      //233 set model id to the one of the creature with id m_modifier.m_miscvalue
@@ -4833,7 +4833,7 @@ void Aura::HandleModStealth(bool apply, bool Real)
             }
 
             // apply full stealth period bonuses only at first stealth aura in stack
-            if(target->GetAurasByType(SPELL_AURA_MOD_STEALTH).size()<=2) // // Vanish also triggering Stealth, (no double auras possible here)
+            if(target->GetAurasByType(SPELL_AURA_MOD_STEALTH).size()<=2) // Vanish also triggering Stealth, (no double auras possible here)
             {
                 Unit::AuraList const& mDummyAuras = target->GetAurasByType(SPELL_AURA_DUMMY);
                 for(Unit::AuraList::const_iterator i = mDummyAuras.begin();i != mDummyAuras.end(); ++i)
@@ -6598,7 +6598,7 @@ void Aura::HandleModCombatSpeedPct(bool apply, bool /*Real*/)
         }
 
         if(!apply)
-            amount = target->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_MELEE_HASTE, true);
+            amount = target->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_MELEE_RANGED_HASTE, true);
 
         target->ApplyCastTimePercentMod(amount, true);
         target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
@@ -6617,8 +6617,35 @@ void Aura::HandleModAttackSpeed(bool apply, bool /*Real*/)
 void Aura::HandleModMeleeSpeedPct(bool apply, bool /*Real*/)
 {
     Unit *target = GetTarget();
-    target->ApplyAttackTimePercentMod(BASE_ATTACK, float(m_modifier.m_amount), apply);
-    target->ApplyAttackTimePercentMod(OFF_ATTACK, float(m_modifier.m_amount), apply);
+    
+
+    if (IsStacking())
+    {
+        target->ApplyAttackTimePercentMod(BASE_ATTACK, float(m_modifier.m_amount), apply);
+        target->ApplyAttackTimePercentMod(OFF_ATTACK, float(m_modifier.m_amount), apply);
+	}
+    else
+    {
+        if(m_modifier.m_amount < target->m_modAttackSpeedPct[NONSTACKING_MOD_MELEE])
+            return;
+
+        float amount = float(m_modifier.m_amount);
+
+        // unapply old aura
+        if(target->m_modAttackSpeedPct[NONSTACKING_MOD_MELEE])
+        {
+            target->ApplyAttackTimePercentMod(BASE_ATTACK, target->m_modAttackSpeedPct[NONSTACKING_MOD_MELEE], false);
+            target->ApplyAttackTimePercentMod(OFF_ATTACK, target->m_modAttackSpeedPct[NONSTACKING_MOD_MELEE], false);
+        }
+
+        if(!apply)
+            amount = target->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_MELEE_HASTE, true);
+
+        target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
+        target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
+
+        target->m_modAttackSpeedPct[NONSTACKING_MOD_MELEE] = amount;
+    }
 }
 
 void Aura::HandleAuraModRangedHaste(bool apply, bool /*Real*/)
@@ -6922,7 +6949,8 @@ void Aura::HandleShapeshiftBoosts(bool apply)
             MasterShaperSpellId = 48420;
             break;
         case FORM_TREE:
-            spellId1 = 34123;
+            spellId1 = 5420;
+            spellId2 = 34123;
             MasterShaperSpellId = 48422;
             break;
         case FORM_TRAVEL:
@@ -6993,10 +7021,23 @@ void Aura::HandleShapeshiftBoosts(bool apply)
 
     if(apply)
     {
+        Player* plr = target->GetTypeId() == TYPEID_PLAYER ? (Player*)target : NULL;
+
         if (spellId1)
+        {
+            if (plr && plr->HasSpellCooldown(spellId1))
+                plr->RemoveSpellCooldown(spellId1, true);
+
             target->CastSpell(target, spellId1, true, NULL, this );
+        }
+
         if (spellId2)
+        {
+            if (plr && plr->HasSpellCooldown(spellId2))
+                plr->RemoveSpellCooldown(spellId2, true);
+
             target->CastSpell(target, spellId2, true, NULL, this);
+        }
 
         if (target->GetTypeId() == TYPEID_PLAYER)
         {
@@ -7557,6 +7598,16 @@ void Aura::PeriodicTick()
                             pCaster->CalculateSpellDamage(target, spellProto, SpellEffectIndex(GetEffIndex() + 1)) :
                             100;
                         if(target->GetHealth() * 100 >= target->GetMaxHealth() * percent )
+                        {
+                            target->RemoveAurasDueToSpell(GetId());
+                            return;
+                        }
+                        break;
+                    }
+                    case 31803: // Holy Vengeance should not tick if paladin haven't Seal of Vengeance up
+                    case 53742: // Blood Corruption should not tick if paladin haven't Seal of Corruption up
+                    {
+                        if (!pCaster->HasAura((GetId()==53742) ? 53736 : 31801))
                         {
                             target->RemoveAurasDueToSpell(GetId());
                             return;
@@ -10420,6 +10471,7 @@ bool Aura::IsEffectStacking()
         case SPELL_AURA_MOD_DAMAGE_DONE:                                // Demonic Pact
         case SPELL_AURA_HASTE_ALL:                                      // Imp. Moonkin Aur / Swift Retribution
         case SPELL_AURA_MOD_MELEE_HASTE:                                // Improved Icy Talons
+        case SPELL_AURA_MOD_MELEE_RANGED_HASTE:
         case SPELL_AURA_MOD_ATTACK_POWER_PCT:                           // Abomination's Might / Unleashed Rage
         case SPELL_AURA_MOD_RANGED_ATTACK_POWER_PCT:
         case SPELL_AURA_MOD_ATTACK_POWER:                               // (Greater) Blessing of Might / Battle Shout
