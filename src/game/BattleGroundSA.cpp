@@ -99,13 +99,13 @@ void BattleGroundSA::FillInitialWorldStates(WorldPacket& data, uint32& count)
     FillInitialWorldState(data, count, BG_SA_TIMER_10SEC, uint32(0));
     FillInitialWorldState(data, count, BG_SA_TIMER_SEC, uint32(0));
 
-    UpdateWorldState(BG_SA_RIGHT_GY_HORDE , (m_Gyd[0] == BG_SA_GARVE_STATUS_HORDE_CONTESTED) ? 1 : 0);
-    UpdateWorldState(BG_SA_LEFT_GY_HORDE , (m_Gyd[1] == BG_SA_GARVE_STATUS_HORDE_CONTESTED) ? 1 : 0);
-    UpdateWorldState(BG_SA_CENTER_GY_HORDE , (m_Gyd[2] == BG_SA_GARVE_STATUS_HORDE_CONTESTED) ? 1 : 0);
+    UpdateWorldState(BG_SA_RIGHT_GY_HORDE , ((m_Gyd[0] == BG_SA_GARVE_STATUS_HORDE_CONTESTED) || (m_Gyd[0] == BG_SA_GARVE_STATUS_HORDE_OCCUPIED)) ? 1 : 0);
+    UpdateWorldState(BG_SA_LEFT_GY_HORDE , ((m_Gyd[1] == BG_SA_GARVE_STATUS_HORDE_CONTESTED) || (m_Gyd[1] == BG_SA_GARVE_STATUS_HORDE_OCCUPIED)) ? 1 : 0);
+    UpdateWorldState(BG_SA_CENTER_GY_HORDE , ((m_Gyd[2] == BG_SA_GARVE_STATUS_HORDE_CONTESTED) || (m_Gyd[2] == BG_SA_GARVE_STATUS_HORDE_OCCUPIED)) ? 1 : 0);
 
-    UpdateWorldState(BG_SA_RIGHT_GY_ALLIANCE , (m_Gyd[0] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) ? 1 : 0);
-    UpdateWorldState(BG_SA_LEFT_GY_ALLIANCE , (m_Gyd[1] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) ? 1 : 0);
-    UpdateWorldState(BG_SA_CENTER_GY_ALLIANCE , (m_Gyd[2] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) ? 1 : 0);
+    UpdateWorldState(BG_SA_RIGHT_GY_ALLIANCE , ((m_Gyd[0] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[0] == BG_SA_GARVE_STATUS_ALLY_OCCUPIED)) ? 1 : 0);
+    UpdateWorldState(BG_SA_LEFT_GY_ALLIANCE , ((m_Gyd[1] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[1] == BG_SA_GARVE_STATUS_ALLY_OCCUPIED)) ? 1 : 0);
+    UpdateWorldState(BG_SA_CENTER_GY_ALLIANCE , ((m_Gyd[2] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[2] == BG_SA_GARVE_STATUS_ALLY_OCCUPIED)) ? 1 : 0);
 }
 
 void BattleGroundSA::StartShips()
