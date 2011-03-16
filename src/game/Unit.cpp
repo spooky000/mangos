@@ -7253,11 +7253,7 @@ uint32 Unit::SpellDamageBonusTaken(Unit *pCaster, SpellEntry const *spellProto, 
     for(AuraList::const_iterator i = mOwnerTaken.begin(); i != mOwnerTaken.end(); ++i)
     {
         if ((*i)->GetCasterGuid() == pCaster->GetObjectGuid() && (*i)->isAffectedOnSpell(spellProto))
-            TakenTotalMod *= ((*i)->GetModifier()->m_amount + 100.0f) / 100.0f;
-        // Glyph of Salvation
-        if ((*i)->GetId() == 1038 && (*i)->GetCasterGUID() == GetGUID())
-            if (Aura *dummy = GetDummyAura(63225))
-                TakenTotalMod *= (-(dummy->GetModifier()->m_amount) + 100.0f) / 100.0f;    
+            TakenTotalMod *= ((*i)->GetModifier()->m_amount + 100.0f) / 100.0f; 
     }
 
     // Mod damage from spell mechanic
