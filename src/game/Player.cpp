@@ -13677,7 +13677,7 @@ bool Player::CanTakeQuest(Quest const *pQuest, bool msg) const
         SatisfyQuestClass(pQuest, msg) && SatisfyQuestRace(pQuest, msg) && SatisfyQuestLevel(pQuest, msg) &&
         SatisfyQuestSkill(pQuest, msg) && SatisfyQuestReputation(pQuest, msg) &&
         SatisfyQuestPreviousQuest(pQuest, msg) && SatisfyQuestTimed(pQuest, msg) &&
-        SatisfyQuestNextChain(pQuest, msg) && SatisfyQuestPrevChain(pQuest, msg) &&
+        SatisfyQuestPrevChain(pQuest, msg) &&
         SatisfyQuestDay(pQuest, msg) && SatisfyQuestWeek(pQuest, msg) && SatisfyQuestMonth(pQuest, msg) &&
         pQuest->IsActive();
 }
