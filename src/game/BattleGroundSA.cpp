@@ -67,6 +67,12 @@ void BattleGroundSA::FillInitialWorldStates(WorldPacket& data, uint32& count)
     {
         UpdateWorldState(BG_SA_ALLY_ATTACKS, 1);
         UpdateWorldState(BG_SA_HORDE_ATTACKS, 0);
+
+        UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_ALL, 1);
+        UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_ALL, 1);
+        UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_HRD, 0);
+        UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_HRD, 0);
+        
         UpdateWorldState(BG_SA_HORDE_DEFENCE_TOKEN,1);
         UpdateWorldState(BG_SA_ALLIANCE_DEFENCE_TOKEN,0);
     }
@@ -74,6 +80,12 @@ void BattleGroundSA::FillInitialWorldStates(WorldPacket& data, uint32& count)
     {
         UpdateWorldState(BG_SA_ALLY_ATTACKS, 0);
         UpdateWorldState(BG_SA_HORDE_ATTACKS, 1);
+
+        UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_ALL, 0);
+        UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_ALL, 0);
+        UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_HRD, 1);
+        UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_HRD, 1);
+
         UpdateWorldState(BG_SA_HORDE_DEFENCE_TOKEN,0);
         UpdateWorldState(BG_SA_ALLIANCE_DEFENCE_TOKEN,1);
     }
@@ -86,6 +98,14 @@ void BattleGroundSA::FillInitialWorldStates(WorldPacket& data, uint32& count)
     FillInitialWorldState(data, count, BG_SA_TIMER_MINUTES, uint32(0));
     FillInitialWorldState(data, count, BG_SA_TIMER_10SEC, uint32(0));
     FillInitialWorldState(data, count, BG_SA_TIMER_SEC, uint32(0));
+
+    UpdateWorldState(BG_SA_RIGHT_GY_HORDE , (m_Gyd[0] == BG_SA_GARVE_STATUS_HORDE_CONTESTED) ? 1 : 0);
+    UpdateWorldState(BG_SA_LEFT_GY_HORDE , (m_Gyd[1] == BG_SA_GARVE_STATUS_HORDE_CONTESTED) ? 1 : 0);
+    UpdateWorldState(BG_SA_CENTER_GY_HORDE , (m_Gyd[2] == BG_SA_GARVE_STATUS_HORDE_CONTESTED) ? 1 : 0);
+
+    UpdateWorldState(BG_SA_RIGHT_GY_ALLIANCE , (m_Gyd[0] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) ? 1 : 0);
+    UpdateWorldState(BG_SA_LEFT_GY_ALLIANCE , (m_Gyd[1] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) ? 1 : 0);
+    UpdateWorldState(BG_SA_CENTER_GY_ALLIANCE , (m_Gyd[2] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) ? 1 : 0);
 }
 
 void BattleGroundSA::StartShips()
@@ -222,15 +242,6 @@ void BattleGroundSA::Update(uint32 diff)
 
 void BattleGroundSA::ResetWorldStates()
 {
-    //Player may enter BEFORE we set up bG - lets update his worldstates anyway...
-    /*UpdateWorldState(BG_SA_RIGHT_GY_HORDE , GraveyardStatus[BG_SA_RIGHT_CAPTURABLE_GY] == HORDE?1:0);
-    UpdateWorldState(BG_SA_LEFT_GY_HORDE , GraveyardStatus[BG_SA_LEFT_CAPTURABLE_GY] == HORDE?1:0);
-    UpdateWorldState(BG_SA_CENTER_GY_HORDE , GraveyardStatus[BG_SA_CENTRAL_CAPTURABLE_GY] == HORDE?1:0);
-
-    UpdateWorldState(BG_SA_RIGHT_GY_ALLIANCE , GraveyardStatus[BG_SA_RIGHT_CAPTURABLE_GY] == ALLIANCE?1:0);
-    UpdateWorldState(BG_SA_LEFT_GY_ALLIANCE , GraveyardStatus[BG_SA_LEFT_CAPTURABLE_GY] == ALLIANCE?1:0);
-    UpdateWorldState(BG_SA_CENTER_GY_ALLIANCE , GraveyardStatus[BG_SA_CENTRAL_CAPTURABLE_GY] == ALLIANCE?1:0);*/
-
     if (GetDefender() == HORDE)
     {
         UpdateWorldState(BG_SA_ALLY_ATTACKS, 1);
