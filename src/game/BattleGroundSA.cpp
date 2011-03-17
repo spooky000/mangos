@@ -214,6 +214,17 @@ void BattleGroundSA::Update(uint32 diff)
             }
         }
         UpdateTimer();
+
+        if (Phase == SA_ROUND_TWO)
+        {       
+            if (Round_timer > RoundScores[0].time)
+            {
+                if (GetDefender() == HORDE)
+                    EndBattleGround(HORDE);
+                else
+                    EndBattleGround(ALLIANCE);
+            }
+        }
     }
     if (GetStatus() == STATUS_WAIT_JOIN && Phase == SA_ROUND_TWO) // Round two, not yet started
     {
