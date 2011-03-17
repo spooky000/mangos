@@ -475,6 +475,12 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         }
                         break;
                     }
+                    // Gargoyle Strike
+                    case 51963:
+                    {
+                        damage += m_caster->GetTotalAttackPowerValue(BASE_ATTACK);
+                        break;
+                    }                    
                     // Tympanic Tantrum
                     case 62775:
                     {
@@ -1209,6 +1215,30 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     }
                     return;
                 }
+                case 14537:
+                {
+                    if (!unitTarget)
+                        return;
+                    
+                    if (urand(0, 99) < 10)                  //10% chance for rare effects
+                        switch(urand(1, 4))
+                        {
+                            case 1: m_caster->CastSpell(unitTarget, 31718, true); break; //enveloping winds
+                            case 2: m_caster->CastSpell(unitTarget, 118, true); break;   //polymorph target
+                            case 3: m_caster->CastSpell(m_caster, 118, true); break;     //polymorph self
+                            case 4: m_caster->CastSpell(m_caster, 8176, true); break;    //summon fellhunter
+                        }
+                    else                                    //common effects
+                        switch(urand(1, 3))
+                        {
+                            case 1: m_caster->CastSpell(unitTarget, 8401, true); break;  //fireball
+                            case 2: m_caster->CastSpell(unitTarget, 8407, true); break;  //frostbolt
+                            case 3: m_caster->CastSpell(unitTarget, 421, true); break;   //chain lightning
+
+                        }
+                    
+                    return;
+                }                
                 case 15998:                                 // Capture Worg Pup
                 case 29435:                                 // Capture Female Kaliri Hatchling
                 {
@@ -2320,6 +2350,13 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 54581, true, m_CastItem);
                     return;
                 }
+                case 54171:                                 // Divine Storm
+                {
+                        // split between targets
+                        int32 bp = damage / m_UniqueTargetInfo.size();
+                        m_caster->CastCustomSpell(unitTarget, 54172, &bp, NULL, NULL, true);
+                        return;
+                }                
                 case 55004:                                 // Nitro Boosts
                 {
                     if (!m_CastItem)
@@ -4179,7 +4216,21 @@ void Spell::EffectApplyAura(SpellEffectIndex eff_idx)
         delete Aur;
         return;
     }
-
+    
+    // Mixology - increase effect and duration of alchemy spells which the caster has
+    if(caster->GetTypeId() == TYPEID_PLAYER && Aur->GetSpellProto()->SpellFamilyName == SPELLFAMILY_POTION
+        && caster->HasAura(53042))
+    {
+        SpellSpecific spellSpec = GetSpellSpecific(Aur->GetSpellProto()->Id);
+        if(spellSpec == SPELL_BATTLE_ELIXIR || spellSpec == SPELL_GUARDIAN_ELIXIR || spellSpec == SPELL_FLASK_ELIXIR)
+        {
+            if(caster->HasSpell(Aur->GetSpellProto()->EffectTriggerSpell[0]))
+            {
+               duration *= 2.0f;
+               Aur->GetModifier()->m_amount *= 1.3f;
+            }
+        }
+    }
     if(duration != Aur->GetAuraMaxDuration())
     {
         Aur->SetAuraMaxDuration(duration);
