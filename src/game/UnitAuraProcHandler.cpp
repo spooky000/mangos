@@ -1270,6 +1270,18 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 triggered_spell_id = 26654;
                 break;
             }
+            // Glyph of Blocking
+            if (dummySpell->Id == 58375)
+            {
+                triggered_spell_id = 58374;
+                break;
+            }
+             // Glyph of Devastate
+            if (dummySpell->Id == 58388)
+            {
+                triggered_spell_id = 58567;
+                break;
+            }
             // Glyph of Sunder Armor
             if (dummySpell->Id == 58387)
             {
@@ -2824,9 +2836,11 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
             // Mark of Blood
             if (dummySpell->Id == 49005)
             {
+                if (target->GetTypeId() != TYPEID_PLAYER)
+                    return SPELL_AURA_PROC_FAILED;
                 // TODO: need more info (cooldowns/PPM)
-                triggered_spell_id = 61607;
-                break;
+                target->CastSpell(target, 61607, true, NULL, triggeredByAura);
+                return SPELL_AURA_PROC_OK;
             }
             // Unholy Blight
             if (dummySpell->Id == 49194)
@@ -2987,6 +3001,29 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 triggered_spell_id = 50526;
                 break;
             }
+            // Death Rune Mastery
+            if (dummySpell->SpellIconID == 2622)
+            {
+                if(GetTypeId()!=TYPEID_PLAYER)
+                    return SPELL_AURA_PROC_FAILED;
+
+                Player *player = (Player*)this;
+                for (uint32 i = 0; i < MAX_RUNES; ++i)
+                {
+                    RuneType currRune = player->GetCurrentRune(i);
+                    if (currRune == RUNE_UNHOLY || currRune == RUNE_FROST)
+                    {
+                        uint16 cd = player->GetRuneCooldown(i);
+                        if(!cd)
+                            player->ConvertRune(i, RUNE_DEATH, dummySpell->Id);
+                        else // there is a cd
+                            player->SetNeedConvertRune(i, true, dummySpell->Id);
+                        // no break because it converts all
+                    }
+                }
+                triggeredByAura->SetAuraPeriodicTimer(0);
+                return SPELL_AURA_PROC_OK;
+            }
             // Hungering Cold - not break from diseases
             if (dummySpell->SpellIconID == 2797)
             {
@@ -3002,6 +3039,22 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
 
                 // triggered_spell_id in spell data
                 break;
+            }
+            // Hungering Cold (51209 only)
+            if (dummySpell->SpellIconID == 2797)
+            {
+                // Damage from diseases does not break the freeze effect
+                if (procSpell && (GetAllSpellMechanicMask(procSpell) & (1 << MECHANIC_INFECTED)))
+                    return SPELL_AURA_PROC_FAILED;
+
+                break;
+            }
+            // Rune strike
+            if (dummySpell->Id == 56817)
+            {   
+                //Must proc only from Rune strike (56815)
+                if (procSpell && procSpell->Id != 56815)
+                    return SPELL_AURA_PROC_FAILED;
             }
             break;
         }
@@ -3231,6 +3284,19 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
 
                     break;
                 }
+                case 64568:                                 // Blood Reserve
+                {
+                    // Check health condition - should drop to less 35%
+                    if (!(10*(int32(GetHealth() - damage)) < 3.5 * GetMaxHealth()))
+                       return SPELL_AURA_PROC_FAILED;
+
+                    if (!roll_chance_f(50))
+                        return SPELL_AURA_PROC_FAILED;
+
+                    trigger_spell_id = 64569;
+                    basepoints[0] = triggerAmount;
+                    break;
+                } 
                 case 67702:                                 // Death's Choice, Item - Coliseum 25 Normal Melee Trinket
                 {
                     float stat = 0.0f;
@@ -3651,6 +3717,12 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                         return SPELL_AURA_PROC_FAILED;
                 }
             }
+            // Glyph of Death's Embrace
+            else if (auraSpellInfo->Id == 58677)
+            {
+                if (procSpell->Id != 47633)
+                    return SPELL_AURA_PROC_FAILED;
+            }            
             // Blade Barrier
             else if (auraSpellInfo->SpellIconID == 85)
             {
@@ -3997,6 +4069,40 @@ SpellAuraProcResult Unit::HandleOverrideClassScriptAuraProc(Unit *pVictim, uint3
                 case POWER_RUNIC_POWER: triggered_spell_id = 48543; break;
                 default: return SPELL_AURA_PROC_FAILED;
             }
+            break;
+        }
+        case 7282:                                          // Crypt Fever & Ebon Plaguebringer
+        {
+            if (!procSpell || pVictim == this)
+                return SPELL_AURA_PROC_FAILED;
+
+            bool HasEP = false;
+            Unit::AuraList const& scriptAuras = GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
+            for(Unit::AuraList::const_iterator i = scriptAuras.begin(); i != scriptAuras.end(); ++i)
+            {
+                if ((*i)->GetSpellProto()->SpellIconID == 1766)
+                {
+                    HasEP = true;
+                    break;
+                }
+            }
+
+            if (!HasEP)
+                switch(triggeredByAura->GetId())
+                {
+                    case 49032: triggered_spell_id = 50508; break;
+                    case 49631: triggered_spell_id = 50509; break;
+                    case 49632: triggered_spell_id = 50510; break;
+                    default: return SPELL_AURA_PROC_FAILED;
+                }
+            else
+                switch(triggeredByAura->GetId())
+                {
+                    case 51099: triggered_spell_id = 51726; break;
+                    case 51160: triggered_spell_id = 51734; break;
+                    case 51161: triggered_spell_id = 51735; break;
+                    default: return SPELL_AURA_PROC_FAILED;
+                }
             break;
         }
     }
