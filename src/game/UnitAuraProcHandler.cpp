@@ -1270,6 +1270,18 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 triggered_spell_id = 26654;
                 break;
             }
+            // Glyph of Blocking
+            if (dummySpell->Id == 58375)
+            {
+                triggered_spell_id = 58374;
+                break;
+            }
+             // Glyph of Devastate
+            if (dummySpell->Id == 58388)
+            {
+                triggered_spell_id = 58567;
+                break;
+            }
             // Glyph of Sunder Armor
             if (dummySpell->Id == 58387)
             {
@@ -2989,6 +3001,29 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 triggered_spell_id = 50526;
                 break;
             }
+            // Death Rune Mastery
+/*            if (dummySpell->SpellIconID == 2622)
+            {
+                if(GetTypeId()!=TYPEID_PLAYER)
+                    return SPELL_AURA_PROC_FAILED;
+
+                Player *player = (Player*)this;
+                for (uint32 i = 0; i < MAX_RUNES; ++i)
+                {
+                    RuneType currRune = player->GetCurrentRune(i);
+                    if (currRune == RUNE_UNHOLY || currRune == RUNE_FROST)
+                    {
+                        uint16 cd = player->GetRuneCooldown(i);
+                        if(!cd)
+                            player->ConvertRune(i, RUNE_DEATH, dummySpell->Id);
+                        else // there is a cd
+                            player->SetNeedConvertRune(i, true, dummySpell->Id);
+                        // no break because it converts all
+                    }
+                }
+                triggeredByAura->SetAuraPeriodicTimer(0);
+                return SPELL_AURA_PROC_OK;
+            }*/
             // Hungering Cold - not break from diseases
             if (dummySpell->SpellIconID == 2797)
             {
