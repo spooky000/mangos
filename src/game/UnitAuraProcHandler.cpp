@@ -3002,7 +3002,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 break;
             }
             // Death Rune Mastery
-            if (dummySpell->SpellIconID == 2622)
+/*            if (dummySpell->SpellIconID == 2622)
             {
                 if(GetTypeId()!=TYPEID_PLAYER)
                     return SPELL_AURA_PROC_FAILED;
@@ -3023,7 +3023,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 }
                 triggeredByAura->SetAuraPeriodicTimer(0);
                 return SPELL_AURA_PROC_OK;
-            }
+            }*/
             // Hungering Cold - not break from diseases
             if (dummySpell->SpellIconID == 2797)
             {
