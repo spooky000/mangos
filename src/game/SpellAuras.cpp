@@ -2597,6 +2597,7 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
             }
             case 35079:                                     // Misdirection, triggered buff
             case 59628:                                     // Tricks of the Trade, triggered buff
+            case 59665:                                     // Vigilance, redirection spell
             {
                 if (Unit* pCaster = GetCaster())
                     pCaster->getHostileRefManager().ResetThreatRedirection();
@@ -3801,6 +3802,10 @@ void Aura::HandleAuraTransform(bool apply, bool Real)
         // special case (spell specific functionality)
         if (m_modifier.m_miscvalue == 0)
         {
+            // player applied only
+            if (target->GetTypeId() != TYPEID_PLAYER)
+                return;
+
             switch (GetId())
             {
                 case 16739:                                 // Orb of Deception
@@ -9216,6 +9221,10 @@ void SpellAuraHolder::_AddSpellAuraHolder()
         if (m_spellProto->SpellFamilyName == SPELLFAMILY_DRUID && (m_spellProto->SpellFamilyFlags & UI64LIT(0x0000000000000400)))
             m_target->ModifyAuraState(AURA_STATE_FAERIE_FIRE, true);
 
+        // Sting (hunter's pet ability)
+        if (m_spellProto->Category == 1133)
+            m_target->ModifyAuraState(AURA_STATE_FAERIE_FIRE, true);
+
         // Victorious
         if (m_spellProto->SpellFamilyName == SPELLFAMILY_WARRIOR && (m_spellProto->SpellFamilyFlags & UI64LIT(0x0004000000000000)))
             m_target->ModifyAuraState(AURA_STATE_WARRIOR_VICTORY_RUSH, true);
@@ -10497,19 +10506,25 @@ bool Aura::IsEffectStacking()
             if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_SHAMAN && GetSpellProto()->AttributesEx6 & SPELL_ATTR_EX6_UNK26)
                 return false;
             break;
+        case SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE:                 // Winter's Chill / Improved Scorch
+            if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_MAGE)
+                return false;
+            break;
         case SPELL_AURA_MOD_RESISTANCE_PCT:
             // Ancestral Healing / Inspiration
             if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_SHAMAN ||
                 GetSpellProto()->SpellFamilyName == SPELLFAMILY_PRIEST)
                 return false;
             break;
-        // case SPELL_AURA_MOD_HEALING_PCT:
-            // break;
         case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:
             return false;
         case SPELL_AURA_MOD_PARTY_MAX_HEALTH:
             // Commanding Shout
             return false;
+        case SPELL_AURA_MOD_HEALING_PCT:                                // Mortal Strike / Wound Poison / Aimed Shot / Furious Attacks
+            // Healing debuffs
+            if (GetSpellProto()->EffectBasePoints[m_effIndex] < 0)
+                return false;
 
         default:
             return true;
