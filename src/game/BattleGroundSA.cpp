@@ -143,9 +143,7 @@ void BattleGroundSA::EndBattleGround(Team winner)
 {
     if (RoundScores[0].time == RoundScores[1].time) // Noone got in time
         winner = TEAM_NONE;
-    else if (RoundScores[0].time < RoundScores[1].time)
-        winner = RoundScores[0].winner == ALLIANCE ? ALLIANCE : HORDE;
-    else
+    else if (RoundScores[0].time > RoundScores[1].time)
         winner = RoundScores[1].winner == ALLIANCE ? ALLIANCE : HORDE;
 
     //win reward
@@ -215,17 +213,14 @@ void BattleGroundSA::Update(uint32 diff)
         }
         UpdateTimer();
 
+        //2nd round shouldnt be longer than 1st
         if (Phase == SA_ROUND_TWO)
         {       
             if (Round_timer > RoundScores[0].time)
-            {
-                if (GetDefender() == HORDE)
-                    EndBattleGround(HORDE);
-                else
-                    EndBattleGround(ALLIANCE);
-            }
+                EndBattleGround(GetDefender() == HORDE ? HORDE : ALLIANCE);
         }
     }
+
     if (GetStatus() == STATUS_WAIT_JOIN && Phase == SA_ROUND_TWO) // Round two, not yet started
     {
         if (!shipsStarted)
