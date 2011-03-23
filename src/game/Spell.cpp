@@ -572,9 +572,10 @@ void Spell::FillTargetMap()
                     case TARGET_ALL_ENEMY_IN_AREA_CHANNELED:
                     case TARGET_ALL_FRIENDLY_UNITS_IN_AREA:
                     case TARGET_AREAEFFECT_GO_AROUND_DEST:
+                    case TARGET_RANDOM_NEARBY_DEST:
                         // triggered spells get dest point from default target set, ignore it
                         if (!(m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION) || m_IsTriggeredSpell)
-                            if (WorldObject* castObject = GetAffectiveCasterObject())
+                            if (WorldObject* castObject = GetCastingObject())
                                 m_targets.setDestination(castObject->GetPositionX(), castObject->GetPositionY(), castObject->GetPositionZ());
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetB[i], tmpUnitMap);
                         break;
@@ -594,7 +595,6 @@ void Spell::FillTargetMap()
                     case TARGET_POINT_AT_NW:
                     case TARGET_POINT_AT_SE:
                     case TARGET_POINT_AT_SW:
-                    case TARGET_RANDOM_NEARBY_DEST:
                         // need some target for processing
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetA[i], tmpUnitMap);
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetB[i], tmpUnitMap);
