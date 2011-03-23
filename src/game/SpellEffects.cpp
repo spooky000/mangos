@@ -3559,7 +3559,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 totem->CastSpell(totem, triggered_spell_id, true, NULL, NULL, m_caster->GetGUID());
 
                 // Fire Nova Visual
-                totem->CastSpell(totem, 19823, true, NULL, NULL, m_caster->GetGUID());
+                totem->CastSpell(totem, 19823, true, NULL, NULL, totem->GetGUID());
                 return;
             }
             break;
