@@ -643,6 +643,15 @@ bool IsPositiveEffect(uint32 spellId, SpellEffectIndex effIndex)
         case 52986:                                         // Penance heal effect trigger - Rank 2
         case 52987:                                         // Penance heal effect trigger - Rank 3
         case 52988:                                         // Penance heal effect trigger - Rank 4
+        case 64844:                                         // Divine Hymn
+        case 64904:                                         // Hymn of Hope
+        case 1008:                                          // Amplify Magic - Rank 1
+        case 8455:                                          // Amplify Magic - Rank 2
+        case 10169:                                         // Amplify Magic - Rank 3
+        case 10170:                                         // Amplify Magic - Rank 4
+        case 27130:                                         // Amplify Magic - Rank 5
+        case 33946:                                         // Amplify Magic - Rank 6
+        case 43017:                                         // Amplify Magic - Rank 7
             return true;
     }
 
