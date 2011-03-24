@@ -7032,23 +7032,10 @@ void Aura::HandleShapeshiftBoosts(bool apply)
 
     if(apply)
     {
-        Player* plr = target->GetTypeId() == TYPEID_PLAYER ? (Player*)target : NULL;
-
         if (spellId1)
-        {
-            if (plr && plr->HasSpellCooldown(spellId1))
-                plr->RemoveSpellCooldown(spellId1, true);
-
-            target->CastSpell(target, spellId1, true, NULL, this );
-        }
-
+            target->CastSpell(target, spellId1, true, NULL, this);
         if (spellId2)
-        {
-            if (plr && plr->HasSpellCooldown(spellId2))
-                plr->RemoveSpellCooldown(spellId2, true);
-
             target->CastSpell(target, spellId2, true, NULL, this);
-        }
 
         if (target->GetTypeId() == TYPEID_PLAYER)
         {
