@@ -32,7 +32,7 @@
 /*
 * BattleGround Strand of the Ancients:
 * TODO:
-*   - Put Seaforium charges also in last zone, just before last door. But when?
+*   - Put Seaforium charges also in last zone, just before last door. But when? -- when the attacker captures 3rd GY
 *   - Move all the harcoded variables such coords to header BattleGroundSA.h
 *   - Cosmetics & avoid hacks.
 */
@@ -217,7 +217,10 @@ void BattleGroundSA::Update(uint32 diff)
         if (Phase == SA_ROUND_TWO)
         {       
             if (Round_timer > RoundScores[0].time)
+            {
+                RoundScores[1].time = Round_timer;
                 EndBattleGround(GetDefender() == HORDE ? HORDE : ALLIANCE);
+            }
         }
     }
 
