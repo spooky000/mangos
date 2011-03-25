@@ -422,6 +422,8 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     case 62598: case 62937:     // Detonate 
                     case 65279:                 // Lightning Nova 
                     case 62311: case 64596:     // Cosmic Smash 
+                    case 51673:                 // Rocket Blast (SotA cannons)
+                    case 52339:                 // Hurl Boulder (SotA Demolishers)
                     { 
                         float distance = unitTarget->GetDistance2d(m_targets.m_destX, m_targets.m_destY); 
                         damage *= exp(-distance/15.0f); 
@@ -2470,6 +2472,26 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     return;
                 }
+                case 55804:                                 // Healing Finished (triggered by item spell Telluric Poultice)
+                {
+                    Unit* pCaster = GetAffectiveCaster();
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT || unitTarget->isInCombat() || !pCaster || pCaster->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    switch(urand(0,3))
+                    {
+                        case 0: unitTarget->MonsterSay("Let us fight the Irons together!",LANG_UNIVERSAL);break;
+                        case 1: unitTarget->MonsterSay("Thank you! I thought I was doomed.",LANG_UNIVERSAL);break;
+                        case 2: unitTarget->MonsterSay("Let me fight by your side!",LANG_UNIVERSAL);break;
+                        case 3: unitTarget->MonsterSay("I was certain I was going to die out here.",LANG_UNIVERSAL);break;
+                    }
+                    ((Creature*)unitTarget)->ForcedDespawn(30000);
+                    unitTarget->SetByteValue(UNIT_FIELD_BYTES_1,0,UNIT_STAND_STATE_STAND);
+                    unitTarget->GetMotionMaster()->Clear();
+                    unitTarget->GetMotionMaster()->MoveFollow(pCaster,PET_FOLLOW_DIST,unitTarget->GetAngle(pCaster));
+                    ((Player*)pCaster)->KilledMonsterCredit(unitTarget->GetEntry(),unitTarget->GetGUID());
+                    return;
+                }
                 case 55818:                                 // Hurl Boulder
                 {
                     // unclear how many summon min/max random, best guess below
@@ -3649,7 +3671,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 totem->CastSpell(totem, triggered_spell_id, true, NULL, NULL, m_caster->GetGUID());
 
                 // Fire Nova Visual
-                totem->CastSpell(totem, 19823, true, NULL, NULL, m_caster->GetGUID());
+                totem->CastSpell(totem, 19823, true, NULL, NULL, totem->GetGUID());
                 return;
             }
             break;
@@ -5275,7 +5297,7 @@ void Spell::EffectSummonType(SpellEffectIndex eff_idx)
                             if (!cInfo)
                                 return;
 
-                            // FIXME: not all totems and similar cases seelcted by this check...
+                            // FIXME: not all totems and similar cases selected by this check...
                             if (cInfo->type == CREATURE_TYPE_TOTEM)
                                 DoSummonTotem(eff_idx);
                             else
@@ -5348,8 +5370,8 @@ void Spell::EffectSummonType(SpellEffectIndex eff_idx)
             // TODO
             // EffectSummonVehicle(i);
                DoSummonVehicle(eff_idx, summon_prop->FactionId);
-//            sLog.outDebug("EffectSummonType: Unhandled summon group type SUMMON_PROP_GROUP_VEHICLE(%u)", summon_prop->Group);
-//            Mangos developers thinking - this summon is not supported. But in this his worked fine :)
+            //sLog.outDebug("EffectSummonType: Unhandled summon group type SUMMON_PROP_GROUP_VEHICLE(%u)", summon_prop->Group);
+            //Mangos developers thinking - this summon is not supported. But in this his worked fine :)
             break;
         }
         default:
@@ -5482,7 +5504,7 @@ void Spell::EffectSummonPossessed(SpellEffectIndex eff_idx)
     int32 duration = GetSpellDuration(m_spellInfo);
 
         float px, py, pz;
-    // If dest location if present
+    // If dest location is present
     if (m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
     {
         // Summon 1 unit in dest location
