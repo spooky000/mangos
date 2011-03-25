@@ -21,7 +21,7 @@
 
 class BattleGround;
 
-#define BG_SA_GRY_MAX   3
+#define BG_SA_GRY_MAX   4
 #define BG_SA_GATE_MAX  6
 #define BG_SA_MAX_WS    3
 
@@ -77,21 +77,16 @@ static int32 GrraveYardWS[3][2]=
 
 enum BG_SA_Sounds
 {
-    BG_SA_SOUND_GYD_CLAIMED            = 8192,
     BG_SA_SOUND_GYD_CAPTURED_ALLIANCE  = 8173,
     BG_SA_SOUND_GYD_CAPTURED_HORDE     = 8213,
-    BG_SA_SOUND_GYD_ASSAULTED_ALLIANCE = 8212,
-    BG_SA_SOUND_GYD_ASSAULTED_HORDE    = 8174,
     BG_SA_SOUND_GYD_VICTORY            = 8456
 };
 
 enum BG_SA_GraveYardStatus
 {
-    BG_SA_GARVE_TYPE_CONTESTED           = 1,
-    BG_SA_GARVE_STATUS_ALLY_CONTESTED    = 1,
+    BG_SA_GARVE_STATUS_ALLY_CONTESTED    = 1,   //owned by the Allies, clickable for Horde
     BG_SA_GARVE_STATUS_HORDE_CONTESTED   = 2,
-    BG_SA_GARVE_TYPE_OCCUPIED            = 3,
-    BG_SA_GARVE_STATUS_ALLY_OCCUPIED     = 3,
+    BG_SA_GARVE_STATUS_ALLY_OCCUPIED     = 3,   //captured by the Allies, not clickable by anyone
     BG_SA_GARVE_STATUS_HORDE_OCCUPIED    = 4
 };
 
@@ -109,7 +104,6 @@ enum BG_SA_GraveYard
 
 enum BG_SA_Timers
 {
-    BG_SA_FLAG_CAPTURING_TIME           = 60000,
     BG_SA_ROUNDLENGTH                   = 600000,
     BG_SA_BOAT_START                    = 60000
 };
@@ -193,12 +187,6 @@ enum VehicleFactions
     VEHICLE_FACTION_HORDE    = 6
 };
 
-/* Ships:
- * 193182 - ally
- * 193183 - horde
- * 193184 - horde
- * 193185 - ally
- */
 enum BG_SA_Boat
 {
     BG_SA_BOAT_ONE_A = 193182,

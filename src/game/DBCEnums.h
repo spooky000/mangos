@@ -163,7 +163,7 @@ enum AchievementCriteriaTypes
     ACHIEVEMENT_CRITERIA_TYPE_SPECIAL_PVP_KILL= 70,
     ACHIEVEMENT_CRITERIA_TYPE_FISH_IN_GAMEOBJECT = 72,
     // TODO: title id is not mentioned in dbc
-    ACHIEVEMENT_CRITERIA_TYPE_EARNED_PVP_TITLE = 74,
+    ACHIEVEMENT_CRITERIA_TYPE_ON_LOGIN = 74,
     ACHIEVEMENT_CRITERIA_TYPE_LEARN_SKILLLINE_SPELLS= 75,
     ACHIEVEMENT_CRITERIA_TYPE_WIN_DUEL = 76,
     ACHIEVEMENT_CRITERIA_TYPE_LOSE_DUEL = 77,
@@ -487,6 +487,7 @@ enum VehicleSeatFlags
     SEAT_FLAG_USABLE                = 0x02000000,           // Lua_CanExitVehicle
     SEAT_FLAG_CAN_SWITCH            = 0x04000000,           // Lua_CanSwitchVehicleSeats
     SEAT_FLAG_CAN_CAST              = 0x20000000,           // Lua_UnitHasVehicleUI
+    SEAT_FLAG_ATTACK_TEST           = 0x40000000,           // Attack test
 };
 
 #endif

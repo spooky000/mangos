@@ -46,9 +46,9 @@ alter table creature_movement add `wpguid` int(11) default '0';
 //-----------------------------------------------//
 void WaypointMovementGenerator<Creature>::LoadPath(Creature &creature)
 {
-    DETAIL_FILTER_LOG(LOG_FILTER_AI_AND_MOVEGENSS, "LoadPath: loading waypoint path for creature %u, %u", creature.GetGUIDLow(), creature.GetDBTableGUIDLow());
+    DETAIL_FILTER_LOG(LOG_FILTER_AI_AND_MOVEGENSS, "LoadPath: loading waypoint path for %s", creature.GetGuidStr().c_str());
 
-    i_path = sWaypointMgr.GetPath(creature.GetDBTableGUIDLow());
+    i_path = sWaypointMgr.GetPath(creature.GetGUIDLow());
 
     // We may LoadPath() for several occasions:
 
@@ -70,7 +70,7 @@ void WaypointMovementGenerator<Creature>::LoadPath(Creature &creature)
         if (!i_path)
         {
             sLog.outErrorDb("WaypointMovementGenerator::LoadPath: creature %s (Entry: %u GUID: %u) doesn't have waypoint path",
-                creature.GetName(), creature.GetEntry(), creature.GetDBTableGUIDLow());
+                creature.GetName(), creature.GetEntry(), creature.GetGUIDLow());
             return;
         }
     }
@@ -186,7 +186,7 @@ bool WaypointMovementGenerator<Creature>::Update(Creature &creature, const uint3
 
             if (i_path->at(i_currentNode).script_id)
             {
-                DEBUG_FILTER_LOG(LOG_FILTER_AI_AND_MOVEGENSS, "Creature movement start script %u at point %u for creature %u (entry %u).", i_path->at(i_currentNode).script_id, i_currentNode, creature.GetDBTableGUIDLow(), creature.GetEntry());
+                DEBUG_FILTER_LOG(LOG_FILTER_AI_AND_MOVEGENSS, "Creature movement start script %u at point %u for %s.", i_path->at(i_currentNode).script_id, i_currentNode, creature.GetGuidStr().c_str());
                 creature.GetMap()->ScriptsStart(sCreatureMovementScripts, i_path->at(i_currentNode).script_id, &creature, &creature);
             }
 
@@ -331,12 +331,23 @@ void FlightPathMovementGenerator::Initialize(Player &player)
 
 void FlightPathMovementGenerator::Finalize(Player & player)
 {
+    if (GetPathId() == 632) // Vision Guide quest
+    {
+        if( player.GetQuestStatus(10525) == QUEST_STATUS_INCOMPLETE )
+            player.CompleteQuest(10525);
+
+        player.SetDisplayId(player.GetNativeDisplayId());
+    }
+
     // remove flag to prevent send object build movement packets for flight state and crash (movement generator already not at top of stack)
     player.clearUnitState(UNIT_STAT_TAXI_FLIGHT);
 
     float x, y, z;
     i_destinationHolder.GetLocationNow(player.GetMap(), x, y, z);
     player.SetPosition(x, y, z, player.GetOrientation());
+
+    if (GetPathId() == 632) // Vision Guide
+        player.TeleportTo(player.GetMapId(), GetPath()[0].x, GetPath()[0].y, GetPath()[0].z, player.GetOrientation());
 
     player.Unmount();
     player.RemoveFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_TAXI_FLIGHT);
@@ -361,6 +372,9 @@ void FlightPathMovementGenerator::Interrupt(Player & player)
 
 void FlightPathMovementGenerator::Reset(Player & player)
 {
+    if (player.m_taxi.GetTaxiDestination() == 158)
+        player.SetDisplayId(16587); // Vision Guide transformation
+
     player.getHostileRefManager().setOnlineOfflineState(false);
     player.addUnitState(UNIT_STAT_TAXI_FLIGHT);
     player.SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_TAXI_FLIGHT);

@@ -643,6 +643,15 @@ bool IsPositiveEffect(uint32 spellId, SpellEffectIndex effIndex)
         case 52986:                                         // Penance heal effect trigger - Rank 2
         case 52987:                                         // Penance heal effect trigger - Rank 3
         case 52988:                                         // Penance heal effect trigger - Rank 4
+        case 64844:                                         // Divine Hymn
+        case 64904:                                         // Hymn of Hope
+        case 1008:                                          // Amplify Magic - Rank 1
+        case 8455:                                          // Amplify Magic - Rank 2
+        case 10169:                                         // Amplify Magic - Rank 3
+        case 10170:                                         // Amplify Magic - Rank 4
+        case 27130:                                         // Amplify Magic - Rank 5
+        case 33946:                                         // Amplify Magic - Rank 6
+        case 43017:                                         // Amplify Magic - Rank 7
             return true;
     }
 
@@ -1977,6 +1986,17 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
     if ((spellInfo_1->Attributes & SPELL_ATTR_PASSIVE)!=(spellInfo_2->Attributes & SPELL_ATTR_PASSIVE))
         return false;
 
+    // Mangle and Trauma 
+    if (spellInfo_1->EffectApplyAuraName[EFFECT_INDEX_1] == SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT && 
+        spellInfo_1->EffectMiscValue[EFFECT_INDEX_1] == MECHANIC_BLEED &&
+        spellInfo_2->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT &&
+        spellInfo_2->EffectMiscValue[EFFECT_INDEX_0] == MECHANIC_BLEED || 
+        spellInfo_2->EffectApplyAuraName[EFFECT_INDEX_1] == SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT && 
+        spellInfo_2->EffectMiscValue[EFFECT_INDEX_1] == MECHANIC_BLEED &&
+        spellInfo_1->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT &&
+        spellInfo_1->EffectMiscValue[EFFECT_INDEX_0] == MECHANIC_BLEED ) 
+        return true;
+
     // Dispersion - stacks with everything
      if ((spellInfo_1->Id == 47585 && spellInfo_2->Id == 60069) ||
           (spellInfo_2->Id == 47585 && spellInfo_1->Id == 60069))
@@ -2072,6 +2092,10 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                     if ((spellInfo_1->Id == 8326 && spellInfo_2->Id == 20584) ||
                         (spellInfo_2->Id == 8326 && spellInfo_1->Id == 20584))
                          return false;
+
+                    // Blood Fury and Rage of the Unraveller
+                    if (spellInfo_1->SpellIconID == 1662 && spellInfo_2->SpellIconID == 1662)
+                        return false;
 
                     // Kindred Spirits
                     if (spellInfo_1->SpellIconID == 3559 && spellInfo_2->SpellIconID == 3559)
@@ -2243,6 +2267,11 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                 if ((spellInfo_1->SpellIconID == 456 && spellInfo_2->SpellIconID == 2006) ||
                     (spellInfo_2->SpellIconID == 456 && spellInfo_1->SpellIconID == 2006))
                     return false;
+
+                // Defensive/Berserker/Battle stance aura can not stack (needed for dummy auras)
+                if (((spellInfo_1->SpellFamilyFlags & UI64LIT(0x800000)) && (spellInfo_2->SpellFamilyFlags & UI64LIT(0x800000))) ||
+                    ((spellInfo_2->SpellFamilyFlags & UI64LIT(0x800000)) && (spellInfo_1->SpellFamilyFlags & UI64LIT(0x800000))))
+                    return true;
             }
 
             // Hamstring -> Improved Hamstring (multi-family check)
@@ -2256,6 +2285,14 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
             // Bloodlust and Bloodthirst (multi-family check)
             if (spellInfo_2->Id == 2825 && spellInfo_1->SpellIconID == 38 && spellInfo_1->SpellVisual[0] == 0)
                 return false;
+
+            else if (spellInfo_2->SpellFamilyName == SPELLFAMILY_ROGUE)
+            {
+                // Sunder Armor and Expose Armor
+                if (spellInfo_1->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MOD_RESISTANCE_PCT &&
+                    spellInfo_2->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MOD_RESISTANCE_PCT)
+                    return true;
+            }
 
             break;
         case SPELLFAMILY_PRIEST:
@@ -2340,6 +2377,11 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                 if ((spellInfo_1->Id == 22842 && spellInfo_2->Id == 62606) ||
                     (spellInfo_2->Id == 22842 && spellInfo_1->Id == 62606))
                     return false;
+
+                // Rejuvenation and Forethought Talisman (item 40258)
+                if ((spellInfo_1->SpellIconID == 64 && spellInfo_2->SpellIconID == 3088) ||
+                    (spellInfo_2->SpellIconID == 64 && spellInfo_1->SpellIconID == 3088))
+                    return false;
             }
 
             // Leader of the Pack and Scroll of Stamina (multi-family check)
@@ -2348,10 +2390,6 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
 
             // Dragonmaw Illusion (multi-family check)
             if (spellId_1 == 42016 && spellId_2 == 40216 )
-                return false;
-
-            // Rejuvenation and Forethought Talisman (item 40258)
-            if(spellInfo_2->Id == 60530 && spellInfo_1->SpellIconID == 64)
                 return false;
 
             break;
@@ -2369,6 +2407,15 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                     (spellInfo_2->Category == 44 && spellInfo_1->Category == 0)))
                     return false;
             }
+
+            else if (spellInfo_2->SpellFamilyName == SPELLFAMILY_WARRIOR)
+            {
+                // Sunder Armor and Expose Armor
+                if (spellInfo_1->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MOD_RESISTANCE_PCT &&
+                    spellInfo_2->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MOD_RESISTANCE_PCT)
+                    return true;
+            }
+
              else if (spellInfo_2->SpellFamilyName == SPELLFAMILY_GENERIC) 
             {
                 // Honor Among Thieves dummy auras (multi-family check)

@@ -30,7 +30,7 @@
 #include "ObjectAccessor.h"
 #include "Language.h"
 #include "CellImpl.h"
-#include "InstanceSaveMgr.h"
+#include "MapPersistentStateMgr.h"
 #include "Mail.h"
 #include "Util.h"
 #include "ChannelMgr.h"
@@ -554,14 +554,13 @@ bool ChatHandler::HandleGonameCommand(char* args)
                 // if no bind exists, create a solo bind
                 if (!gBind)
                 {
-                    if (InstanceSave *save = target->GetMap()->GetInstanceSave())
-                    {
-                        // if player is group leader then we need add group bind
-                        if (group && group->IsLeader(_player->GetObjectGuid()))
-                            group->BindToInstance(save, !save->CanReset());
-                        else
-                            _player->BindToInstance(save, !save->CanReset());
-                    }
+                    DungeonPersistentState *save = ((DungeonMap*)target->GetMap())->GetPersistanceState();
+
+                    // if player is group leader then we need add group bind
+                    if (group && group->IsLeader(_player->GetObjectGuid()))
+                        group->BindToInstance(save, !save->CanReset());
+                    else
+                        _player->BindToInstance(save, !save->CanReset());
                 }
             }
 
@@ -1224,6 +1223,7 @@ bool ChatHandler::HandleModifyScaleCommand(char* args)
     }
 
     target->SetObjectScale(Scale);
+    target->UpdateModelData();
 
     return true;
 }
@@ -2309,5 +2309,19 @@ bool ChatHandler::HandleSendChannelMsgCommand(char *args)
     WorldPacket dataa;
     ChatHandler::FillMessageData(&dataa, NULL, CHAT_MSG_CHANNEL, LANG_UNIVERSAL, channel->GetName().c_str(), NULL, msg, NULL, isGM);
     channel->SendToAll(&dataa);
+    return true;
+}
+
+bool ChatHandler::HandleSetViewCommand(char* /*args*/)
+{
+    if (Unit* unit = getSelectedUnit())
+        m_session->GetPlayer()->GetCamera().SetView(unit);
+    else
+    {
+        PSendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
     return true;
 }
