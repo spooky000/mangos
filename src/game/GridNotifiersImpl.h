@@ -80,7 +80,7 @@ inline void MaNGOS::PlayerRelocationNotifier::Visit(CreatureMapType &m)
     for(CreatureMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
     {
         Creature* c = iter->getSource();
-        if (c->isAlive() && !c->isVisibilityUpdatePending(VisibilityUpdateFlag_AI_Now))
+        if (c->isAlive())
             PlayerCreatureRelocationWorker(&i_player, c);
     }
 }
@@ -94,7 +94,7 @@ inline void MaNGOS::CreatureRelocationNotifier::Visit(PlayerMapType &m)
     for(PlayerMapType::iterator iter=m.begin(); iter != m.end(); ++iter)
     {
         Player* player = iter->getSource();
-        if (player->isAlive() && !player->IsTaxiFlying() && !player->isVisibilityUpdatePending(VisibilityUpdateFlag_AI_Now))
+        if (player->isAlive() && !player->IsTaxiFlying())
             PlayerCreatureRelocationWorker(player, &i_creature);
     }
 }
@@ -108,7 +108,7 @@ inline void MaNGOS::CreatureRelocationNotifier::Visit(CreatureMapType &m)
     for(CreatureMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
     {
         Creature* c = iter->getSource();
-        if (c != &i_creature && c->isAlive() && !c->isVisibilityUpdatePending(VisibilityUpdateFlag_AI_Now))
+        if (c != &i_creature && c->isAlive())
             CreatureCreatureRelocationWorker(c, &i_creature);
     }
 }
@@ -136,14 +136,15 @@ inline void MaNGOS::DynamicObjectUpdater::VisitHelper(Unit* target)
     if (target->GetTypeId() == TYPEID_PLAYER && target != i_check && (((Player*)target)->isGameMaster() || ((Player*)target)->GetVisibility() == VISIBILITY_OFF))
         return;
 
+    // for player casts use less strict negative and more stricted positive targeting
     if (i_check->GetTypeId() == TYPEID_PLAYER )
     {
-        if (i_check->IsFriendlyTo( target ))
-            return;
+        if (i_check->IsFriendlyTo( target ) != i_positive)
+                return;
     }
     else
     {
-        if (!i_check->IsHostileTo( target ))
+        if (i_check->IsHostileTo( target ) == i_positive)
             return;
     }
 
@@ -159,7 +160,7 @@ inline void MaNGOS::DynamicObjectUpdater::VisitHelper(Unit* target)
 
     // Apply PersistentAreaAura on target
     // in case 2 dynobject overlap areas for same spell, same holder is selected, so dynobjects share holder
-    SpellAuraHolder *holder = target->GetSpellAuraHolder(spellInfo->Id, i_dynobject.GetCaster()->GetGUID());
+    SpellAuraHolder *holder = target->GetSpellAuraHolder(spellInfo->Id, i_dynobject.GetCasterGuid().GetRawValue());
 
     if (holder)
     {

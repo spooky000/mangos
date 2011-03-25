@@ -475,7 +475,7 @@ bool ChatHandler::HandleCharacterWhisperCommand(char* args)
         player->rcGmName = from_name;
 
         WorldPacket data( SMSG_NAME_QUERY_RESPONSE, (8+1+1+1+1+1+1+10) );
-        data.appendPackGUID(ObjectGuid(HIGHGUID_PLAYER, 0, 1).ReadAsPacked().m_guidPtr->GetRawValue());
+        data.appendPackGUID(ObjectGuid(HIGHGUID_PLAYER, (uint32)0, (uint32)1).ReadAsPacked().m_guidPtr->GetRawValue());
         data << uint8(0);             // added in 3.1
         data << from_name.c_str();
         data << uint32(0);            // not needed here data
