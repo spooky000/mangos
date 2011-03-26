@@ -5766,12 +5766,6 @@ void Aura::HandlePeriodicHeal(bool apply, bool /*Real*/)
             holy = int32(holy * 377 / 1000);
             m_modifier.m_amount += ap > holy ? ap : holy;
         }
-        // Lifeblood
-        else if (GetSpellProto()->SpellIconID == 3088 && GetSpellProto()->SpellVisual[0] == 8145)
-        {
-            int32 healthBonus = int32 (0.0032f * caster->GetMaxHealth());
-            m_modifier.m_amount += healthBonus;
-        }
 
         // Lifeblood
         if (GetSpellProto()->SpellIconID == 3088 && GetSpellProto()->SpellVisual[0] == 8145)
@@ -6041,14 +6035,8 @@ void Aura::HandleModResistancePercent(bool apply, bool /*Real*/)
 
 void Aura::HandleModBaseResistance(bool apply, bool /*Real*/)
 {
-    // only players have base stats
-    if(GetTarget()->GetTypeId() != TYPEID_PLAYER)
-    {
-        //only pets have base stats
-        if(((Creature*)GetTarget())->IsPet() && (m_modifier.m_miscvalue & SPELL_SCHOOL_MASK_NORMAL))
-            GetTarget()->HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(m_modifier.m_amount), apply);
-    }
-    else
+    // only players and pets have base stats
+    if(GetTarget()->GetTypeId() == TYPEID_PLAYER  || ((Creature*)GetTarget())->IsPet())
     {
         for(int i = SPELL_SCHOOL_NORMAL; i < MAX_SPELL_SCHOOL; i++)
             if(m_modifier.m_miscvalue & (1<<i))
