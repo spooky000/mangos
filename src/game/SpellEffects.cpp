@@ -9773,6 +9773,10 @@ void Spell::EffectKnockBack(SpellEffectIndex eff_idx)
     if(!unitTarget)
         return;
 
+	// Can't knockback vehicles
+    if (unitTarget->GetObjectGuid().IsVehicle())
+        return;
+
     // Can't knockback rooted target
     if (unitTarget->hasUnitState(UNIT_STAT_ROOT))
         return;
