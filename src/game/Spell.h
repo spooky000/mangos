@@ -597,7 +597,6 @@ class Spell
             bool   processed:1;
             bool   deleted:1;
         };
-        tbb::concurrent_vector<TargetInfo> m_UniqueTargetInfo;
         uint8 m_needAliveTargetMask;                        // Mask req. alive targets
         bool m_destroyed;
 
@@ -609,7 +608,6 @@ class Spell
             bool   processed:1;
             bool   deleted:1;
         };
-        tbb::concurrent_vector<GOTargetInfo> m_UniqueGOTargetInfo;
 
         struct ItemTargetInfo
         {
@@ -618,7 +616,14 @@ class Spell
             bool   processed:1;
             bool   deleted:1;
         };
-        tbb::concurrent_vector<ItemTargetInfo> m_UniqueItemInfo;
+
+        typedef tbb::concurrent_vector<TargetInfo> TargetList;
+        typedef tbb::concurrent_vector<GOTargetInfo> GOTargetList;
+        typedef tbb::concurrent_vector<ItemTargetInfo> ItemTargetList;
+
+        TargetList m_UniqueTargetInfo;
+        GOTargetList m_UniqueGOTargetInfo;
+        ItemTargetList m_UniqueItemInfo;
 
         void AddUnitTarget(Unit* target, SpellEffectIndex effIndex);
         void AddUnitTarget(uint64 unitGUID, SpellEffectIndex effIndex);
