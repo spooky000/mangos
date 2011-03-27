@@ -386,7 +386,7 @@ m_isPersistent(false), m_in_use(0), m_spellAuraHolder(holder)
 
     bool isPassive = IsPassiveSpell(GetSpellProto());
     bool isPermanent = false;
-    m_positive = IsPositiveEffect(spellproto->Id, m_effIndex);
+    m_positive = IsPositiveEffect(spellproto, m_effIndex);
 
     m_applyTime = time(NULL);
 
@@ -2233,6 +2233,10 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                             }
                         }
                     }
+                    case 62109:                             // Tails Up: Aura
+                        target->setFaction(1990);           // Ambient (hostile)
+                        target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_OOC_NOT_ATTACKABLE);
+                        return;
                     case 63624:                             // Learn a Second Talent Specialization
                         // Teach Learn Talent Specialization Switches, required for client triggered casts, allow after 30 sec delay
                         if (target->GetTypeId() == TYPEID_PLAYER)
