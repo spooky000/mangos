@@ -1749,7 +1749,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(unitTarget, 44455, true, m_CastItem);
                     return;
                 }
-                case 44875:                                 // Complete Raptor Capture
+                /*case 44875:                                 // Complete Raptor Capture
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
                         return;
@@ -1761,7 +1761,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     //cast spell Raptor Capture Credit
                     m_caster->CastSpell(m_caster, 42337, true, NULL);
                     return;
-                }
+                }*/
                 case 44997:                                 // Converting Sentry
                 {
                     //Converted Sentry Credit
