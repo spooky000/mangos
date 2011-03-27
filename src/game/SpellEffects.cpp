@@ -2669,6 +2669,23 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(unitTarget,60934,true,NULL);
                     return;
                 }
+                case 62105:                                 // To'kini's Blowgun
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
+                        return;
+
+                    // Sleeping Sleep
+                    unitTarget->CastSpell(unitTarget, 62248, true);
+
+                    // Although not really correct, it's needed to have access to m_caster later,
+                    // to properly process spell 62110 (cast from gossip).
+                    // Can possibly be replaced with a similar function that doesn't set any dynamic flags.
+                    ((Creature*)unitTarget)->SetLootRecipient(m_caster);
+
+                    unitTarget->setFaction(190);            // Ambient (neutral)
+                    unitTarget->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_OOC_NOT_ATTACKABLE);
+                    return;
+                }
                 case 46171:                                 // Q:Emergency Protocol: Section 8.2, Paragraph D
                 {
                     if (m_caster->GetTypeId() != TYPEID_PLAYER)
