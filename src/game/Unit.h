@@ -825,14 +825,6 @@ inline ByteBuffer& operator>> (ByteBuffer& buf, MovementInfo& mi)
     return buf;
 }
 
-enum VisibilityUpdateFlags
-{
-    VisibilityUpdateFlag_None        = 0x00,
-    VisibilityUpdateFlag_AI_Sheduled = 0x01,         // AI relocation notification sheduled
-    VisibilityUpdateFlag_AI_Now      = 0x02,         // AI relocation notification will be executed in next update tick
-    VisibilityUpdateFlag_Client      = 0x04,         // Visibility will be updated in next update tick
-};
-
 enum DiminishingLevels
 {
     DIMINISHING_LEVEL_1             = 0,
