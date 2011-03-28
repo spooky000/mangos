@@ -13055,22 +13055,22 @@ void Player::PrepareGossipMenu(WorldObject *pSource, uint32 menuId)
         {
             if (itr->second.cond_1 && !sObjectMgr.IsPlayerMeetToCondition(this, itr->second.cond_1))
             {
-//                if (itr->second.option_id == GOSSIP_OPTION_QUESTGIVER)
-//                    canSeeQuests = false;
+                if (itr->second.option_id == GOSSIP_OPTION_QUESTGIVER)
+                    canSeeQuests = false;
                 continue;
             }
 
             if (itr->second.cond_2 && !sObjectMgr.IsPlayerMeetToCondition(this, itr->second.cond_2))
             {
-//                if (itr->second.option_id == GOSSIP_OPTION_QUESTGIVER)
-//                    canSeeQuests = false;
+                if (itr->second.option_id == GOSSIP_OPTION_QUESTGIVER)
+                    canSeeQuests = false;
                 continue;
             }
 
             if (itr->second.cond_3 && !sObjectMgr.IsPlayerMeetToCondition(this, itr->second.cond_3))
             {
-//                if (itr->second.option_id == GOSSIP_OPTION_QUESTGIVER)
-//                    canSeeQuests = false;
+                if (itr->second.option_id == GOSSIP_OPTION_QUESTGIVER)
+                    canSeeQuests = false;
                 continue;
             }
         }
