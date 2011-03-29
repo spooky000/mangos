@@ -422,6 +422,7 @@ Spell::Spell( Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid o
 
 Spell::~Spell()
 {
+    m_destroyed = true;
 }
 
 template<typename T>
