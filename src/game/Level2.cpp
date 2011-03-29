@@ -88,7 +88,7 @@ bool ChatHandler::HandleMuteCommand(char* args)
         reason = "reason was not provided";
 
     LoginDatabase.PExecute("INSERT INTO account_muted VALUES ('%u', " UI64FMTD ", '%s', '%s')",
-        account_id,uint64(mutetime), m_session ? m_session->GetPlayerName() : "", reason);
+        account_id,uint64(mutetime), m_session ? m_session->GetPlayerName() : "Console(IRC)", reason);
 
     if (target)
         ChatHandler(target).PSendSysMessage(LANG_YOUR_CHAT_DISABLED, notspeaktime, reason);
