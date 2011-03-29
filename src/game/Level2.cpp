@@ -84,16 +84,18 @@ bool ChatHandler::HandleMuteCommand(char* args)
         target->GetSession()->m_muteTime = mutetime;
 
     char* reason = ExtractArg(&args);
+    if (!reason)
+        reason = "reason was not provided";
 
     LoginDatabase.PExecute("INSERT INTO account_muted VALUES ('%u', " UI64FMTD ", '%s', '%s')",
-        account_id,uint64(mutetime), m_session ? m_session->GetPlayerName() : "", reason ? reason : "");
+        account_id,uint64(mutetime), m_session ? m_session->GetPlayerName() : "", reason);
 
     if (target)
-        ChatHandler(target).PSendSysMessage(LANG_YOUR_CHAT_DISABLED, notspeaktime);
+        ChatHandler(target).PSendSysMessage(LANG_YOUR_CHAT_DISABLED, notspeaktime, reason);
 
     std::string nameLink = playerLink(target_name);
 
-    PSendSysMessage(LANG_YOU_DISABLE_CHAT, nameLink.c_str(), notspeaktime);
+    PSendSysMessage(LANG_YOU_DISABLE_CHAT, nameLink.c_str(), notspeaktime, reason);
     return true;
 }
 
