@@ -796,8 +796,7 @@ int WorldSocket::HandleAuthSession (WorldPacket& recvPacket)
                                 "v, "                       //5
                                 "s, "                       //6
                                 "expansion, "               //7
-                                "mutetime, "                //8
-                                "locale "                   //9
+                                "locale "                   //8
                                 "FROM account "
                                 "WHERE username = '%s'",
                                 safe_account.c_str ());
@@ -857,9 +856,16 @@ int WorldSocket::HandleAuthSession (WorldPacket& recvPacket)
 
     K.SetHexStr (fields[2].GetString ());
 
-    time_t mutetime = time_t (fields[8].GetUInt64 ());
+    QueryResult *muteResult = LoginDatabase.PQuery ("SELECT mutetime FROM account_muted WHERE account_id = %u", id);
 
-    locale = LocaleConstant (fields[9].GetUInt8 ());
+    time_t mutetime = 0;
+    if (muteResult)
+    {
+        mutetime = muteResult->Fetch()[0].GetUInt64();
+        delete muteResult;
+    }
+
+    locale = LocaleConstant (fields[8].GetUInt8 ());
     if (locale >= MAX_LOCALE)
         locale = LOCALE_enUS;
 

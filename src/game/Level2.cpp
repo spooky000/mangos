@@ -83,7 +83,10 @@ bool ChatHandler::HandleMuteCommand(char* args)
     if (target)
         target->GetSession()->m_muteTime = mutetime;
 
-    LoginDatabase.PExecute("UPDATE account SET mutetime = " UI64FMTD " WHERE id = '%u'", uint64(mutetime), account_id);
+    char* reason = ExtractArg(&args);
+
+    LoginDatabase.PExecute("INSERT INTO account_muted VALUES ('%u', " UI64FMTD ", '%s', '%s')",
+        account_id,uint64(mutetime), m_session ? m_session->GetPlayerName() : "", reason ? reason : "");
 
     if (target)
         ChatHandler(target).PSendSysMessage(LANG_YOUR_CHAT_DISABLED, notspeaktime);
@@ -128,7 +131,7 @@ bool ChatHandler::HandleUnmuteCommand(char* args)
         target->GetSession()->m_muteTime = 0;
     }
 
-    LoginDatabase.PExecute("UPDATE account SET mutetime = '0' WHERE id = '%u'", account_id);
+    LoginDatabase.PExecute("DELETE FROM account_muted WHERE account_id = '%u'", account_id);
 
     if (target)
         ChatHandler(target).PSendSysMessage(LANG_YOUR_CHAT_ENABLED);
