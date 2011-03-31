@@ -1679,10 +1679,9 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 67296:
                 case 67297:
                 case 67298:
+                case 62488:                                 // Activate Construct (Ulduar - Ignis encounter)
                 case 63024:                                 // Gravity Bomb (10 man)
                 case 64234:                                 // Gravity Bomb (25 man)
-                case 61916:                                 // Lightning Whirl (10 man)
-                case 63482:                                 // Lightning Whirl (25 man)
                 case 63018:                                 // Searing Light (10 man)
                 case 65121:                                 // Searing Light (25 man)
                 case 71340:                                 // Pact of darkfallen (hack for script work)
@@ -1705,6 +1704,12 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 62477:                                 // Icicle (Hodir 25man)
                 case 54522:
                     unMaxTargets = 3;
+                    break;
+                case 61916:                                 // Lightning Whirl (10 man)
+                    unMaxTargets = urand(2,3);
+                    break;
+                case 63482:                                 // Lightning Whirl (25 man)
+                    unMaxTargets = urand(3,6);
                     break;
                 case 71221:                                 // Gas spore - 25
                     unMaxTargets = 4;
@@ -2025,16 +2030,28 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
             break;
         }
         case TARGET_ALL_ENEMY_IN_AREA:
-        {
             FillAreaTargets(targetUnitMap, m_targets.m_destX, m_targets.m_destY, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
-            if (m_spellInfo->Id == 62240 || m_spellInfo->Id == 62920)
+
+            if (m_spellInfo->Id == 63342 ||                              // Focused Eyebeam (Kologarn)
+                m_spellInfo->Id == 62166 || m_spellInfo->Id == 63981)    // Stone Grip (Kologarn)
+            {
+                targetUnitMap.clear();
+                if (m_targets.getUnitTarget())
+                {
+                    targetUnitMap.push_back(m_targets.getUnitTarget());
+                    return;
+                }
+                else
+                    unMaxTargets = 1;
+            }
+            // Solar Flare (Freya's elder)
+            else if (m_spellInfo->Id == 62240 || m_spellInfo->Id == 62920)
             {
                 if (SpellAuraHolder *holder = m_caster->GetSpellAuraHolder(62239))
                     unMaxTargets = holder->GetStackAmount();
                 else
                     unMaxTargets = 1;
             }
-        }
             break;
         case TARGET_AREAEFFECT_INSTANT:
         {
@@ -2079,6 +2096,64 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                         }
                     }
                 }
+            }
+            
+            // Decimate - Gluth encounter
+            // target everything in the room except the caster
+            if (m_spellInfo->Id == 28374)
+            {
+                targetUnitMap.clear();
+                FillAreaTargets(targetUnitMap, m_caster->GetPositionX(), m_caster->GetPositionY(), radius, PUSH_DEST_CENTER, SPELL_TARGETS_ALL);
+            }
+            // Activate Constructs (remove all except inactive constructs)
+            if (m_spellInfo->Id == 62488 && !targetUnitMap.empty() )
+            {
+                std::list<Unit*> tempTargetUnitMap;
+                targetUnitMap.clear();
+                FillAreaTargets(tempTargetUnitMap, m_caster->GetPositionX(), m_caster->GetPositionY(), radius, PUSH_DEST_CENTER, SPELL_TARGETS_NOT_HOSTILE);
+
+                for (std::list<Unit*>::iterator itr = tempTargetUnitMap.begin(),next; itr != tempTargetUnitMap.end(); itr++)
+                {
+                    if ((*itr) && (*itr)->GetEntry() == 33121 && (*itr)->HasAura(62468, EFFECT_INDEX_0))
+                        targetUnitMap.push_back(*itr);
+                }
+            }
+            // Heat (remove all except active iron constructs)
+            if (m_spellInfo->Id == 62343)
+            {
+                std::list<Unit*> tempTargetUnitMap;
+                targetUnitMap.clear();
+                FillAreaTargets(tempTargetUnitMap, m_caster->GetPositionX(), m_caster->GetPositionY(), radius, PUSH_DEST_CENTER, SPELL_TARGETS_NOT_HOSTILE);
+
+                for (std::list<Unit*>::iterator itr = tempTargetUnitMap.begin(),next; itr != tempTargetUnitMap.end(); itr++)
+                {
+                    if ((*itr) && (*itr)->GetEntry() == 33121 &&
+                        !(*itr)->HasAura(62468) && !(*itr)->HasAura(62373) &&
+                        !(*itr)->HasAura(62382) && !(*itr)->HasAura(67114)
+                        )
+                        targetUnitMap.push_back(*itr);
+                }
+
+                return;
+            }
+            // Supercharge (Iron Council: Ulduar)
+            if (m_spellInfo->Id == 61920)
+            {
+                std::list<Unit*> tempTargetUnitMap;
+                targetUnitMap.clear();
+                FillAreaTargets(tempTargetUnitMap, m_caster->GetPositionX(), m_caster->GetPositionY(), radius, PUSH_DEST_CENTER, SPELL_TARGETS_NOT_HOSTILE);
+
+                for (std::list<Unit*>::iterator itr = tempTargetUnitMap.begin(),next; itr != tempTargetUnitMap.end(); itr++)
+                {
+                    if ((*itr) &&
+                        ((*itr)->GetEntry() == 32867 || // Steelbreaker
+                        (*itr)->GetEntry() == 32927 ||  // Runemaster Molgeim
+                        (*itr)->GetEntry() == 32857)    // Stormcaller Brundir
+                        )
+                        targetUnitMap.push_back(*itr);
+                }
+
+                return;
             }
 
             // exclude caster
@@ -2405,6 +2480,17 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 uint32 count = CalculateDamage(EFFECT_INDEX_2,m_caster); // stored in dummy effect, affected by mods
 
                 FillRaidOrPartyHealthPriorityTargets(targetUnitMap, m_caster, target, radius, count, true, false, true);
+            }
+            // Gravity Bomb, Searing Light
+            else if (m_spellInfo->SpellIconID == 3757 || m_spellInfo->SpellIconID == 3021)
+            {
+                // targets are checked with original caster, which is in fact hostile, not friendly
+                if (Unit *pTarget = m_targets.getUnitTarget())
+                {
+                    FillAreaTargets(targetUnitMap, pTarget->GetPositionX(), pTarget->GetPositionY(), radius, PUSH_TARGET_CENTER, SPELL_TARGETS_FRIENDLY, pTarget);
+                    targetUnitMap.remove(pTarget); // the target of aura triggering this spell
+                    return;
+                }
             }
             // Item - Icecrown 25 Heroic/Normal Healer Trinket 2
             else if (m_spellInfo->Id == 71641 || m_spellInfo->Id == 71610)
@@ -3009,6 +3095,28 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                             SetTargetMap(effIndex, m_spellInfo->EffectImplicitTargetB[effIndex], targetUnitMap);
                             return;
                         }
+                        case SPELL_AURA_PERIODIC_TRIGGER_SPELL:
+                        case SPELL_AURA_PERIODIC_DAMAGE:
+                        {
+                            switch (m_spellInfo->Id)
+                            {
+                                case 63024:                                 // Gravity Bomb (XT-002)
+                                case 64234:                                 // Gravity Bomb (h) (XT-002)
+                                case 63018:                                 // Searing Light (XT-002)
+                                case 65121:                                 // Searing Light (h) (XT-002)
+                                {
+                                    if (Unit *pTarget = m_targets.getUnitTarget())
+                                    {
+                                        targetUnitMap.clear();
+                                        targetUnitMap.push_back(pTarget);
+                                        return;
+                                    }
+                                }
+                                default:
+                                    break;
+                            }
+                            break;
+                        }
                         default:                            // apply to target in other case
                             if (m_targets.getUnitTarget())
                                 targetUnitMap.push_back(m_targets.getUnitTarget());
@@ -3330,7 +3438,7 @@ void Spell::cast(bool skipCheck)
                 AddTriggeredSpell(65116);                   // Stoneskin - armor 10% for 8 sec
             else if(m_spellInfo->Id == 71904)               // Chaos Bane strength buff
                 AddTriggeredSpell(73422);
-            else if(m_spellInfo->Id ==61968)
+            else if(m_spellInfo->Id ==61968)                // Flash Freeze (Hodir: Ulduar)
                 AddTriggeredSpell(62148);                   // visual effect
             else if(m_spellInfo->Id == 42292)               // PvP trinket
                 AddTriggeredSpell(72752);                   // Will of the Forsaken Cooldown

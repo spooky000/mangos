@@ -5422,6 +5422,20 @@ void Aura::HandleModMechanicImmunity(bool apply, bool /*Real*/)
     // Heroic Fury (Intercept cooldown remove)
     else if (apply && GetSpellProto()->Id == 60970 && target->GetTypeId() == TYPEID_PLAYER)
         ((Player*)target)->RemoveSpellCooldown(20252, true);
+    // Potent Pheromones (Freya encounter)
+    else if (GetId() == 64321 || GetId() == 62619)
+    {
+        if (apply)
+            HandleAuraModPacifyAndSilence(false, true);
+        else
+        {
+            if (GetId() == 64321 && m_removeMode == AURA_REMOVE_BY_EXPIRE || GetId() == 62619)
+            {
+                if (GetTarget()->HasAura(62532, EFFECT_INDEX_0))
+                    HandleAuraModPacifyAndSilence(true, true);
+            }
+        }
+    }
 }
 
 void Aura::HandleModMechanicImmunityMask(bool apply, bool /*Real*/)
@@ -5616,6 +5630,23 @@ void Aura::HandlePeriodicTriggerSpell(bool apply, bool /*Real*/)
                 }
 
                 return;
+            case 63018:                                     // Searing Light (Ulduar: XT-002)
+            case 65121:                                     // Searing Light (h) (Ulduar: XT-002)
+                if (Unit *pCaster = pCaster = GetCaster())
+                {
+                    if (pCaster->HasAura(GetModifier()->m_amount))
+                        pCaster->CastSpell(target, 64210, true);
+                }
+
+                return;
+            case 63024:                                     // Gravity Bomb (Ulduar: XT-002)
+            case 64234:                                     // Gravity Bomb (h) (Ulduar: XT-002)
+                if (Unit *pCaster = pCaster = GetCaster())
+                {
+                    uint32 spellId = GetId() == 63024 ? 64203 : 64235;
+                    if (pCaster->HasAura(GetModifier()->m_amount))
+                        pCaster->CastSpell(target, spellId, true);
+                }
             default:
                 break;
         }
@@ -5700,6 +5731,23 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
     SpellEntry const*spell = GetSpellProto();
     switch( spell->SpellFamilyName)
     {
+       case SPELLFAMILY_GENERIC:
+        {
+            case 62717:                                   // Slag Pot (Ulduar: Ignis)
+            case 63477:
+            {
+                Unit *caster = GetCaster();
+
+                if (!caster || !target)
+                    return;
+
+                // Haste buff (Slag Imbued)
+                if (!apply)
+                    target->CastSpell(caster, (spell->Id == 62717) ? 62836 : 63536, true);
+
+                break;
+            }
+        }
         case SPELLFAMILY_WARLOCK:
         {
             switch (spell->Id)
@@ -8520,7 +8568,16 @@ void Aura::PeriodicDummyTick()
 
                     break;
                 }
-// Exist more after, need add later
+                case 62717:                                 // Slag Pot (periodic dmg)
+                case 63477:
+                {
+                    Unit *caster = GetCaster();
+
+                    if (caster && target)
+                        caster->CastSpell(target, (spell->Id == 62717) ? 65722 : 65723, true, 0, this, this->GetCasterGUID(), this->GetSpellProto());
+                    return;
+                }
+            // Exist more after, need add later
                 default:
                     break;
             }
