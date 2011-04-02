@@ -8011,7 +8011,7 @@ uint32 Unit::MeleeDamageBonusDone(Unit *pVictim, uint32 pdamage,WeaponAttackType
                                                                                                     // Those auras have SPELL_SCHOOL_MASK_MAGIC, but anyway should also affect
                                                                                                     // physical damage from non-weapon-damage-based spells (claw, swipe etc.)
                 (*i)->GetModifier()->m_miscvalue & GetMeleeDamageSchoolMask() &&                    // AND schoolmask has to fit with weapon damage school (essential for non-physical spells)
-                ((*i)->GetSpellProto()->EquippedItemClass == -1) ||                                 // general, weapon independent
+                (({*i)->GetSpellProto()->EquippedItemClass == -1) ||                                // general, weapon independent
                 (pWeapon && pWeapon->IsFitToSpellRequirements((*i)->GetSpellProto()))))             // OR used weapon fits aura requirements
             {
                 DoneFlat += (*i)->GetModifier()->m_amount;
