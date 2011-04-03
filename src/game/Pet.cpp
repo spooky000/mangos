@@ -71,8 +71,8 @@ void Pet::AddToWorld()
     if (!((Creature*)this)->IsInWorld())
     {
         GetMap()->GetObjectsStore().insert<Pet>(GetGUID(), (Pet*)this);
-        //if(!IsInWorld())
-        sObjectAccessor.AddObject(this);
+        /*if(!IsInWorld())
+        sObjectAccessor.AddObject(this);*/
         //GetMap()->GetObjectsStore().insert<Pet>(GetGUID(), (Pet*)this);
     }
 
@@ -85,8 +85,8 @@ void Pet::RemoveFromWorld()
     if (((Creature*)this)->IsInWorld())
     {
         GetMap()->GetObjectsStore().erase<Pet>(GetGUID(), (Pet*)NULL);
-        //if(IsInWorld())
-        sObjectAccessor.RemoveObject(this);
+        /*if(IsInWorld())
+        sObjectAccessor.RemoveObject(this);*/
     }
 
     ///- Don't call the function for Creature, normal mobs + totems go in a different storage
