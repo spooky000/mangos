@@ -71,8 +71,8 @@ void Pet::AddToWorld()
     if (!((Creature*)this)->IsInWorld())
     {
         GetMap()->GetObjectsStore().insert<Pet>(GetGUID(), (Pet*)this);
-        /*if(!IsInWorld())
-        sObjectAccessor.AddObject(this);*/
+        //if(!IsInWorld())
+        sObjectAccessor.AddObject(this);
         //GetMap()->GetObjectsStore().insert<Pet>(GetGUID(), (Pet*)this);
     }
 
@@ -85,8 +85,8 @@ void Pet::RemoveFromWorld()
     if (((Creature*)this)->IsInWorld())
     {
         GetMap()->GetObjectsStore().erase<Pet>(GetGUID(), (Pet*)NULL);
-        /*if(IsInWorld())
-        sObjectAccessor.RemoveObject(this);*/
+        //if(IsInWorld())
+        sObjectAccessor.RemoveObject(this);
     }
 
     ///- Don't call the function for Creature, normal mobs + totems go in a different storage
@@ -1345,6 +1345,10 @@ void Pet::_SaveAuras()
     if (auraHolders.empty())
         return;
 
+    stmt = CharacterDatabase.CreateStatement(insAuras, "INSERT INTO pet_aura (guid, caster_guid, item_guid, spell, stackcount, remaincharges, "
+           "basepoints0, basepoints1, basepoints2, maxduration0, maxduration1, maxduration2, remaintime0, remaintime1, remaintime2, effIndexMask) "
+           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
     for(SpellAuraHolderMap::const_iterator itr = auraHolders.begin(); itr != auraHolders.end(); ++itr)
     {
         SpellAuraHolder *holder = itr->second;
@@ -1393,9 +1397,6 @@ void Pet::_SaveAuras()
             if (!effIndexMask)
                 continue;
             
-            stmt = CharacterDatabase.CreateStatement(insAuras, "INSERT INTO pet_aura (guid, caster_guid, item_guid, spell, stackcount, remaincharges, basepoints0, basepoints1, basepoints2, maxduration0, maxduration1, maxduration2, remaintime0, remaintime1, remaintime2, effIndexMask) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-
             stmt.addUInt32(m_charmInfo->GetPetNumber());
             stmt.addUInt64(holder->GetCasterGuid().GetRawValue());
             stmt.addUInt32(holder->GetCastItemGuid().GetCounter());
@@ -1984,6 +1985,11 @@ bool Pet::IsPermanentPetFor(Player* owner)
 bool Pet::Create(uint32 guidlow, CreatureCreatePos& cPos, uint32 Entry, uint32 pet_number, Unit* owner)
 {
     if (!owner)
+        return false;
+
+    CreatureInfo const* cInfo = ObjectMgr::GetCreatureTemplate(Entry);
+
+    if (!cInfo)
         return false;
 
     m_loading = true;
@@ -3023,8 +3029,8 @@ bool Pet::ReapplyScalingAura(SpellAuraHolder* holder, SpellEntry const *spellpro
     }
 
     Aura* aura = CreateAura(spellproto, index, &basePoints, holder, this, this, NULL);
-    aura->SetAuraDuration(aura->GetAuraMaxDuration());
     holder->AddAura(aura, index);
+    aura->SetAuraDuration(aura->GetAuraMaxDuration());
     AddAuraToModList(aura);
     aura->ApplyModifier(true,true);
 
