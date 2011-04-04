@@ -4376,16 +4376,7 @@ void Spell::WriteSpellGoTargets(WorldPacket* data)
             ihit->missCondition = SPELL_MISS_IMMUNE2;
             ++miss;
         }
-        else if ((*ihit).missCondition == SPELL_MISS_NONE)
-            ++hit;
-        else
-            ++miss;
-    }
-
-    *data << (uint8)hit;
-    for(TargetList::const_iterator ihit = m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
-    {
-        if ((*ihit).missCondition == SPELL_MISS_NONE)       // Add only hits
+        else if (ihit->missCondition == SPELL_MISS_NONE)    // Add only hits
         {
             ++hit;
             *data << ihit->targetGUID;
