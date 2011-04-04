@@ -286,7 +286,6 @@ class Spell
         void EffectTriggerMissileSpell(SpellEffectIndex eff_idx);
         void EffectThreat(SpellEffectIndex eff_idx);
         void EffectRestoreItemCharges(SpellEffectIndex eff_idx);
-        void EffectRemoveAura(SpellEffectIndex eff_idx);
         void EffectHealMaxHealth(SpellEffectIndex eff_idx);
         void EffectInterruptCast(SpellEffectIndex eff_idx);
         void EffectSummonObjectWild(SpellEffectIndex eff_idx);
@@ -356,6 +355,7 @@ class Spell
         void EffectPlayMusic(SpellEffectIndex eff_idx);
         void EffectSpecCount(SpellEffectIndex eff_idx);
         void EffectActivateSpec(SpellEffectIndex eff_idx);
+        void EffectCancelAura(SpellEffectIndex eff_idx);
 
         Spell(Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid originalCasterGUID = ObjectGuid(), SpellEntry const* triggeredBy = NULL);
         ~Spell();
@@ -407,8 +407,8 @@ class Spell
         void DoSummonSnakes(SpellEffectIndex eff_idx);
         void DoSummonVehicle(SpellEffectIndex eff_idx, uint32 forceFaction = 0);
 
-        void WriteSpellGoTargets( WorldPacket * data );
-        void WriteAmmoToPacket( WorldPacket * data );
+        void WriteSpellGoTargets(WorldPacket* data);
+        void WriteAmmoToPacket(WorldPacket* data);
 
         typedef std::list<Unit*> UnitList;
         void FillTargetMap();
@@ -557,7 +557,7 @@ class Spell
         Unit* unitTarget;
         Item* itemTarget;
         GameObject* gameObjTarget;
-        SpellAuraHolder* spellAuraHolder;                   // spell aura holder for current target, created only if spell has aura applying effect
+        SpellAuraHolder* m_spellAuraHolder;                 // spell aura holder for current target, created only if spell has aura applying effect
         int32 damage;
 
         // this is set in Spell Hit, but used in Apply Aura handler

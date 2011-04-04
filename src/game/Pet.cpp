@@ -399,7 +399,7 @@ void Pet::SavePetToDB(PetSaveMode mode)
         if (mode <= PET_SAVE_LAST_STABLE_SLOT)
         {
             static SqlStatementID updPet ;
-            
+
             stmt = CharacterDatabase.CreateStatement(updPet, "UPDATE character_pet SET slot = ? WHERE owner = ? AND slot = ?");
             stmt.PExecute(uint32(PET_SAVE_NOT_IN_SLOT), ownerLow, uint32(mode));
         }
@@ -408,7 +408,7 @@ void Pet::SavePetToDB(PetSaveMode mode)
         if (getPetType()==HUNTER_PET && (mode==PET_SAVE_AS_CURRENT||mode > PET_SAVE_LAST_STABLE_SLOT))
         {
             static SqlStatementID del ;
-            
+
             stmt = CharacterDatabase.CreateStatement(del, "DELETE FROM character_pet WHERE owner = ? AND (slot = ? OR slot > ?)");
             stmt.PExecute(ownerLow, uint32(PET_SAVE_AS_CURRENT), uint32(PET_SAVE_LAST_STABLE_SLOT));
         }
@@ -417,7 +417,7 @@ void Pet::SavePetToDB(PetSaveMode mode)
         SqlStatement savePet = CharacterDatabase.CreateStatement(insPet, "INSERT INTO character_pet ( id, entry,  owner, modelid, level, exp, Reactstate, slot, name, renamed, curhealth, "
             "curmana, curhappiness, abdata, savetime, resettalents_cost, resettalents_time, CreatedBySpell, PetType) "
              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        
+
         savePet.addUInt32(m_charmInfo->GetPetNumber());
         savePet.addUInt32(GetEntry());
         savePet.addUInt32(ownerLow);
@@ -1244,7 +1244,7 @@ void Pet::_LoadAuras(uint32 timediff)
 {
     RemoveAllAuras();
 
-    QueryResult *result = CharacterDatabase.PQuery("SELECT caster_guid,item_guid,spell,stackcount,remaincharges,basepoints0,basepoints1,basepoints2,maxduration0,maxduration1,maxduration2,remaintime0,remaintime1,remaintime2,effIndexMask FROM pet_aura WHERE guid = '%u'",m_charmInfo->GetPetNumber());
+    QueryResult *result = CharacterDatabase.PQuery("SELECT caster_guid,item_guid,spell,stackcount,remaincharges,basepoints0,basepoints1,basepoints2,periodictime0,periodictime1,periodictime2,maxduration,remaintime,effIndexMask FROM pet_aura WHERE guid = '%u'", m_charmInfo->GetPetNumber());
 
     if(result)
     {
@@ -1256,16 +1256,18 @@ void Pet::_LoadAuras(uint32 timediff)
             uint32 spellid = fields[2].GetUInt32();
             uint32 stackcount = fields[3].GetUInt32();
             uint32 remaincharges = fields[4].GetUInt32();
-            int32 damage[MAX_EFFECT_INDEX];
-            int32 maxduration[MAX_EFFECT_INDEX];
-            int32 remaintime[MAX_EFFECT_INDEX];
+            int32  damage[MAX_EFFECT_INDEX];
+            uint32 periodicTime[MAX_EFFECT_INDEX];
+
             for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
             {
                 damage[i] = fields[i+5].GetInt32();
-                maxduration[i] = fields[i+8].GetInt32();
-                remaintime[i] = fields[i+11].GetInt32();
+                periodicTime[i] = fields[i+8].GetUInt32();
             }
-            uint32 effIndexMask = fields[14].GetUInt32();
+
+            int32 maxduration = fields[11].GetInt32();
+            int32 remaintime = fields[12].GetInt32();
+            uint32 effIndexMask = fields[13].GetUInt32();
 
             SpellEntry const* spellproto = sSpellStore.LookupEntry(spellid);
             if (!spellproto)
@@ -1277,6 +1279,14 @@ void Pet::_LoadAuras(uint32 timediff)
             // do not load single target auras (unless they were cast by the player)
             if (caster_guid != GetGUID() && IsSingleTargetSpell(spellproto))
                 continue;
+
+            if (remaintime != -1 && !IsPositiveSpell(spellproto))
+            {
+                if (remaintime/IN_MILLISECONDS <= int32(timediff))
+                    continue;
+
+                remaintime -= timediff*IN_MILLISECONDS;
+            }
 
             // prevent wrong values of remaincharges
             uint32 procCharges = spellproto->procCharges;
@@ -1295,34 +1305,24 @@ void Pet::_LoadAuras(uint32 timediff)
             else if (!stackcount)
                 stackcount = 1;
 
-
             SpellAuraHolder *holder = CreateSpellAuraHolder(spellproto, this, NULL);
+            holder->SetLoadedState(caster_guid, ObjectGuid(HIGHGUID_ITEM, item_lowguid), stackcount, remaincharges, maxduration, remaintime);
+
             for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
             {
                 if ((effIndexMask & (1 << i)) == 0)
                     continue;
 
-                if (remaintime[i] != -1 && !IsPositiveEffect(spellproto, SpellEffectIndex(i)))
-                {
-                    if (remaintime[i]/IN_MILLISECONDS <= int32(timediff))
-                    continue;
-
-                    remaintime[i] -= timediff*IN_MILLISECONDS;
-                }
-
                 Aura* aura = CreateAura(spellproto, SpellEffectIndex(i), NULL, holder, this);
                 if (!damage[i])
                     damage[i] = aura->GetModifier()->m_amount;
 
-                aura->SetLoadedState(damage[i], maxduration[i], remaintime[i]);
+                aura->SetLoadedState(damage[i], periodicTime[i]);
                 holder->AddAura(aura, SpellEffectIndex(i));
             }
 
             if (!holder->IsEmptyHolder())
-            {
-                holder->SetLoadedState(caster_guid, ObjectGuid(HIGHGUID_ITEM, item_lowguid), stackcount, remaincharges);
                 AddSpellAuraHolder(holder);
-            }
             else
                 delete holder;
         }
@@ -1345,6 +1345,10 @@ void Pet::_SaveAuras()
     if (auraHolders.empty())
         return;
 
+    stmt = CharacterDatabase.CreateStatement(insAuras, "INSERT INTO pet_aura (guid, caster_guid, item_guid, spell, stackcount, remaincharges, "
+        "basepoints0, basepoints1, basepoints2, periodictime0, periodictime1, periodictime2, maxduration, remaintime, effIndexMask) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
     for(SpellAuraHolderMap::const_iterator itr = auraHolders.begin(); itr != auraHolders.end(); ++itr)
     {
         SpellAuraHolder *holder = itr->second;
@@ -1366,16 +1370,14 @@ void Pet::_SaveAuras()
         //do not save single target holders (unless they were cast by the player)
         if (save && !holder->IsPassive() && !IsChanneledSpell(holder->GetSpellProto()) && (holder->GetCasterGUID() == GetGUID() || !holder->IsSingleTarget()))
         {
-            int32 damage[MAX_EFFECT_INDEX];
-            int32 remaintime[MAX_EFFECT_INDEX];
-            int32 maxduration[MAX_EFFECT_INDEX];
+            int32  damage[MAX_EFFECT_INDEX];
+            uint32 periodicTime[MAX_EFFECT_INDEX];
             uint32 effIndexMask = 0;
 
-            for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+            for (uint32 i = 0; i < MAX_EFFECT_INDEX; ++i)
             {
                 damage[i] = 0;
-                remaintime[i] = 0;
-                maxduration[i] = 0;
+                periodicTime[i] = 0;
 
                 if (Aura *aur = holder->GetAuraByEffectIndex(SpellEffectIndex(i)))
                 {
@@ -1384,17 +1386,13 @@ void Pet::_SaveAuras()
                         continue;
 
                     damage[i] = aur->GetModifier()->m_amount;
-                    remaintime[i] = aur->GetAuraDuration();
-                    maxduration[i] = aur->GetAuraMaxDuration();
+                    periodicTime[i] = aur->GetModifier()->periodictime;
                     effIndexMask |= (1 << i);
                 }
             }
 
             if (!effIndexMask)
                 continue;
-            
-            stmt = CharacterDatabase.CreateStatement(insAuras, "INSERT INTO pet_aura (guid, caster_guid, item_guid, spell, stackcount, remaincharges, basepoints0, basepoints1, basepoints2, maxduration0, maxduration1, maxduration2, remaintime0, remaintime1, remaintime2, effIndexMask) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             stmt.addUInt32(m_charmInfo->GetPetNumber());
             stmt.addUInt64(holder->GetCasterGuid().GetRawValue());
@@ -1403,15 +1401,14 @@ void Pet::_SaveAuras()
             stmt.addUInt32(holder->GetStackAmount());
             stmt.addUInt8(holder->GetAuraCharges());
 
-            for (int i = EFFECT_INDEX_0; i <= EFFECT_INDEX_2; ++i )
+            for (uint32 i = 0; i < MAX_EFFECT_INDEX; ++i)
                 stmt.addInt32(damage[i]);
 
-            for (int i = EFFECT_INDEX_0; i <= EFFECT_INDEX_2; ++i )
-                stmt.addInt32(maxduration[i]);
+            for (uint32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+                stmt.addUInt32(periodicTime[i]);
 
-            for (int i = EFFECT_INDEX_0; i <= EFFECT_INDEX_2; ++i )
-                stmt.addInt32(remaintime[i]);
-
+            stmt.addInt32(holder->GetAuraMaxDuration());
+            stmt.addInt32(holder->GetAuraDuration());
             stmt.addUInt32(effIndexMask);
             stmt.Execute();
         }
