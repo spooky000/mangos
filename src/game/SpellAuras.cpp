@@ -5690,20 +5690,42 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
     switch( spell->SpellFamilyName)
     {
        case SPELLFAMILY_GENERIC:
-        {
-            case 62717:                                   // Slag Pot (Ulduar: Ignis)
-            case 63477:
+       {
+            switch(spell->Id)
             {
-                Unit *caster = GetCaster();
+                case 55093:                                   // Grip of Slad'ran
+                case 61474:                                   // Grip of Slad'ran (h)
+                {
+                    if (apply)
+                    {
+                        if (target->HasAura(55126) || target->HasAura(61476))
+                        {
+                            target->RemoveSpellAuraHolder(GetHolder());
+                            return;
+                        }
 
-                if (!caster || !target)
-                    return;
+                        if (GetHolder()->GetStackAmount() >= 5)
+                        {
+                            target->RemoveAura(this);
+                            target->CastSpell(target, (spell->Id == 55093) ? 55126 : 61476, true);
+                        }
+                    }
+                    break;
+                }
+                case 62717:                                   // Slag Pot (Ulduar: Ignis)
+                case 63477:
+                {
+                    Unit *caster = GetCaster();
 
-                // Haste buff (Slag Imbued)
-                if (!apply)
-                    target->CastSpell(caster, (spell->Id == 62717) ? 62836 : 63536, true);
+                    if (!caster || !target)
+                        return;
 
-                break;
+                    // Haste buff (Slag Imbued)
+                    if (!apply)
+                        target->CastSpell(caster, (spell->Id == 62717) ? 62836 : 63536, true);
+
+                    break;
+                }
             }
         }
         case SPELLFAMILY_WARLOCK:

@@ -1346,8 +1346,8 @@ void Pet::_SaveAuras()
         return;
 
     stmt = CharacterDatabase.CreateStatement(insAuras, "INSERT INTO pet_aura (guid, caster_guid, item_guid, spell, stackcount, remaincharges, "
-        "basepoints0, basepoints1, basepoints2, periodictime0, periodictime1, periodictime2, maxduration, remaintime, effIndexMask) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+           "basepoints0, basepoints1, basepoints2, maxduration0, maxduration1, maxduration2, remaintime0, remaintime1, remaintime2, effIndexMask) "
+           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     for(SpellAuraHolderMap::const_iterator itr = auraHolders.begin(); itr != auraHolders.end(); ++itr)
     {
@@ -1981,6 +1981,11 @@ bool Pet::IsPermanentPetFor(Player* owner)
 bool Pet::Create(uint32 guidlow, CreatureCreatePos& cPos, uint32 Entry, uint32 pet_number, Unit* owner)
 {
     if (!owner)
+        return false;
+
+    CreatureInfo const* cInfo = ObjectMgr::GetCreatureTemplate(Entry);
+
+    if (!cInfo)
         return false;
 
     m_loading = true;
@@ -3020,8 +3025,8 @@ bool Pet::ReapplyScalingAura(SpellAuraHolder* holder, SpellEntry const *spellpro
     }
 
     Aura* aura = CreateAura(spellproto, index, &basePoints, holder, this, this, NULL);
-    aura->SetAuraDuration(aura->GetAuraMaxDuration());
     holder->AddAura(aura, index);
+    aura->SetAuraDuration(aura->GetAuraMaxDuration());
     AddAuraToModList(aura);
     aura->ApplyModifier(true,true);
 
