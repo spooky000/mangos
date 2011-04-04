@@ -6955,7 +6955,7 @@ void Spell::EffectInterruptCast(SpellEffectIndex eff_idx)
             // check if we can interrupt spell
             if ((curSpellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_INTERRUPT) && curSpellInfo->PreventionType == SPELL_PREVENTION_TYPE_SILENCE )
             {
-                unitTarget->ProhibitSpellSchool(GetSpellSchoolMask(curSpellInfo), unitTarget->CalculateSpellDuration(m_caster, GetSpellDuration(m_spellInfo), m_spellInfo, eff_idx));
+                unitTarget->ProhibitSpellSchool(GetSpellSchoolMask(curSpellInfo), CalculateSpellDuration(m_spellInfo, m_caster));
                 unitTarget->InterruptSpell(CurrentSpellTypes(i),false);
             }
         }
@@ -8037,8 +8037,8 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                         if (countMin < countMax)
                         {
-                            aura->SetAuraDuration(aura->GetAuraDuration() + 3000);
-                            aura->SetAuraMaxDuration(countMin + 3000);
+                            aura->GetHolder()->SetAuraDuration(aura->GetAuraDuration() + 3000);
+                            aura->GetHolder()->SetAuraMaxDuration(countMin + 3000);
                             aura->GetHolder()->SendAuraUpdate(false);
                         }
                     }
@@ -8062,8 +8062,8 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                             if (countMin < countMax)
                             {
-                                aura->SetAuraDuration(aura->GetAuraDuration() + 3000);
-                                aura->SetAuraMaxDuration(countMin + 3000);
+                                aura->GetHolder()->SetAuraDuration(aura->GetAuraDuration() + 3000);
+                                aura->GetHolder()->SetAuraMaxDuration(countMin + 3000);
                                 aura->GetHolder()->SendAuraUpdate(false);
                             }
                         }
@@ -10509,14 +10509,6 @@ void Spell::EffectTeachTaxiNode( SpellEffectIndex eff_idx )
         data << uint8( 1 );
         player->SendDirectMessage( &data );
     }
-}
-
-void Spell::EffectRemoveAura(SpellEffectIndex eff_idx)
-{
-    if (unitTarget)
-        return;
-    // there may be need of specifying casterguid of removed auras
-    unitTarget->RemoveAurasDueToSpell(m_spellInfo->EffectTriggerSpell[eff_idx]);
 }
 
 void Spell::EffectQuestStart(SpellEffectIndex eff_idx)

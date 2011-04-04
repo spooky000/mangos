@@ -9672,7 +9672,7 @@ int32 Unit::CalculateAuraDuration(SpellEntry const* spellProto, uint32 effectMas
                 {
                     // Glyph of Thorns
                     if (Aura *aur = GetAura(57862, EFFECT_INDEX_0))
-                        baseDuration += aur->GetModifier()->m_amount * MINUTE * IN_MILLISECONDS;
+                        duration += aur->GetModifier()->m_amount * MINUTE * IN_MILLISECONDS;
                 }
                 break;
             case SPELLFAMILY_PALADIN:
@@ -9680,20 +9680,20 @@ int32 Unit::CalculateAuraDuration(SpellEntry const* spellProto, uint32 effectMas
                 {
                     // Glyph of Blessing of Might
                     if (Aura *aur = GetAura(57958, EFFECT_INDEX_0))
-                        baseDuration += aur->GetModifier()->m_amount * MINUTE * IN_MILLISECONDS;
+                        duration += aur->GetModifier()->m_amount * MINUTE * IN_MILLISECONDS;
                 }
                 else if (spellProto->SpellIconID == 306 && spellProto->SpellFamilyFlags & UI64LIT(0x00010000))
                 {
                     // Glyph of Blessing of Wisdom
                     if (Aura *aur = GetAura(57979, EFFECT_INDEX_0))
-                        baseDuration += aur->GetModifier()->m_amount * MINUTE * IN_MILLISECONDS;
+                        duration += aur->GetModifier()->m_amount * MINUTE * IN_MILLISECONDS;
                 }
                 break;
             case SPELLFAMILY_POTION:
             {
                 // Mixology
                 if (HasAura(53042))
-                    baseDuration *= 2;
+                    duration *= 2;
 
                 break;
             }
@@ -9702,13 +9702,7 @@ int32 Unit::CalculateAuraDuration(SpellEntry const* spellProto, uint32 effectMas
         }
     }
 
-    if (durationMod != 0)
-    {
-        int32 duration = int32(int64(baseDuration) * (100+durationMod) / 100);
-        return duration < 0 ? 0 : duration;
-    }
-
-    return baseDuration;
+    return duration;
 }
 
 DiminishingLevels Unit::GetDiminishing(DiminishingGroup group)
@@ -12134,8 +12128,8 @@ void Unit::_AddAura(uint32 spellID, uint32 duration, Unit * caster)
                     spellInfo->Effect[i] == SPELL_EFFECT_PERSISTENT_AREA_AURA )
                 {
                     Aura *aura = CreateAura(spellInfo, SpellEffectIndex(i), NULL, holder, this, caster);
-                    aura->SetAuraDuration(duration);
                     holder->AddAura(aura, SpellEffectIndex(i));
+                    holder->SetAuraDuration(duration);
                     DEBUG_FILTER_LOG(LOG_FILTER_SPELL_CAST, "Manually adding aura of spell %u, index %u, duration %u ms", spellID, i, duration);
                 }
             }

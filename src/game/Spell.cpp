@@ -3940,7 +3940,7 @@ void Spell::update(uint32 difftime)
                             if(!target->targetGUID.IsCreatureOrVehicle())
                                 continue;
 
-                            Unit* unit = m_caster->GetObjectGuid() == target.targetGUID ? m_caster : ObjectAccessor::GetUnit(*m_caster, target.targetGUID);
+                            Unit* unit = m_caster->GetObjectGuid() == target->targetGUID ? m_caster : ObjectAccessor::GetUnit(*m_caster, target->targetGUID);
                             if (unit == NULL)
                                 continue;
 

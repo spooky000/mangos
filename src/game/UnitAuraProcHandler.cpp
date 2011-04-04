@@ -1703,8 +1703,8 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                         // so set Rip's duration and max duration
                         if (countMin < countMax)
                         {
-                            aura->SetAuraDuration(aura->GetAuraDuration() + triggerAmount * 1000);
-                            aura->SetAuraMaxDuration(countMin + triggerAmount * 1000);
+                            aura->GetHolder()->SetAuraDuration(aura->GetAuraDuration() + triggerAmount * 1000);
+                            aura->GetHolder()->SetAuraMaxDuration(countMin + triggerAmount * 1000);
                             aura->GetHolder()->SendAuraUpdate(false);
                             return SPELL_AURA_PROC_OK;
                         }
@@ -1865,8 +1865,8 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
 
                         if (countMin < countMax)
                         {
-                            aura->SetAuraDuration(aura->GetAuraDuration() + triggerAmount * 1000);
-                            aura->SetAuraMaxDuration(countMin + triggerAmount * 1000);
+                            aura->GetHolder()->SetAuraDuration(aura->GetAuraDuration() + triggerAmount * 1000);
+                            aura->GetHolder()->SetAuraMaxDuration(countMin + triggerAmount * 1000);
                             aura->GetHolder()->SendAuraUpdate(false);
                             return SPELL_AURA_PROC_OK;
                         }
@@ -1900,7 +1900,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                         int32 duration = GetSpellMaxDuration(spellProto);
                         if(GetTypeId() == TYPEID_PLAYER)
                             static_cast<Player*>(this)->ApplySpellMod(spellProto->Id, SPELLMOD_DURATION, duration);
-                        (*itr)->SetAuraMaxDuration(duration);
+                        (*itr)->GetHolder()->SetAuraMaxDuration(duration);
                         (*itr)->GetHolder()->RefreshHolder();
                         return SPELL_AURA_PROC_OK;
                     }

@@ -3026,7 +3026,7 @@ bool Pet::ReapplyScalingAura(SpellAuraHolder* holder, SpellEntry const *spellpro
 
     Aura* aura = CreateAura(spellproto, index, &basePoints, holder, this, this, NULL);
     holder->AddAura(aura, index);
-    aura->SetAuraDuration(aura->GetAuraMaxDuration());
+    holder->SetAuraDuration(aura->GetAuraMaxDuration());
     AddAuraToModList(aura);
     aura->ApplyModifier(true,true);
 
