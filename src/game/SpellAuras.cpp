@@ -4510,10 +4510,10 @@ void Aura::HandleModCharm(bool apply, bool Real)
         return;
 
     Unit* caster = GetCaster();
-    if(!caster)
+    if (!caster)
         return;
 
-    if( apply )
+    if (apply)
     {
         // is it really need after spell check checks?
         target->RemoveSpellsCausingAura(SPELL_AURA_MOD_CHARM, GetHolder());
@@ -4533,6 +4533,7 @@ void Aura::HandleModCharm(bool apply, bool Real)
         {
             if(!(((Creature*)target)->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_KEEP_AI))
                 ((Creature*)target)->AIM_Initialize();
+
             CharmInfo *charmInfo = target->InitCharmInfo(target);
             charmInfo->InitCharmCreateSpells();
             charmInfo->SetReactState( REACT_DEFENSIVE );
