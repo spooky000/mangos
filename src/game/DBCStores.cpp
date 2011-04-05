@@ -560,6 +560,7 @@ void LoadDBCStores(const std::string& dataPath)
     sfix4->EffectTriggerSpell[EFFECT_INDEX_0] = 57988;
     sfix4->EffectTriggerSpell[EFFECT_INDEX_1] = 0;
 
+    // Shredder Delivery
     SpellEntry *sfix5 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(48610));
     sfix5->EffectImplicitTargetA[EFFECT_INDEX_1] = TARGET_SELF;
     sfix5->Effect[EFFECT_INDEX_1] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
