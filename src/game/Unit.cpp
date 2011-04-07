@@ -4530,6 +4530,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
                     case SPELL_AURA_MOD_MELEE_HASTE:  // for Icy Touch
                     case SPELL_AURA_MOD_RANGED_HASTE: // for Icy Touch
                     case SPELL_AURA_MOD_DAMAGE_TAKEN: // for Hemorrhage
+                    case SPELL_AURA_MOD_DECREASE_SPEED: // for Mind Flay
                         break; 
                     case SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE: // Deadly Poison exception
                         if (aurSpellInfo->Dispel != DISPEL_POISON)             // TODO: stacking rules for all poisons
