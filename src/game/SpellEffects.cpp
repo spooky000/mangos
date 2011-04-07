@@ -4858,9 +4858,8 @@ void Spell::EffectPersistentAA(SpellEffectIndex eff_idx)
     if (Player* modOwner = m_caster->GetSpellModOwner())
         modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RADIUS, radius);
 
-    int32 duration = GetSpellDuration(m_spellInfo);
     DynamicObject* dynObj = new DynamicObject;
-    if (!dynObj->Create(m_caster->GetMap()->GenerateLocalLowGuid(HIGHGUID_DYNAMICOBJECT), m_caster, m_spellInfo->Id, eff_idx, m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, duration, radius))
+    if (!dynObj->Create(m_caster->GetMap()->GenerateLocalLowGuid(HIGHGUID_DYNAMICOBJECT), m_caster, m_spellInfo->Id, eff_idx, m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, m_duration, radius))
     {
         delete dynObj;
         return;
@@ -5881,6 +5880,7 @@ void Spell::DoSummonWild(SpellEffectIndex eff_idx, uint32 forceFaction)
     }
 }
 
+
 void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
 {
     uint32 pet_entry = m_spellInfo->EffectMiscValue[eff_idx];
@@ -5940,20 +5940,8 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
 
     uint32 originalSpellID = (m_IsTriggeredSpell && m_triggeredBySpellInfo) ? m_triggeredBySpellInfo->Id : m_spellInfo->Id;
 
-    int32 amount = damage > 0 ? damage : 1;
-
-    switch(m_spellInfo->EffectMiscValueB[eff_idx])
-    {
-        case 2081: // Engineering Dragonlings
-        case 2141: // Winterfin Horn of Distress
-        {
-            if (level > m_spellInfo->maxLevel)
-                level = m_spellInfo->maxLevel;
-
-            amount = 1;
-            break;
-        }
-    }
+    // cannot find any guardian group over 5. need correct?
+    int32 amount = (damage > 0 && damage < 6) ? damage : 1;
 
     for (int32 count = 0; count < amount; ++count)
     {
@@ -6009,6 +5997,7 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
         DEBUG_LOG("Guardian pet (guidlow %d, entry %d) summoned (default). Counter is %d ", spawnCreature->GetGUIDLow(), spawnCreature->GetEntry(), spawnCreature->GetPetCounter());
     }
 }
+
 
 void Spell::DoSummonVehicle(SpellEffectIndex eff_idx, uint32 forceFaction)
 {
@@ -9174,8 +9163,7 @@ void Spell::DoSummonTotem(SpellEffectIndex eff_idx, uint8 slot_dbc)
     pTotem->SetOwner(m_caster);
     pTotem->SetTypeBySummonSpell(m_spellInfo);              // must be after Create call where m_spells initialized
 
-    int32 duration = CalculateSpellDuration(m_spellInfo, m_caster);
-    pTotem->SetDuration(duration);
+    pTotem->SetDuration(m_duration);
 
     if (m_spellInfo->Id == 16190)
         damage = m_caster->GetMaxHealth() * m_spellInfo->CalculateSimpleValue(EFFECT_INDEX_1) / 100;
@@ -9204,7 +9192,7 @@ void Spell::DoSummonTotem(SpellEffectIndex eff_idx, uint8 slot_dbc)
         WorldPacket data(SMSG_TOTEM_CREATED, 1 + 8 + 4 + 4);
         data << uint8(slot);
         data << pTotem->GetObjectGuid();
-        data << uint32(duration);
+        data << uint32(m_duration);
         data << uint32(m_spellInfo->Id);
         ((Player*)m_caster)->SendDirectMessage(&data);
     }

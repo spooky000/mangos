@@ -424,6 +424,15 @@ enum CreatureSubtype
     CREATURE_SUBTYPE_TEMPORARY_SUMMON,                      // new TemporarySummon
 };
 
+enum TemporaryFactionFlags                                  // Used at real faction changes
+{
+    TEMPFACTION_NONE                    = 0x00,             // When no flag is used in temporary faction change, faction will be persistent. It will then require manual change back to default/another faction when changed once
+    TEMPFACTION_RESTORE_RESPAWN         = 0x01,             // Default faction will be restored at respawn
+    TEMPFACTION_RESTORE_COMBAT_STOP     = 0x02,             // ... at CombatStop() (happens at creature death, at evade or custom scripte among others)
+    TEMPFACTION_RESTORE_REACH_HOME      = 0x04,             // ... at reaching home in home movement (evade), if not already done at CombatStop()
+    TEMPFACTION_ALL,
+};
+
 class MANGOS_DLL_SPEC Creature : public Unit
 {
     CreatureAI *i_AI;
@@ -672,8 +681,8 @@ class MANGOS_DLL_SPEC Creature : public Unit
                 return m_charmInfo->GetCharmSpell(pos)->GetAction();
         }
 
-        void SetCombatStartPosition(float x, float y, float z) { CombatStartX = x; CombatStartY = y; CombatStartZ = z; }
-        void GetCombatStartPosition(float &x, float &y, float &z) { x = CombatStartX; y = CombatStartY; z = CombatStartZ; }
+        void SetCombatStartPosition(float x, float y, float z) { m_combatStartX = x; m_combatStartY = y; m_combatStartZ = z; }
+        void GetCombatStartPosition(float &x, float &y, float &z) { x = m_combatStartX; y = m_combatStartY; z = m_combatStartZ; }
 
         void SetSummonPoint(CreatureCreatePos const& pos) { m_summonXpoint = pos.m_pos.x; m_summonYpoint = pos.m_pos.y; m_summonZpoint = pos.m_pos.z; m_summonOrientation = pos.m_pos.o; }
         void GetSummonPoint(float &fX, float &fY, float &fZ, float &fOrient) const { fX = m_summonXpoint; fY = m_summonYpoint; fZ = m_summonZpoint; fOrient = m_summonOrientation; }
@@ -681,6 +690,10 @@ class MANGOS_DLL_SPEC Creature : public Unit
         void SetDeadByDefault (bool death_state) { m_isDeadByDefault = death_state; }
 
         void SetActiveObjectState(bool on);
+
+        void SetFactionTemporary(uint32 factionId, uint32 tempFactionFlags = TEMPFACTION_ALL);
+        void ClearTemporaryFaction();
+        uint32 GetTemporaryFactionFlags() { return m_temporaryFactionFlags; }
 
         void SendAreaSpiritHealerQueryOpcode(Player *pl);
 
@@ -722,18 +735,20 @@ class MANGOS_DLL_SPEC Creature : public Unit
         Cell m_currentCell;                                 // store current cell where creature listed
         uint32 m_equipmentId;
 
+        // below fields has potential for optimization
         bool m_AlreadyCallAssistance;
         bool m_AlreadySearchedAssistance;
         bool m_regenHealth;
         bool m_AI_locked;
         bool m_isDeadByDefault;
+        uint32 m_temporaryFactionFlags;                     // used for real faction changes (not auras etc)
 
         SpellSchoolMask m_meleeDamageSchoolMask;
         uint32 m_originalEntry;
 
-        float CombatStartX;
-        float CombatStartY;
-        float CombatStartZ;
+        float m_combatStartX;
+        float m_combatStartY;
+        float m_combatStartZ;
 
         float m_summonXpoint;
         float m_summonYpoint;
