@@ -2173,7 +2173,7 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                             Caster->CombatStop(true);
                         }
                         return;
-                    }                    
+                    }
                     case 48025:                             // Headless Horseman's Mount
                         Spell::SelectMountByAreaAndSkill(target, GetSpellProto(), 51621, 48024, 51617, 48023, 0);
                         return;
@@ -2194,22 +2194,14 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                             // Reindeer Transformation
                             target->CastSpell(target, 25860, true, NULL, this);
                         return;
-                    case 39246:                             // Q: The Big Bone Worm
+                    case 39238:                             // Q: Fumping
                     {
                         if (!target)
                             return;
 
                         if (Unit* caster = GetCaster())
-                        {
-                            if (urand(0,10) > 2)
-                            {
-                                int32 count  = urand(0,1) ? 2 : 4;
-                                for(int i = 0; i < count; ++i)
-                                    caster->SummonCreature(urand(0,1) ? 22482 : 22483, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation(), TEMPSUMMON_CORPSE_TIMED_DESPAWN, 60000 );
-                            }
-                            else 
-                                caster->SummonCreature(22038, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation(), TEMPSUMMON_CORPSE_TIMED_DESPAWN, 60000 );
-                        }
+                            caster->SummonCreature(urand(0,1) ? 22482 : 22483, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation(), TEMPSUMMON_CORPSE_TIMED_DESPAWN, 60000 );
+
                         return;
                     }
                     case 45611:                             // Q: Abduction
