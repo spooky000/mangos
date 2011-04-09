@@ -167,7 +167,7 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
         passenger->SendMessageToSet(&data, true);
     }
 
-    if (seatInfo->m_flags & SEAT_FLAG_UNATTACKABLE)
+    if (seat->second.seatInfo->m_flags & SEAT_FLAG_UNATTACKABLE || seat->second.seatInfo->m_flags & SEAT_FLAG_CAN_CONTROL)
     {
         // some exceptions where passengets should be targetable, seems that flag is wrong
         switch (m_pBase->GetEntry())
@@ -269,7 +269,7 @@ void VehicleKit::RemovePassenger(Unit *passenger)
     passenger->m_movementInfo.ClearTransportData();
     passenger->m_movementInfo.RemoveMovementFlag(MOVEFLAG_ONTRANSPORT);
 
-    if (seat->second.seatInfo->m_flags & SEAT_FLAG_UNATTACKABLE)
+    if (seat->second.seatInfo->m_flags & SEAT_FLAG_UNATTACKABLE || seat->second.seatInfo->m_flags & SEAT_FLAG_CAN_CONTROL)
     {
         passenger->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
     }
