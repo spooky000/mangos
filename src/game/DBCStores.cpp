@@ -565,11 +565,6 @@ void LoadDBCStores(const std::string& dataPath)
     sfix5->EffectImplicitTargetA[EFFECT_INDEX_1] = TARGET_SELF;
     sfix5->Effect[EFFECT_INDEX_1] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
 
-    // Deliver Gryphon
-    SpellEntry *sfix5 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(54420));
-    sfix5->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
-    sfix5->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
-
     // Rescue Injured Soldier
     SpellEntry *sfix6 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(47962));
     sfix6->SpellFamilyName = SPELLFAMILY_GENERIC;
@@ -595,6 +590,11 @@ void LoadDBCStores(const std::string& dataPath)
     sfix9->Effect[EFFECT_INDEX_1] = SPELL_EFFECT_DUMMY;
     for(int i = 0; i < 2; ++i)
          sfix9->EffectImplicitTargetA[i] = TARGET_SELF;
+
+    // Deliver Gryphon
+    SpellEntry *sfix10 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(54420));
+    sfix10->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
+    sfix10->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
 
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
