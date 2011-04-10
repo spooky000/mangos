@@ -1852,7 +1852,9 @@ bool ChatHandler::HandleNpcDeleteCommand(char* args)
 
     // Delete the creature
     unit->CombatStop();
-    unit->DeleteFromDB();
+    if(!unit->IsTemporarySummon())
+        unit->DeleteFromDB();
+
     unit->AddObjectToRemoveList();
 
     SendSysMessage(LANG_COMMAND_DELCREATMESSAGE);
