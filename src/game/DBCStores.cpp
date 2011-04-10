@@ -589,12 +589,11 @@ void LoadDBCStores(const std::string& dataPath)
     sfix9->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
     sfix9->Effect[EFFECT_INDEX_1] = SPELL_EFFECT_DUMMY;
     for(int i = 0; i < 2; ++i)
-         sfix9->EffectImplicitTargetA[i] = TARGET_SELF;
+        sfix9->EffectImplicitTargetA[i] = TARGET_SELF;
 
-    // Deliver Gryphon
-    SpellEntry *sfix10 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(54420));
-    sfix10->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
-    sfix10->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
+    // Moorabi Transform
+    SpellEntry *sfix11 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(55098));
+    sfix11->InterruptFlags |= SPELL_INTERRUPT_FLAG_INTERRUPT;
 
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
