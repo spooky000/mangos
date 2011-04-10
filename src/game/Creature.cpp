@@ -2225,7 +2225,7 @@ void Creature::GetRespawnCoord( float &x, float &y, float &z, float* ori, float*
     if(!MaNGOS::IsValidMapCoord(x, y, z))
     {
         sLog.outError("Creature with invalid respawn coordinates: mapid = %u, guid = %u, x = %f, y = %f, z = %f", GetMapId(), GetGUIDLow(), x, y, z);
-        MANGOS_ASSERT(false);
+        //MANGOS_ASSERT(false);
     }
 }
 

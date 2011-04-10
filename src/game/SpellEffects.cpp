@@ -5484,6 +5484,8 @@ void Spell::DoSummonGroupPets(SpellEffectIndex eff_idx)
             return;
         }
 
+        pet->SetSummonPoint(pos);
+
         if (!pet->Summon())
         {
             sLog.outError("Pet (guidlow %d, entry %d) not summoned by undefined reason. ",
@@ -6489,6 +6491,8 @@ void Spell::EffectSummonPet(SpellEffectIndex eff_idx)
         delete NewSummon;
         return;
     }
+
+    NewSummon->SetSummonPoint(pos);
 
     if (!NewSummon->Summon())
     {
