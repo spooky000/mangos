@@ -1435,10 +1435,7 @@ bool DungeonMap::Add(Player *player)
                 player->BindToInstance(GetPersistanceState(), false);
             else
             {
-                // cannot jump to a different instance without resetting it (GM can enter any instance)
-                if(!player->isGameMaster())
-                    player->RepopAtGraveyard();
-                // MANGOS_ASSERT(playerBind->state == GetPersistentState());
+                 MANGOS_ASSERT(playerBind->state == GetPersistentState());
             }
         }
     }
