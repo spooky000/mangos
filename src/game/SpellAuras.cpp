@@ -10735,7 +10735,7 @@ void Aura::HandleCharmConvert(bool apply, bool Real)
         if (!targetlist.empty())
         {
             // Select random player to attack from caster threat list
-            Unit * selectedTarget = targetlist[urand(0, targetlist.size()-1];
+            Unit * selectedTarget = targetlist[urand(0, targetlist.size()-1)];
             if (target->Attack(selectedTarget, true))
             {
                 target->SetInCombatWith(selectedTarget);
