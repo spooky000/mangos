@@ -9826,7 +9826,7 @@ void Spell::EffectPlayerPull(SpellEffectIndex eff_idx)
 
     unitTarget->SetOrientation(pullO);
 
-    uint32 speed_z = m_spellInfo->EffectMiscValue[eff_idx];
+    uint32 speed_z = (m_spellInfo->EffectMiscValue[eff_idx])/5;
     if (!speed_z)
         speed_z = 10;
 
