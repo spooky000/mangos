@@ -9811,14 +9811,26 @@ void Spell::EffectSendTaxi(SpellEffectIndex eff_idx)
 
 void Spell::EffectPlayerPull(SpellEffectIndex eff_idx)
 {
-    if(!unitTarget)
+    if( !unitTarget || !unitTarget->isAlive())
         return;
 
-    float dist = unitTarget->GetDistance2d(m_caster);
-    if (damage && dist > damage)
-        dist = float(damage);
+    Unit * m_caster = GetCaster();
 
-    unitTarget->KnockBackFrom(m_caster,-dist,float(m_spellInfo->EffectMiscValue[eff_idx])/10);
+    // calculate destination
+    float dist = unitTarget->GetDistance(m_caster);
+    float pullO = unitTarget->GetAngle(m_caster);
+    float pullX = unitTarget->GetPositionX() + dist * cosf(pullO);
+    float pullY = unitTarget->GetPositionY() + dist * sinf(pullO);
+    float pullZ = unitTarget->GetPositionZ() + 0.3f;
+    uint32 time = uint32(dist * 42.0f);
+
+    unitTarget->SetOrientation(pullO);
+
+    uint32 speed_z = m_spellInfo->EffectMiscValue[eff_idx];
+    if (!speed_z)
+        speed_z = 10;
+
+    unitTarget->MonsterJump(pullX, pullY, pullZ, pullO, time, speed_z);
 }
 
 void Spell::EffectDispelMechanic(SpellEffectIndex eff_idx)
