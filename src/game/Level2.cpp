@@ -1866,6 +1866,7 @@ bool ChatHandler::HandleNpcDeleteCommand(char* args)
     switch (unit->GetSubtype())
     {
         case CREATURE_SUBTYPE_GENERIC:
+//        case CREATURE_SUBTYPE_VEHICLE:
         {
             unit->CombatStop();
             if (CreatureData const* data = sObjectMgr.GetCreatureData(unit->GetGUIDLow()))
@@ -1885,9 +1886,6 @@ bool ChatHandler::HandleNpcDeleteCommand(char* args)
             break;
         case CREATURE_SUBTYPE_TEMPORARY_SUMMON:
             ((TemporarySummon*)unit)->UnSummon();
-            break;
-        case CREATURE_SUBTYPE_VEHICLE:
-            ((Vehicle*)unit)->Dismiss();
             break;
         default:
             return false;
