@@ -143,10 +143,10 @@ struct CreatureInfo
     uint32  ScriptID;
 
     // helpers
-    // TODO: return HIGHGUID_UNIT/HIGHGUID_VEHICLE base at currently missing creature template data
+    // completed: return HIGHGUID_UNIT/HIGHGUID_VEHICLE base at currently missing creature template data
     HighGuid GetHighGuid() const
     {
-        return HIGHGUID_UNIT;
+        return VehicleId ? HIGHGUID_VEHICLE : HIGHGUID_UNIT;
     }
 
     SkillType GetRequiredLootSkill() const
