@@ -749,7 +749,7 @@ void WorldSession::HandleUpdateProjectilePosition(WorldPacket& recvPacket)
     for(int i = 0; i < 3; ++i)
     {
         if(spellInfo->EffectTriggerSpell[i])
-            if (SpellEntry const* spellInfo = sSpellStore.LookupEntry(spellInfo->EffectTriggerSpell[i]))
-                pCaster->CastSpell(m_targetX, m_targetY, m_targetZ, spellInfo, true);
+            if (SpellEntry const* triggeredSpellInfo = sSpellStore.LookupEntry(spellInfo->EffectTriggerSpell[i]))
+                pCaster->CastSpell(m_targetX, m_targetY, m_targetZ, triggeredSpellInfo, true);
     }
 }
