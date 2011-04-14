@@ -600,6 +600,16 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix11 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(55098));
     sfix11->InterruptFlags |= SPELL_INTERRUPT_FLAG_INTERRUPT;
 
+    // Drop Off Soldier
+    SpellEntry *sfix12 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49081));
+    sfix12->EffectImplicitTargetA[EFFECT_INDEX_1] = TARGET_SELF;
+    sfix12->Effect[EFFECT_INDEX_1] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
+
+    // Drop Off Gnome
+    SpellEntry *sfix13 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49122));
+    sfix13->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
+    sfix13->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);
