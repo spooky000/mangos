@@ -1346,7 +1346,7 @@ void BattleGround::AddPlayer(Player *plr)
             plr->SetPower(POWER_MANA, plr->GetMaxPower(POWER_MANA));
         }
 
-        WorldPacket data(SMSG_ARENA_OPPONENT_UPDATE, 8);
+        WorldPacket data(SMSG_DESTROY_ARENA_UNIT, 8);
         data << plr->GetObjectGuid();
         SendPacketToTeam(team, &data, plr, true);
     }

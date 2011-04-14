@@ -15270,15 +15270,6 @@ void Player::SendPushToPartyResponse(Player *pPlayer, uint32 msg)
     }
 }
 
-void Player::SendQuestUpdateAddItem(Quest const* /*pQuest*/, uint32 /*item_idx*/, uint32 /*count*/)
-{
-    WorldPacket data( SMSG_QUESTUPDATE_ADD_ITEM, 0 );
-    DEBUG_LOG( "WORLD: Sent SMSG_QUESTUPDATE_ADD_ITEM" );
-    //data << pQuest->ReqItemId[item_idx];
-    //data << count;
-    GetSession()->SendPacket( &data );
-}
-
 void Player::SendQuestUpdateAddCreatureOrGo(Quest const* pQuest, ObjectGuid guid, uint32 creatureOrGO_idx, uint32 count)
 {
     MANGOS_ASSERT(count < 65536 && "mob/GO count store in 16 bits 2^16 = 65536 (0..65536)");

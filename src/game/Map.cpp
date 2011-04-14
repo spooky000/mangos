@@ -1419,7 +1419,7 @@ bool DungeonMap::Add(Player *player)
                 // players also become permanently bound when they enter
                 if (groupBind->perm)
                 {
-                    WorldPacket data(SMSG_INSTANCE_LOCK_WARNING_QUERY, 9);
+                    WorldPacket data(SMSG_PENDING_RAID_LOCK, 9);
                     data << uint32(60000);
                     data << uint32(0); // Completed Encounter Mask (Feanor: TODO)
                     data << uint8(0);
