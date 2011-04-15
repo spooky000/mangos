@@ -7894,7 +7894,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     {
                         if (m_caster->GetCharmerOrOwner())
                             if (m_caster->GetCharmerOrOwner()->GetTypeId() == TYPEID_PLAYER)
-                            ((Player*)m_caster->GetCharmerOrOwner())->KilledMonsterCredit(27109);
+                                ((Player*)m_caster->GetCharmerOrOwner())->KilledMonsterCredit(27109);
                         pInjured->CastSpell(m_caster, 49242, true); // Enter Vehicle
                     }
                 }
@@ -7936,6 +7936,24 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     for(int i = 0; i < 5; ++i)
                         unitTarget->SummonCreature(27588, 3704.239f+irand(-5, 5),-1188.2666f,121.054f, 4.259f, TEMPSUMMON_TIMED_DESPAWN, 10000);
 
+                    return;
+                }
+                case 43770:                                 //Grappling Hook
+                {
+                    if(Creature * pSack = m_caster->GetClosestCreatureWithEntry(m_caster, 24439, 30))
+                    {
+                        if(m_caster->GetDistance2d(pSack) > 5)
+                            return;
+
+                        m_caster->CastSpell(pSack, 43789, false);
+
+                        pSack->ForcedDespawn(500);
+
+                        if (m_caster->GetCharmerOrOwner())
+                            if (m_caster->GetCharmerOrOwner()->GetTypeId() == TYPEID_PLAYER)
+                                ((Player*)m_caster->GetCharmerOrOwner())->KilledMonsterCredit(24439);
+
+                    }
                     return;
                 }
                 case 48724:                                 // Q: The Denouncement

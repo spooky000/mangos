@@ -611,6 +611,10 @@ void LoadDBCStores(const std::string& dataPath)
     sfix13->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
     sfix13->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
 
+    // Grappling Hook
+    SpellEntry *sfix14 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(43770));
+    sfix14->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);
