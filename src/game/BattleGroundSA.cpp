@@ -32,7 +32,7 @@
 /*
 * BattleGround Strand of the Ancients:
 * TODO:
-*   - Put Seaforium charges also in last zone, just before last door. But when?
+*   - Put Seaforium charges also in last zone, just before last door. But when? -- when the attacker captures 3rd GY
 *   - Move all the harcoded variables such coords to header BattleGroundSA.h
 *   - Cosmetics & avoid hacks.
 */
@@ -182,14 +182,14 @@ void BattleGroundSA::Update(uint32 diff)
                 PlaySoundToAll(BG_SA_SOUND_GYD_VICTORY);
                 SendMessageToAll(defender == ALLIANCE ? LANG_BG_SA_ALLIANCE_TIMEOUT_END_1ROUND : LANG_BG_SA_HORDE_TIMEOUT_END_1ROUND, CHAT_MSG_BG_SYSTEM_NEUTRAL, NULL);
                 RoundScores[0].winner = GetDefender();
-                RoundScores[0].time = Round_timer;
+                RoundScores[0].time = BG_SA_ROUNDLENGTH;
                 ResetBattle(0, defender);
             }
             else // Timeout of second round
             {
                 SendMessageToAll(defender == ALLIANCE ? LANG_BG_SA_ALLIANCE_TIMEOUT_END_2ROUND : LANG_BG_SA_HORDE_TIMEOUT_END_2ROUND, CHAT_MSG_BG_SYSTEM_NEUTRAL, NULL);
                 RoundScores[1].winner = GetDefender();
-                RoundScores[1].time = Round_timer;
+                RoundScores[1].time = BG_SA_ROUNDLENGTH;
                 EndBattleGround(TEAM_NONE);
                 return;
             }
@@ -217,7 +217,10 @@ void BattleGroundSA::Update(uint32 diff)
         if (Phase == SA_ROUND_TWO)
         {       
             if (Round_timer > RoundScores[0].time)
+            {
+                RoundScores[1].time = Round_timer;
                 EndBattleGround(GetDefender() == HORDE ? HORDE : ALLIANCE);
+            }
         }
     }
 
@@ -896,6 +899,19 @@ void BattleGroundSA::TeleportPlayerToCorrectLoc(Player *plr, bool resetBattle)
     if (!plr)
         return;
 
+    if (resetBattle)
+    {
+        if (!plr->isAlive())
+        {
+            plr->ResurrectPlayer(1.0f);
+            plr->SpawnCorpseBones();
+        }
+
+        plr->SetHealth(plr->GetMaxHealth());
+        plr->SetPower(POWER_MANA, plr->GetMaxPower(POWER_MANA));
+        plr->CombatStopWithPets(true);
+    }
+
     if (!shipsStarted)
     {
         if (plr->GetTeam() != GetDefender())
@@ -919,18 +935,6 @@ void BattleGroundSA::TeleportPlayerToCorrectLoc(Player *plr, bool resetBattle)
             plr->TeleportTo(607, 1209.7f, -65.16f, 70.1f, 0.0f, 0);
     }
     SendTransportInit(plr);
-    if (resetBattle)
-    {
-        if (!plr->isAlive())
-        {
-            plr->ResurrectPlayer(1.0f);
-            plr->SpawnCorpseBones();
-        }
-
-        plr->SetHealth(plr->GetMaxHealth());
-        plr->SetPower(POWER_MANA, plr->GetMaxPower(POWER_MANA));
-        plr->CombatStopWithPets(true);
-    }
 }
 
 void BattleGroundSA::SendTransportInit(Player *player)

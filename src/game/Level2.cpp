@@ -21,8 +21,12 @@
 #include "DBCStores.h"
 #include "ObjectMgr.h"
 #include "ObjectGuid.h"
-#include "Player.h"
 #include "Item.h"
+#include "Player.h"
+#include "TemporarySummon.h"
+#include "Totem.h"
+#include "Pet.h"
+#include "Vehicle.h"
 #include "GameObject.h"
 #include "Opcodes.h"
 #include "Chat.h"
@@ -83,14 +87,19 @@ bool ChatHandler::HandleMuteCommand(char* args)
     if (target)
         target->GetSession()->m_muteTime = mutetime;
 
-    LoginDatabase.PExecute("UPDATE account SET mutetime = " UI64FMTD " WHERE id = '%u'", uint64(mutetime), account_id);
+    char* reason = ExtractArg(&args);
+    if (!reason)
+        reason = "reason was not provided";
+
+    LoginDatabase.PExecute("INSERT INTO account_muted VALUES ('%u', " UI64FMTD ", '%s', '%s')",
+        account_id,uint64(mutetime), m_session ? m_session->GetPlayerName() : "Console(IRC)", reason);
 
     if (target)
-        ChatHandler(target).PSendSysMessage(LANG_YOUR_CHAT_DISABLED, notspeaktime);
+        ChatHandler(target).PSendSysMessage(LANG_YOUR_CHAT_DISABLED, notspeaktime, reason);
 
     std::string nameLink = playerLink(target_name);
 
-    PSendSysMessage(LANG_YOU_DISABLE_CHAT, nameLink.c_str(), notspeaktime);
+    PSendSysMessage(LANG_YOU_DISABLE_CHAT, nameLink.c_str(), notspeaktime, reason);
     return true;
 }
 
@@ -128,7 +137,7 @@ bool ChatHandler::HandleUnmuteCommand(char* args)
         target->GetSession()->m_muteTime = 0;
     }
 
-    LoginDatabase.PExecute("UPDATE account SET mutetime = '0' WHERE id = '%u'", account_id);
+    LoginDatabase.PExecute("DELETE FROM account_muted WHERE account_id = '%u'", account_id);
 
     if (target)
         ChatHandler(target).PSendSysMessage(LANG_YOUR_CHAT_ENABLED);
@@ -1086,7 +1095,15 @@ bool ChatHandler::HandleGameObjectAddCommand(char* args)
     Map *map = chr->GetMap();
 
     GameObject* pGameObj = new GameObject;
-    uint32 db_lowGUID = map->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT);
+
+    // used guids from specially reserved range (can be 0 if no free values)
+    uint32 db_lowGUID = sObjectMgr.GenerateStaticGameObjectLowGuid();
+    if (!db_lowGUID)
+    {
+        SendSysMessage(LANG_NO_FREE_STATIC_GUID_FOR_SPAWN);
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     if (!pGameObj->Create(db_lowGUID, gInfo->id, map, chr->GetPhaseMaskForSpawn(), x, y, z, o, 0.0f, 0.0f, 0.0f, 0.0f, GO_ANIMPROGRESS_DEFAULT, GO_STATE_READY))
     {
@@ -1587,13 +1604,31 @@ bool ChatHandler::HandleNpcAddCommand(char* args)
     if (!ExtractUint32KeyFromLink(&args, "Hcreature_entry", id))
         return false;
 
+    CreatureInfo const *cinfo = ObjectMgr::GetCreatureTemplate(id);
+    //FIXME: need vehicle support like GenerateStaticCreatureLowGuid when its will allowed static spawns
+    if (!cinfo)
+    {
+        PSendSysMessage(LANG_COMMAND_INVALIDCREATUREID, id);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
     Player *chr = m_session->GetPlayer();
     CreatureCreatePos pos(chr, chr->GetOrientation());
     Map *map = chr->GetMap();
 
     Creature* pCreature = new Creature;
 
-    if (!pCreature->Create(map->GenerateLocalLowGuid(HIGHGUID_UNIT), pos, id))
+    // used guids from specially reserved range (can be 0 if no free values)
+    uint32 lowguid = sObjectMgr.GenerateStaticCreatureLowGuid();
+    if (!lowguid)
+    {
+        SendSysMessage(LANG_NO_FREE_STATIC_GUID_FOR_SPAWN);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    if (!pCreature->Create(lowguid, pos, cinfo))
     {
         delete pCreature;
         return false;
@@ -1715,7 +1750,7 @@ bool ChatHandler::HandleNpcAddMoveCommand(char* args)
         return false;
     }
 
-    Creature* pCreature = player->GetMap()->GetCreature(ObjectGuid(HIGHGUID_UNIT, data->id, lowguid));
+    Creature* pCreature = player->GetMap()->GetCreature(data->GetObjectGuid(lowguid));
 
     sWaypointMgr.AddLastNode(lowguid, player->GetPositionX(), player->GetPositionY(), player->GetPositionZ(), player->GetOrientation(), wait, 0);
 
@@ -1816,22 +1851,45 @@ bool ChatHandler::HandleNpcDeleteCommand(char* args)
             return false;
 
         if (CreatureData const* data = sObjectMgr.GetCreatureData(lowguid))
-            unit = m_session->GetPlayer()->GetMap()->GetCreature(ObjectGuid(HIGHGUID_UNIT, data->id, lowguid));
+            unit = m_session->GetPlayer()->GetMap()->GetCreature(data->GetObjectGuid(lowguid));
     }
     else
         unit = getSelectedCreature();
 
-    if (!unit || unit->IsPet() || unit->IsTotem())
+    if (!unit)
     {
         SendSysMessage(LANG_SELECT_CREATURE);
         SetSentErrorMessage(true);
         return false;
     }
 
-    // Delete the creature
-    unit->CombatStop();
-    unit->DeleteFromDB();
-    unit->AddObjectToRemoveList();
+    switch (unit->GetSubtype())
+    {
+        case CREATURE_SUBTYPE_GENERIC:
+//        case CREATURE_SUBTYPE_VEHICLE:
+        {
+            unit->CombatStop();
+            if (CreatureData const* data = sObjectMgr.GetCreatureData(unit->GetGUIDLow()))
+            {
+                Creature::AddToRemoveListInMaps(unit->GetGUIDLow(), data);
+                Creature::DeleteFromDB(unit->GetGUIDLow(), data);
+            }
+            else
+                unit->AddObjectToRemoveList();
+            break;
+        }
+        case CREATURE_SUBTYPE_PET:
+            ((Pet*)unit)->Unsummon(PET_SAVE_AS_CURRENT);
+            break;
+        case CREATURE_SUBTYPE_TOTEM:
+            ((Totem*)unit)->UnSummon();
+            break;
+        case CREATURE_SUBTYPE_TEMPORARY_SUMMON:
+            ((TemporarySummon*)unit)->UnSummon();
+            break;
+        default:
+            return false;
+    }
 
     SendSysMessage(LANG_COMMAND_DELCREATMESSAGE);
 
@@ -1868,7 +1926,7 @@ bool ChatHandler::HandleNpcMoveCommand(char* args)
             return false;
         }
 
-        pCreature = player->GetMap()->GetCreature(ObjectGuid(HIGHGUID_UNIT, data->id, lowguid));
+        pCreature = player->GetMap()->GetCreature(data->GetObjectGuid(lowguid));
     }
     else
         lowguid = pCreature->GetGUIDLow();
@@ -1951,7 +2009,7 @@ bool ChatHandler::HandleNpcSetMoveTypeCommand(char* args)
             return false;
         }
 
-        pCreature = player->GetMap()->GetCreature(ObjectGuid(HIGHGUID_UNIT, data->id, lowguid));
+        pCreature = player->GetMap()->GetCreature(data->GetObjectGuid(lowguid));
     }
 
     MovementGeneratorType move_type;
@@ -2865,7 +2923,7 @@ bool ChatHandler::HandleWpAddCommand(char* args)
                 return false;
             }
 
-            target = m_session->GetPlayer()->GetMap()->GetCreature(ObjectGuid(HIGHGUID_UNIT, data->id, lowguid));
+            target = m_session->GetPlayer()->GetMap()->GetCreature(data->GetObjectGuid(lowguid));
             if (!target)
             {
                 PSendSysMessage(LANG_WAYPOINT_NOTFOUNDDBPROBLEM, lowguid);
@@ -2899,7 +2957,7 @@ bool ChatHandler::HandleWpAddCommand(char* args)
             return false;
         }
 
-        target = m_session->GetPlayer()->GetMap()->GetCreature(ObjectGuid(HIGHGUID_UNIT, data->id, lowguid));
+        target = m_session->GetPlayer()->GetMap()->GetCreature(data->GetObjectGuid(lowguid));
         if (!target || target->IsPet())
         {
             PSendSysMessage(LANG_WAYPOINT_CREATNOTFOUND, lowguid);
@@ -2962,6 +3020,10 @@ bool ChatHandler::HandleWpModifyCommand(char* args)
 
     if (!*args)
         return false;
+
+    CreatureInfo const* waypointInfo = ObjectMgr::GetCreatureTemplate(VISUAL_WAYPOINT);
+    if (!waypointInfo || waypointInfo->GetHighGuid() != HIGHGUID_UNIT)
+        return false;                                       // must exist as normal creature in mangos.sql 'creature_template'
 
     // first arg: add del text emote spell waittime move
     char* show_str = strtok(args, " ");
@@ -3114,7 +3176,7 @@ bool ChatHandler::HandleWpModifyCommand(char* args)
             return false;
         }
 
-        Creature* npcCreature = m_session->GetPlayer()->GetMap()->GetCreature(ObjectGuid(HIGHGUID_UNIT, data->id, lowguid));
+        Creature* npcCreature = m_session->GetPlayer()->GetMap()->GetCreature(data->GetObjectGuid(lowguid));
 
         if (!npcCreature)
         {
@@ -3150,7 +3212,7 @@ bool ChatHandler::HandleWpModifyCommand(char* args)
 
         CreatureCreatePos pos(chr, chr->GetOrientation());
 
-        if (!wpCreature->Create(map->GenerateLocalLowGuid(HIGHGUID_UNIT), pos, VISUAL_WAYPOINT))
+        if (!wpCreature->Create(map->GenerateLocalLowGuid(HIGHGUID_UNIT), pos, waypointInfo))
         {
             PSendSysMessage(LANG_WAYPOINT_VP_NOTCREATED, VISUAL_WAYPOINT);
             delete wpCreature;
@@ -3185,7 +3247,7 @@ bool ChatHandler::HandleWpModifyCommand(char* args)
             return false;
         }
 
-        Creature* npcCreature = m_session->GetPlayer()->GetMap()->GetCreature(ObjectGuid(HIGHGUID_UNIT, data->id, lowguid));
+        Creature* npcCreature = m_session->GetPlayer()->GetMap()->GetCreature(data->GetObjectGuid(lowguid));
 
         // wpCreature
         Creature* wpCreature = NULL;
@@ -3245,7 +3307,7 @@ bool ChatHandler::HandleWpModifyCommand(char* args)
                 return false;
             }
 
-            Creature* npcCreature = m_session->GetPlayer()->GetMap()->GetCreature(ObjectGuid(HIGHGUID_UNIT, data->id, lowguid));
+            Creature* npcCreature = m_session->GetPlayer()->GetMap()->GetCreature(data->GetObjectGuid(lowguid));
 
             // wpCreature
             Creature* wpCreature = NULL;
@@ -3262,7 +3324,7 @@ bool ChatHandler::HandleWpModifyCommand(char* args)
 
                 CreatureCreatePos pos(chr, chr->GetOrientation());
 
-                if (!wpCreature2->Create(map->GenerateLocalLowGuid(HIGHGUID_UNIT), pos, VISUAL_WAYPOINT))
+                if (!wpCreature2->Create(map->GenerateLocalLowGuid(HIGHGUID_UNIT), pos, waypointInfo))
                 {
                     PSendSysMessage(LANG_WAYPOINT_VP_NOTCREATED, VISUAL_WAYPOINT);
                     delete wpCreature2;
@@ -3310,7 +3372,7 @@ bool ChatHandler::HandleWpModifyCommand(char* args)
 
     sWaypointMgr.SetNodeText(lowguid, point, show_str, arg_str);
 
-    Creature* npcCreature = m_session->GetPlayer()->GetMap()->GetCreature(ObjectGuid(HIGHGUID_UNIT, data->id, lowguid));
+    Creature* npcCreature = m_session->GetPlayer()->GetMap()->GetCreature(data->GetObjectGuid(lowguid));
     if (npcCreature)
     {
         npcCreature->SetDefaultMovementType(WAYPOINT_MOTION_TYPE);
@@ -3357,6 +3419,10 @@ bool ChatHandler::HandleWpShowCommand(char* args)
 
     if (!*args)
         return false;
+
+    CreatureInfo const* waypointInfo = ObjectMgr::GetCreatureTemplate(VISUAL_WAYPOINT);
+    if (!waypointInfo || waypointInfo->GetHighGuid() != HIGHGUID_UNIT)
+        return false;                                       // must exist as normal creature in mangos.sql 'creature_template'
 
     // first arg: on, off, first, last
     char* show_str = strtok(args, " ");
@@ -3410,7 +3476,7 @@ bool ChatHandler::HandleWpShowCommand(char* args)
             return false;
         }
 
-        target = m_session->GetPlayer()->GetMap()->GetCreature(ObjectGuid(HIGHGUID_UNIT, data->id, lowguid));
+        target = m_session->GetPlayer()->GetMap()->GetCreature(data->GetObjectGuid(lowguid));
 
         if (!target)
         {
@@ -3553,7 +3619,7 @@ bool ChatHandler::HandleWpShowCommand(char* args)
 
             Creature* wpCreature = new Creature;
 
-            if (!wpCreature->Create(map->GenerateLocalLowGuid(HIGHGUID_UNIT), pos, VISUAL_WAYPOINT))
+            if (!wpCreature->Create(map->GenerateLocalLowGuid(HIGHGUID_UNIT), pos, waypointInfo))
             {
                 PSendSysMessage(LANG_WAYPOINT_VP_NOTCREATED, VISUAL_WAYPOINT);
                 delete wpCreature;
@@ -3598,7 +3664,7 @@ bool ChatHandler::HandleWpShowCommand(char* args)
 
         Creature* pCreature = new Creature;
 
-        if (!pCreature->Create(map->GenerateLocalLowGuid(HIGHGUID_UNIT), pos, VISUAL_WAYPOINT))
+        if (!pCreature->Create(map->GenerateLocalLowGuid(HIGHGUID_UNIT), pos, waypointInfo))
         {
             PSendSysMessage(LANG_WAYPOINT_VP_NOTCREATED, VISUAL_WAYPOINT);
             delete pCreature;
@@ -3646,7 +3712,7 @@ bool ChatHandler::HandleWpShowCommand(char* args)
 
         Creature* pCreature = new Creature;
 
-        if (!pCreature->Create(map->GenerateLocalLowGuid(HIGHGUID_UNIT), pos, VISUAL_WAYPOINT))
+        if (!pCreature->Create(map->GenerateLocalLowGuid(HIGHGUID_UNIT), pos, waypointInfo))
         {
             PSendSysMessage(LANG_WAYPOINT_NOTCREATED, VISUAL_WAYPOINT);
             delete pCreature;

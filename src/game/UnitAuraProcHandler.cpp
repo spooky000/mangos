@@ -1703,8 +1703,8 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                         // so set Rip's duration and max duration
                         if (countMin < countMax)
                         {
-                            aura->SetAuraDuration(aura->GetAuraDuration() + triggerAmount * 1000);
-                            aura->SetAuraMaxDuration(countMin + triggerAmount * 1000);
+                            aura->GetHolder()->SetAuraDuration(aura->GetAuraDuration() + triggerAmount * 1000);
+                            aura->GetHolder()->SetAuraMaxDuration(countMin + triggerAmount * 1000);
                             aura->GetHolder()->SendAuraUpdate(false);
                             return SPELL_AURA_PROC_OK;
                         }
@@ -1865,8 +1865,8 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
 
                         if (countMin < countMax)
                         {
-                            aura->SetAuraDuration(aura->GetAuraDuration() + triggerAmount * 1000);
-                            aura->SetAuraMaxDuration(countMin + triggerAmount * 1000);
+                            aura->GetHolder()->SetAuraDuration(aura->GetAuraDuration() + triggerAmount * 1000);
+                            aura->GetHolder()->SetAuraMaxDuration(countMin + triggerAmount * 1000);
                             aura->GetHolder()->SendAuraUpdate(false);
                             return SPELL_AURA_PROC_OK;
                         }
@@ -1900,7 +1900,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                         int32 duration = GetSpellMaxDuration(spellProto);
                         if(GetTypeId() == TYPEID_PLAYER)
                             static_cast<Player*>(this)->ApplySpellMod(spellProto->Id, SPELLMOD_DURATION, duration);
-                        (*itr)->SetAuraMaxDuration(duration);
+                        (*itr)->GetHolder()->SetAuraMaxDuration(duration);
                         (*itr)->GetHolder()->RefreshHolder();
                         return SPELL_AURA_PROC_OK;
                     }
@@ -3154,7 +3154,8 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 //case 24949: break;                        // Defensive State 2 (DND)
                 case 27522:                                 // Mana Drain Trigger
                 case 40336:                                 // Mana Drain Trigger
-                    // On successful melee or ranged attack gain $29471s1 mana and if possible drain $27526s1 mana from the target.
+                case 46939:                                 // Black Bow of the Betrayer
+                    // On successful melee or ranged attack gain 8 mana and if possible drain 8 mana from the target.
                     if (isAlive())
                         CastSpell(this, 29471, true, castItem, triggeredByAura);
                     if (pVictim && pVictim->isAlive())
@@ -3204,9 +3205,6 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                     break;
                 //case 45903: break:                        // Offensive State
                 //case 46146: break:                        // [PH] Ahune  Spanky Hands
-                //case 46939: break;                        // Black Bow of the Betrayer
-                //    trigger_spell_id = 29471; - gain mana
-                //                       27526; - drain mana if possible
                 case 43820:                                 // Charm of the Witch Doctor (Amani Charm of the Witch Doctor trinket)
                     // Pct value stored in dummy
                     basepoints[0] = pVictim->GetCreateHealth() * auraSpellInfo->CalculateSimpleValue(EFFECT_INDEX_1) / 100;

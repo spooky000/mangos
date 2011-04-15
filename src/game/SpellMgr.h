@@ -35,6 +35,7 @@
 
 class Player;
 class Spell;
+class Unit;
 struct CreatureInfo;
 struct SpellModifier;
 
@@ -109,6 +110,7 @@ inline float GetSpellMaxRange(SpellRangeEntry const *range, bool friendly = fals
 inline uint32 GetSpellRecoveryTime(SpellEntry const *spellInfo) { return spellInfo->RecoveryTime > spellInfo->CategoryRecoveryTime ? spellInfo->RecoveryTime : spellInfo->CategoryRecoveryTime; }
 int32 GetSpellDuration(SpellEntry const *spellInfo);
 int32 GetSpellMaxDuration(SpellEntry const *spellInfo);
+int32 CalculateSpellDuration(SpellEntry const *spellInfo, Unit const* caster = NULL);
 uint16 GetSpellAuraMaxTicks(SpellEntry const* spellInfo);
 WeaponAttackType GetWeaponAttackType(SpellEntry const *spellInfo);
 
@@ -241,7 +243,8 @@ inline bool IsNonCombatSpell(SpellEntry const *spellInfo)
 }
 
 bool IsPositiveSpell(uint32 spellId);
-bool IsPositiveEffect(uint32 spellId, SpellEffectIndex effIndex);
+bool IsPositiveSpell(SpellEntry const *spellproto);
+bool IsPositiveEffect(SpellEntry const *spellInfo, SpellEffectIndex effIndex);
 bool IsPositiveTarget(uint32 targetA, uint32 targetB);
 
 bool IsExplicitPositiveTarget(uint32 targetA);
@@ -464,13 +467,21 @@ inline SpellSchoolMask GetSpellSchoolMask(SpellEntry const* spellInfo)
     return SpellSchoolMask(spellInfo->SchoolMask);
 }
 
-inline uint32 GetSpellMechanicMask(SpellEntry const* spellInfo, int32 effect)
+inline uint32 GetSpellMechanicMask(SpellEntry const* spellInfo, uint32 effectMask)
 {
     uint32 mask = 0;
     if (spellInfo->Mechanic)
         mask |= 1 << (spellInfo->Mechanic - 1);
-    if (spellInfo->EffectMechanic[effect])
-        mask |= 1 << (spellInfo->EffectMechanic[effect] - 1);
+
+    for (uint32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+    {
+        if (!(effectMask & (1 << i)))
+            continue;
+
+        if (spellInfo->EffectMechanic[i])
+            mask |= 1 << (spellInfo->EffectMechanic[i]-1);
+    }
+
     return mask;
 }
 
@@ -591,7 +602,8 @@ enum ProcFlagsEx
     PROC_EX_RESERVED3           = 0x0008000,
     PROC_EX_EX_TRIGGER_ALWAYS   = 0x0010000,                // If set trigger always ( no matter another flags) used for drop charges
     PROC_EX_EX_ONE_TIME_TRIGGER = 0x0020000,                // If set trigger always but only one time (not used)
-    PROC_EX_PERIODIC_POSITIVE   = 0x0040000                 // For periodic heal
+    PROC_EX_PERIODIC_POSITIVE   = 0x0040000,                // For periodic heal
+    PROC_EX_DIRECT_DAMAGE       = 0x0080000                 // do not proc from absorbed damage
 };
 
 struct SpellProcEventEntry

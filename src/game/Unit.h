@@ -723,12 +723,6 @@ enum SplineType
     SPLINETYPE_FACINGANGLE  = 4
 };
 
-struct Position
-{
-    Position() : x(0.0f), y(0.0f), z(0.0f), o(0.0f) {}
-    float x, y, z, o;
-};
-
 class MovementInfo
 {
     public:
@@ -824,14 +818,6 @@ inline ByteBuffer& operator>> (ByteBuffer& buf, MovementInfo& mi)
     mi.Read(buf);
     return buf;
 }
-
-enum VisibilityUpdateFlags
-{
-    VisibilityUpdateFlag_None        = 0x00,
-    VisibilityUpdateFlag_AI_Sheduled = 0x01,         // AI relocation notification sheduled
-    VisibilityUpdateFlag_AI_Now      = 0x02,         // AI relocation notification will be executed in next update tick
-    VisibilityUpdateFlag_Client      = 0x04,         // Visibility will be updated in next update tick
-};
 
 enum DiminishingLevels
 {
@@ -1559,7 +1545,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         }
         bool isCharmedOwnedByPlayerOrPlayer() const { return GetCharmerOrOwnerOrOwnGuid().IsPlayer(); }
 
-        Player* GetSpellModOwner();
+        Player* GetSpellModOwner() const;
 
         Unit* GetOwner() const;
         Pet* GetPet() const;
@@ -1600,7 +1586,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         Player * m_movedPlayer;
 
-        uint64 const& GetTotemGUID(TotemSlot slot) const { return m_TotemSlot[slot]; }
+        ObjectGuid const& GetTotemGuid(TotemSlot slot) const { return m_TotemSlot[slot]; }
         Totem* GetTotem(TotemSlot slot) const;
         bool IsAllTotemSlotsUsed() const;
 
@@ -1975,8 +1961,8 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         uint32 CalcNotIgnoreAbsorbDamage( uint32 damage, SpellSchoolMask damageSchoolMask, SpellEntry const* spellInfo = NULL);
         uint32 CalcNotIgnoreDamageRedunction( uint32 damage, SpellSchoolMask damageSchoolMask);
-        int32 CalculateBaseSpellDuration(SpellEntry const* spellProto, uint32* periodicTime = NULL);
-        uint32 CalculateSpellDuration(Unit const* caster, uint32 baseDuration, SpellEntry const* spellProto, SpellEffectIndex effect_index);
+        int32 CalculateAuraDuration(SpellEntry const* spellProto, uint32 effectMask, int32 duration, Unit const* caster);
+
         float CalculateLevelPenalty(SpellEntry const* spellProto) const;
 
         void addFollower(FollowerReference* pRef) { m_FollowingRefManager.insertFirst(pRef); }
@@ -2139,7 +2125,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         GuardianPetList m_guardianPets;
 
-        uint64 m_TotemSlot[MAX_TOTEM_SLOT];
+        ObjectGuid m_TotemSlot[MAX_TOTEM_SLOT];
 
     private:                                                // Error traps for some wrong args using
         // this will catch and prevent build for any cases when all optional args skipped and instead triggered used non boolean type

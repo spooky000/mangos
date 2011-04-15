@@ -167,9 +167,19 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
         passenger->SendMessageToSet(&data, true);
     }
 
-    if (seatInfo->m_flags & SEAT_FLAG_UNATTACKABLE)
+    if (seat->second.seatInfo->m_flags & SEAT_FLAG_UNATTACKABLE || seat->second.seatInfo->m_flags & SEAT_FLAG_CAN_CONTROL)
     {
-        passenger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+        // some exceptions where passengets should be targetable, seems that flag is wrong
+        switch (m_pBase->GetEntry())
+        {
+            case 33118:                  // Ignis slag pot
+            case 32934:                  // Kologarn Right Arm
+                break;
+            default:
+                passenger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                break;
+        }
+        passenger->RemoveSpellsCausingAura(SPELL_AURA_MOD_SHAPESHIFT);
     }
 
     if (seatInfo->m_flags & SEAT_FLAG_CAN_CONTROL)
@@ -211,7 +221,8 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
             player->VehicleSpellInitialize();
         }
 
-        ((Creature*)m_pBase)->AIM_Initialize();
+        if(!(((Creature*)m_pBase)->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_KEEP_AI))
+            ((Creature*)m_pBase)->AIM_Initialize();
 
         if(m_pBase->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE))
         {
@@ -258,7 +269,7 @@ void VehicleKit::RemovePassenger(Unit *passenger)
     passenger->m_movementInfo.ClearTransportData();
     passenger->m_movementInfo.RemoveMovementFlag(MOVEFLAG_ONTRANSPORT);
 
-    if (seat->second.seatInfo->m_flags & SEAT_FLAG_UNATTACKABLE)
+    if (seat->second.seatInfo->m_flags & SEAT_FLAG_UNATTACKABLE || seat->second.seatInfo->m_flags & SEAT_FLAG_CAN_CONTROL)
     {
         passenger->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
     }
@@ -281,7 +292,8 @@ void VehicleKit::RemovePassenger(Unit *passenger)
             player->RemovePetActionBar();
         }
 
-        ((Creature*)m_pBase)->AIM_Initialize();
+        if(!(((Creature*)m_pBase)->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_KEEP_AI))
+            ((Creature*)m_pBase)->AIM_Initialize();
     }
 
     if (passenger->GetTypeId() == TYPEID_PLAYER)

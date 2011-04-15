@@ -26,6 +26,7 @@
 #include "Spell.h"
 #include "BattleGroundMgr.h"
 #include "MapManager.h"
+#include "Unit.h"
 
 SpellMgr::SpellMgr()
 {
@@ -59,6 +60,29 @@ int32 GetSpellMaxDuration(SpellEntry const *spellInfo)
     if(!du)
         return 0;
     return (du->Duration[2] == -1) ? -1 : abs(du->Duration[2]);
+}
+
+int32 CalculateSpellDuration(SpellEntry const *spellInfo, Unit const* caster)
+{
+    int32 duration = GetSpellDuration(spellInfo);
+
+    if (duration != -1 && caster)
+    {
+        int32 maxduration = GetSpellMaxDuration(spellInfo);
+
+        if (duration != maxduration && caster->GetTypeId() == TYPEID_PLAYER)
+            duration += int32((maxduration - duration) * ((Player*)caster)->GetComboPoints() / 5);
+
+        if (Player* modOwner = caster->GetSpellModOwner())
+        {
+            modOwner->ApplySpellMod(spellInfo->Id, SPELLMOD_DURATION, duration);
+
+            if (duration < 0)
+                duration = 0;
+        }
+    }
+
+    return duration;
 }
 
 uint32 GetSpellCastTime(SpellEntry const* spellInfo, Spell const* spell)
@@ -627,13 +651,9 @@ bool IsExplicitNegativeTarget(uint32 targetA)
     return false;
 }
 
-bool IsPositiveEffect(uint32 spellId, SpellEffectIndex effIndex)
+bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
 {
-    SpellEntry const *spellproto = sSpellStore.LookupEntry(spellId);
-    if (!spellproto)
-        return false;
-
-    switch(spellId)
+    switch(spellproto->Id)
     {
         case 47540:                                         // Penance start dummy aura - Rank 1
         case 53005:                                         // Penance start dummy aura - Rank 2
@@ -652,6 +672,7 @@ bool IsPositiveEffect(uint32 spellId, SpellEffectIndex effIndex)
         case 27130:                                         // Amplify Magic - Rank 5
         case 33946:                                         // Amplify Magic - Rank 6
         case 43017:                                         // Amplify Magic - Rank 7
+        case 12042:                                         // Arcane Power        
             return true;
     }
 
@@ -659,12 +680,13 @@ bool IsPositiveEffect(uint32 spellId, SpellEffectIndex effIndex)
     {
         case SPELL_EFFECT_DUMMY:
             // some explicitly required dummy effect sets
-            switch(spellId)
+            switch(spellproto->Id)
             {
                 case 28441:                                 // AB Effect 000
                     return false;
                 case 49634:                                 // Sergeant's Flare
                 case 54530:                                 // Opening
+                case 62105:                                 // To'kini's Blowgun
                     return true;
                 default:
                     break;
@@ -684,6 +706,21 @@ bool IsPositiveEffect(uint32 spellId, SpellEffectIndex effIndex)
         {
             switch(spellproto->EffectApplyAuraName[effIndex])
             {
+                case SPELL_AURA_PHASE:
+                {
+                    switch(spellproto->Id)
+                    {
+                        case 57508: // Insanity (Volazj ecounter)
+                        case 57509:
+                        case 57510:
+                        case 57511:
+                        case 57512:
+                            return false;
+                        default: 
+                            break;
+                    }
+                    break;
+                }
                 case SPELL_AURA_DUMMY:
                 {
                     // dummy aura can be positive or negative dependent from casted spell
@@ -733,7 +770,7 @@ bool IsPositiveEffect(uint32 spellId, SpellEffectIndex effIndex)
                 case SPELL_AURA_ADD_TARGET_TRIGGER:
                     return true;
                 case SPELL_AURA_PERIODIC_TRIGGER_SPELL:
-                    if (spellId != spellproto->EffectTriggerSpell[effIndex])
+                    if (spellproto->Id != spellproto->EffectTriggerSpell[effIndex])
                     {
                         uint32 spellTriggeredId = spellproto->EffectTriggerSpell[effIndex];
                         SpellEntry const *spellTriggeredProto = sSpellStore.LookupEntry(spellTriggeredId);
@@ -745,8 +782,8 @@ bool IsPositiveEffect(uint32 spellId, SpellEffectIndex effIndex)
                             {
                                 // if non-positive trigger cast targeted to positive target this main cast is non-positive
                                 // this will place this spell auras as debuffs
-                                if (IsPositiveTarget(spellTriggeredProto->EffectImplicitTargetA[effIndex],spellTriggeredProto->EffectImplicitTargetB[effIndex]) &&
-                                    !IsPositiveEffect(spellTriggeredId,SpellEffectIndex(i)))
+                                if (IsPositiveTarget(spellTriggeredProto->EffectImplicitTargetA[effIndex], spellTriggeredProto->EffectImplicitTargetB[effIndex]) &&
+                                    !IsPositiveEffect(spellTriggeredProto, SpellEffectIndex(i)))
                                     return false;
                             }
                         }
@@ -898,10 +935,15 @@ bool IsPositiveSpell(uint32 spellId)
     if (!spellproto)
         return false;
 
+    return IsPositiveSpell(spellproto);
+}
+
+bool IsPositiveSpell(SpellEntry const *spellproto)
+{
     // spells with at least one negative effect are considered negative
     // some self-applied spells have negative effects but in self casting case negative check ignored.
     for (int i = 0; i < MAX_EFFECT_INDEX; ++i)
-        if (!IsPositiveEffect(spellId, SpellEffectIndex(i)))
+        if (spellproto->Effect[i] && !IsPositiveEffect(spellproto, SpellEffectIndex(i)))
             return false;
     return true;
 }
@@ -2689,7 +2731,7 @@ SpellEntry const* SpellMgr::SelectAuraRankForLevel(SpellEntry const* spellInfo, 
             IsAreaEffectPossitiveTarget(Targets(spellInfo->EffectImplicitTargetA[i])))) ||
             spellInfo->Effect[i] == SPELL_EFFECT_APPLY_AREA_AURA_PARTY ||
             spellInfo->Effect[i] == SPELL_EFFECT_APPLY_AREA_AURA_RAID) &&
-            IsPositiveEffect(spellInfo->Id, SpellEffectIndex(i)))
+            IsPositiveEffect(spellInfo, SpellEffectIndex(i)))
         {
             needRankSelection = true;
             break;

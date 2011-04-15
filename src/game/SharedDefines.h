@@ -747,7 +747,7 @@ enum SpellEffects
     SPELL_EFFECT_TALENT_SPEC_COUNT         = 161,
     SPELL_EFFECT_TALENT_SPEC_SELECT        = 162,
     SPELL_EFFECT_163                       = 163,
-    SPELL_EFFECT_REMOVE_AURA               = 164,
+    SPELL_EFFECT_CANCEL_AURA               = 164,
     TOTAL_SPELL_EFFECTS                    = 165
 };
 
@@ -1012,6 +1012,9 @@ enum Mechanics
     MECHANIC_SAPPED           = 30,
     MECHANIC_ENRAGED          = 31
 };
+
+#define FIRST_MECHANIC          1
+#define MAX_MECHANIC            32
 
 // Used for spell 42292 Immune Movement Impairment and Loss of Control (0x49967da6)
 #define IMMUNE_TO_MOVEMENT_IMPAIRMENT_AND_LOSS_CONTROL_MASK ( \

@@ -49,6 +49,13 @@
 // apply implementation of the singletons
 #include "Policies/SingletonImp.h"
 
+
+HighGuid CreatureData::GetHighGuid() const
+{
+    // info existence checked at loading
+    return ObjectMgr::GetCreatureTemplate(id)->GetHighGuid();
+}
+
 TrainerSpell const* TrainerSpellData::Find(uint32 spell_id) const
 {
     TrainerSpellMap::const_iterator itr = spellList.find(spell_id);
@@ -158,7 +165,7 @@ m_corpseDecayTimer(0), m_respawnTime(0), m_respawnDelay(300), m_corpseDelay(60),
 m_subtype(subtype), m_defaultMovementType(IDLE_MOTION_TYPE), m_equipmentId(0),
 m_AlreadyCallAssistance(false), m_AlreadySearchedAssistance(false),
 m_regenHealth(true), m_AI_locked(false), m_isDeadByDefault(false),
-m_meleeDamageSchoolMask(SPELL_SCHOOL_MASK_NORMAL),
+m_meleeDamageSchoolMask(SPELL_SCHOOL_MASK_NORMAL), m_originalEntry(0), m_temporaryFactionFlags(TEMPFACTION_NONE),
 m_creatureInfo(NULL), m_splineFlags(SPLINEFLAG_WALKMODE)
 {
     m_regenTimer = 200;
@@ -789,27 +796,13 @@ bool Creature::AIM_Initialize()
     return true;
 }
 
-bool Creature::Create(uint32 guidlow, CreatureCreatePos& cPos, uint32 Entry, Team team /*= TEAM_NONE*/, const CreatureData *data /*= NULL*/, GameEventCreatureData const* eventData /*= NULL*/)
+bool Creature::Create(uint32 guidlow, CreatureCreatePos& cPos, CreatureInfo const* cinfo, Team team /*= TEAM_NONE*/, const CreatureData *data /*= NULL*/, GameEventCreatureData const* eventData /*= NULL*/)
 {
-    CreatureInfo const *cinfo = sObjectMgr.GetCreatureTemplate(Entry);
-
-    if (!cinfo)
-    {
-        sLog.outErrorDb("Creature entry %u does not exist.", Entry);
-        return false;
-    }
 
     SetMap(cPos.GetMap());
     SetPhaseMask(cPos.GetPhaseMask(), false);
 
-    HighGuid hi = cinfo->VehicleId ? HIGHGUID_VEHICLE : HIGHGUID_UNIT;
-
-    ObjectGuid guid(hi, Entry, guidlow);
-
-    if (cPos.GetMap()->GetCreature(guid))
-        return false;
-
-    if (!CreateFromProto(guid, Entry, team, data, eventData))
+    if (!CreateFromProto(guidlow, cinfo, team, data, eventData))
         return false;
 
     cPos.SelectFinalPoint(this);
@@ -1324,13 +1317,13 @@ float Creature::GetSpellDamageMod(int32 Rank)
     }
 }
 
-bool Creature::CreateFromProto(ObjectGuid guid, uint32 Entry, Team team, const CreatureData *data /*=NULL*/, GameEventCreatureData const* eventData /*=NULL*/)
+bool Creature::CreateFromProto(uint32 guidlow, CreatureInfo const* cinfo, Team team, const CreatureData *data /*=NULL*/, GameEventCreatureData const* eventData /*=NULL*/)
 {
-    m_originalEntry = Entry;
+    m_originalEntry = cinfo->Entry;
 
-    Object::_Create(guid);
+    Object::_Create(guidlow, cinfo->Entry, cinfo->GetHighGuid());
 
-    if (!UpdateEntry(Entry, team, data, eventData, false))
+    if (!UpdateEntry(cinfo->Entry, team, data, eventData, false))
         return false;
 
     // Checked at startup
@@ -1350,15 +1343,22 @@ bool Creature::LoadFromDB(uint32 guidlow, Map *map)
         return false;
     }
 
+    CreatureInfo const *cinfo = ObjectMgr::GetCreatureTemplate(data->id);
+    if(!cinfo)
+    {
+        sLog.outErrorDb("Creature (Entry: %u) not found in table `creature_template`, can't load. ", data->id);
+        return false;
+    }
+
     GameEventCreatureData const* eventData = sGameEventMgr.GetCreatureUpdateDataForActiveEvent(guidlow);
 
     // Creature can be loaded already in map if grid has been unloaded while creature walk to another grid
-    if (map->GetCreature(ObjectGuid(HIGHGUID_UNIT, data->id, guidlow)))
+    if (map->GetCreature(data->GetObjectGuid(guidlow)))
         return false;
 
     CreatureCreatePos pos(map, data->posX, data->posY, data->posZ, data->orientation, data->phaseMask);
 
-    if (!Create(guidlow, pos, data->id, TEAM_NONE, data, eventData))
+    if (!Create(guidlow, pos, cinfo, TEAM_NONE, data, eventData))
         return false;
 
     m_respawnradius = data->spawndist;
@@ -1465,24 +1465,30 @@ struct CreatureRespawnDeleteWorker
 
 void Creature::DeleteFromDB()
 {
-    if (!HasStaticDBSpawnData())
+    CreatureData const* data = sObjectMgr.GetCreatureData(GetGUIDLow());
+    if (!data)
     {
         DEBUG_LOG("Trying to delete not saved creature!");
         return;
     }
 
-    CreatureRespawnDeleteWorker worker (GetGUIDLow());
-    sMapPersistentStateMgr.DoForAllStatesWithMapId(GetMapId(), worker);
+    DeleteFromDB(GetGUIDLow(), data);
+}
 
-    sObjectMgr.DeleteCreatureData(GetGUIDLow());
+void Creature::DeleteFromDB(uint32 lowguid, CreatureData const* data)
+{
+    CreatureRespawnDeleteWorker worker (lowguid);
+    sMapPersistentStateMgr.DoForAllStatesWithMapId(data->mapid, worker);
+
+    sObjectMgr.DeleteCreatureData(lowguid);
 
     WorldDatabase.BeginTransaction();
-    WorldDatabase.PExecuteLog("DELETE FROM creature WHERE guid=%u", GetGUIDLow());
-    WorldDatabase.PExecuteLog("DELETE FROM creature_addon WHERE guid=%u", GetGUIDLow());
-    WorldDatabase.PExecuteLog("DELETE FROM creature_movement WHERE id=%u", GetGUIDLow());
-    WorldDatabase.PExecuteLog("DELETE FROM game_event_creature WHERE guid=%u", GetGUIDLow());
-    WorldDatabase.PExecuteLog("DELETE FROM game_event_creature_data WHERE guid=%u", GetGUIDLow());
-    WorldDatabase.PExecuteLog("DELETE FROM creature_battleground WHERE guid=%u", GetGUIDLow());
+    WorldDatabase.PExecuteLog("DELETE FROM creature WHERE guid=%u", lowguid);
+    WorldDatabase.PExecuteLog("DELETE FROM creature_addon WHERE guid=%u", lowguid);
+    WorldDatabase.PExecuteLog("DELETE FROM creature_movement WHERE id=%u", lowguid);
+    WorldDatabase.PExecuteLog("DELETE FROM game_event_creature WHERE guid=%u", lowguid);
+    WorldDatabase.PExecuteLog("DELETE FROM game_event_creature_data WHERE guid=%u", lowguid);
+    WorldDatabase.PExecuteLog("DELETE FROM creature_battleground WHERE guid=%u", lowguid);
     WorldDatabase.CommitTransaction();
 }
 
@@ -1565,7 +1571,12 @@ void Creature::SetDeathState(DeathState s)
         RemoveFlag (UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
         AddSplineFlag(SPLINEFLAG_WALKMODE);
         SetUInt32Value(UNIT_NPC_FLAGS, cinfo->npcflag);
+
+        if (GetTemporaryFactionFlags() & TEMPFACTION_RESTORE_RESPAWN)
+            ClearTemporaryFaction();
+
         Unit::SetDeathState(ALIVE);
+
         clearUnitState(UNIT_STAT_ALL_STATE);
         i_motionMaster.Clear();
         SetMeleeDamageSchool(SpellSchools(cinfo->dmgschool));
@@ -1577,11 +1588,6 @@ bool Creature::FallGround()
 {
     // Only if state is JUST_DIED. CORPSE_FALLING is set below and promoted to CORPSE later
     if (getDeathState() != JUST_DIED)
-        return false;
-
-    // some creatures should stay levitating
-    // Kologarn (Ulduar)
-    if (GetEntry() == 32930)
         return false;
 
     // use larger distance for vmap height search than in most other cases
@@ -1964,7 +1970,7 @@ bool Creature::IsOutOfThreatArea(Unit* pVictim) const
     float ThreatRadius = sWorld.getConfig(CONFIG_FLOAT_THREAT_RADIUS);
 
     //Use AttackDistance in distance check if threat radius is lower. This prevents creature bounce in and out of combat every update tick.
-    return !pVictim->IsWithinDist3d(CombatStartX, CombatStartY, CombatStartZ,
+    return !pVictim->IsWithinDist3d(m_combatStartX, m_combatStartY, m_combatStartZ,
         ThreatRadius > AttackDist ? ThreatRadius : AttackDist);
 }
 
@@ -2023,19 +2029,19 @@ bool Creature::LoadCreatureAddon(bool reload)
 
     if(cainfo->auras)
     {
-        for (CreatureDataAddonAura const* cAura = cainfo->auras; cAura->spell_id; ++cAura)
+        for (uint32 const* cAura = cainfo->auras; *cAura; ++cAura)
         {
-            SpellEntry const *AdditionalSpellInfo = sSpellStore.LookupEntry(cAura->spell_id);
+            SpellEntry const *AdditionalSpellInfo = sSpellStore.LookupEntry(*cAura);
             if (!AdditionalSpellInfo)
             {
-                sLog.outErrorDb("Creature (GUIDLow: %u Entry: %u ) has wrong spell %u defined in `auras` field.",GetGUIDLow(),GetEntry(),cAura->spell_id);
+                sLog.outErrorDb("Creature (GUIDLow: %u Entry: %u ) has wrong spell %u defined in `auras` field.",GetGUIDLow(),GetEntry(), *cAura);
                 continue;
             }
 
-            if (HasAura(cAura->spell_id))
+            if (HasAura(*cAura))
             {
-                if(!reload)
-                    sLog.outErrorDb("Creature (GUIDLow: %u Entry: %u) has duplicate spell %u in `auras` field.", GetGUIDLow(), GetEntry(), cAura->spell_id);
+                if (!reload)
+                    sLog.outErrorDb("Creature (GUIDLow: %u Entry: %u) has duplicate spell %u in `auras` field.", GetGUIDLow(), GetEntry(), *cAura);
 
                 continue;
             }
@@ -2208,18 +2214,25 @@ void Creature::GetRespawnCoord( float &x, float &y, float &z, float* ori, float*
             *ori = data->orientation;
         if (dist)
             *dist = GetRespawnRadius();
+    }
+    else
+    {
+        float orient;
 
-        return;
+        GetSummonPoint(x, y, z, orient);
+
+        if (ori)
+            *ori = orient;
+        if (dist)
+            *dist = GetRespawnRadius();
     }
 
-    float orient;
-
-    GetSummonPoint(x, y, z, orient);
-
-    if (ori)
-        *ori = orient;
-    if (dist)
-        *dist = GetRespawnRadius();
+    //lets check if our creatures have valid spawn coordinates
+    if(!MaNGOS::IsValidMapCoord(x, y, z))
+    {
+        sLog.outError("Creature with invalid respawn coordinates: mapid = %u, guid = %u, x = %f, y = %f, z = %f", GetMapId(), GetGUIDLow(), x, y, z);
+        //MANGOS_ASSERT(false);
+    }
 }
 
 void Creature::AllLootRemovedFromCorpse()
@@ -2409,6 +2422,24 @@ const char* Creature::GetNameForLocaleIdx(int32 loc_idx) const
     return GetName();
 }
 
+void Creature::SetFactionTemporary(uint32 factionId, uint32 tempFactionFlags)
+{
+    m_temporaryFactionFlags = tempFactionFlags;
+    setFaction(factionId);
+}
+
+void Creature::ClearTemporaryFaction()
+{
+    // No restore if creature is charmed/possessed.
+    // For later we may consider extend to restore to charmer faction where charmer is creature.
+    // This can also be done by update any pet/charmed of creature at any faction change to charmer.
+    if (isCharmed())
+        return;
+
+    m_temporaryFactionFlags = TEMPFACTION_NONE;
+    setFaction(GetCreatureInfo()->faction_A);
+}
+
 void Creature::SetActiveObjectState( bool on )
 {
     if(m_isActiveObject==on)
@@ -2490,7 +2521,7 @@ struct AddCreatureToRemoveListInMapsWorker
 
 void Creature::AddToRemoveListInMaps(uint32 db_guid, CreatureData const* data)
 {
-    AddCreatureToRemoveListInMapsWorker worker(ObjectGuid(HIGHGUID_UNIT, data->id, db_guid));
+    AddCreatureToRemoveListInMapsWorker worker(data->GetObjectGuid(db_guid));
     sMapMgr.DoForAllMapsWithMapId(data->mapid, worker);
 }
 
