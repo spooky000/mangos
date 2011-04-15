@@ -595,6 +595,7 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix10 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(54420));
     sfix10->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
     sfix10->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
+    sfix10->Effect[EFFECT_INDEX_1] = SPELL_EFFECT_DUMMY;
 
     // Moorabi Transform
     SpellEntry *sfix11 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(55098));
