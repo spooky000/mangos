@@ -575,7 +575,7 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         if(unitTarget->GetGUID() == m_caster->GetGUID() || unitTarget->GetTypeId() != TYPEID_PLAYER)
                             return;
                         
-                        float radius = sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[0])->Radius2;
+                        float radius = sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[0])->Radius;
                         if (!radius)
                             return;
                         float distance = m_caster->GetDistance2d(unitTarget);
@@ -7592,7 +7592,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     return;
                 }
-                case 45713:                                 // Naked Caravan Guard - Master Transform
+                /*case 45713:                                 // Naked Caravan Guard - Master Transform
                 {
                     if (m_caster->GetTypeId() != TYPEID_UNIT)
                         return;
@@ -7645,7 +7645,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     m_caster->SetDisplayId(display_id);
                     return;
-                }
+                }*/
                 case 46203:                                 // Goblin Weather Machine
                 {
                     if (!unitTarget)
