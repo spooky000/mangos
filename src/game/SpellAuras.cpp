@@ -612,7 +612,7 @@ void AreaAura::Update(uint32 diff)
             Unit* owner = caster->GetCharmerOrOwner();
             if (!owner)
                 owner = caster;
-            std::list<Unit *> targets;
+            Spell::UnitList targets;
 
             switch(m_areaAuraType)
             {
@@ -740,7 +740,7 @@ void AreaAura::Update(uint32 diff)
                 }
             }
 
-            for(std::list<Unit *>::iterator tIter = targets.begin(); tIter != targets.end(); tIter++)
+            for(Spell::UnitList::iterator tIter = targets.begin(); tIter != targets.end(); tIter++)
             {
                 // flag for seelction is need apply aura to current iteration target
                 bool apply = true;
@@ -895,7 +895,7 @@ void PersistentAreaAura::Update(uint32 diff)
             if (!GetTarget()->IsWithinDistInMap(dynObj, dynObj->GetRadius()))
             {
                 remove = true;
-                dynObj->RemoveAffected(GetTarget());
+                dynObj->RemoveAffected(GetTarget());        // let later reapply if target return to range
             }
         }
         else
@@ -8711,7 +8711,7 @@ void Aura::PeriodicDummyTick()
                     if (target->hasUnitState(UNIT_STAT_STUNNED) || target->isFeared() || target->HasAuraType(SPELL_AURA_MOD_CONFUSE))
                         return;
 
-                    std::list<Unit*> targets;
+                    Spell::UnitList targets;
                     {
                         // eff_radius ==0
                         float radius = GetSpellMaxRange(sSpellRangeStore.LookupEntry(spell->rangeIndex));
@@ -8732,7 +8732,7 @@ void Aura::PeriodicDummyTick()
                     if(targets.empty())
                         return;
 
-                    std::list<Unit*>::const_iterator itr = targets.begin();
+                    Spell::UnitList::const_iterator itr = targets.begin();
                     std::advance(itr, rand()%targets.size());
                     Unit* victim = *itr;
 
