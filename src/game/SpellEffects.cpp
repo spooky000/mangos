@@ -8515,34 +8515,31 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         unitTarget->GetMap()->Visit(cell, go_visit);
                     }
 
+                    Unit * pOwner = pCaster->GetCharmer();
+                    if (!pOwner || pOwner->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
                     if (!creatureList.empty())
                     {
                         for(std::list<Creature*>::iterator itr = creatureList.begin(); itr != creatureList.end(); ++itr)
                         {
                             if((*itr)->GetEntry() == 28844)
                             {
-                                if (Unit * pOwner = pCaster->GetCharmer())
+                                ((Player*)pOwner)->KilledMonsterCredit(29099);
+                                QuestStatusData& q_status = ((Player*)pOwner)->getQuestStatusMap()[12690]; // Fuel for the Fire
+                                if (q_status.m_status == QUEST_STATUS_INCOMPLETE && (q_status.m_creatureOrGOcount[0] % 20) == 0)
                                 {
-                                    if (pOwner->GetTypeId() == TYPEID_PLAYER)
-                                    {
-                                        ((Player*)pOwner)->KilledMonsterCredit(29099);
-                                        QuestStatusData& q_status = ((Player*)pOwner)->getQuestStatusMap()[12690]; // Fuel for the Fire
-                                        if (q_status.m_status == QUEST_STATUS_INCOMPLETE && (q_status.m_creatureOrGOcount[0] % 20) == 0)
-                                        {
-                                            float x,y,z;
-                                            (*itr)->GetPosition(x,y,z);
-                                            (*itr)->SummonCreature(28873, x,y,z, 0, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 10000);
-                                            ((Player*)pOwner)->KilledMonsterCredit(28873);
-                                        }
-                                        ((Creature*)pCaster)->ForcedDespawn();
-                                    }
+                                    float x,y,z;
+                                    (*itr)->GetPosition(x,y,z);
+                                    (*itr)->SummonCreature(28873, x,y,z, 0, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 10000);
+                                    ((Player*)pOwner)->KilledMonsterCredit(28873);
                                 }
-                                
+
                                 (*itr)->CastSpell((*itr), 52508, true);
                             }
                         }
 
-                        unitTarget->DealDamage(unitTarget, unitTarget->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+                        ((Creature*)pCaster)->ForcedDespawn();
                     }
                     return;
                 }
