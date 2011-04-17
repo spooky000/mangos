@@ -8460,6 +8460,13 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                 case 59576:
                 {
                     Unit * pCaster = GetCaster();
+                    if (!pCaster)
+                        return;
+
+                    Unit * pOwner = pCaster->GetCharmer();
+                    if (!pOwner || pOwner->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
                     // Iterate for all creatures around cast place
                     CellPair pair(MaNGOS::ComputeCellPair(pCaster->GetPositionX(), pCaster->GetPositionY()));
                     Cell cell(pair);
@@ -8485,9 +8492,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                                 case 31205: entryToCredit = 32167; break;
                             }
 
-                            if (GetCaster()->GetOwner())
-                                if (GetCaster()->GetOwner()->GetTypeId() == TYPEID_PLAYER)
-                                    ((Player*)GetCaster()->GetOwner())->KilledMonsterCredit(entryToCredit);
+                            ((Player*)pOwner)->KilledMonsterCredit(entryToCredit);
 
                             unitTarget->DealDamage((*itr), (*itr)->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
                         }
