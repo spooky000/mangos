@@ -389,7 +389,7 @@ void BattleGroundSA::UpdatePhase()
         SpawnEvent(SA_EVENT_ADD_NPC, 0, false);
         OpenDoorEvent(SA_EVENT_OP_DOOR, 0);
 
-        Round_timer = (RoundScores[0].winner == GetDefender()) ? (BG_SA_ROUNDLENGTH - RoundScores[0].time) : 0;
+        Round_timer = (BG_SA_ROUNDLENGTH - RoundScores[0].time);
         SetStatus(STATUS_WAIT_JOIN);
         SendMessageToAll(LANG_BG_SA_START_TWO_MINUTE, CHAT_MSG_BG_SYSTEM_NEUTRAL, NULL);
     }
