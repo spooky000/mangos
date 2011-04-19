@@ -8461,6 +8461,13 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                 case 59576:
                 {
                     Unit * pCaster = GetCaster();
+                    if (!pCaster)
+                        return;
+
+                    Unit * pOwner = pCaster->GetCharmer();
+                    if (!pOwner || pOwner->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
                     // Iterate for all creatures around cast place
                     CellPair pair(MaNGOS::ComputeCellPair(pCaster->GetPositionX(), pCaster->GetPositionY()));
                     Cell cell(pair);
@@ -8486,9 +8493,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                                 case 31205: entryToCredit = 32167; break;
                             }
 
-                            if (GetCaster()->GetOwner())
-                                if (GetCaster()->GetOwner()->GetTypeId() == TYPEID_PLAYER)
-                                    ((Player*)GetCaster()->GetOwner())->KilledMonsterCredit(entryToCredit);
+                            ((Player*)pOwner)->KilledMonsterCredit(entryToCredit);
 
                             unitTarget->DealDamage((*itr), (*itr)->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
                         }
@@ -8503,47 +8508,31 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!pCaster || pCaster->GetTypeId() != TYPEID_UNIT)
                         return;
 
-                    // Iterate for all creatures around cast place
-                    CellPair pair(MaNGOS::ComputeCellPair(pCaster->GetPositionX(), pCaster->GetPositionY()));
-                    Cell cell(pair);
-                    cell.SetNoCreate();
+                    Unit * pOwner = pCaster->GetCharmer();
+                    if (!pOwner || pOwner->GetTypeId() != TYPEID_PLAYER)
+                        return;
 
                     std::list<Creature*> creatureList;
-                    {
-                        MaNGOS::AnyUnitInPointRangeCheck go_check(pCaster, pCaster->GetPositionX(), pCaster->GetPositionY(), pCaster->GetPositionZ(), 20);
-                        MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInPointRangeCheck> go_search(creatureList, go_check);
-                        TypeContainerVisitor<MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInPointRangeCheck>, GridTypeMapContainer> go_visit(go_search);
-                        unitTarget->GetMap()->Visit(cell, go_visit);
-                    }
+                    pCaster->GetCreatureListWithEntryInGrid(creatureList, 28844, 20);
 
                     if (!creatureList.empty())
                     {
                         for(std::list<Creature*>::iterator itr = creatureList.begin(); itr != creatureList.end(); ++itr)
                         {
-                            if((*itr)->GetEntry() == 28844)
+                            ((Player*)pOwner)->KilledMonsterCredit(29099);
+                            QuestStatusData& q_status = ((Player*)pOwner)->getQuestStatusMap()[12690]; // Fuel for the Fire
+                            if (q_status.m_status == QUEST_STATUS_INCOMPLETE && (q_status.m_creatureOrGOcount[0] % 20) == 0)
                             {
-                                if (Unit * pOwner = pCaster->GetCharmer())
-                                {
-                                    if (pOwner->GetTypeId() == TYPEID_PLAYER)
-                                    {
-                                        ((Player*)pOwner)->KilledMonsterCredit(29099);
-                                        QuestStatusData& q_status = ((Player*)pOwner)->getQuestStatusMap()[12690]; // Fuel for the Fire
-                                        if (q_status.m_status == QUEST_STATUS_INCOMPLETE && (q_status.m_creatureOrGOcount[0] % 20) == 0)
-                                        {
-                                            float x,y,z;
-                                            (*itr)->GetPosition(x,y,z);
-                                            (*itr)->SummonCreature(28873, x,y,z, 0, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 10000);
-                                            ((Player*)pOwner)->KilledMonsterCredit(28873);
-                                        }
-                                        ((Creature*)pCaster)->ForcedDespawn();
-                                    }
-                                }
-                                
-                                (*itr)->CastSpell((*itr), 52508, true);
+                                float x,y,z;
+                                (*itr)->GetPosition(x,y,z);
+                                (*itr)->SummonCreature(28873, x,y,z, 0, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 10000);
+                                ((Player*)pOwner)->KilledMonsterCredit(28873);
                             }
+
+                            (*itr)->CastSpell((*itr), 52508, true);
                         }
 
-                        unitTarget->DealDamage(unitTarget, unitTarget->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+                        ((Creature*)pCaster)->ForcedDespawn();
                     }
                     return;
                 }
