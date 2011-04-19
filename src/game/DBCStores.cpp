@@ -615,6 +615,12 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix14 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(43770));
     sfix14->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
 
+    // Hand over Mammoth
+    SpellEntry *sfix15 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(51660));
+    sfix15->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
+    sfix15->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
+    sfix15->EffectImplicitTargetA[EFFECT_INDEX_1] = TARGET_SELF;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);

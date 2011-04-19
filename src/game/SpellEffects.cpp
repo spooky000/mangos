@@ -2848,8 +2848,9 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 case 49285:                                 // Q:Mounting Up
                 case 48297:                                 // Q:Fresh Remounts
                 case 54420:                                 // Q:You'll Need a Gryphon
+                case 51660:                                 // Q:A Mammoth Undertaking
                 {
-                   if(m_caster->GetObjectGuid().IsVehicle())
+                   if (m_caster->GetObjectGuid().IsVehicle())
                         ((Creature*)m_caster)->ForcedDespawn(500);
                     return;
                 }
