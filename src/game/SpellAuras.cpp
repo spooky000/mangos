@@ -6687,7 +6687,7 @@ void Aura::HandleModCombatSpeedPct(bool apply, bool /*Real*/)
         }
 
         if(!apply)
-            amount = target->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_MELEE_RANGED_HASTE, true);
+            amount = target->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_MELEE_HASTE, true);
 
         target->ApplyCastTimePercentMod(amount, true);
         target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
