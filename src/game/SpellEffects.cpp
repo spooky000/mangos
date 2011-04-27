@@ -4526,12 +4526,12 @@ void Spell::EffectPowerBurn(SpellEffectIndex eff_idx)
 
 void Spell::EffectHeal(SpellEffectIndex /*eff_idx*/)
 {
-    // can't heal mechanical vehicles
-    if (unitTarget->GetObjectGuid().IsVehicle() && unitTarget->GetCreatureType() == CREATURE_TYPE_MECHANICAL)
-        return;
-
     if (unitTarget && unitTarget->isAlive() && damage >= 0)
     {
+        // can't heal mechanical vehicles
+        if (unitTarget->GetObjectGuid().IsVehicle() && unitTarget->GetCreatureType() == CREATURE_TYPE_MECHANICAL)
+        return;
+
         // Try to get original caster
         Unit *caster = GetAffectiveCaster();
         if (!caster)
