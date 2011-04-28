@@ -6426,13 +6426,13 @@ Unit *Unit::GetCharmer() const
     return NULL;
 }
 
-Unit *Unit::GetCreator() const
+/*Unit *Unit::GetCreator() const
 {
     ObjectGuid creatorid = GetCreatorGuid();
     if(!creatorid.IsEmpty())
         return ObjectAccessor::GetUnit(*this, creatorid);
     return NULL;
-}
+}*/
 
 bool Unit::IsCharmerOrOwnerPlayerOrPlayerItself() const
 {
@@ -12279,7 +12279,7 @@ void Unit::OnRelocated()
     ScheduleAINotify(World::GetRelocationAINotifyDelay());
 }
 
-ObjectGuid const& Unit::GetCreatorGuid() const
+/*ObjectGuid const& Unit::GetCreatorGuid() const
 {
     switch(GetObjectGuid().GetHigh())
     {
@@ -12301,4 +12301,4 @@ ObjectGuid const& Unit::GetCreatorGuid() const
         default:
             return ObjectGuid();
     }
-}
+}*/
