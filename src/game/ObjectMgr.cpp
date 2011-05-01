@@ -3629,7 +3629,7 @@ void ObjectMgr::LoadArenaTeams()
 
     //                                                     0                      1    2           3    4               5
     QueryResult *result = CharacterDatabase.Query( "SELECT arena_team.arenateamid,name,captainguid,type,BackgroundColor,EmblemStyle,"
-    //   6           7           8            9      10         11        12    13     14
+    //   6           7           8            9      10         11         12              13            14
         "EmblemColor,BorderStyle,BorderColor, rating,games_week,wins_week,games_season,wins_season,rank "
         "FROM arena_team LEFT JOIN arena_team_stats ON arena_team.arenateamid = arena_team_stats.arenateamid ORDER BY arena_team.arenateamid ASC" );
 
@@ -7823,13 +7823,7 @@ bool PlayerCondition::Meets(Player const * player) const
 // Verification of condition values validity
 bool PlayerCondition::IsValid(ConditionType condition, uint32 value1, uint32 value2)
 {
-    if (condition >= MAX_CONDITION)                         // Wrong condition type
-    {
-        sLog.outErrorDb("Condition has bad type of %u, skipped ", condition );
-        return false;
-    }
-
-    switch (condition)
+    switch(condition)
     {
         case CONDITION_AURA:
         {
@@ -8097,6 +8091,9 @@ bool PlayerCondition::IsValid(ConditionType condition, uint32 value1, uint32 val
         }
         case CONDITION_NONE:
             break;
+        default:
+            sLog.outErrorDb("Condition has bad type of %u, skipped ", condition);
+            return false;
     }
     return true;
 }
