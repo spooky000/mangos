@@ -111,8 +111,8 @@ class MANGOS_DLL_DECL ObjectAccessor : public MaNGOS::Singleton<ObjectAccessor, 
 
         void SaveAllPlayers();
 
-        /*// Pet access
-        static Pet* FindPet(ObjectGuid guid);               // if need pet at specific map better use Map::GetPet*/
+        // Pet access
+        static Pet* FindPet(ObjectGuid guid);               // if need pet at specific map better use Map::GetPet
 
         // Corpse access
         Corpse* GetCorpseForPlayerGUID(ObjectGuid guid);
@@ -126,10 +126,10 @@ class MANGOS_DLL_DECL ObjectAccessor : public MaNGOS::Singleton<ObjectAccessor, 
         // For call from Player/Corpse AddToWorld/RemoveFromWorld only
         void AddObject(Corpse *object) { HashMapHolder<Corpse>::Insert(object); }
         void AddObject(Player *object) { HashMapHolder<Player>::Insert(object); }
-        //void AddObject(Pet *object)    { HashMapHolder<Pet>::Insert(object); }
+        void AddObject(Pet *object)    { HashMapHolder<Pet>::Insert(object); }
         void RemoveObject(Corpse *object) { HashMapHolder<Corpse>::Remove(object); }
         void RemoveObject(Player *object) { HashMapHolder<Player>::Remove(object); }
-        //void RemoveObject(Pet *object)    { HashMapHolder<Pet>::Remove(object); }
+        void RemoveObject(Pet *object)    { HashMapHolder<Pet>::Remove(object); }
 
     private:
 

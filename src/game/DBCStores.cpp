@@ -589,7 +589,37 @@ void LoadDBCStores(const std::string& dataPath)
     sfix9->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
     sfix9->Effect[EFFECT_INDEX_1] = SPELL_EFFECT_DUMMY;
     for(int i = 0; i < 2; ++i)
-         sfix9->EffectImplicitTargetA[i] = TARGET_SELF;
+        sfix9->EffectImplicitTargetA[i] = TARGET_SELF;
+
+    // Deliver Gryphon
+    SpellEntry *sfix10 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(54420));
+    sfix10->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
+    sfix10->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
+    sfix10->Effect[EFFECT_INDEX_1] = SPELL_EFFECT_DUMMY;
+
+    // Moorabi Transform
+    SpellEntry *sfix11 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(55098));
+    sfix11->InterruptFlags |= SPELL_INTERRUPT_FLAG_INTERRUPT;
+
+    // Drop Off Soldier
+    SpellEntry *sfix12 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49081));
+    sfix12->EffectImplicitTargetA[EFFECT_INDEX_1] = TARGET_SELF;
+    sfix12->Effect[EFFECT_INDEX_1] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
+
+    // Drop Off Gnome
+    SpellEntry *sfix13 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49122));
+    sfix13->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
+    sfix13->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
+
+    // Grappling Hook
+    SpellEntry *sfix14 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(43770));
+    sfix14->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
+
+    // Hand over Mammoth
+    SpellEntry *sfix15 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(51660));
+    sfix15->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
+    sfix15->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
+    sfix15->EffectImplicitTargetA[EFFECT_INDEX_1] = TARGET_SELF;
 
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {

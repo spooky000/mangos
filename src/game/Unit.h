@@ -723,12 +723,6 @@ enum SplineType
     SPLINETYPE_FACINGANGLE  = 4
 };
 
-struct Position
-{
-    Position() : x(0.0f), y(0.0f), z(0.0f), o(0.0f) {}
-    float x, y, z, o;
-};
-
 class MovementInfo
 {
     public:
@@ -1592,7 +1586,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         Player * m_movedPlayer;
 
-        uint64 const& GetTotemGUID(TotemSlot slot) const { return m_TotemSlot[slot]; }
+        ObjectGuid const& GetTotemGuid(TotemSlot slot) const { return m_TotemSlot[slot]; }
         Totem* GetTotem(TotemSlot slot) const;
         bool IsAllTotemSlotsUsed() const;
 
@@ -1844,9 +1838,9 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         uint32 m_AuraFlags;
 
-        uint32 GetDisplayId() { return GetUInt32Value(UNIT_FIELD_DISPLAYID); }
+        uint32 GetDisplayId() const { return GetUInt32Value(UNIT_FIELD_DISPLAYID); }
         void SetDisplayId(uint32 modelId);
-        uint32 GetNativeDisplayId() { return GetUInt32Value(UNIT_FIELD_NATIVEDISPLAYID); }
+        uint32 GetNativeDisplayId() const { return GetUInt32Value(UNIT_FIELD_NATIVEDISPLAYID); }
         void SetNativeDisplayId(uint32 modelId) { SetUInt32Value(UNIT_FIELD_NATIVEDISPLAYID, modelId); }
         void setTransForm(uint32 spellid) { m_transform = spellid;}
         uint32 getTransForm() const { return m_transform;}
@@ -2131,7 +2125,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         GuardianPetList m_guardianPets;
 
-        uint64 m_TotemSlot[MAX_TOTEM_SLOT];
+        ObjectGuid m_TotemSlot[MAX_TOTEM_SLOT];
 
     private:                                                // Error traps for some wrong args using
         // this will catch and prevent build for any cases when all optional args skipped and instead triggered used non boolean type

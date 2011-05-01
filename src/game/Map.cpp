@@ -1419,7 +1419,7 @@ bool DungeonMap::Add(Player *player)
                 // players also become permanently bound when they enter
                 if (groupBind->perm)
                 {
-                    WorldPacket data(SMSG_INSTANCE_LOCK_WARNING_QUERY, 9);
+                    WorldPacket data(SMSG_PENDING_RAID_LOCK, 9);
                     data << uint32(60000);
                     data << uint32(0); // Completed Encounter Mask (Feanor: TODO)
                     data << uint8(0);
@@ -1435,10 +1435,7 @@ bool DungeonMap::Add(Player *player)
                 player->BindToInstance(GetPersistanceState(), false);
             else
             {
-                // cannot jump to a different instance without resetting it (GM can enter any instance)
-                if(!player->isGameMaster())
-                    player->RepopAtGraveyard();
-                // MANGOS_ASSERT(playerBind->state == GetPersistentState());
+                 MANGOS_ASSERT(playerBind->state == GetPersistentState());
             }
         }
     }
@@ -3081,7 +3078,7 @@ void Map::ScriptsProcess()
                     }
                     else
                     {
-                        // No buddy found, so don't do anything                     
+                        // No buddy found, so don't do anything
                         break;
                     }
                 }

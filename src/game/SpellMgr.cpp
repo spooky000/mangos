@@ -706,6 +706,21 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
         {
             switch(spellproto->EffectApplyAuraName[effIndex])
             {
+                case SPELL_AURA_PHASE:
+                {
+                    switch(spellproto->Id)
+                    {
+                        case 57508: // Insanity (Volazj ecounter)
+                        case 57509:
+                        case 57510:
+                        case 57511:
+                        case 57512:
+                            return false;
+                        default: 
+                            break;
+                    }
+                    break;
+                }
                 case SPELL_AURA_DUMMY:
                 {
                     // dummy aura can be positive or negative dependent from casted spell

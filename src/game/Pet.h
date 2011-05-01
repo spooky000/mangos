@@ -174,9 +174,8 @@ class Pet : public Creature
         bool isTemporarySummoned() const { return m_duration > 0; }
 
         bool IsPermanentPetFor(Player* owner);              // pet have tab in character windows and set UNIT_FIELD_PETNUMBER
-
-        bool Create (uint32 guidlow, CreatureCreatePos& cPos, uint32 Entry, uint32 pet_number, Unit* owner);
-        bool CreateBaseAtCreature(Creature* creature, Unit* owner);
+        bool Create (uint32 guidlow, CreatureCreatePos& cPos, CreatureInfo const* cinfo, uint32 pet_number, Unit* owner);
+        bool CreateBaseAtCreature(Creature* creature, Unit* owner);        
         bool LoadPetFromDB( Player* owner,uint32 petentry = 0,uint32 petnumber = 0, bool current = false );
         void SavePetToDB(PetSaveMode mode);
         void Unsummon(PetSaveMode mode, Unit* owner = NULL);

@@ -915,7 +915,8 @@ enum MangosStrings
     LANG_SCRIPTS_WRONG_API              = 1167,
     LANG_SCRIPTS_RELOADED_OK            = 1168,
     LANG_SCRIPTS_OUTDATED               = 1169,
-    // Room for more level 3              1170-1199 not used
+    LANG_NPCINFO_CHAR_DIFFICULTY        = 1170,
+    // Room for more level 3              1171-1199 not used
 
     // Debug commands
     LANG_CINEMATIC_NOT_EXIST            = 1200,
@@ -999,6 +1000,8 @@ enum MangosStrings
 
     LANG_BG_SA_HORDE_TIMEOUT_END_2ROUND             = 20041,
     LANG_BG_SA_ALLIANCE_TIMEOUT_END_2ROUND          = 20042,
+
+    LANG_BG_SA_END_1ROUND                           = 20043,
 
     // NOT RESERVED IDS                   12000-1999999999
     // `db_script_string` table index     2000000000-2000009999 (MIN_DB_SCRIPT_STRING_ID-MAX_DB_SCRIPT_STRING_ID)

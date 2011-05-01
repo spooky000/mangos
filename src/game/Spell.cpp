@@ -524,7 +524,7 @@ void Spell::FillTargetMap()
         if(IsAreaAuraEffect(m_spellInfo->Effect[i]))
             AddUnitTarget(m_caster, SpellEffectIndex(i));
 
-        std::list<Unit*> tmpUnitMap;
+        UnitList tmpUnitMap;
 
         // TargetA/TargetB dependent from each other, we not switch to full support this dependences
         // but need it support in some know cases
@@ -710,7 +710,7 @@ void Spell::FillTargetMap()
         if(m_caster->GetTypeId() == TYPEID_PLAYER)
         {
             Player *me = (Player*)m_caster;
-            for (std::list<Unit*>::const_iterator itr = tmpUnitMap.begin(); itr != tmpUnitMap.end(); ++itr)
+            for (UnitList::const_iterator itr = tmpUnitMap.begin(); itr != tmpUnitMap.end(); ++itr)
             {
                 Unit *owner = (*itr)->GetOwner();
                 Unit *u = owner ? owner : (*itr);
@@ -723,7 +723,7 @@ void Spell::FillTargetMap()
             }
         }
 
-        for (std::list<Unit*>::iterator itr = tmpUnitMap.begin(); itr != tmpUnitMap.end();)
+        for (UnitList::iterator itr = tmpUnitMap.begin(); itr != tmpUnitMap.end();)
         {
             if (!CheckTarget (*itr, SpellEffectIndex(i)))
             {
@@ -734,7 +734,7 @@ void Spell::FillTargetMap()
                 ++itr;
         }
 
-        for(std::list<Unit*>::const_iterator iunit = tmpUnitMap.begin(); iunit != tmpUnitMap.end(); ++iunit)
+        for(UnitList::const_iterator iunit = tmpUnitMap.begin(); iunit != tmpUnitMap.end(); ++iunit)
             AddUnitTarget((*iunit), SpellEffectIndex(i));
     }
 }
@@ -770,6 +770,9 @@ void Spell::prepareDataForTriggerSystem()
                     m_canTrigger = true;
                 // Replenish Mana, item spell with triggered cases (Mana Agate, etc mana gems)
                 else if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000010000000000))
+                    m_canTrigger = true;
+                // Fingers of Frost: triggered by Frost/Ice Armor
+                else if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000000000100000))
                     m_canTrigger = true;
                 // Living Bomb - can trigger Hot Streak
                 else if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x1000000000000))
@@ -1845,7 +1848,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
             if (radius > 0.0f)
             {
                 // caster included here?
-                FillAreaTargets(targetUnitMap, dest_x, dest_y, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+                FillAreaTargets(targetUnitMap, dest_x, dest_y, radius, PUSH_DEST_CENTER, SPELL_TARGETS_ALL);
             }
             else if (IsPositiveSpell(m_spellInfo->Id))
                     targetUnitMap.push_back(m_caster);
@@ -1868,7 +1871,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
             unMaxTargets = EffectChainTarget;
             float max_range = radius + unMaxTargets * CHAIN_SPELL_JUMP_RADIUS;
 
-            std::list<Unit *> tempTargetUnitMap;
+            UnitList tempTargetUnitMap;
 
             {
                 MaNGOS::AnyAoETargetUnitInObjectRangeCheck u_check(m_caster, max_range);
@@ -1883,7 +1886,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
 
             //Now to get us a random target that's in the initial range of the spell
             uint32 t = 0;
-            std::list<Unit*>::iterator itr = tempTargetUnitMap.begin();
+            UnitList::iterator itr = tempTargetUnitMap.begin();
             while(itr!= tempTargetUnitMap.end() && (*itr)->IsWithinDist(m_caster, radius))
                 ++t, ++itr;
 
@@ -1901,7 +1904,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
 
             t = unMaxTargets - 1;
             Unit *prev = pUnitTarget;
-            std::list<Unit*>::iterator next = tempTargetUnitMap.begin();
+            UnitList::iterator next = tempTargetUnitMap.begin();
 
             while(t && next != tempTargetUnitMap.end())
             {
@@ -1929,7 +1932,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
             m_targets.m_targetMask = 0;
             unMaxTargets = EffectChainTarget;
             float max_range = radius + unMaxTargets * CHAIN_SPELL_JUMP_RADIUS;
-            std::list<Unit*> tempTargetUnitMap;
+            UnitList tempTargetUnitMap;
             {
                 MaNGOS::AnyFriendlyUnitInObjectRangeCheck u_check(m_caster, max_range);
                 MaNGOS::UnitListSearcher<MaNGOS::AnyFriendlyUnitInObjectRangeCheck> searcher(tempTargetUnitMap, u_check);
@@ -1943,7 +1946,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
 
             //Now to get us a random target that's in the initial range of the spell
             uint32 t = 0;
-            std::list<Unit*>::iterator itr = tempTargetUnitMap.begin();
+            UnitList::iterator itr = tempTargetUnitMap.begin();
             while(itr != tempTargetUnitMap.end() && (*itr)->IsWithinDist(m_caster, radius))
                 ++t, ++itr;
 
@@ -1961,7 +1964,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
 
             t = unMaxTargets - 1;
             Unit *prev = pUnitTarget;
-            std::list<Unit*>::iterator next = tempTargetUnitMap.begin();
+            UnitList::iterator next = tempTargetUnitMap.begin();
 
             while(t && next != tempTargetUnitMap.end())
             {
@@ -2021,7 +2024,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     //FIXME: This very like horrible hack and wrong for most spells
                     max_range = radius + unMaxTargets * CHAIN_SPELL_JUMP_RADIUS;
 
-                std::list<Unit *> tempTargetUnitMap;
+                UnitList tempTargetUnitMap;
                 {
                     MaNGOS::AnyAoEVisibleTargetUnitInObjectRangeCheck u_check(pUnitTarget, originalCaster, max_range);
                     MaNGOS::UnitListSearcher<MaNGOS::AnyAoEVisibleTargetUnitInObjectRangeCheck> searcher(tempTargetUnitMap, u_check);
@@ -2038,7 +2041,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 targetUnitMap.push_back(pUnitTarget);
                 uint32 t = unMaxTargets - 1;
                 Unit *prev = pUnitTarget;
-                std::list<Unit*>::iterator next = tempTargetUnitMap.begin();
+                UnitList::iterator next = tempTargetUnitMap.begin();
 
                 while (t && next != tempTargetUnitMap.end())
                 {
@@ -2781,7 +2784,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 targetUnitMap.push_back(pUnitTarget);
                 uint32 t = unMaxTargets - 1;
                 Unit *prev = pUnitTarget;
-                std::list<Unit*>::iterator next = tempTargetUnitMap.begin();
+                UnitList::iterator next = tempTargetUnitMap.begin();
 
                 while(t && next != tempTargetUnitMap.end())
                 {
@@ -3317,8 +3320,8 @@ void Spell::prepare(SpellCastTargets const* targets, Aura* triggeredByAura)
 
         TriggerGlobalCooldown();
     }
-    // execute triggered without cast time explicitly in call point
-    else if(m_timer == 0)
+    // execute triggered or without cast time explicitly in call point
+    else if(m_timer == 0 || m_IsTriggeredSpell)
         cast(true);
     // else triggered with cast time will execute execute at next tick or later
     // without adding to cast type slot
@@ -5631,7 +5634,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                 if (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN && m_spellInfo->SpellIconID == 33)
                 {
                     // fire totems slot
-                    if (!m_caster->GetTotemGUID(TOTEM_SLOT_FIRE))
+                    if (m_caster->GetTotemGuid(TOTEM_SLOT_FIRE).IsEmpty())
                         return SPELL_FAILED_TOTEMS;
                 }
                 break;
@@ -6400,11 +6403,12 @@ SpellCastResult Spell::CheckCasterAuras() const
                 {
                     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
                     {
-                        if (GetSpellMechanicMask(itr->second->GetSpellProto(), 1 << i) & mechanic_immune)
+                        SpellEntry const * pEntry = holder->GetSpellProto();
+                        if (GetSpellMechanicMask(pEntry, 1 << i) & mechanic_immune)
                             continue;
-                        if (GetSpellSchoolMask(itr->second->GetSpellProto()) & school_immune)
+                        if ((GetSpellSchoolMask(pEntry) & school_immune) && !(pEntry->AttributesEx & SPELL_ATTR_EX_UNAFFECTED_BY_SCHOOL_IMMUNE))
                             continue;
-                        if ((1<<(itr->second->GetSpellProto()->Dispel)) & dispel_immune)
+                        if ((1<<(pEntry->Dispel)) & dispel_immune)
                             continue;
                         Aura *aura = holder->GetAuraByEffectIndex(SpellEffectIndex(i));
                         if (!aura)
