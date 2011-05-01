@@ -6420,7 +6420,7 @@ SpellCastResult Spell::CheckCasterAuras() const
                     switch(aura->GetModifier()->m_auraname)
                     {
                         case SPELL_AURA_MOD_STUN:
-                            if (!(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_STUNNED) || !aura->HasMechanic(MECHANIC_STUN))
+                            if (!(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_STUNNED)/* || !aura->HasMechanic(MECHANIC_STUN)*/)
                                 return SPELL_FAILED_STUNNED;
                             break;
                         case SPELL_AURA_MOD_CONFUSE:
