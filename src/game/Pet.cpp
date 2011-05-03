@@ -71,9 +71,8 @@ void Pet::AddToWorld()
     if (!((Creature*)this)->IsInWorld())
     {
         GetMap()->GetObjectsStore().insert<Pet>(GetGUID(), (Pet*)this);
-        /*if(!IsInWorld())
-        sObjectAccessor.AddObject(this);*/
-        //GetMap()->GetObjectsStore().insert<Pet>(GetGUID(), (Pet*)this);
+        // if(!IsInWorld())
+        sObjectAccessor.AddObject(this);
     }
 
     Unit::AddToWorld();
@@ -85,8 +84,8 @@ void Pet::RemoveFromWorld()
     if (((Creature*)this)->IsInWorld())
     {
         GetMap()->GetObjectsStore().erase<Pet>(GetGUID(), (Pet*)NULL);
-        /*if(IsInWorld())
-        sObjectAccessor.RemoveObject(this);*/
+        //if(IsInWorld())
+        sObjectAccessor.RemoveObject(this);
     }
 
     ///- Don't call the function for Creature, normal mobs + totems go in a different storage
@@ -514,8 +513,8 @@ void Pet::SetDeathState(DeathState s)                       // overwrite virtual
         else
         {
             // pet corpse non lootable and non skinnable
-            SetUInt32Value( UNIT_DYNAMIC_FLAGS, 0x00 );
-            RemoveFlag (UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
+            SetUInt32Value(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_NONE);
+            RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
 
             //lose happiness when died and not in BG/Arena
             MapEntry const* mapEntry = sMapStore.LookupEntry(GetMapId());

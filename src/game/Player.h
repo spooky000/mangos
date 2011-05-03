@@ -394,72 +394,12 @@ struct EnchantDuration
 typedef std::list<EnchantDuration> EnchantDurationList;
 typedef std::list<Item*> ItemDurationList;
 
-enum LfgType
-{
-    LFG_TYPE_NONE                 = 0,
-    LFG_TYPE_DUNGEON              = 1,
-    LFG_TYPE_RAID                 = 2,
-    LFG_TYPE_QUEST                = 3,
-    LFG_TYPE_ZONE                 = 4,
-    LFG_TYPE_HEROIC_DUNGEON       = 5,
-    LFG_TYPE_RANDOM_DUNGEON       = 6
-};
-
 enum LfgRoles
 {
     LEADER  = 0x01,
     TANK    = 0x02,
     HEALER  = 0x04,
     DAMAGE  = 0x08
-};
-
-struct LookingForGroupSlot
-{
-    LookingForGroupSlot() : entry(0), type(0) {}
-    bool Empty() const { return !entry && !type; }
-    void Clear() { entry = 0; type = 0; }
-    void Set(uint32 _entry, uint32 _type ) { entry = _entry; type = _type; }
-    bool Is(uint32 _entry, uint32 _type) const { return entry == _entry && type == _type; }
-    bool canAutoJoin() const { return entry && (type == LFG_TYPE_DUNGEON || type == LFG_TYPE_HEROIC_DUNGEON); }
-
-    uint32 entry;
-    uint32 type;
-};
-
-#define MAX_LOOKING_FOR_GROUP_SLOT 3
-
-struct LookingForGroup
-{
-    LookingForGroup() {}
-    bool HaveInSlot(LookingForGroupSlot const& slot) const { return HaveInSlot(slot.entry, slot.type); }
-    bool HaveInSlot(uint32 _entry, uint32 _type) const
-    {
-        for(int i = 0; i < MAX_LOOKING_FOR_GROUP_SLOT; ++i)
-            if(slots[i].Is(_entry, _type))
-                return true;
-        return false;
-    }
-
-    bool canAutoJoin() const
-    {
-        for(int i = 0; i < MAX_LOOKING_FOR_GROUP_SLOT; ++i)
-            if(slots[i].canAutoJoin())
-                return true;
-        return false;
-    }
-
-    bool Empty() const
-    {
-        for(int i = 0; i < MAX_LOOKING_FOR_GROUP_SLOT; ++i)
-            if(!slots[i].Empty())
-                return false;
-        return more.Empty();
-    }
-
-    LookingForGroupSlot slots[MAX_LOOKING_FOR_GROUP_SLOT];
-    LookingForGroupSlot more;
-    std::string comment;
-    uint8 roles;
 };
 
 enum RaidGroupError
@@ -1807,7 +1747,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         static void RemovePetitionsAndSigns(ObjectGuid guid, uint32 type);
 
         // Arena Team
-        void SetInArenaTeam(uint32 ArenaTeamId, uint8 slot, uint8 type)
+        void SetInArenaTeam(uint32 ArenaTeamId, uint8 slot, ArenaType type)
         {
             SetArenaTeamInfoField(slot, ARENA_TEAM_ID, ArenaTeamId);
             SetArenaTeamInfoField(slot, ARENA_TEAM_TYPE, type);
@@ -1818,7 +1758,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         }
         uint32 GetArenaTeamId(uint8 slot) { return GetUInt32Value(PLAYER_FIELD_ARENA_TEAM_INFO_1_1 + (slot * ARENA_TEAM_END) + ARENA_TEAM_ID); }
         uint32 GetArenaPersonalRating(uint8 slot) { return GetUInt32Value(PLAYER_FIELD_ARENA_TEAM_INFO_1_1 + (slot * ARENA_TEAM_END) + ARENA_TEAM_PERSONAL_RATING); }
-        static uint32 GetArenaTeamIdFromDB(ObjectGuid guid, uint8 slot);
+        static uint32 GetArenaTeamIdFromDB(ObjectGuid guid, ArenaType type);
         void SetArenaTeamIdInvited(uint32 ArenaTeamId) { m_ArenaTeamIdInvited = ArenaTeamId; }
         uint32 GetArenaTeamIdInvited() { return m_ArenaTeamIdInvited; }
         static void LeaveAllArenaTeams(ObjectGuid guid);
@@ -2313,8 +2253,6 @@ class MANGOS_DLL_SPEC Player : public Unit
         bool HasAtLoginFlag(AtLoginFlags f) const { return m_atLoginFlags & f; }
         void SetAtLoginFlag(AtLoginFlags f) { m_atLoginFlags |= f; }
         void RemoveAtLoginFlag(AtLoginFlags f, bool in_db_also = false);
-
-        LookingForGroup m_lookingForGroup;
 
         // Temporarily removed pet cache
         uint32 GetTemporaryUnsummonedPetNumber() const { return m_temporaryUnsummonedPetNumber; }

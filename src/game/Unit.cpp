@@ -3279,7 +3279,7 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit *pVictim, SpellEntry const *spell)
 
     uint32 missChance = uint32(MeleeSpellMissChance(pVictim, attType, fullSkillDiff, spell)*100.0f);
     // Roll miss
-    uint32 tmp = missChance;
+    uint32 tmp = spell->AttributesEx3 & SPELL_ATTR_EX3_CANT_MISS ? 0 : missChance;
     if (roll < tmp)
         return SPELL_MISS_MISS;
 
@@ -3459,7 +3459,7 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit *pVictim, SpellEntry const *spell)
     if (HitChance <  100) HitChance =  100;
     if (HitChance > 10000) HitChance = 10000;
 
-    int32 tmp = 10000 - HitChance;
+    int32 tmp = spell->AttributesEx3 & SPELL_ATTR_EX3_CANT_MISS ? 0 : (10000 - HitChance);
 
     int32 rand = irand(0,10000);
 
@@ -4513,6 +4513,20 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
 
                 // m_auraname can be modified to SPELL_AURA_NONE for area auras, use original
                 AuraType aurNameReal = AuraType(aurSpellInfo->EffectApplyAuraName[i]);
+
+                // Priest's Mind Flay must stack from different casters
+                if (const SpellEntry* sp = foundHolder->GetSpellProto())
+                {
+                    if (sp && sp->SpellFamilyName == SPELLFAMILY_PRIEST && sp->SpellIconID == 548 && (sp->SpellFamilyFlags2 & UI64LIT(0x00000040)))
+                        break;
+                }
+
+                // Warlock's Drain Soul must stack from different casters
+                if (const SpellEntry* sp = foundHolder->GetSpellProto())
+                {
+                    if (sp && sp->SpellFamilyName == SPELLFAMILY_WARLOCK && sp->SpellIconID == 113 && (sp->SpellFamilyFlags & UI64LIT(0x00004000)))
+                        break;
+                }
 
                 switch(aurNameReal)
                 {
@@ -5828,11 +5842,15 @@ void Unit::setPowerType(Powers new_powertype)
         if(((Player*)this)->GetGroup())
             ((Player*)this)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_POWER_TYPE);
     }
-    else if(Unit* owner = GetCharmerOrOwner())
+    else if(((Creature*)this)->IsPet())
     {
         Pet *pet = ((Pet*)this);
-        if((owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
-            ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_POWER_TYPE);
+        if(pet->isControlled())
+        {
+            Unit *owner = GetOwner();
+            if(owner && (owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
+                ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_POWER_TYPE);
+        }
     }
 
     switch(new_powertype)
@@ -6459,10 +6477,7 @@ Pet* Unit::GetPet() const
 
 Pet* Unit::_GetPet(ObjectGuid guid) const
 {
-    if (Map* pMap = GetMap())
-        return pMap->GetPet(guid);
-    else
-        return NULL;
+    return ObjectAccessor::FindPet(guid);
 }
 
 void Unit::RemoveMiniPet()
@@ -10100,10 +10115,15 @@ void Unit::SetHealth(uint32 val)
         if(((Player*)this)->GetGroup())
             ((Player*)this)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_CUR_HP);
     }
-    else if(Unit* owner = GetCharmerOrOwner())
+    else if(((Creature*)this)->IsPet())
     {
-        if((owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
-            ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_CUR_HP);
+        Pet *pet = ((Pet*)this);
+        if(pet->isControlled())
+        {
+            Unit *owner = GetOwner();
+            if(owner && (owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
+                ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_CUR_HP);
+        }
     }
 }
 
@@ -10118,10 +10138,15 @@ void Unit::SetMaxHealth(uint32 val)
         if(((Player*)this)->GetGroup())
             ((Player*)this)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_MAX_HP);
     }
-    else if(Unit* owner = GetCharmerOrOwner())
+    else if(((Creature*)this)->IsPet())
     {
-        if((owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
-            ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_MAX_HP);
+        Pet *pet = ((Pet*)this);
+        if(pet->isControlled())
+        {
+            Unit *owner = GetOwner();
+            if(owner && (owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
+                ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_MAX_HP);
+        }
     }
 
     if(val < health)
@@ -10186,10 +10211,15 @@ void Unit::SetMaxPower(Powers power, uint32 val)
         if(((Player*)this)->GetGroup())
             ((Player*)this)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_MAX_POWER);
     }
-    else if(Unit* owner = GetCharmerOrOwner())
+    else if(((Creature*)this)->IsPet())
     {
-        if((owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
-            ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_MAX_POWER);
+        Pet *pet = ((Pet*)this);
+        if(pet->isControlled())
+        {
+            Unit *owner = GetOwner();
+            if(owner && (owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
+                ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_MAX_POWER);
+        }
     }
 
     if(val < cur_power)
@@ -10206,10 +10236,15 @@ void Unit::ApplyPowerMod(Powers power, uint32 val, bool apply)
         if(((Player*)this)->GetGroup())
             ((Player*)this)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_CUR_POWER);
     }
-    else if(Unit* owner = GetCharmerOrOwner())
+    else if(((Creature*)this)->IsPet())
     {
-        if((owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
-            ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_CUR_POWER);
+        Pet *pet = ((Pet*)this);
+        if(pet->isControlled())
+        {
+            Unit *owner = GetOwner();
+            if(owner && (owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
+                ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_CUR_POWER);
+        }
     }
 }
 
@@ -10223,10 +10258,15 @@ void Unit::ApplyMaxPowerMod(Powers power, uint32 val, bool apply)
         if(((Player*)this)->GetGroup())
             ((Player*)this)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_MAX_POWER);
     }
-    else if(Unit* owner = GetCharmerOrOwner())
+    else if(((Creature*)this)->IsPet())
     {
-        if((owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
-            ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_MAX_POWER);
+        Pet *pet = ((Pet*)this);
+        if(pet->isControlled())
+        {
+            Unit *owner = GetOwner();
+            if(owner && (owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
+                ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_MAX_POWER);
+        }
     }
 }
 
@@ -11505,14 +11545,16 @@ void Unit::UpdateAuraForGroup(uint8 slot)
             player->SetAuraUpdateMask(slot);
         }
     }
-    else if(GetTypeId() == TYPEID_UNIT)
+    else if(GetTypeId() == TYPEID_UNIT && ((Creature*)this)->IsPet())
     {
-        if(Unit *owner = GetCharmerOrOwner())
+        Pet *pet = ((Pet*)this);
+        if(pet->isControlled())
         {
-            if((owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
+            Unit *owner = GetOwner();
+            if(owner && (owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
             {
                 ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_AURAS);
-                SetAuraUpdateMask(slot);
+                pet->SetAuraUpdateMask(slot);
             }
         }
     }

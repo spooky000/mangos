@@ -264,12 +264,12 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
                     // (ok) most seem to have this
                     unit->m_movementInfo.AddMovementFlag(MOVEFLAG_LEVITATING);
 
-                    if (!((Creature*)unit)->hasUnitState(UNIT_STAT_MOVING))
+                    /*if (!((Creature*)unit)->hasUnitState(UNIT_STAT_MOVING))
                     {
                         // (ok) possibly some "hover" mode
-                        //unit->m_movementInfo.AddMovementFlag(MOVEFLAG_ROOT);
+                        unit->m_movementInfo.AddMovementFlag(MOVEFLAG_ROOT);
                     }
-                    else
+                    else*/
                     {
                         if (((Creature*)unit)->IsMounted())
                         {
@@ -775,6 +775,10 @@ void Object::_SetUpdateBits(UpdateMask *updateMask, Player* /*target*/) const
         if(m_uint32Values_mirror[index]!= m_uint32Values[index])
             updateMask->SetBit(index);
     }
+  
+    // always update this field to prevent problems with shapeshifting
+    if (GetTypeId() == TYPEID_PLAYER)
+        updateMask->SetBit(UNIT_FIELD_BYTES_2);
 }
 
 void Object::_SetCreateBits(UpdateMask *updateMask, Player* /*target*/) const
