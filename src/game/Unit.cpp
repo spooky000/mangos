@@ -39,6 +39,7 @@
 #include "Pet.h"
 #include "Util.h"
 #include "Totem.h"
+#include "Vehicle.h"
 #include "BattleGround.h"
 #include "InstanceData.h"
 #include "MapPersistentStateMgr.h"
@@ -182,8 +183,10 @@ void GlobalCooldownMgr::CancelGlobalCooldown(SpellEntry const* spellInfo)
 ////////////////////////////////////////////////////////////
 // Methods of class Unit
 
-Unit::Unit()
-: WorldObject(), m_movedPlayer(NULL), i_motionMaster(this), m_ThreatManager(this), m_HostileRefManager(this)
+Unit::Unit() :
+    i_motionMaster(this), m_ThreatManager(this), m_HostileRefManager(this),
+    m_charmInfo(NULL),
+    m_vehicleInfo(NULL)
 {
     m_objectType |= TYPEMASK_UNIT;
     m_objectTypeId = TYPEID_UNIT;
@@ -265,15 +268,12 @@ Unit::Unit()
     for (int i = 0; i < MAX_MOVE_TYPE; ++i)
         m_speed_rate[i] = 1.0f;
 
-    m_charmInfo = NULL;
-
     // remove aurastates allowing special moves
     for(int i=0; i < MAX_REACTIVE; ++i)
         m_reactiveTimer[i] = 0;
 
     m_transport = NULL;
 
-    m_pVehicle = NULL;
     m_pVehicleKit = NULL;
 
     m_auraUpdateMask = 0;
@@ -291,8 +291,8 @@ Unit::~Unit()
         }
     }
 
-    if (m_charmInfo)
-        delete m_charmInfo;
+    delete m_charmInfo;
+    delete m_vehicleInfo;
 
     // those should be already removed at "RemoveFromWorld()" call
     MANGOS_ASSERT(m_gameObj.size() == 0);
@@ -11802,18 +11802,6 @@ struct SetPvPHelper
     bool state;
 };
 
-bool Unit::CreateVehicleKit(uint32 vehicleId)
-{
-    VehicleEntry const *vehicleInfo = sVehicleStore.LookupEntry(vehicleId);
-
-    if (!vehicleInfo)
-        return false;
-
-    m_pVehicleKit = new VehicleKit(this, vehicleInfo);
-    m_updateFlag |= UPDATEFLAG_VEHICLE;
-    return true;
-}
-
 void Unit::RemoveVehicleKit()
 {
     if (!m_pVehicleKit)
@@ -11821,8 +11809,8 @@ void Unit::RemoveVehicleKit()
 
     m_pVehicleKit->RemoveAllPassengers();
 
-    delete m_pVehicleKit;
-    m_pVehicleKit = NULL;
+//    delete m_pVehicleKit;
+//    m_pVehicleKit = NULL;
 
     m_updateFlag &= ~UPDATEFLAG_VEHICLE;
     RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_SPELLCLICK);
@@ -12283,4 +12271,58 @@ void Unit::OnRelocated()
         UpdateObjectVisibility();
     }
     ScheduleAINotify(World::GetRelocationAINotifyDelay());
+}
+
+ObjectGuid const& Unit::GetCreatorGuid() const
+{
+    switch(GetObjectGuid().GetHigh())
+    {
+        case HIGHGUID_UNIT:
+        case HIGHGUID_VEHICLE:
+            if (((Creature*)this)->IsTemporarySummon())
+            {
+                return ((TemporarySummon*)this)->GetSummonerGuid();
+            }
+            else
+                return ObjectGuid();
+
+        case HIGHGUID_PET:
+            return GetGuidValue(UNIT_FIELD_CREATEDBY);
+
+        case HIGHGUID_PLAYER:
+            return ObjectGuid();
+
+        default:
+            return ObjectGuid();
+    }
+}
+
+void Unit::SetVehicleId(uint32 entry)
+{
+    delete m_vehicleInfo;
+
+    if (entry)
+    {
+        VehicleEntry const* ventry = sVehicleStore.LookupEntry(entry);
+        MANGOS_ASSERT(ventry != NULL);
+
+        m_vehicleInfo = new VehicleInfo(ventry);
+        m_updateFlag |= UPDATEFLAG_VEHICLE;
+
+        if (!m_pVehicleKit)
+            m_pVehicleKit = new VehicleKit(this);
+    }
+    else
+    {
+        m_vehicleInfo = NULL;
+        m_updateFlag &= ~UPDATEFLAG_VEHICLE;
+    }
+
+    if (GetTypeId() == TYPEID_PLAYER)
+    {
+        WorldPacket data(SMSG_SET_VEHICLE_REC_ID, 16);
+        data << GetPackGUID();
+        data << uint32(entry);
+        SendMessageToSet(&data, true);
+    }
 }

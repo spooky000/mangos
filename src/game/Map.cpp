@@ -19,7 +19,6 @@
 #include "Map.h"
 #include "MapManager.h"
 #include "Player.h"
-#include "Vehicle.h"
 #include "GridNotifiers.h"
 #include "Log.h"
 #include "GridStates.h"
@@ -139,7 +138,7 @@ template<>
 void Map::AddToGrid(Creature* obj, NGridType *grid, Cell const& cell)
 {
     // add to world object registry in grid
-    if(obj->IsPet())
+    if (obj->IsPet())
     {
         (*grid)(cell.CellX(), cell.CellY()).AddWorldObject<Creature>(obj);
         obj->SetCurrentCell(cell);
@@ -183,7 +182,7 @@ template<>
 void Map::RemoveFromGrid(Creature* obj, NGridType *grid, Cell const& cell)
 {
     // remove from world object registry in grid
-    if(obj->IsPet())
+    if (obj->IsPet())
     {
         (*grid)(cell.CellX(), cell.CellY()).RemoveWorldObject<Creature>(obj);
     }
@@ -1703,13 +1702,11 @@ void Map::ScriptsProcess()
                     break;
                 }
                 case HIGHGUID_UNIT:
+                case HIGHGUID_VEHICLE:
                     source = GetCreature(step.sourceGuid);
                     break;
                 case HIGHGUID_PET:
                     source = GetPet(step.sourceGuid);
-                    break;
-                case HIGHGUID_VEHICLE:
-                    source = GetCreature(step.sourceGuid);
                     break;
                 case HIGHGUID_PLAYER:
                     source = HashMapHolder<Player>::Find(step.sourceGuid);
@@ -1736,13 +1733,11 @@ void Map::ScriptsProcess()
             switch(step.targetGuid.GetHigh())
             {
                 case HIGHGUID_UNIT:
+                case HIGHGUID_VEHICLE:
                     target = GetCreature(step.targetGuid);
                     break;
                 case HIGHGUID_PET:
                     target = GetPet(step.targetGuid);
-                    break;
-                case HIGHGUID_VEHICLE:
-                    target = GetCreature(step.targetGuid);
                     break;
                 case HIGHGUID_PLAYER:
                     target = HashMapHolder<Player>::Find(step.targetGuid);
@@ -3082,9 +3077,9 @@ Player* Map::GetPlayer(ObjectGuid guid)
 }
 
 /**
- * Function return creature (non-pet and then most summoned by spell creatures) that in world at CURRENT map 
+ * Function return creature (non-pet and then most summoned by spell creatures) that in world at CURRENT map
  *
- * @param guid must be creature guid (HIGHGUID_UNIT)
+ * @param guid must be creature or vehicle guid (HIGHGUID_UNIT HIGHGUID_VEHICLE)
  */
 Creature* Map::GetCreature(ObjectGuid guid)
 {
@@ -3092,6 +3087,7 @@ Creature* Map::GetCreature(ObjectGuid guid)
 }
 
 /**
+ * Function return pet that in world at CURRENT map
  *
  * @param guid must be pet guid (HIGHGUID_PET)
  */

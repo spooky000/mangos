@@ -272,8 +272,7 @@ class Item;
 class Pet;
 class PetAura;
 class Totem;
-class Transport;
-class VehicleKit;
+class VehicleInfo;
 
 struct SpellImmune
 {
@@ -563,7 +562,7 @@ enum UnitFlags2
     UNIT_FLAG2_DISARM_OFFHAND       = 0x00000080,           // also shield case
     UNIT_FLAG2_UNK8                 = 0x00000100,
     UNIT_FLAG2_UNK9                 = 0x00000200,
-    UNIT_FLAG2_DISARM_RANGED        = 0x00000400,
+    UNIT_FLAG2_DISARM_RANGED        = 0x00000400,           // disarm or something
     UNIT_FLAG2_REGENERATE_POWER     = 0x00000800,
 };
 
@@ -1326,6 +1325,10 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void Mount(uint32 mount, uint32 spellId = 0, uint32 vehicleId = 0, uint32 creatureEntry = 0);
         void Unmount(bool from_aura = false);
 
+        VehicleInfo* GetVehicleInfo() { return m_vehicleInfo; }
+        bool IsVehicle() const { return m_vehicleInfo != NULL; }
+        void SetVehicleId(uint32 entry);
+
         uint16 GetMaxSkillValueForLevel(Unit const* target = NULL) const { return (target ? GetLevelForTarget(target) : getLevel()) * 5; }
         void DealDamageMods(Unit *pVictim, uint32 &damage, uint32* absorb);
         uint32 DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDamage, DamageEffectType damagetype, SpellSchoolMask damageSchoolMask, SpellEntry const *spellProto, bool durabilityLoss);
@@ -2026,7 +2029,6 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void ChangeSeat(int8 seatId, bool next = true);
         VehicleKit* GetVehicle() const { return m_pVehicle; }
         VehicleKit* GetVehicleKit() const { return m_pVehicleKit; }
-        bool CreateVehicleKit(uint32 vehicleId);
         void RemoveVehicleKit();
 
         void ScheduleAINotify(uint32 delay);
@@ -2088,8 +2090,9 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         // Transports
         Transport* m_transport;
 
-        VehicleKit* m_pVehicle;
-        VehicleKit* m_pVehicleKit;
+        VehicleInfo* m_vehicleInfo;
+        VehicleKit*  m_pVehicleKit;
+        VehicleKit*  m_pVehicle;
 
     private:
         void CleanupDeletedAuras();

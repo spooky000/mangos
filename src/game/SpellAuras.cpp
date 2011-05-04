@@ -8905,34 +8905,33 @@ void Aura::HandleAuraControlVehicle(bool apply, bool Real)
     if(!Real)
         return;
 
-    Unit* caster = GetCaster();
-
-    if (!caster)
-        return;
-
     Unit* target = GetTarget();
-
-    if (!target)
+    if (!target->IsVehicle())
         return;
 
-    VehicleKit* pVehicle = target->GetVehicleKit();
+    // TODO: Check for free seat
 
-    if (target->GetTypeId() != TYPEID_UNIT || !pVehicle)
+    Unit *caster = GetCaster();
+    if (!caster)
         return;
 
     if (apply)
     {
-//        ((Player*)caster)->RemovePet(PET_SAVE_AS_CURRENT);
-        // Maybe seat number stored somewhere
-        caster->EnterVehicle(pVehicle);
+        if (caster->GetTypeId() == TYPEID_PLAYER)
+            ((Player*)caster)->RemovePet(PET_SAVE_AS_CURRENT);
+
+        caster->EnterVehicle(target->GetVehicleKit());
     }
     else
     {
         // some SPELL_AURA_CONTROL_VEHICLE auras have a dummy effect on the player - remove them
         caster->RemoveAurasDueToSpell(GetId());
 
-        if (caster->GetVehicle() == pVehicle)
+        if (caster->GetVehicle() == target->GetVehicleKit())
             caster->ExitVehicle();
+
+        if (caster->GetTypeId() == TYPEID_PLAYER)
+            ((Player*)caster)->ResummonPetTemporaryUnSummonedIfAny();
     }
 }
 
@@ -10886,13 +10885,16 @@ void Aura::HandleAuraSetVehicle(bool apply, bool Real)
 
     uint32 vehicleId = GetMiscValue();
 
+    if (vehicleId == 0)
+        return;
+
     if (apply)
     {
-        if (!target->CreateVehicleKit(vehicleId))
-            return;
+        target->SetVehicleId(vehicleId);
     }
-    else if (target->GetVehicleKit())
-        target->RemoveVehicleKit();
+    else
+        if (target->GetVehicleKit())
+            target->RemoveVehicleKit();
 
     WorldPacket data(SMSG_SET_VEHICLE_REC_ID, target->GetPackGUID().size()+4);
     data.appendPackGUID(target->GetGUID());

@@ -3937,7 +3937,7 @@ void Spell::update(uint32 difftime)
                                 continue;
 
                             TargetInfo const& target = *ihit;
-                            if(!target.targetGUID.IsCreatureOrVehicle())
+                            if (!target.targetGUID.IsCreatureOrVehicle())
                                 continue;
 
                             Unit* unit = m_caster->GetObjectGuid() == target.targetGUID ? m_caster : ObjectAccessor::GetUnit(*m_caster, target.targetGUID);
