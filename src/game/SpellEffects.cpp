@@ -1799,11 +1799,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     break;
                 }
-                case 45958:                                 // Signal Alliance
-                {
-                    m_caster->CastSpell(m_caster, m_spellInfo->CalculateSimpleValue(eff_idx), true);
-                    return;
-                }
                 case 45980:                                 // Re-Cursive Transmatter Injection
                 {
                     if (m_caster->GetTypeId() == TYPEID_PLAYER && unitTarget)
