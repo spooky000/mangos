@@ -6441,6 +6441,14 @@ Unit *Unit::GetCharmer() const
     return NULL;
 }
 
+Unit *Unit::GetCreator() const
+{
+    ObjectGuid creatorid = GetCreatorGuid();
+    if(!creatorid.IsEmpty())
+        return ObjectAccessor::GetUnit(*this, creatorid);
+    return NULL;
+}
+
 bool Unit::IsCharmerOrOwnerPlayerOrPlayerItself() const
 {
     if (GetTypeId()==TYPEID_PLAYER)
