@@ -1170,7 +1170,6 @@ bool ChatHandler::HandleDebugEnterVehicleCommand(char* args)
     return true;
 }
 
-
 bool ChatHandler::HandleDebugSetVehicleIdCommand(char* args)
 {
     Unit* target = getSelectedUnit();
@@ -1194,6 +1193,6 @@ bool ChatHandler::HandleDebugSetVehicleIdCommand(char* args)
     }
 
     target->RemoveVehicleKit();
-    target->CreateVehicleKit(vehicleId);
+    target->SetVehicleId(vehicleId);
     return true;
 }

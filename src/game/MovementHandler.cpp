@@ -501,26 +501,14 @@ void WorldSession::HandleMoveNotActiveMoverOpcode(WorldPacket &recv_data)
     recv_data >> mi;
 
     if(_player->GetMover()->GetObjectGuid() == old_mover_guid)
+    {
+        sLog.outError("HandleMoveNotActiveMover: incorrect mover guid: mover is %s and should be %s instead of %s",
+            _player->GetMover()->GetGuidStr().c_str(),
+            _player->GetGuidStr().c_str(),
+            old_mover_guid.GetString().c_str());
+        recv_data.rpos(recv_data.wpos());                   // prevent warnings spam
         return;
-
-    _player->m_movementInfo = mi;
-}
-
-void WorldSession::HandleDismissControlledVehicle(WorldPacket &recv_data)
-{
-    DEBUG_LOG("WORLD: Recvd CMSG_DISMISS_CONTROLLED_VEHICLE");
-    recv_data.hexlike();
-
-    ObjectGuid guid;
-    MovementInfo mi;
-
-    recv_data >> guid.ReadAsPacked();
-    recv_data >> mi;
-
-    ObjectGuid vehicleGUID = _player->GetCharmGuid();
-
-    if (vehicleGUID.IsEmpty())                              // something wrong here...
-        return;
+    }
 
     _player->m_movementInfo = mi;
 }

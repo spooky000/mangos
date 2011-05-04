@@ -275,6 +275,7 @@ Unit::Unit() :
     m_transport = NULL;
 
     m_pVehicleKit = NULL;
+    m_pVehicle    = NULL;
 
     m_auraUpdateMask = 0;
 }
@@ -8453,22 +8454,11 @@ void Unit::Mount(uint32 mount, uint32 spellId, uint32 vehicleId, uint32 creature
 
         if (vehicleId)
         {
-            if (CreateVehicleKit(vehicleId))
-            {
-                GetVehicleKit()->Reset();
+            SetVehicleId(vehicleId);
+            GetVehicleKit()->Reset();
 
-                // Send others that we now have a vehicle
-                WorldPacket data(SMSG_SET_VEHICLE_REC_ID, 8+4);
-                data << GetPackGUID();
-                data << uint32(vehicleId);
-                SendMessageToSet(&data, true);
-
-                data.Initialize(SMSG_ON_CANCEL_EXPECTED_RIDE_VEHICLE_AURA, 0);
-                ((Player*)this)->GetSession()->SendPacket(&data);
-
-                // mounts can also have accessories
-                GetVehicleKit()->InstallAllAccessories(creatureEntry);
-            }
+            // mounts can also have accessories
+            GetVehicleKit()->InstallAllAccessories(creatureEntry);
         }
     }
 }
@@ -10325,9 +10315,10 @@ void Unit::CleanupsBeforeDelete()
 {
     if(m_uint32Values)                                      // only for fully created object
     {
-        RemoveVehicleKit();
-        ExitVehicle();
-
+        if (GetVehicle())
+            ExitVehicle();
+        if (GetVehicleKit())
+            RemoveVehicleKit();
         InterruptNonMeleeSpells(true);
         m_Events.KillAllEvents(false);                      // non-delatable (currently casted spells) will not deleted now but it will deleted at call in Map::RemoveAllObjectsInRemoveList
         CombatStop();
@@ -10585,6 +10576,9 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
     {
         case ACT_COMMAND:                                   //0x07
        // Maybe exists some flag that disable it at client side
+            if (petGuid.IsVehicle())
+                return;
+
             switch(spellid)
             {
                 case COMMAND_STAY:                          //flat=1792  //STAY
@@ -10594,8 +10588,6 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                     GetCharmInfo()->SetCommandState( COMMAND_STAY );
                     break;
                 case COMMAND_FOLLOW:                        //spellid=1792  //FOLLOW
-                    if (petGuid.IsVehicle())
-                        return;
                     AttackStop();
                     GetMotionMaster()->MoveFollow(owner,PET_FOLLOW_DIST,((Pet*)this)->GetPetFollowAngle());
                     GetCharmInfo()->SetCommandState( COMMAND_FOLLOW );
@@ -10654,9 +10646,6 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                     break;
                 }
                 case COMMAND_ABANDON:                       // abandon (hunter pet) or dismiss (summoned pet)
-                    if (petGuid.IsVehicle())
-                        return;
-
                     if(((Creature*)this)->IsPet())
                     {
                         Pet* p = (Pet*)this;

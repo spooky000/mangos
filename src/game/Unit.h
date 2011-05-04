@@ -1137,6 +1137,7 @@ typedef std::set<ObjectGuid> GroupPetList;
 #define REGEN_TIME_PRECISE  500                             // Used in Spell::CheckPower for precise regeneration in spell cast time
 
 struct SpellProcEventEntry;                                 // used only privately
+class  VehicleKit;
 
 class MANGOS_DLL_SPEC Unit : public WorldObject
 {
@@ -1518,7 +1519,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         ObjectGuid const& GetOwnerGuid() const { return  GetGuidValue(UNIT_FIELD_SUMMONEDBY); }
         void SetOwnerGuid(ObjectGuid owner) { SetGuidValue(UNIT_FIELD_SUMMONEDBY, owner); }
-        ObjectGuid const& GetCreatorGuid() const { return GetGuidValue(UNIT_FIELD_CREATEDBY); }
+        ObjectGuid const& GetCreatorGuid() const;
         void SetCreatorGuid(ObjectGuid creator) { SetGuidValue(UNIT_FIELD_CREATEDBY, creator); }
         ObjectGuid const& GetPetGuid() const { return GetGuidValue(UNIT_FIELD_SUMMON); }
         void SetPetGuid(ObjectGuid pet) { SetGuidValue(UNIT_FIELD_SUMMON, pet); }
