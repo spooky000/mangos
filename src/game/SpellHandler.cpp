@@ -329,8 +329,8 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
     recvPacket >> unk_flags;                                // flags (if 0x02 - some additional data are received)
 
     // ignore for remote control state (for player case)
-    Unit* _mover = GetPlayer()->GetMover();
-    if (_mover != GetPlayer() && _mover->GetTypeId()==TYPEID_PLAYER)
+    Unit* mover = _player->GetMover();
+    if (mover != _player && mover->GetTypeId()==TYPEID_PLAYER)
     {
         recvPacket.rpos(recvPacket.wpos());                 // prevent spam at ignore packet
         return;
@@ -348,15 +348,6 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
         recvPacket.rpos(recvPacket.wpos());                 // prevent spam at ignore packet
         return;
     }
-
-    //  Players on vehicles may cast many simple spells (like knock) from self
-
-    Unit* mover = NULL;
-
-    if (spellInfo->AttributesEx6 & SPELL_ATTR_EX6_UNK12 && _mover->IsCharmerOrOwnerPlayerOrPlayerItself())
-        mover = _mover->GetCharmerOrOwnerPlayerOrPlayerItself();
-    else
-        mover = _mover;
 
     if (mover->GetTypeId()==TYPEID_PLAYER)
     {
@@ -624,6 +615,11 @@ void WorldSession::HandleSpellClick( WorldPacket & recv_data )
 
             caster->CastSpell(target, itr->second.spellId, true);
         }
+    }
+
+    if (unit->GetObjectGuid().IsVehicle())
+    {
+        _player->EnterVehicle(unit->GetVehicleKit());
     }
 }
 

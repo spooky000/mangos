@@ -2158,14 +2158,6 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                     case 43873:                             // Headless Horseman Laugh
                         target->PlayDistanceSound(11965);
                         return;
-                    case 45963:                             // Call Alliance Deserter
-                    {
-                        // Escorting Alliance Deserter
-                        if (target->GetMiniPet())
-                            target->CastSpell(target, 45957, true);
-
-                        return;
-                    }
                     case 46699:                             // Requires No Ammo
                         if (target->GetTypeId() == TYPEID_PLAYER)
                             // not use ammo and not allow use
@@ -2662,12 +2654,6 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                 // Kill target if dispelled
                 if (m_removeMode==AURA_REMOVE_BY_DISPEL)
                     target->DealDamage(target, target->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
-                return;
-            }
-            case 45963:                                     // Call Alliance Deserter
-            {
-                // Escorting Alliance Deserter
-                target->RemoveAurasDueToSpell(45957);
                 return;
             }
             case 46308:                                     // Burning Winds
@@ -3463,7 +3449,7 @@ void Aura::HandleAuraMounted(bool apply, bool Real)
         if (minfo)
             display_id = minfo->modelid;
 
-        target->Mount(display_id, GetId(), ci->vehicleId, GetMiscValue());
+        target->Mount(display_id, GetId(), ci->VehicleId, GetMiscValue());
     }
     else
     {
@@ -6704,13 +6690,10 @@ void Aura::HandleModCombatSpeedPct(bool apply, bool /*Real*/)
         if(!apply)
             amount = target->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_MELEE_HASTE, true);
 
-        if(amount)
-        {
-            target->ApplyCastTimePercentMod(amount, true);
-            target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
-            target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
-            target->ApplyAttackTimePercentMod(RANGED_ATTACK, amount, true);
-        }
+        target->ApplyCastTimePercentMod(amount, true);
+        target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
+        target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
+        target->ApplyAttackTimePercentMod(RANGED_ATTACK, amount, true);
 
         target->m_modAttackSpeedPct[NONSTACKING_MOD_ALL] = amount;
     }
@@ -6747,11 +6730,8 @@ void Aura::HandleModMeleeSpeedPct(bool apply, bool /*Real*/)
         if(!apply)
             amount = target->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_MELEE_HASTE, true);
 
-        if(amount)
-        {
-            target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
-            target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
-        }
+        target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
+        target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
 
         target->m_modAttackSpeedPct[NONSTACKING_MOD_MELEE] = amount;
     }
@@ -8596,36 +8576,25 @@ void Aura::PeriodicDummyTick()
                     if (!caster)
                         return;
 
-                    Player *rider = caster->GetCharmerOrOwnerPlayerOrPlayerItself();
+                    if (target->GetTypeId() == TYPEID_UNIT || !caster->GetObjectGuid().IsVehicle())
+                        return;
+
+                    Unit *rider = caster->GetVehicleKit()->GetPassenger(0);
                     if (!rider)
                         return;
 
+                    // set ablaze
+                    if (target->HasAura(54683, EFFECT_INDEX_0))
+                        return;
+                    else
+                        target->CastSpell(target, 54683, true);
+
+                    // Credit Frostworgs
                     if (target->GetEntry() == 29358)
-                    {
-                        if (target->HasAura(54683, EFFECT_INDEX_0))
-                            return;
-                        else
-                        {
-                            // Credit Frostworgs
-                            rider->CastSpell(rider, 54896, true);
-                            // set ablaze
-                            target->CastSpell(target, 54683, true);
-                            ((Creature*)target)->ForcedDespawn(6000);
-                        }
-                    }
+                        rider->CastSpell(rider, 54896, true);
+                    // Credit Frost Giants
                     else if (target->GetEntry() == 29351)
-                    {
-                        if (target->HasAura(54683, EFFECT_INDEX_0))
-                            return;
-                        else
-                        {
-                            // Credit Frost Giants
-                            rider->CastSpell(rider, 54893, true);
-                            // set ablaze
-                            target->CastSpell(target, 54683, true);
-                            ((Creature*)target)->ForcedDespawn(6000);
-                        }
-                    }
+                        rider->CastSpell(rider, 54893, true);
 
                     break;
                 }
@@ -8936,33 +8905,34 @@ void Aura::HandleAuraControlVehicle(bool apply, bool Real)
     if(!Real)
         return;
 
-    Unit* target = GetTarget();
-    if (!target->IsVehicle())
+    Unit* caster = GetCaster();
+
+    if (!caster)
         return;
 
-    // TODO: Check for free seat
+    Unit* target = GetTarget();
 
-    Unit *caster = GetCaster();
-    if (!caster)
+    if (!target)
+        return;
+
+    VehicleKit* pVehicle = target->GetVehicleKit();
+
+    if (target->GetTypeId() != TYPEID_UNIT || !pVehicle)
         return;
 
     if (apply)
     {
-        if (caster->GetTypeId() == TYPEID_PLAYER)
-            ((Player*)caster)->RemovePet(PET_SAVE_AS_CURRENT);
-
-        caster->EnterVehicle(target->GetVehicleKit());
+//        ((Player*)caster)->RemovePet(PET_SAVE_AS_CURRENT);
+        // Maybe seat number stored somewhere
+        caster->EnterVehicle(pVehicle);
     }
     else
     {
         // some SPELL_AURA_CONTROL_VEHICLE auras have a dummy effect on the player - remove them
         caster->RemoveAurasDueToSpell(GetId());
 
-        if (caster->GetVehicle() == target->GetVehicleKit())
+        if (caster->GetVehicle() == pVehicle)
             caster->ExitVehicle();
-
-        if (caster->GetTypeId() == TYPEID_PLAYER)
-            ((Player*)caster)->ResummonPetTemporaryUnSummonedIfAny();
     }
 }
 
@@ -10676,7 +10646,7 @@ bool Aura::IsEffectStacking()
         case SPELL_AURA_MOD_HEALING_DONE:                               // Demonic Pact
         case SPELL_AURA_MOD_DAMAGE_DONE:                                // Demonic Pact
         case SPELL_AURA_HASTE_ALL:                                      // Imp. Moonkin Aur / Swift Retribution
-        case SPELL_AURA_MOD_MELEE_HASTE:                                // Improved Icy Talons  / Windfury Totem
+        //case SPELL_AURA_MOD_MELEE_HASTE:                                // Improved Icy Talons  / Windfury Totem
         case SPELL_AURA_MOD_MELEE_RANGED_HASTE:
         case SPELL_AURA_MOD_ATTACK_POWER_PCT:                           // Abomination's Might / Unleashed Rage
         case SPELL_AURA_MOD_RANGED_ATTACK_POWER_PCT:
@@ -10916,16 +10886,13 @@ void Aura::HandleAuraSetVehicle(bool apply, bool Real)
 
     uint32 vehicleId = GetMiscValue();
 
-    if (vehicleId == 0)
-        return;
-
     if (apply)
     {
-        target->SetVehicleId(vehicleId);
+        if (!target->CreateVehicleKit(vehicleId))
+            return;
     }
-    else
-        if (target->GetVehicleKit())
-            target->RemoveVehicleKit();
+    else if (target->GetVehicleKit())
+        target->RemoveVehicleKit();
 
     WorldPacket data(SMSG_SET_VEHICLE_REC_ID, target->GetPackGUID().size()+4);
     data.appendPackGUID(target->GetGUID());

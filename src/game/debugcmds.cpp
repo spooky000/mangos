@@ -19,6 +19,7 @@
 #include "Common.h"
 #include "Database/DatabaseEnv.h"
 #include "WorldPacket.h"
+#include "Vehicle.h"
 #include "Player.h"
 #include "Opcodes.h"
 #include "Chat.h"
@@ -1170,6 +1171,7 @@ bool ChatHandler::HandleDebugEnterVehicleCommand(char* args)
     return true;
 }
 
+
 bool ChatHandler::HandleDebugSetVehicleIdCommand(char* args)
 {
     Unit* target = getSelectedUnit();
@@ -1193,6 +1195,6 @@ bool ChatHandler::HandleDebugSetVehicleIdCommand(char* args)
     }
 
     target->RemoveVehicleKit();
-    target->SetVehicleId(vehicleId);
+    target->CreateVehicleKit(vehicleId);
     return true;
 }

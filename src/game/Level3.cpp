@@ -4067,7 +4067,7 @@ bool ChatHandler::HandleNpcInfoCommand(char* /*args*/)
     uint32 Entry = target->GetEntry();
     uint32 phaseMask = target->GetPhaseMask();
     CreatureInfo const* cInfo = target->GetCreatureInfo();
-    //uint32 vehicleId = target->GetVehicleKit() ? target->SetVehicleId() : 0;
+    uint32 VehicleId = target->GetVehicleKit() ? target->GetVehicleKit()->GetVehicleId() : 0;
     uint32 difficulty_entry_1 = cInfo ? cInfo->DifficultyEntry[0] : 0;
     uint32 difficulty_entry_2 = cInfo ? cInfo->DifficultyEntry[1] : 0;
     uint32 difficulty_entry_3 = cInfo ? cInfo->DifficultyEntry[2] : 0;
@@ -4100,8 +4100,7 @@ bool ChatHandler::HandleNpcInfoCommand(char* /*args*/)
     PSendSysMessage(LANG_NPCINFO_DUNGEON_ID, target->GetInstanceId());
     PSendSysMessage(LANG_NPCINFO_POSITION,float(target->GetPositionX()), float(target->GetPositionY()), float(target->GetPositionZ()));
     PSendSysMessage("phaseMask: %u", phaseMask);
-    if (cInfo->vehicleId)
-        PSendSysMessage("VehicleId: %u", cInfo->vehicleId);
+    PSendSysMessage("VehicleId: %u", VehicleId);
     PSendSysMessage("difficulty_entry_1: %u, difficulty_entry_2: %u, difficulty_entry_3: %u", difficulty_entry_1, difficulty_entry_2, difficulty_entry_3);
 
     if ((npcflags & UNIT_NPC_FLAG_VENDOR) )

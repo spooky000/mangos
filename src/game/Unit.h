@@ -272,7 +272,8 @@ class Item;
 class Pet;
 class PetAura;
 class Totem;
-class VehicleInfo;
+class Transport;
+class VehicleKit;
 
 struct SpellImmune
 {
@@ -562,7 +563,7 @@ enum UnitFlags2
     UNIT_FLAG2_DISARM_OFFHAND       = 0x00000080,           // also shield case
     UNIT_FLAG2_UNK8                 = 0x00000100,
     UNIT_FLAG2_UNK9                 = 0x00000200,
-    UNIT_FLAG2_DISARM_RANGED        = 0x00000400,           // disarm or something
+    UNIT_FLAG2_DISARM_RANGED        = 0x00000400,
     UNIT_FLAG2_REGENERATE_POWER     = 0x00000800,
 };
 
@@ -1137,7 +1138,6 @@ typedef std::set<ObjectGuid> GroupPetList;
 #define REGEN_TIME_PRECISE  500                             // Used in Spell::CheckPower for precise regeneration in spell cast time
 
 struct SpellProcEventEntry;                                 // used only privately
-class  VehicleKit;
 
 class MANGOS_DLL_SPEC Unit : public WorldObject
 {
@@ -1325,10 +1325,6 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         uint32 GetMountID() const { return GetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID); }
         void Mount(uint32 mount, uint32 spellId = 0, uint32 vehicleId = 0, uint32 creatureEntry = 0);
         void Unmount(bool from_aura = false);
-
-        VehicleInfo* GetVehicleInfo() { return m_vehicleInfo; }
-        bool IsVehicle() const { return m_vehicleInfo != NULL; }
-        void SetVehicleId(uint32 entry);
 
         uint16 GetMaxSkillValueForLevel(Unit const* target = NULL) const { return (target ? GetLevelForTarget(target) : getLevel()) * 5; }
         void DealDamageMods(Unit *pVictim, uint32 &damage, uint32* absorb);
@@ -1519,7 +1515,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         ObjectGuid const& GetOwnerGuid() const { return  GetGuidValue(UNIT_FIELD_SUMMONEDBY); }
         void SetOwnerGuid(ObjectGuid owner) { SetGuidValue(UNIT_FIELD_SUMMONEDBY, owner); }
-        ObjectGuid const& GetCreatorGuid() const;
+        ObjectGuid const& GetCreatorGuid() const { return GetGuidValue(UNIT_FIELD_CREATEDBY); }
         void SetCreatorGuid(ObjectGuid creator) { SetGuidValue(UNIT_FIELD_CREATEDBY, creator); }
         ObjectGuid const& GetPetGuid() const { return GetGuidValue(UNIT_FIELD_SUMMON); }
         void SetPetGuid(ObjectGuid pet) { SetGuidValue(UNIT_FIELD_SUMMON, pet); }
@@ -1555,7 +1551,6 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         Pet* GetPet() const;
         Unit* GetCharmer() const;
         Unit* GetCharm() const;
-        Unit* GetCreator() const;
         void Uncharm();
         Unit* GetCharmerOrOwner() const { return !GetCharmerGuid().IsEmpty() ? GetCharmer() : GetOwner(); }
         Unit* GetCharmOrPet() const { return !GetCharmGuid().IsEmpty() ? GetCharm() : (Unit*)GetPet(); }
@@ -2031,6 +2026,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void ChangeSeat(int8 seatId, bool next = true);
         VehicleKit* GetVehicle() const { return m_pVehicle; }
         VehicleKit* GetVehicleKit() const { return m_pVehicleKit; }
+        bool CreateVehicleKit(uint32 vehicleId);
         void RemoveVehicleKit();
 
         void ScheduleAINotify(uint32 delay);
@@ -2092,9 +2088,8 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         // Transports
         Transport* m_transport;
 
-        VehicleInfo* m_vehicleInfo;
-        VehicleKit*  m_pVehicleKit;
-        VehicleKit*  m_pVehicle;
+        VehicleKit* m_pVehicle;
+        VehicleKit* m_pVehicleKit;
 
     private:
         void CleanupDeletedAuras();
