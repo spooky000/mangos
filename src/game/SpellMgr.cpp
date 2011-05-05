@@ -594,8 +594,17 @@ bool IsSingleFromSpellSpecificPerTarget(SpellSpecific spellSpec1,SpellSpecific s
     }
 }
 
-bool IsPositiveTarget(uint32 targetA, uint32 targetB)
+bool IsPositiveTarget(uint32 targetA, uint32 targetB, uint32 spellId)
 {
+    switch(spellId)
+    {
+        // special spell exclusion
+        case 54798:
+            return false;
+        default:
+            break;
+    }
+
     switch(targetA)
     {
         // non-positive targets
@@ -615,7 +624,7 @@ bool IsPositiveTarget(uint32 targetA, uint32 targetB)
             break;
     }
     if (targetB)
-        return IsPositiveTarget(targetB, 0);
+        return IsPositiveTarget(targetB, 0, spellId);
     return true;
 }
 
@@ -782,7 +791,7 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
                             {
                                 // if non-positive trigger cast targeted to positive target this main cast is non-positive
                                 // this will place this spell auras as debuffs
-                                if (IsPositiveTarget(spellTriggeredProto->EffectImplicitTargetA[effIndex], spellTriggeredProto->EffectImplicitTargetB[effIndex]) &&
+                                if (IsPositiveTarget(spellTriggeredProto->EffectImplicitTargetA[effIndex], spellTriggeredProto->EffectImplicitTargetB[effIndex], spellproto->Id) &&
                                     !IsPositiveEffect(spellTriggeredProto, SpellEffectIndex(i)))
                                     return false;
                             }
@@ -918,7 +927,7 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
     }
 
     // non-positive targets
-    if(!IsPositiveTarget(spellproto->EffectImplicitTargetA[effIndex],spellproto->EffectImplicitTargetB[effIndex]))
+    if(!IsPositiveTarget(spellproto->EffectImplicitTargetA[effIndex],spellproto->EffectImplicitTargetB[effIndex], spellproto->Id))
         return false;
 
     // AttributesEx check
