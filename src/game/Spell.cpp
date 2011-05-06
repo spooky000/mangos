@@ -3690,7 +3690,7 @@ void Spell::handle_immediate()
     // start channeling if applicable
     if (IsChanneledSpell(m_spellInfo))
     {
-        int32 duration = m_caster->CalculateBaseSpellDuration(m_spellInfo);
+        int32 duration = m_caster->CalculateSpellDuration(m_spellInfo);
         if (duration)
         {
             m_spellState = SPELL_STATE_CASTING;
