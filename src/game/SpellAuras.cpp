@@ -6690,10 +6690,13 @@ void Aura::HandleModCombatSpeedPct(bool apply, bool /*Real*/)
         if(!apply)
             amount = target->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_MELEE_HASTE, true);
 
-        target->ApplyCastTimePercentMod(amount, true);
-        target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
-        target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
-        target->ApplyAttackTimePercentMod(RANGED_ATTACK, amount, true);
+        if(amount)
+        {
+            target->ApplyCastTimePercentMod(amount, true);
+            target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
+            target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
+            target->ApplyAttackTimePercentMod(RANGED_ATTACK, amount, true);
+        }
 
         target->m_modAttackSpeedPct[NONSTACKING_MOD_ALL] = amount;
     }
@@ -6730,8 +6733,11 @@ void Aura::HandleModMeleeSpeedPct(bool apply, bool /*Real*/)
         if(!apply)
             amount = target->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_MELEE_HASTE, true);
 
-        target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
-        target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
+        if(amount)
+        {
+            target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
+            target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
+        }
 
         target->m_modAttackSpeedPct[NONSTACKING_MOD_MELEE] = amount;
     }
@@ -10657,7 +10663,7 @@ bool Aura::IsEffectStacking()
         case SPELL_AURA_MOD_HEALING_DONE:                               // Demonic Pact
         case SPELL_AURA_MOD_DAMAGE_DONE:                                // Demonic Pact
         case SPELL_AURA_HASTE_ALL:                                      // Imp. Moonkin Aur / Swift Retribution
-        //case SPELL_AURA_MOD_MELEE_HASTE:                                // Improved Icy Talons  / Windfury Totem
+        case SPELL_AURA_MOD_MELEE_HASTE:                                // Improved Icy Talons  / Windfury Totem
         case SPELL_AURA_MOD_MELEE_RANGED_HASTE:
         case SPELL_AURA_MOD_ATTACK_POWER_PCT:                           // Abomination's Might / Unleashed Rage
         case SPELL_AURA_MOD_RANGED_ATTACK_POWER_PCT:
