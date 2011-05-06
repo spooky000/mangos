@@ -423,7 +423,7 @@ Spell::Spell( Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid o
 
 Spell::~Spell()
 {
-    m_destroyed = true;
+    //m_destroyed = true;
 }
 
 template<typename T>
@@ -3690,8 +3690,8 @@ void Spell::handle_immediate()
     // start channeling if applicable
     if (IsChanneledSpell(m_spellInfo) && m_duration)
     {
-        m_spellState = SPELL_STATE_CASTING;
-        SendChannelStart(m_duration);
+            m_spellState = SPELL_STATE_CASTING;
+            SendChannelStart(m_duration);
     }
 
     // process immediate effects (items, ground, etc.) also initialize some variables

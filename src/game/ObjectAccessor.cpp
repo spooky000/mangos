@@ -287,3 +287,4 @@ template <class T> ACE_RW_Thread_Mutex HashMapHolder<T>::i_lock;
 
 template class HashMapHolder<Player>;
 template class HashMapHolder<Corpse>;
+template class HashMapHolder<Pet>;
