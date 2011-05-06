@@ -3690,7 +3690,7 @@ void Spell::handle_immediate()
     // start channeling if applicable
     if (IsChanneledSpell(m_spellInfo))
     {
-        int32 duration = m_caster->CalculateAuraDuration(m_spellInfo);
+        int32 duration = unit->CalculateAuraDuration(m_spellInfo, effectMask, duration, m_caster);
         if (duration)
         {
             m_spellState = SPELL_STATE_CASTING;
