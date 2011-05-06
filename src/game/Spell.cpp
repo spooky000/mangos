@@ -3688,10 +3688,14 @@ void Spell::handle_immediate()
         return;
 
     // start channeling if applicable
-    if (IsChanneledSpell(m_spellInfo) && m_duration)
+    if (IsChanneledSpell(m_spellInfo))
     {
+        int32 duration = m_caster->CalculateAuraDuration(m_spellInfo);
+        if (duration)
+        {
             m_spellState = SPELL_STATE_CASTING;
             SendChannelStart(m_duration);
+        }
     }
 
     // process immediate effects (items, ground, etc.) also initialize some variables
