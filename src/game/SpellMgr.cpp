@@ -615,7 +615,7 @@ bool IsPositiveTarget(uint32 targetA, uint32 targetB, uint32 spellId)
         case TARGET_ALL_ENEMY_IN_AREA_CHANNELED:
         case TARGET_CURRENT_ENEMY_COORDINATES:
         case TARGET_SINGLE_ENEMY:
-        case TARGET_IN_FRONT_OF_CASTER_90:
+        case TARGET_IN_FRONT_OF_CASTER_30:
             return false;
         // positive or dependent
         case TARGET_CASTER_COORDINATES:

@@ -1177,7 +1177,7 @@ enum Targets
     TARGET_UNIT_PASSENGER_5            = 101,
     TARGET_UNIT_PASSENGER_6            = 102,
     TARGET_UNIT_PASSENGER_7            = 103,
-    TARGET_IN_FRONT_OF_CASTER_90       = 104,
+    TARGET_IN_FRONT_OF_CASTER_30       = 104,
 };
 
 enum SpellMissInfo
