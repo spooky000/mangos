@@ -22452,7 +22452,7 @@ void Player::UnsummonPetTemporaryIfAny()
     GroupPetList m_groupPetsTmp = GetPets();  // Original list may be modified in this function
     for (GroupPetList::const_iterator itr = m_groupPetsTmp.begin(); itr != m_groupPetsTmp.end(); ++itr)
     {
-        if (Pet* _pet = GetMap()->GetPet(*itr))
+        if (Pet* _pet = ObjectAccessor::FindPet(*itr))
         {
             if (!_pet->isTemporarySummoned())
                 _pet->Unsummon(PET_SAVE_AS_CURRENT, this);
