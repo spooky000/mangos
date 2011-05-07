@@ -1905,6 +1905,31 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     }
                     return;
                 }
+                case 46171:                                 // Scuttle Wrecked Flying Machine
+                {
+                    if (!unitTarget || m_caster->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    ((Player*)m_caster)->KilledMonsterCredit(unitTarget->GetEntry(), unitTarget->GetObjectGuid());
+
+                    // look for gameobject within max spell range of unitTarget, and respawn if found
+                    GameObject* pGo = NULL;
+
+                    float fMaxDist = GetSpellMaxRange(sSpellRangeStore.LookupEntry(m_spellInfo->rangeIndex));
+
+                    MaNGOS::NearestGameObjectEntryInPosRangeCheck go_check(*unitTarget, 187675, unitTarget->GetPositionX(), unitTarget->GetPositionY(), unitTarget->GetPositionZ(), fMaxDist);
+                    MaNGOS::GameObjectSearcher<MaNGOS::NearestGameObjectEntryInPosRangeCheck> checker(pGo, go_check);
+
+                    Cell::VisitGridObjects(unitTarget, checker, fMaxDist);
+
+                    if (pGo && !pGo->isSpawned())
+                    {
+                        pGo->SetRespawnTime(MINUTE/2);
+                        pGo->Refresh();
+                    }
+
+                    return;
+                }
                 case 46485:                                 // Greatmother's Soulcatcher
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
@@ -2747,24 +2772,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     unitTarget->setFaction(190);            // Ambient (neutral)
                     unitTarget->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_OOC_NOT_ATTACKABLE);
-                    return;
-                }
-                case 46171:                                 // Q:Emergency Protocol: Section 8.2, Paragraph D
-                {
-                    if (m_caster->GetTypeId() != TYPEID_PLAYER)
-                        return;
-
-                    Player * pPlayer = static_cast<Player*>(m_caster);
-
-                    if (pPlayer->GetClosestCreatureWithEntry(pPlayer, 25845, 10))
-                        pPlayer->KilledMonsterCredit(25845);
-
-                    else if (pPlayer->GetClosestCreatureWithEntry(pPlayer, 25846, 10))
-                        pPlayer->KilledMonsterCredit(25846);
-
-                    else if (pPlayer->GetClosestCreatureWithEntry(pPlayer, 25847, 10))
-                        pPlayer->KilledMonsterCredit(25847);
-
                     return;
                 }
                 case 64981:                                 // Summon Random Vanquished Tentacle
