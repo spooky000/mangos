@@ -662,6 +662,9 @@ bool IsExplicitNegativeTarget(uint32 targetA)
 
 bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
 {
+    if (!spellproto)
+        return false;
+
     switch(spellproto->Id)
     {
         case 47540:                                         // Penance start dummy aura - Rank 1
@@ -682,7 +685,9 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
         case 33946:                                         // Amplify Magic - Rank 6
         case 43017:                                         // Amplify Magic - Rank 7
         case 12042:                                         // Arcane Power        
-            return true;
+        return true;
+        default:
+            break;
     }
 
     switch(spellproto->Effect[effIndex])

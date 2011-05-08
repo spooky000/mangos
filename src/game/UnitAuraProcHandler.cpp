@@ -1003,6 +1003,31 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     // Cauterizing Heal or Searing Flame
                     triggered_spell_id = (procFlag & PROC_FLAG_SUCCESSFUL_POSITIVE_SPELL) ? 69733 : 69729;
                     break;
+                case 71169:
+                {
+                    // Shadow's Fate
+                    if (GetTypeId() != TYPEID_UNIT)
+                        return SPELL_AURA_PROC_FAILED;
+                    switch (((Creature*)this)->GetCreatureInfo()->Entry)
+                    {
+                        case 38431:  // Puthricide 25
+                        case 38586:
+                            CastSpell(this, 71518, true);
+                            break;
+                        case 38434:  // Lanathel 25
+                        case 38436:
+                            CastSpell(this, 72934, true);
+                            break;
+                        case 38265:  // Sindragosa 25
+                        case 38267:
+                            CastSpell(this, 72289, true);
+                            break;
+                        default:
+                            break;
+                    }
+                    CastSpell(triggeredByAura->GetCaster(), 71203, true);
+                    return SPELL_AURA_PROC_OK;
+                }
                 // Item - Shadowmourne Legendary
                 case 71903:
                 {

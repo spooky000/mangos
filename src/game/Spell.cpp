@@ -455,6 +455,64 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
     else
         radius = GetSpellMaxRange(sSpellRangeStore.LookupEntry(m_spellInfo->rangeIndex));
 
+    //Corpse Explosion
+    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_DEATHKNIGHT && m_spellInfo->SpellIconID == 1737)
+    {
+        Unit* unitTarget = NULL;
+
+        targetUnitMap.remove(m_caster);
+        unitTarget = m_targets.getUnitTarget();
+
+        if (unitTarget)
+        {
+            // Cast on corpses...
+            if ((unitTarget->getDeathState() == CORPSE && !unitTarget->IsTaxiFlying() &&
+                (unitTarget->GetDisplayId() == unitTarget->GetNativeDisplayId()) && m_caster->IsWithinDistInMap(unitTarget, radius) &&
+                (unitTarget->GetCreatureTypeMask() & CREATURE_TYPEMASK_MECHANICAL_OR_ELEMENTAL) == 0) ||
+                // ...or own Risen Ghoul pet - self explode effect
+                (unitTarget->GetEntry() == 26125 && unitTarget->GetCreatorGuid() == m_caster->GetObjectGuid()) )
+            {
+                targetUnitMap.push_back(unitTarget);
+                return true;
+            }
+        }
+
+        WorldObject* result = FindCorpseUsing <MaNGOS::RaiseDeadObjectCheck>  ();
+        if (result)
+        {
+            switch(result->GetTypeId())
+            {
+                case TYPEID_UNIT:
+                case TYPEID_PLAYER:
+                    targetUnitMap.push_back((Unit*)result);
+                    break;
+                case TYPEID_CORPSE:
+                    m_targets.setCorpseTarget((Corpse*)result);
+                    if (Player* owner = ObjectAccessor::FindPlayer(((Corpse*)result)->GetOwnerGuid()))
+                        targetUnitMap.push_back(owner);
+                    break;
+                default:
+                    targetUnitMap.push_back((Unit*)m_caster);
+                    break;
+            };
+        }
+
+        if (targetUnitMap.empty())
+        {
+            // no valid targets, clear cooldown at fail
+            if (m_caster->GetTypeId() == TYPEID_PLAYER)
+                ((Player*)m_caster)->RemoveSpellCooldown(m_spellInfo->Id, true);
+            SendCastResult(SPELL_FAILED_NO_VALID_TARGETS);
+            finish(false);
+            return false;
+        }
+
+        // OK, we have all possible targets, let's sort them by distance from m_caster and keep the closest one
+//        targetUnitMap.sort(TargetDistanceOrder(m_caster));
+        targetUnitMap.resize(1);
+        return true;
+    }
+
     // Resulting effect depends on spell that we want to cast
     switch (m_spellInfo->Id)
     {
@@ -486,6 +544,23 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
         case 47496: // Ghoul's explode
         {
             FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            break;
+        }
+        case 58912: // Deathstorm
+        {
+            if (!m_caster->GetObjectGuid().IsVehicle())
+                return false;
+
+            SetTargetMap(SpellEffectIndex(i), TARGET_RANDOM_ENEMY_CHAIN_IN_AREA, targetUnitMap);
+            return true;
+        }
+        case 61999: // Raise ally
+        {
+            WorldObject* result = FindCorpseUsing <MaNGOS::RaiseAllyObjectCheck>  ();
+            if (result)
+                targetUnitMap.push_back((Unit*)result);
+            else
+                targetUnitMap.push_back((Unit*)m_caster);
             break;
         }
         case 65045: // Flame of demolisher
@@ -1137,9 +1212,8 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
     
     // recheck for visibility of target
     if ((m_spellInfo->speed > 0.0f || 
-        (m_spellInfo->EffectImplicitTargetA[0] == TARGET_CHAIN_DAMAGE &&
-        GetSpellCastTime(m_spellInfo, this) > 0)) 
-         && !unit->isVisibleForOrDetect(caster, caster, false))
+        (m_spellInfo->EffectImplicitTargetA[0] == TARGET_CHAIN_DAMAGE && GetSpellCastTime(m_spellInfo, this) > 0)) &&
+        (!unit->isVisibleForOrDetect(m_caster, m_caster, false) && !m_IsTriggeredSpell))
     {
         caster->SendSpellMiss(unit, m_spellInfo->Id, SPELL_MISS_EVADE);
         missInfo = SPELL_MISS_EVADE;
@@ -1159,7 +1233,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
         {
             // can cause back attack (if detected)
             if (!(m_spellInfo->AttributesEx3 & SPELL_ATTR_EX3_NO_INITIAL_AGGRO) && !IsPositiveSpell(m_spellInfo->Id) &&
-                m_caster->isVisibleForOrDetect(unit, unit, false))
+                (m_caster->isVisibleForOrDetect(unit, unit, false) && !m_IsTriggeredSpell))
             {
                 if (!unit->isInCombat() && unit->GetTypeId() != TYPEID_PLAYER && ((Creature*)unit)->AI())
                     ((Creature*)unit)->AI()->AttackedBy(real_caster);
@@ -1345,7 +1419,7 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
         {
             // for delayed spells ignore not visible explicit target
             if (m_spellInfo->speed > 0.0f && unit == m_targets.getUnitTarget() &&
-                !unit->isVisibleForOrDetect(m_caster, m_caster, false))
+                (!unit->isVisibleForOrDetect(m_caster, m_caster, false) && !m_IsTriggeredSpell))
             {
                 realCaster->SendSpellMiss(unit, m_spellInfo->Id, SPELL_MISS_EVADE);
                 ResetEffectDamageAndHeal();
@@ -1798,6 +1872,12 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
         {
             if (m_spellInfo->SpellFamilyFlags2 & 0x00000100)// Starfall
                 unMaxTargets = 2;
+            break;
+        }
+        case SPELLFAMILY_DEATHKNIGHT:
+        {
+            if (m_spellInfo->SpellIconID == 1737)           // Corpse Explosion
+                unMaxTargets = 1;
             break;
         }
         case SPELLFAMILY_PALADIN:
@@ -3883,6 +3963,9 @@ void Spell::update(uint32 difftime)
         {
             if(m_timer)
             {
+                if (m_targets.getUnitTarget() && m_targets.getUnitTarget()->isAlive() && !m_targets.getUnitTarget()->isVisibleForOrDetect(m_caster, m_caster, false) && !m_IsTriggeredSpell )
+                    cancel();
+
                 if(difftime >= m_timer)
                     m_timer = 0;
                 else
@@ -3941,7 +4024,7 @@ void Spell::update(uint32 difftime)
                                 continue;
 
                             TargetInfo const& target = *ihit;
-                            if(!target.targetGUID.IsCreatureOrVehicle())
+                            if (!target.targetGUID.IsCreatureOrVehicle())
                                 continue;
 
                             Unit* unit = m_caster->GetObjectGuid() == target.targetGUID ? m_caster : ObjectAccessor::GetUnit(*m_caster, target.targetGUID);
@@ -6248,7 +6331,10 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
             {
                 need = true;
                 if(!target)
+                {
                     return SPELL_FAILED_BAD_IMPLICIT_TARGETS;
+                    DEBUG_LOG("Charmed creature attempt to cast spell %d, but no required target",m_spellInfo->Id);
+                }
                 break;
             }
         }
@@ -6264,6 +6350,20 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
 
             if(!IsValidSingleTargetSpell(_target))
                 return SPELL_FAILED_BAD_TARGETS;
+
+            if(IsPositiveSpell(m_spellInfo->Id) && !IsDispelSpell(m_spellInfo))
+            {
+                if(m_caster->IsHostileTo(_target))
+                {
+                    DEBUG_LOG("Charmed creature attempt to cast positive spell %d, but target (guid %u) is hostile",m_spellInfo->Id, target->GetObjectGuid().GetRawValue());
+                    return SPELL_FAILED_BAD_TARGETS;
+                }
+            }
+            else if (!_target->isTargetableForAttack() || (!_target->isVisibleForOrDetect(m_caster,m_caster,true) && !m_IsTriggeredSpell))
+            {
+                DEBUG_LOG("Charmed creature attempt to cast spell %d, but target (guid %u) is not targetable or not detectable",m_spellInfo->Id,target->GetObjectGuid().GetRawValue());
+                return SPELL_FAILED_BAD_TARGETS;            // guessed error
+            }
         }
                                                             //cooldown
         if(((Creature*)m_caster)->HasSpellCooldown(m_spellInfo->Id))
