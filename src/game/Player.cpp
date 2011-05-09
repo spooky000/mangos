@@ -13713,7 +13713,7 @@ bool Player::CanAddQuest(Quest const *pQuest, bool msg) const
     if (!SatisfyQuestLog(msg))
         return false;
 
-    if (!CanGiveQuestSourceItemIfNeed(pQuest))
+    if (!CanGiveQuestSourceItem(pQuest))
         return false;
 
     return true;
@@ -13927,7 +13927,8 @@ void Player::AddQuest( Quest const *pQuest, Object *questGiver )
             questStatusData.m_creatureOrGOcount[i] = 0;
     }
 
-    // remove start item if not need
+    GiveQuestSourceItem(pQuest);
+    /*// remove start item if not need
     if (questGiver && questGiver->isType(TYPEID_ITEM))
     {
         // destroy not required for quest finish quest starting item
@@ -13948,7 +13949,7 @@ void Player::AddQuest( Quest const *pQuest, Object *questGiver )
             DestroyItem(((Item*)questGiver)->GetBagSlot(), ((Item*)questGiver)->GetSlot(), true);
     }
 
-    GiveQuestSourceItemIfNeed(pQuest);
+    GiveQuestSourceItemIfNeed(pQuest);*/
 
     AdjustQuestReqItemCount( pQuest, questStatusData );
 
@@ -14596,18 +14597,21 @@ bool Player::SatisfyQuestMonth(Quest const* qInfo, bool msg) const
     return m_monthlyquests.find(qInfo->GetQuestId()) == m_monthlyquests.end();
 }
 
-bool Player::CanGiveQuestSourceItemIfNeed( Quest const *pQuest, ItemPosCountVec* dest) const
+bool Player::CanGiveQuestSourceItem( Quest const *pQuest, ItemPosCountVec* dest) const
 {
     if (uint32 srcitem = pQuest->GetSrcItemId())
     {
         uint32 count = pQuest->GetSrcItemCount();
 
-        // player already have max amount required item (including bank), just report success
+        if (count <= 0)
+            count = 1;
+
+        /*// player already have max amount required item (including bank), just report success
         uint32 has_count = GetItemCount(srcitem, true);
         if (has_count >= count)
             return true;
 
-        count -= has_count;                                 // real need amount
+        count -= has_count;                                 // real need amount*/
 
         uint8 msg;
         if (!dest)
@@ -14620,6 +14624,9 @@ bool Player::CanGiveQuestSourceItemIfNeed( Quest const *pQuest, ItemPosCountVec*
 
         if (msg == EQUIP_ERR_OK)
             return true;
+        // player already have max amount required item, just report success
+        else if (msg == EQUIP_ERR_CANT_CARRY_MORE_OF_THIS)
+            return true;
         else
             SendEquipError(msg, NULL, NULL, srcitem);
         return false;
@@ -14628,11 +14635,11 @@ bool Player::CanGiveQuestSourceItemIfNeed( Quest const *pQuest, ItemPosCountVec*
     return true;
 }
 
-void Player::GiveQuestSourceItemIfNeed(Quest const *pQuest)
+void Player::GiveQuestSourceItem(Quest const *pQuest)
 {
     ItemPosCountVec dest;
 
-    if (CanGiveQuestSourceItemIfNeed(pQuest, &dest) && !dest.empty())
+    if (GiveQuestSourceItem(pQuest, &dest) && !dest.empty())
     {
         uint32 count = 0;
         for(ItemPosCountVec::const_iterator c_itr = dest.begin(); c_itr != dest.end(); ++c_itr)
