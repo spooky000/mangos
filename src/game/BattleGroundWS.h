@@ -24,7 +24,7 @@
 #define BG_WS_MAX_TEAM_SCORE      3
 #define BG_WS_FLAG_RESPAWN_TIME   (23*IN_MILLISECONDS)
 #define BG_WS_FLAG_DROP_TIME      (10*IN_MILLISECONDS)
-#define BG_WS_TIME_LIMIT          (25*MINUTE*IN_MILLISECONDS)
+#define BG_WS_TIME_LIMIT          (20*MINUTE*IN_MILLISECONDS)
 #define BG_WS_FIVE_MINUTES        (5*MINUTE*IN_MILLISECONDS)
 #define BG_WS_CARRIER_DEBUFF      (15*MINUTE*IN_MILLISECONDS)
 
@@ -164,7 +164,7 @@ class BattleGroundWS : public BattleGround
         uint32 m_HonorWinKills;
         uint32 m_HonorEndKills;
         uint32 m_EndTimer;
-        Team m_LastCapturedFlagTeam;
+        Team m_FirstCapturedFlagTeam;
         uint32 m_FocusedAssault;
         bool m_FocusedAssaultExtra;
 };

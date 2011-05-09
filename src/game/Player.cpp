@@ -13929,6 +13929,28 @@ void Player::AddQuest( Quest const *pQuest, Object *questGiver )
     }
 
     GiveQuestSourceItem(pQuest);
+    /*// remove start item if not need
+    if (questGiver && questGiver->isType(TYPEID_ITEM))
+    {
+        // destroy not required for quest finish quest starting item
+        bool notRequiredItem = true;
+        for(int i = 0; i < QUEST_ITEM_OBJECTIVES_COUNT; ++i)
+        {
+            if (pQuest->ReqItemId[i] == questGiver->GetEntry())
+            {
+                notRequiredItem = false;
+                break;
+            }
+        }
+
+        if (pQuest->GetSrcItemId() == questGiver->GetEntry())
+            notRequiredItem = false;
+
+        if (notRequiredItem)
+            DestroyItem(((Item*)questGiver)->GetBagSlot(), ((Item*)questGiver)->GetSlot(), true);
+    }
+
+    GiveQuestSourceItemIfNeed(pQuest);*/
 
     AdjustQuestReqItemCount( pQuest, questStatusData );
 
@@ -14576,13 +14598,21 @@ bool Player::SatisfyQuestMonth(Quest const* qInfo, bool msg) const
     return m_monthlyquests.find(qInfo->GetQuestId()) == m_monthlyquests.end();
 }
 
-bool Player::CanGiveQuestSourceItem(Quest const *pQuest, ItemPosCountVec* dest) const
+bool Player::CanGiveQuestSourceItem( Quest const *pQuest, ItemPosCountVec* dest) const
 {
     if (uint32 srcitem = pQuest->GetSrcItemId())
     {
         uint32 count = pQuest->GetSrcItemCount();
+
         if (count <= 0)
             count = 1;
+
+        /*// player already have max amount required item (including bank), just report success
+        uint32 has_count = GetItemCount(srcitem, true);
+        if (has_count >= count)
+            return true;
+
+        count -= has_count;                                 // real need amount*/
 
         uint8 msg;
         if (!dest)
@@ -22453,7 +22483,7 @@ void Player::UnsummonPetTemporaryIfAny()
     GroupPetList m_groupPetsTmp = GetPets();  // Original list may be modified in this function
     for (GroupPetList::const_iterator itr = m_groupPetsTmp.begin(); itr != m_groupPetsTmp.end(); ++itr)
     {
-        if (Pet* _pet = ObjectAccessor::FindPet(*itr))
+        if (Pet* _pet = GetMap()->GetPet(*itr))
         {
             if (!_pet->isTemporarySummoned())
                 _pet->Unsummon(PET_SAVE_AS_CURRENT, this);

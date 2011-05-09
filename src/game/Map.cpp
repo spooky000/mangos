@@ -1628,7 +1628,7 @@ void Map::ScriptsStart(ScriptMapMap const& scripts, uint32 id, Object* source, O
     // prepare static data
     ObjectGuid sourceGuid = source->GetObjectGuid();
     ObjectGuid targetGuid = target ? target->GetObjectGuid() : ObjectGuid();
-    ObjectGuid ownerGuid  = (source->GetTypeId()==TYPEID_ITEM) ? ((Item*)source)->GetOwnerGuid() : ObjectGuid();
+    ObjectGuid ownerGuid  = source->isType(TYPEMASK_ITEM) ? ((Item*)source)->GetOwnerGuid() : ObjectGuid();
 
     ///- Schedule script execution for all scripts in the script map
     ScriptMap const *s2 = &(s->second);
@@ -1659,7 +1659,7 @@ void Map::ScriptCommandStart(ScriptInfo const& script, uint32 delay, Object* sou
     // prepare static data
     ObjectGuid sourceGuid = source->GetObjectGuid();
     ObjectGuid targetGuid = target ? target->GetObjectGuid() : ObjectGuid();
-    ObjectGuid ownerGuid  = (source->GetTypeId()==TYPEID_ITEM) ? ((Item*)source)->GetOwnerGuid() : ObjectGuid();
+    ObjectGuid ownerGuid  = source->isType(TYPEMASK_ITEM) ? ((Item*)source)->GetOwnerGuid() : ObjectGuid();
 
     ScriptAction sa;
     sa.sourceGuid = sourceGuid;
@@ -3098,9 +3098,9 @@ Creature* Map::GetCreature(ObjectGuid guid)
 
 Pet* Map::GetPet(ObjectGuid guid)
 {
-    //return m_objectsStore.find<Pet>(guid.GetRawValue(), (Pet*)NULL);
-    Pet* pet = ObjectAccessor::FindPet(guid);         // return only in world pets
-    return pet && pet->GetMap() == this ? pet : NULL;
+    return m_objectsStore.find<Pet>(guid.GetRawValue(), (Pet*)NULL);
+    /*Pet* pet = ObjectAccessor::FindPet(guid);         // return only in world pets
+    return pet && pet->GetMap() == this ? pet : NULL;*/
 }
 
 /**
