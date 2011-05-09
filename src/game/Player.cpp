@@ -14639,7 +14639,7 @@ void Player::GiveQuestSourceItem(Quest const *pQuest)
 {
     ItemPosCountVec dest;
 
-    if (GiveQuestSourceItem(pQuest, &dest) && !dest.empty())
+    if (CanGiveQuestSourceItem(pQuest, &dest) && !dest.empty())
     {
         uint32 count = 0;
         for(ItemPosCountVec::const_iterator c_itr = dest.begin(); c_itr != dest.end(); ++c_itr)
