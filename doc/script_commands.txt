@@ -221,6 +221,6 @@ spell_scripts
 
 
 
-
+30 SCRIPT_COMMAND_ADD_QUEST_COUNT           source = any, target = player, datalong = quest_id, datalong2 = quest_field, dataint = increment value
 
 
