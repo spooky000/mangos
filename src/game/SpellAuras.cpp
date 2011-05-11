@@ -10782,7 +10782,10 @@ bool Aura::IsEffectStacking()
         case SPELL_AURA_MOD_MELEE_HASTE:                                // Melee haste changing don't stack (pos with pos, neg with neg)
         case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:
         case SPELL_AURA_MOD_PARTY_MAX_HEALTH:                           // Commanding Shout / Blood Pact
-            return false;
+            // Ancestral Healing / Inspiration
+            if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_SHAMAN ||
+                GetSpellProto()->SpellFamilyName == SPELLFAMILY_PRIEST)
+                return false;
         // hardcoded checks are needed (given attrEx6 not present)
         case SPELL_AURA_MOD_DAMAGE_PERCENT_DONE:                        // Ferocious Inspiration / Sanctified Retribution
             if (spellProto->SpellFamilyName == SPELLFAMILY_PALADIN &&
@@ -10830,14 +10833,6 @@ bool Aura::IsEffectStacking()
             {
                 return false;
             }
-        // these effects never stack
-        case SPELL_AURA_MOD_MELEE_HASTE:                                // Melee haste changing don't stack (pos with pos, neg with neg)
-        case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:
-        case SPELL_AURA_MOD_PARTY_MAX_HEALTH:                           // Commanding Shout / Blood Pact
-            // Ancestral Healing / Inspiration
-            if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_SHAMAN ||
-                GetSpellProto()->SpellFamilyName == SPELLFAMILY_PRIEST)
-                return false;
 
         default:
             break;
