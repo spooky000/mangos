@@ -10768,7 +10768,7 @@ bool Aura::IsEffectStacking()
         case SPELL_AURA_MOD_POWER_REGEN:                                // (Greater) Blessing of Wisdom
         case SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN:                       // Renewed Hope / (Greater) Blessing of Sanctuary / Vigilance // Glyph of Salvation / Pain Suppression / Safeguard ?
         case SPELL_AURA_MOD_SPELL_CRIT_CHANCE:                          // Elemental Oath
-            if (GetSpellProto()->AttributesEx6 & SPELL_ATTR_EX6_UNK26)
+            if (GetSpellProto()->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_BUFF)
                 return false;
             break;
         case SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK:                    // Mind Numbing Poison / Wrath of Air Totem
