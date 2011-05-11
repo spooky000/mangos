@@ -291,7 +291,8 @@ enum UnitModifierType
     TOTAL_PCT = 3,
     NONSTACKING_VALUE = 4,
     NONSTACKING_PCT = 5,
-    MODIFIER_TYPE_END = 6
+    NONSTACKING_PCT_MINOR = 6,
+    MODIFIER_TYPE_END = 7
 };
 
 enum WeaponDamageRange
