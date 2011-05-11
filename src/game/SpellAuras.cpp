@@ -10798,15 +10798,12 @@ bool Aura::IsEffectStacking()
             break;
         // these effects never stack
         case SPELL_AURA_MOD_MELEE_HASTE:                                // Melee haste changing don't stack (pos with pos, neg with neg)
+        case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:
         case SPELL_AURA_MOD_PARTY_MAX_HEALTH:                           // Commanding Shout / Blood Pact
-        case SPELL_AURA_MOD_RESISTANCE_PCT:
             // Ancestral Healing / Inspiration
             if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_SHAMAN ||
                 GetSpellProto()->SpellFamilyName == SPELLFAMILY_PRIEST)
                 return false;
-            break;
-        case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:
-            return false;
 
         default:
             break;
