@@ -10833,7 +10833,6 @@ bool Aura::IsEffectStacking()
             {
                 return false;
             }
-
         case SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE:      // Heart of the Crusader / Totem of Wrath
             if (spellProto->SpellFamilyName == SPELLFAMILY_PALADIN &&
                 spellProto->SpellFamilyFlags & UI64LIT(0x0000000020000000))    // HoC
@@ -10842,6 +10841,13 @@ bool Aura::IsEffectStacking()
             }
             else if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_BUFF) // Totem
                 return false;
+        case SPELL_AURA_MOD_ATTACKER_SPELL_HIT_CHANCE:                  // Misery / Imp. Faerie Fire (must find triggered aura)
+            if (spellProto->SpellFamilyName == SPELLFAMILY_PRIEST &&
+                spellProto->SpellIconId == 2211)                        // Misery
+            {
+                return false;
+            }
+            break;
 
         default:
             break;
