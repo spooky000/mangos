@@ -6954,6 +6954,9 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
     if( GetTypeId() == TYPEID_UNIT && !((Creature*)this)->IsPet() )
         DoneTotalMod *= ((Creature*)this)->GetSpellDamageMod(((Creature*)this)->GetCreatureInfo()->rank);
 
+    float nonStackingPos = 0.0f;
+    float nonStackingNeg = 0.0f;
+
     AuraList const& mModDamagePercentDone = GetAurasByType(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
     for(AuraList::const_iterator i = mModDamagePercentDone.begin(); i != mModDamagePercentDone.end(); ++i)
     {
@@ -6980,10 +6983,19 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
                     }
                 }
             }
-            else
+          
+            if ((*i)->IsStacking())
                 DoneTotalMod *= ((*i)->GetModifier()->m_amount+100.0f)/100.0f;
+            else
+            {
+                if((*i)->GetModifier()->m_amount > nonStackingPos)
+                    nonStackingPos = (*i)->GetModifier()->m_amount;
+                else if((*i)->GetModifier()->m_amount < nonStackingNeg)
+                    nonStackingNeg = (*i)->GetModifier()->m_amount;
+            }
         }
     }
+    DoneTotalMod *= ((nonStackingPos + 100.0f) / 100.0f) * ((nonStackingNeg + 100.0f) / 100.0f);
 
     uint32 creatureTypeMask = pVictim->GetCreatureTypeMask();
     // Add flat bonus from spell damage versus
