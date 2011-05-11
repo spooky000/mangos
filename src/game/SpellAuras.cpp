@@ -6699,7 +6699,9 @@ void Aura::HandleModSpellCritChanceShool(bool /*apply*/, bool Real)
 
 void Aura::HandleModCastingSpeed(bool apply, bool /*Real*/)
 {
-    Unit *target = GetTarget();
+    GetTarget()->ApplyCastTimePercentMod(float(m_modifier.m_amount),apply);
+
+    /*Unit *target = GetTarget();
 
     if(IsStacking())
         target->ApplyCastTimePercentMod(float(m_modifier.m_amount),apply);
@@ -6723,7 +6725,7 @@ void Aura::HandleModCastingSpeed(bool apply, bool /*Real*/)
         target->ApplyCastTimePercentMod(amount, true);
 
         target->m_modSpellSpeedPctNeg = amount;
-    }
+    }*/
 }
 
 void Aura::HandleModMeleeRangedSpeedPct(bool apply, bool /*Real*/)
