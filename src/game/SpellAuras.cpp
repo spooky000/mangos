@@ -10843,7 +10843,7 @@ bool Aura::IsEffectStacking()
                 return false;
         case SPELL_AURA_MOD_ATTACKER_SPELL_HIT_CHANCE:                  // Misery / Imp. Faerie Fire (must find triggered aura)
             if (spellProto->SpellFamilyName == SPELLFAMILY_PRIEST &&
-                spellProto->SpellIconId == 2211)                        // Misery
+                spellProto->SpellIconID == 2211)                        // Misery
             {
                 return false;
             }
