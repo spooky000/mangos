@@ -10787,13 +10787,12 @@ bool Aura::IsEffectStacking()
             if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_SHAMAN ||
                 GetSpellProto()->SpellFamilyName == SPELLFAMILY_PRIEST)
                 return false;
+            break;
         // hardcoded checks are needed (given attrEx6 not present)
         case SPELL_AURA_MOD_DAMAGE_PERCENT_DONE:                        // Ferocious Inspiration / Sanctified Retribution
             if (spellProto->SpellFamilyName == SPELLFAMILY_PALADIN &&
                 spellProto->SpellFamilyFlags & UI64LIT(0x000000000000000008)) // Sanctified Retribution
-            {
                 return false;
-            }
             else if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_BUFF)
                 return false;
             break;
@@ -10802,19 +10801,14 @@ bool Aura::IsEffectStacking()
                 spellProto->SpellFamilyFlags & UI64LIT(0x0000000000004000) ||       // (only spell triggering this aura has the flag)
                 spellProto->SpellFamilyName == SPELLFAMILY_HUNTER &&                // Sting (Hunter Pet)
                 spellProto->SpellFamilyFlags & UI64LIT(0x1000000000000000))
-            {
                 return false;
-            }
             else if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_DEBUFF)
                 return false;
-
             break;
         case SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN:                       // Glyph of Salvation / Pain Suppression / Safeguard / Ancestral Healing / Inspiration // Curse of the Elements / Ebon Plague / Earth and Moon
             if (spellProto->SpellFamilyName == SPELLFAMILY_DRUID &&     // Earth and Moon
                 spellProto->SpellIconID == 2991)
-            {
                 return false;
-            }
             else if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_DEBUFF)
                 return false;
             break;
@@ -10831,23 +10825,19 @@ bool Aura::IsEffectStacking()
             if (spellProto->SpellFamilyName == SPELLFAMILY_DRUID &&
                 spellProto->SpellFamilyFlags & UI64LIT(0x0000044000000000) ||
                 spellProto->Id == 46856 || spellProto->Id == 46857)     // Trauma has SPELLFAMILY_GENERIC and no flags
-            {
                 return false;
-            }
+            break;
         case SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE:      // Heart of the Crusader / Totem of Wrath
             if (spellProto->SpellFamilyName == SPELLFAMILY_PALADIN &&
                 spellProto->SpellFamilyFlags & UI64LIT(0x0000000020000000))    // HoC
-            {
                 return false;
-            }
             else if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_BUFF) // Totem
                 return false;
+            break;
         case SPELL_AURA_MOD_ATTACKER_SPELL_HIT_CHANCE:                  // Misery / Imp. Faerie Fire (must find triggered aura)
             if (spellProto->SpellFamilyName == SPELLFAMILY_PRIEST &&
                 spellProto->SpellIconID == 2211)                        // Misery
-            {
                 return false;
-            }
             break;
 
         default:
