@@ -6768,28 +6768,33 @@ void Aura::HandleModMeleeSpeedPct(bool apply, bool /*Real*/)
     }
     else
     {
-        if(m_modifier.m_amount < target->m_modAttackSpeedPct[NONSTACKING_MOD_MELEE])
+        bool bIsPositive = m_modifier.m_amount > 0;
+
+        if(bIsPositive && m_modifier.m_amount < target->m_modAttackSpeedPct[NONSTACKING_POS_MOD_MELEE] ||
+            !bIsPositive && m_modifier.m_amount > target->m_modAttackSpeedPct[NONSTACKING_NEG_MOD_MELEE])
             return;
 
         float amount = float(m_modifier.m_amount);
 
         // unapply old aura
-        if(target->m_modAttackSpeedPct[NONSTACKING_MOD_MELEE])
+        if(target->m_modAttackSpeedPct[bIsPositive ? NONSTACKING_POS_MOD_MELEE : NONSTACKING_NEG_MOD_MELEE])
         {
-            target->ApplyAttackTimePercentMod(BASE_ATTACK, target->m_modAttackSpeedPct[NONSTACKING_MOD_MELEE], false);
-            target->ApplyAttackTimePercentMod(OFF_ATTACK, target->m_modAttackSpeedPct[NONSTACKING_MOD_MELEE], false);
+            target->ApplyAttackTimePercentMod(BASE_ATTACK, target->m_modAttackSpeedPct[bIsPositive ? NONSTACKING_POS_MOD_MELEE : NONSTACKING_NEG_MOD_MELEE], false);
+            target->ApplyAttackTimePercentMod(OFF_ATTACK, target->m_modAttackSpeedPct[bIsPositive ? NONSTACKING_POS_MOD_MELEE : NONSTACKING_NEG_MOD_MELEE], false);
         }
 
         if(!apply)
-            amount = target->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_MELEE_HASTE, true);
-
-        if(amount)
         {
+            if (bIsPositive)
+                amount = target->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_MELEE_HASTE, true);
+			else
+                amount = target->GetMaxNegativeAuraModifier(SPELL_AURA_MOD_MELEE_HASTE, true);
+		}
+
             target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
             target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
-        }
 
-        target->m_modAttackSpeedPct[NONSTACKING_MOD_MELEE] = amount;
+        target->m_modAttackSpeedPct[bIsPositive ? NONSTACKING_POS_MOD_MELEE : NONSTACKING_NEG_MOD_MELEE] = amount;
     }
 }
 
@@ -10733,7 +10738,6 @@ bool Aura::IsEffectStacking()
         case SPELL_AURA_MOD_HEALING_DONE:                               // Demonic Pact
         case SPELL_AURA_MOD_DAMAGE_DONE:                                // Demonic Pact
         case SPELL_AURA_HASTE_ALL:                                      // Imp. Moonkin Aur / Swift Retribution
-        case SPELL_AURA_MOD_MELEE_HASTE:                                // Improved Icy Talons  / Windfury Totem
         case SPELL_AURA_MOD_MELEE_RANGED_HASTE:
         case SPELL_AURA_MOD_ATTACK_POWER_PCT:                           // Abomination's Might / Unleashed Rage
         case SPELL_AURA_MOD_RANGED_ATTACK_POWER_PCT:
@@ -10743,10 +10747,9 @@ bool Aura::IsEffectStacking()
         case SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN:                       // Renewed Hope / (Greater) Blessing of Sanctuary / Vigilance // Glyph of Salvation / Pain Suppression / Safeguard ?
             if (GetSpellProto()->AttributesEx6 & SPELL_ATTR_EX6_UNK26)
                 return false;
-            // Improved Icy Talons check
-            else if (GetSpellProto()->SpellIconID == 3785)
-                return false;
             break;
+        case SPELL_AURA_MOD_MELEE_HASTE:                                // Melee haste changing don't stack (pos with pos, neg with neg)
+            return false;
         case SPELL_AURA_MOD_STAT:
             // Horn of Winter / Arcane Intellect / Divine Spirit
             if (GetSpellProto()->AttributesEx6 & SPELL_ATTR_EX6_UNK26 &&
@@ -10786,7 +10789,7 @@ bool Aura::IsEffectStacking()
                 return false;
 
         default:
-            return true;
+            break;
     }
     return true;
 }
