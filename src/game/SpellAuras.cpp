@@ -6699,7 +6699,31 @@ void Aura::HandleModSpellCritChanceShool(bool /*apply*/, bool Real)
 
 void Aura::HandleModCastingSpeed(bool apply, bool /*Real*/)
 {
-    GetTarget()->ApplyCastTimePercentMod(float(m_modifier.m_amount),apply);
+    Unit *target = GetTarget();
+
+    if(IsStacking())
+        target->ApplyCastTimePercentMod(float(m_modifier.m_amount),apply);
+    else
+    {
+        // only negative effects don't stack in this handler
+
+        float amount = float(m_modifier.m_amount);
+
+        // don't apply weaker debuff
+        if(amount > target->m_modSpellSpeedPctNeg)
+            return;
+
+        // unapply old aura (weaker debuff)
+        if(target->m_modSpellSpeedPctNeg)
+            target->ApplyCastTimePercentMod(target->m_modSpellSpeedPctNeg, false);
+
+        if(!apply)
+            amount = target->GetMaxNegativeAuraModifier(SPELL_AURA_HASTE_SPELLS, true);
+
+        target->ApplyCastTimePercentMod(amount, true);
+
+        target->m_modSpellSpeedPctNeg = amount;
+    }
 }
 
 void Aura::HandleModMeleeRangedSpeedPct(bool apply, bool /*Real*/)
@@ -10724,17 +10748,14 @@ void SpellAuraHolder::UnregisterSingleCastHolder()
 
 bool Aura::IsEffectStacking()
 {
-    // Flametongue Totem / Totem of Wrath / Strength of Earth Totem / Fel Intelligence / Leader of the Pack
-    // Moonkin Aura / Mana Spring Totem / Tree of Life Aura / Improved Devotion Aura / Improved Icy Talons / Trueshot Aura
-    // Improved Moonkin Form / Sanctified Retribution Aura / Blood Pact
-    if (GetSpellProto()->Effect[m_effIndex] == SPELL_EFFECT_APPLY_AREA_AURA_RAID)
-        return false;
-
     if (GetSpellSpecific(GetSpellProto()->Id) == SPELL_SCROLL)
         return false;
 
     switch(GetModifier()->m_auraname)
     {
+        case SPELL_AURA_HASTE_SPELLS:                                   // Slow / Curse of Tongues
+            if (GetSpellProto()->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_DEBUFF)
+                return false;
         case SPELL_AURA_MOD_HEALING_DONE:                               // Demonic Pact
         case SPELL_AURA_MOD_DAMAGE_DONE:                                // Demonic Pact
         case SPELL_AURA_HASTE_ALL:                                      // Imp. Moonkin Aur / Swift Retribution
@@ -10742,36 +10763,29 @@ bool Aura::IsEffectStacking()
         case SPELL_AURA_MOD_ATTACK_POWER_PCT:                           // Abomination's Might / Unleashed Rage
         case SPELL_AURA_MOD_RANGED_ATTACK_POWER_PCT:
         case SPELL_AURA_MOD_ATTACK_POWER:                               // (Greater) Blessing of Might / Battle Shout
+        case SPELL_AURA_MOD_STAT:                                       // Horn of Winter / Arcane Intellect / Divine Spirit and (Greater) Blessing of Kings(later group check by miscvalue)
         case SPELL_AURA_MOD_RANGED_ATTACK_POWER:
         case SPELL_AURA_MOD_POWER_REGEN:                                // (Greater) Blessing of Wisdom
         case SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN:                       // Renewed Hope / (Greater) Blessing of Sanctuary / Vigilance // Glyph of Salvation / Pain Suppression / Safeguard ?
+        case SPELL_AURA_MOD_SPELL_CRIT_CHANCE:                          // Elemental Oath
             if (GetSpellProto()->AttributesEx6 & SPELL_ATTR_EX6_UNK26)
                 return false;
             break;
-        case SPELL_AURA_MOD_MELEE_HASTE:                                // Melee haste changing don't stack (pos with pos, neg with neg)
-            return false;
-        case SPELL_AURA_MOD_STAT:
-            // Horn of Winter / Arcane Intellect / Divine Spirit
-            if (GetSpellProto()->AttributesEx6 & SPELL_ATTR_EX6_UNK26 &&
-                (GetSpellProto()->SpellFamilyName == SPELLFAMILY_DEATHKNIGHT ||
-                GetSpellProto()->SpellFamilyName == SPELLFAMILY_MAGE ||
-                GetSpellProto()->SpellFamilyName == SPELLFAMILY_PRIEST) )
-                return false;
-            break;
+        case SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK:                    // Mind Numbing Poison / Wrath of Air Totem
+        case SPELL_AURA_MOD_HEALING_PCT:                                // Mortal Strike / Wound Poison / Aimed Shot / Furious Attacks
+            return (GetModifier()->m_amount > 0);                       // (only negative values don't stack)
         case SPELL_AURA_MOD_CRIT_PERCENT:
             // Rampage
             if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_WARRIOR && GetSpellProto()->SpellIconID == 2006)
-                return false;
-            break;
-        case SPELL_AURA_MOD_SPELL_CRIT_CHANCE:
-            // Elemental Oath
-            if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_SHAMAN && GetSpellProto()->AttributesEx6 & SPELL_ATTR_EX6_UNK26)
                 return false;
             break;
         case SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE:                 // Winter's Chill / Improved Scorch
             if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_MAGE)
                 return false;
             break;
+        // these effects never stack
+        case SPELL_AURA_MOD_MELEE_HASTE:                                // Melee haste changing don't stack (pos with pos, neg with neg)
+        case SPELL_AURA_MOD_PARTY_MAX_HEALTH:                           // Commanding Shout / Blood Pact
         case SPELL_AURA_MOD_RESISTANCE_PCT:
             // Ancestral Healing / Inspiration
             if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_SHAMAN ||
@@ -10780,17 +10794,19 @@ bool Aura::IsEffectStacking()
             break;
         case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:
             return false;
-        case SPELL_AURA_MOD_PARTY_MAX_HEALTH:
-            // Commanding Shout
-            return false;
-        case SPELL_AURA_MOD_HEALING_PCT:                                // Mortal Strike / Wound Poison / Aimed Shot / Furious Attacks
-            // Healing debuffs
-            if (GetSpellProto()->EffectBasePoints[m_effIndex] < 0)
-                return false;
 
         default:
             break;
     }
+
+    // almost all area aura raid auras don't stack (exceptions are handled above)
+
+    // Flametongue Totem / Totem of Wrath / Strength of Earth Totem / Fel Intelligence / Leader of the Pack
+    // Moonkin Aura / Mana Spring Totem / Tree of Life Aura / Improved Devotion Aura / Improved Icy Talons / Trueshot Aura
+    // Improved Moonkin Form / Sanctified Retribution Aura / Blood Pact
+    if (GetSpellProto()->Effect[m_effIndex] == SPELL_EFFECT_APPLY_AREA_AURA_RAID)
+        return false;
+
     return true;
 }
 
