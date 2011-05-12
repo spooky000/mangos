@@ -2780,14 +2780,6 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
 
                 return;
             }
-            case 34477: //Misdirection
-            case 57934: //Tricks of Trade
-            {
-                //Feanor: To fix for Tibbi
-                /*if(Unit * caster = GetCaster())
-                    caster->SetThreatRedirectionTarget(0, 0);*/
-                return;
-            }
             case 52098:                                     // Charge Up
             {
                 if (m_removeMode == AURA_REMOVE_BY_EXPIRE)
