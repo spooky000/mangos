@@ -3537,7 +3537,7 @@ SpellMissInfo Unit::SpellHitResult(Unit *pVictim, SpellEntry const *spell, bool 
         // Improved Spell Reflection
         // HACK! tooltip says 20yards, but no such spell in dbc with such data :/
         if (Aura *aura = pVictim->GetAura(59725, EFFECT_INDEX_0))
-            if (Unit *aura_caster = GetMap()->GetUnit(aura->GetCasterGUID()))
+            if (Unit *aura_caster = GetMap()->GetUnit(aura->GetCasterGuid()))
                 if (!pVictim->IsInRange(aura_caster, 0.0f, 20.0f))
                     reflectchance -= aura->GetModifier()->m_amount;
 
@@ -4444,7 +4444,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
         for (SpellAuraHolderMap::iterator iter = spair.first; iter != spair.second; ++iter)
         {
             SpellAuraHolder *foundHolder = iter->second;
-            if(foundHolder->GetCasterGUID() == holder->GetCasterGUID())
+            if(foundHolder->GetCasterGuid() == holder->GetCasterGuid())
             {
                 // Aura can stack on self -> Stack it;
                 if(aurSpellInfo->StackAmount)
@@ -4853,7 +4853,7 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolder *holder)
         // single allowed spell specific from same caster or from any caster at target
         bool is_spellSpecPerTargetPerCaster = IsSingleFromSpellSpecificPerTargetPerCaster(spellId_spec,i_spellId_spec);
         bool is_spellSpecPerTarget = IsSingleFromSpellSpecificPerTarget(spellId_spec,i_spellId_spec);
-        if (is_spellSpecPerTarget || (is_spellSpecPerTargetPerCaster && holder->GetCasterGUID() == (*i).second->GetCasterGUID()))
+        if (is_spellSpecPerTarget || (is_spellSpecPerTargetPerCaster && holder->GetCasterGuid() == (*i).second->GetCasterGuid()))
         {
             // cannot remove higher rank
             if (sSpellMgr.IsRankSpellDueToSpell(spellProto, i_spellId))
@@ -4879,7 +4879,7 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolder *holder)
         // spell with spell specific that allow single ranks for spell from diff caster
         // same caster case processed or early or later
         bool is_spellPerTarget = IsSingleFromSpellSpecificSpellRanksPerTarget(spellId_spec,i_spellId_spec);
-        if ( is_spellPerTarget && holder->GetCasterGUID() != (*i).second->GetCasterGUID() && sSpellMgr.IsRankSpellDueToSpell(spellProto, i_spellId))
+        if ( is_spellPerTarget && holder->GetCasterGuid() != (*i).second->GetCasterGuid() && sSpellMgr.IsRankSpellDueToSpell(spellProto, i_spellId))
         {
             // cannot remove higher rank
             if(CompareAuraRanks(spellId, i_spellId) < 0)
@@ -4968,7 +4968,7 @@ void Unit::RemoveAurasByCasterSpell(uint32 spellId, uint64 casterGUID)
     SpellAuraHolderBounds spair = GetSpellAuraHolderBounds(spellId);
     for(SpellAuraHolderMap::iterator iter = spair.first; iter != spair.second; )
     {
-        if (iter->second->GetCasterGUID() == casterGUID)
+        if (iter->second->GetCasterGuid() == casterGUID)
         {
             RemoveSpellAuraHolder(iter->second);
             spair = GetSpellAuraHolderBounds(spellId);
@@ -4985,7 +4985,7 @@ void Unit::RemoveSingleAuraFromSpellAuraHolder(uint32 spellId, SpellEffectIndex 
     for(SpellAuraHolderMap::iterator iter = spair.first; iter != spair.second; )
     {
         Aura *aur = iter->second->m_auras[effindex];
-        if (aur && aur->GetCasterGUID() == casterGUID)
+        if (aur && aur->GetCasterGuid() == casterGUID)
         {
             RemoveSingleAuraFromSpellAuraHolder(iter->second, effindex, mode);
             spair = GetSpellAuraHolderBounds(spellId);
@@ -5170,7 +5170,7 @@ void Unit::RemoveAurasWithDispelType( DispelType type, uint64 casterGUID )
     for(SpellAuraHolderMap::iterator itr = auras.begin(); itr != auras.end(); )
     {
         SpellEntry const* spell = itr->second->GetSpellProto();
-        if( ((1<<spell->Dispel) & dispelMask) && (!casterGUID || casterGUID == itr->second->GetCasterGUID()))
+        if( ((1<<spell->Dispel) & dispelMask) && (!casterGUID || casterGUID == itr->second->GetCasterGuid()))
         {
             // Dispel aura
             RemoveAurasDueToSpell(spell->Id);
@@ -5192,7 +5192,7 @@ void Unit::RemoveAuraHolderFromStack(uint32 spellId, uint32 stackAmount, uint64 
     SpellAuraHolderBounds spair = GetSpellAuraHolderBounds(spellId);
     for(SpellAuraHolderMap::iterator iter = spair.first; iter != spair.second; ++iter)
     {
-        if (!casterGUID || iter->second->GetCasterGUID() == casterGUID)
+        if (!casterGUID || iter->second->GetCasterGuid() == casterGUID)
         {
             if (iter->second->ModStackAmount(-int32(stackAmount)))
             {
@@ -5500,7 +5500,7 @@ void Unit::DelaySpellAuraHolder(uint32 spellId, int32 delaytime, uint64 casterGU
     {
         SpellAuraHolder* holder = iter->second;
 
-        if (casterGUID != holder->GetCasterGUID())
+        if (casterGUID != holder->GetCasterGuid())
             continue;
 
         if (holder->GetAuraDuration() < delaytime)
@@ -6442,7 +6442,7 @@ bool Unit::HasAuraStateForCaster(AuraState flag, uint64 caster) const
         for(Unit::AuraList::const_iterator i = dotList.begin(); i != dotList.end(); ++i)
         {
             if ((*i)->GetSpellProto()->SpellFamilyName == SPELLFAMILY_WARLOCK &&
-                (*i)->GetCasterGUID() == caster &&
+                (*i)->GetCasterGuid() == caster &&
                 //  Immolate
                 (((*i)->GetSpellProto()->SpellFamilyFlags & UI64LIT(0x0000000000000004)) ||
                 // Shadowflame
@@ -12258,7 +12258,7 @@ SpellAuraHolder* Unit::GetSpellAuraHolder (uint32 spellid, uint64 casterGUID)
 {
     SpellAuraHolderBounds bounds = GetSpellAuraHolderBounds(spellid);
     for (SpellAuraHolderMap::const_iterator iter = bounds.first; iter != bounds.second; ++iter)
-        if (!casterGUID || iter->second->GetCasterGUID() == casterGUID)
+        if (!casterGUID || iter->second->GetCasterGuid() == casterGUID)
             return iter->second;
 
     return NULL;
