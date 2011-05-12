@@ -10783,9 +10783,6 @@ bool Aura::IsEffectStacking()
         case SPELL_AURA_MOD_PARTY_MAX_HEALTH:                           // Commanding Shout / Blood Pact
         case SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK:                    // Mind Numbing Poison / Wrath of Air Totem
         case SPELL_AURA_MOD_HEALING_PCT:                                // Mortal Strike / Wound Poison / Aimed Shot / Furious Attacks
-            // Ancestral Healing / Inspiration
-            if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_SHAMAN ||
-                GetSpellProto()->SpellFamilyName == SPELLFAMILY_PRIEST)
                 return false;
             break;
         // hardcoded checks are needed (given attrEx6 not present)
