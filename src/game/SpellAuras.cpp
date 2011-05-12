@@ -6463,7 +6463,7 @@ void Aura::HandleAuraModIncreaseEnergy(bool apply, bool Real)
     Unit* target = GetTarget();
 
     if (!target)
-		return;
+        return;
 
     Powers powerType = target->getPowerType();
 
@@ -6501,7 +6501,7 @@ void Aura::HandleAuraModIncreaseEnergyPercent(bool apply, bool /*Real*/)
     Powers powerType = target->getPowerType();
 
     if(int32(powerType) != m_modifier.m_miscvalue)
-	{
+    {
         DEBUG_LOG("HandleAuraModIncreaseEnergy: unit %u change energy %u but current type %u", target->GetObjectGuid().GetCounter(), m_modifier.m_miscvalue, powerType);
         powerType = Powers(m_modifier.m_miscvalue);
     }
@@ -6813,12 +6813,12 @@ void Aura::HandleModMeleeSpeedPct(bool apply, bool /*Real*/)
         {
             if (bIsPositive)
                 amount = target->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_MELEE_HASTE, true);
-			else
+            else
                 amount = target->GetMaxNegativeAuraModifier(SPELL_AURA_MOD_MELEE_HASTE, true);
-		}
+        }
 
-            target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
-            target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
+        target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
+        target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
 
         target->m_modAttackSpeedPct[bIsPositive ? NONSTACKING_POS_MOD_MELEE : NONSTACKING_NEG_MOD_MELEE] = amount;
     }

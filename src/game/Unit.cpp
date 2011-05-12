@@ -4517,7 +4517,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
             }
 
             // Judgements are always single 
-            else if (GetSpellSpecific(holder->GetId()) == SPELL_JUDGEMENT) 
+            /*else if (GetSpellSpecific(holder->GetId()) == SPELL_JUDGEMENT) 
             {
                 RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
                 break;
@@ -4544,7 +4544,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
                     default:
                         break;
                 }
-            }
+            }*/
 
             // Hacky fix for Malygos' Power Spark
             if(foundHolder->GetId() == 55849)
@@ -4700,7 +4700,7 @@ float Unit::CheckAuraStackingAndApply(Aura *Aur, UnitMods unitMod, UnitModifierT
         // need a sanity check here?
 
         // special case: minor and major categories for armor reduction debuffs
-        // TODO: find some better way of dividing to ategories
+        // TODO: find some better way of dividing to categories
         if (Aur->GetId() == 770 ||                                              // Faerie Fire
             spellProto->SpellFamilyName == SPELLFAMILY_HUNTER &&                // Sting (Hunter Pet)
             spellProto->SpellFamilyFlags & UI64LIT(0x1000000000000000) ||
