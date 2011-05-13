@@ -6691,33 +6691,49 @@ void Aura::HandleModSpellCritChanceShool(bool /*apply*/, bool Real)
 
 void Aura::HandleModCastingSpeed(bool apply, bool /*Real*/)
 {
-    GetTarget()->ApplyCastTimePercentMod(float(m_modifier.m_amount),apply);
-
-    /*Unit *target = GetTarget();
+    Unit *target = GetTarget();
 
     if(IsStacking())
         target->ApplyCastTimePercentMod(float(m_modifier.m_amount),apply);
     else
     {
-        // only negative effects don't stack in this handler
-
         float amount = float(m_modifier.m_amount);
+        bool bIsPositive = amount > 0;
 
-        // don't apply weaker debuff
-        if(amount > target->m_modSpellSpeedPctNeg)
+        // don't apply weaker aura
+        if(bIsPositive && amount < target->m_modSpellSpeedPctPos ||
+            !bIsPositive && amount > target->m_modSpellSpeedPctNeg)
+        {
             return;
+        }
 
-        // unapply old aura (weaker debuff)
-        if(target->m_modSpellSpeedPctNeg)
-            target->ApplyCastTimePercentMod(target->m_modSpellSpeedPctNeg, false);
+        // unapply old (weaker) aura
+        if (bIsPositive)
+        {
+            if(target->m_modSpellSpeedPctPos)
+                target->ApplyCastTimePercentMod(target->m_modSpellSpeedPctPos, false);
+        }
+        else
+        {
+            if(target->m_modSpellSpeedPctNeg)
+                target->ApplyCastTimePercentMod(target->m_modSpellSpeedPctNeg, false);
+        }
 
         if(!apply)
-            amount = target->GetMaxNegativeAuraModifier(SPELL_AURA_HASTE_SPELLS, true);
+        {
+            if (bIsPositive)
+                amount = target->GetMaxPositiveAuraModifier(m_modifier.m_auraname, true);
+            else
+                amount = target->GetMaxNegativeAuraModifier(m_modifier.m_auraname, true);
+        }
 
         target->ApplyCastTimePercentMod(amount, true);
 
-        target->m_modSpellSpeedPctNeg = amount;
-    }*/
+        if (bIsPositive)
+            target->m_modSpellSpeedPctPos = amount;
+        else
+            target->m_modSpellSpeedPctNeg = amount;
+    }
 }
 
 void Aura::HandleModMeleeRangedSpeedPct(bool apply, bool /*Real*/)
@@ -10744,13 +10760,18 @@ bool Aura::IsEffectStacking()
 {
     SpellEntry const *spellProto = GetSpellProto();
 
+    // generic check
+    if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_DEBUFF | SPELL_ATTR_EX6_NO_STACK_BUFF)
+        return false;
+
     // scrolls don't stack
     if (GetSpellSpecific(spellProto->Id) == SPELL_SCROLL)
         return false;
 
+    // some hardcoded checks are needed (given attrEx6 not present)
     switch(GetModifier()->m_auraname)
     {
-        case SPELL_AURA_MOD_HIT_CHANCE:                                 // Insect Swarm / Scorpid Sting
+        /*case SPELL_AURA_MOD_HIT_CHANCE:                                 // Insect Swarm / Scorpid Sting
         case SPELL_AURA_HASTE_SPELLS:                                   // Slow / Curse of Tongues
             if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_DEBUFF)
                 return false;
@@ -10770,39 +10791,35 @@ bool Aura::IsEffectStacking()
                 return false;
             break;
         // these effects never stack (pos with pos, neg with neg)
-        case SPELL_AURA_MOD_MELEE_HASTE:                                // Melee haste changing don't stack (pos with pos, neg with neg)
+        case SPELL_AURA_MOD_MELEE_HASTE:*/                                // Melee haste changing don't stack (pos with pos, neg with neg)
+        // these effects never stack
+        case SPELL_AURA_MOD_MELEE_HASTE:
         case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:
         case SPELL_AURA_MOD_PARTY_MAX_HEALTH:                           // Commanding Shout / Blood Pact
-        case SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK:                    // Mind Numbing Poison / Wrath of Air Totem
         case SPELL_AURA_MOD_HEALING_PCT:                                // Mortal Strike / Wound Poison / Aimed Shot / Furious Attacks
+        case SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK:                    // Wrath of Air Totem / Mind-Numbing Poison and many more
                 return false;
             break;
-        // hardcoded checks are needed (given attrEx6 not present)
         case SPELL_AURA_MOD_DAMAGE_PERCENT_DONE:                        // Ferocious Inspiration / Sanctified Retribution
+        case SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE:      // Heart of the Crusader / Totem of Wrath
             if (spellProto->SpellFamilyName == SPELLFAMILY_PALADIN &&
-                spellProto->SpellFamilyFlags & UI64LIT(0x000000000000000008)) // Sanctified Retribution
-                return false;
-            else if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_BUFF)
+                spellProto->SpellFamilyFlags & UI64LIT(0x0000000020000008)) // Sanctified Retribution / HoC
                 return false;
             break;
-        case SPELL_AURA_MOD_RESISTANCE_PCT:                             // Expose Armor / Sunder Armor / Sting / Faerie Fire / Curse of Weakness
+        case SPELL_AURA_MOD_RESISTANCE_PCT:                                         // Sunder Armor / Sting
+        case SPELL_AURA_HASTE_SPELLS:                                               // Mind-Numbing Poison
+        case SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN:                                   // Ebon Plague (spell not implemented) / Earth and Moon
             if (spellProto->SpellFamilyName == SPELLFAMILY_WARRIOR &&               // Sunder Armor
                 spellProto->SpellFamilyFlags & UI64LIT(0x0000000000004000) ||       // (only spell triggering this aura has the flag)
                 spellProto->SpellFamilyName == SPELLFAMILY_HUNTER &&                // Sting (Hunter Pet)
-                spellProto->SpellFamilyFlags & UI64LIT(0x1000000000000000))
-                return false;
-            else if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_DEBUFF)
-                return false;
-            break;
-        case SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN:                       // Glyph of Salvation / Pain Suppression / Safeguard / Ancestral Healing / Inspiration // Curse of the Elements / Ebon Plague / Earth and Moon
-            if (spellProto->SpellFamilyName == SPELLFAMILY_DRUID &&     // Earth and Moon
-                spellProto->SpellIconID == 2991)
-                return false;
-            else if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_DEBUFF)
+                spellProto->SpellFamilyFlags & UI64LIT(0x1000000000000000) ||
+                spellProto->SpellFamilyName == SPELLFAMILY_DRUID &&                 // Earth and Moon
+                spellProto->SpellIconID == 2991 ||
+                spellProto->SpellFamilyName == SPELLFAMILY_ROGUE &&                 // Mind-Numbing Poison
+                spellProto->SpellFamilyFlags & UI64LIT(0x0000000000008000))
                 return false;
             break;
-        case SPELL_AURA_MOD_CRIT_PERCENT:
-            // Rampage
+        case SPELL_AURA_MOD_CRIT_PERCENT:                               // Rampage
             if (spellProto->SpellFamilyName == SPELLFAMILY_WARRIOR && spellProto->SpellIconID == 2006)
                 return false;
             break;
@@ -10811,16 +10828,9 @@ bool Aura::IsEffectStacking()
                 return false;
             break;
         case SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT:              // Mangle / Trauma
-            if (spellProto->SpellFamilyName == SPELLFAMILY_DRUID &&
+            if (spellProto->SpellFamilyName == SPELLFAMILY_DRUID &&     // Mangle
                 spellProto->SpellFamilyFlags & UI64LIT(0x0000044000000000) ||
                 spellProto->Id == 46856 || spellProto->Id == 46857)     // Trauma has SPELLFAMILY_GENERIC and no flags
-                return false;
-            break;
-        case SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE:      // Heart of the Crusader / Totem of Wrath
-            if (spellProto->SpellFamilyName == SPELLFAMILY_PALADIN &&
-                spellProto->SpellFamilyFlags & UI64LIT(0x0000000020000000))    // HoC
-                return false;
-            else if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_BUFF) // Totem
                 return false;
             break;
         case SPELL_AURA_MOD_ATTACKER_SPELL_HIT_CHANCE:                  // Misery / Imp. Faerie Fire (must find triggered aura)
