@@ -4793,7 +4793,9 @@ void Spell::TakePower()
     if (m_caster->GetTypeId() == TYPEID_PLAYER)
     {
         if (m_spellInfo->powerType == POWER_RAGE || m_spellInfo->powerType == POWER_ENERGY || m_spellInfo->powerType == POWER_RUNE)
-            if (uint64 targetGUID = m_targets.getUnitTargetGUID())
+        {
+            ObjectGuid targetGUID = m_targets.getUnitTargetGuid();
+            if (!targetGUID.IsEmpty())
                 for(TargetList::const_iterator ihit= m_UniqueTargetInfo.begin();ihit != m_UniqueTargetInfo.end();++ihit)
                     if (ihit->targetGUID == targetGUID)
                     {
@@ -4807,6 +4809,7 @@ void Spell::TakePower()
                         }
                         break;
                     }
+        }
     }
 
     // health as power used

@@ -7851,15 +7851,6 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     else
                         break;
                 }
-                case 45958:                                 // Signal Alliance
-                {
-                    // "escort" aura not present, so let nothing happen
-                    if (!m_caster->HasAura(m_spellInfo->CalculateSimpleValue(eff_idx)))
-                        return;
-                    // "escort" aura is present so break; and let DB table spell_scripts be used and process further.
-                    else
-                        break;
-                }
                 case 46203:                                 // Goblin Weather Machine
                 {
                     if (!unitTarget)
@@ -9219,7 +9210,7 @@ void Spell::EffectSanctuary(SpellEffectIndex /*eff_idx*/)
 
     for(std::list<Unit *>::iterator tIter = targets.begin(); tIter != targets.end(); ++tIter)
         for(uint32 i = CURRENT_FIRST_NON_MELEE_SPELL; i < CURRENT_MAX_SPELL; ++i)
-            if ((*tIter)->GetCurrentSpell(CurrentSpellTypes(i)) && (*tIter)->GetCurrentSpell(CurrentSpellTypes(i))->m_targets.getUnitTargetGUID() == unitTarget->GetGUID())
+            if ((*tIter)->GetCurrentSpell(CurrentSpellTypes(i)) && (*tIter)->GetCurrentSpell(CurrentSpellTypes(i))->m_targets.getUnitTargetGuid() == unitTarget->GetObjectGuid())
                 (*tIter)->InterruptSpell(CurrentSpellTypes(i), false);
 
     unitTarget->CombatStop();
@@ -10580,7 +10571,7 @@ void Spell::EffectStealBeneficialBuff(SpellEffectIndex eff_idx)
 
             // Try dispel
             if (!roll_chance_i(miss_chance))
-                success_list.push_back( std::pair<uint32,uint64>(holder->GetId(),holder->GetCasterGuid()));
+                success_list.push_back(std::pair<uint32,ObjectGuid>(holder->GetId(),holder->GetCasterGuid()));
             else m_caster->SendSpellMiss(unitTarget, holder->GetSpellProto()->Id, SPELL_MISS_RESIST);
 
             // Remove buff from list for prevent doubles

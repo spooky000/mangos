@@ -2310,7 +2310,7 @@ bool ChatHandler::HandleSendChannelMsgCommand(char *args)
         isGM = true;
 
     WorldPacket dataa;
-    ChatHandler::FillMessageData(&dataa, NULL, CHAT_MSG_CHANNEL, LANG_UNIVERSAL, channel->GetName().c_str(), NULL, msg, NULL, isGM);
+    ChatHandler::FillMessageData(&dataa, NULL, CHAT_MSG_CHANNEL, LANG_UNIVERSAL, channel->GetName().c_str(), ObjectGuid(), msg, NULL, isGM);
     channel->SendToAll(&dataa);
     return true;
 }

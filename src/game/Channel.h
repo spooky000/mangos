@@ -184,6 +184,7 @@ class Channel
         void DeVoice(ObjectGuid guid1, ObjectGuid guid2);
         void JoinNotify(ObjectGuid guid);                                       // invisible notify
         void LeaveNotify(ObjectGuid guid);                                      // invisible notify
+        void SendToAll(WorldPacket *data, ObjectGuid p = ObjectGuid());
 
     private:
         // initial packet data (notify type and channel name)
@@ -227,7 +228,6 @@ class Channel
         void MakeVoiceOff(WorldPacket *data, ObjectGuid guid);                  //+ 0x23
 
         void SendToOne(WorldPacket *data, ObjectGuid who);
-        void SendToAll(WorldPacket *data, ObjectGuid p = ObjectGuid());
 
         bool IsOn(ObjectGuid who) const { return m_players.find(who) != m_players.end(); }
         bool IsBanned(ObjectGuid guid) const { return m_banned.find(guid) != m_banned.end(); }

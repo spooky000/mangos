@@ -3308,7 +3308,7 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                     if (target->IsInWorld() && GetStackAmount() > 0)
                     {
                         //Heal
-                        target->CastCustomSpell(target, 33778, &m_modifier.m_amount, NULL, NULL, true, NULL, this, GetCasterGUID());
+                        target->CastCustomSpell(target, 33778, &m_modifier.m_amount, NULL, NULL, true, NULL, this, GetCasterGuid());
 
                         //Return mana
                         if (Unit* caster = GetCaster())
@@ -8717,7 +8717,7 @@ void Aura::PeriodicDummyTick()
                     Unit *caster = GetCaster();
 
                     if (caster && target)
-                        caster->CastSpell(target, (spell->Id == 62717) ? 65722 : 65723, true, 0, this, this->GetCasterGUID(), this->GetSpellProto());
+                        caster->CastSpell(target, (spell->Id == 62717) ? 65722 : 65723, true, 0, this, GetCasterGuid(), GetSpellProto());
                     return;
                 }
             // Exist more after, need add later
@@ -9096,7 +9096,30 @@ void Aura::HandleAuraOpenStable(bool apply, bool Real)
 
     // client auto close stable dialog at !apply aura
 }
+/* FEANOR: CHECK
+void Aura::HandleAuraMirrorImage(bool Apply, bool Real)
+{
+    if (!Real)
+        return;
 
+    Unit* target = GetTarget();
+
+    if (Apply)
+    {
+        Unit* caster = GetCaster();
+        if (!caster)
+            return;
+        // Set display id
+        target->SetDisplayId(caster->GetDisplayId());
+        target->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_MIRROR_IMAGE);
+    }
+    else
+    {
+        target->SetDisplayId(target->GetNativeDisplayId());
+        target->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_MIRROR_IMAGE);
+    }
+}
+*/
 void Aura::HandleAuraMirrorImage(bool apply, bool Real)
 {
     if (!Real)
@@ -10366,7 +10389,7 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
             if(GetSpellProto()->SpellFamilyFlags2 & 0x2)
             {
                 // Can't proc on self
-                if (GetCasterGUID() == m_target->GetGUID())
+                if (GetCasterGuid() == m_target->GetObjectGuid())
                     return;
                 Unit * caster = GetCaster();
                 if (!caster)
@@ -11020,29 +11043,6 @@ void Aura::HandleAuraModReflectSpells(bool Apply, bool Real)
     }
 }
 
-void Aura::HandleAuraMirrorImage(bool Apply, bool Real)
-{
-    if (!Real)
-        return;
-
-    Unit* target = GetTarget();
-
-    if (Apply)
-    {
-        Unit* caster = GetCaster();
-        if (!caster)
-            return;
-        // Set display id
-        target->SetDisplayId(caster->GetDisplayId());
-        target->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_MIRROR_IMAGE);
-    }
-    else
-    {
-        target->SetDisplayId(target->GetNativeDisplayId());
-        target->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_MIRROR_IMAGE);
-    }
-}
-
 void Aura::HandleAuraLinked(bool apply, bool Real)
 {
     if (!Real)
@@ -11062,29 +11062,32 @@ void Aura::HandleAuraLinked(bool apply, bool Real)
             caster->CastSpell(target, GetSpellProto()->EffectTriggerSpell[m_effIndex],true, NULL, this);
     }
     else
-        target->RemoveAurasByCasterSpell(GetSpellProto()->EffectTriggerSpell[m_effIndex], GetCasterGUID());
+        target->RemoveAurasByCasterSpell(GetSpellProto()->EffectTriggerSpell[m_effIndex], GetCasterGuid());
         //target->RemoveAura(GetSpellProto()->EffectTriggerSpell[m_effIndex], GetCasterGUID(), 0, AuraRemoveMode(aurApp->GetRemoveMode()));
 }
 
-void Aura::HandleAuraSetVehicle(bool apply, bool Real)
+void Aura::HandleAuraSetVehicle(bool apply, bool real)
 {
-    if(!Real)
+    if (!real)
         return;
 
-    Unit * target = GetTarget();
+    Unit* target = GetTarget();
 
     if (target->GetTypeId() != TYPEID_PLAYER || !target->IsInWorld())
         return;
 
     uint32 vehicleId = GetMiscValue();
 
+    if (vehicleId == 0)
+        return;
+
     if (apply)
     {
-        if (!target->CreateVehicleKit(vehicleId))
-            return;
+        target->SetVehicleId(vehicleId);
     }
-    else if (target->GetVehicleKit())
-        target->RemoveVehicleKit();
+    else
+        if (target->GetVehicleKit())
+            target->RemoveVehicleKit();
 
     WorldPacket data(SMSG_SET_VEHICLE_REC_ID, target->GetPackGUID().size()+4);
     data.appendPackGUID(target->GetGUID());

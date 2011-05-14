@@ -703,14 +703,13 @@ class ObjectMgr
             return NULL;
         }
 
-		// FEANOR: CHECK VEHICLE AND RELATED
-        /*VehicleAccessoryList const* GetVehicleAccessoryList(uint32 uiEntry) const
+        VehicleAccessoryList const* GetVehicleAccessoryList(uint32 uiEntry) const
         {
             VehicleAccessoryMap::const_iterator itr = m_VehicleAccessoryMap.find(uiEntry);
             if (itr != m_VehicleAccessoryMap.end())
                 return &itr->second;
             return NULL;
-        }*/
+        }
 
         void LoadArenaTeams();
         void LoadGroups();

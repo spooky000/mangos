@@ -1331,8 +1331,8 @@ bool Creature::CreateFromProto(uint32 guidlow, CreatureInfo const* cinfo, Team t
         return false;
 
     // Checked at startup
-    if (GetCreatureInfo()->VehicleId)
-        CreateVehicleKit(GetCreatureInfo()->VehicleId);
+    if (GetCreatureInfo()->vehicleId)
+        SetVehicleId(GetCreatureInfo()->vehicleId);
 
     return true;
 }

@@ -1170,7 +1170,6 @@ bool ChatHandler::HandleDebugEnterVehicleCommand(char* args)
     return true;
 }
 
-
 bool ChatHandler::HandleDebugSetVehicleIdCommand(char* args)
 {
     Unit* target = getSelectedUnit();
@@ -1181,7 +1180,8 @@ bool ChatHandler::HandleDebugSetVehicleIdCommand(char* args)
         return false;
     }
 
-    uint32 vehicleId;
+    // FEANOR: CHECK
+    /*uint32 vehicleId;
     if (!ExtractUInt32(&args, vehicleId))
         return false;
 
@@ -1195,5 +1195,5 @@ bool ChatHandler::HandleDebugSetVehicleIdCommand(char* args)
 
     target->RemoveVehicleKit();
     target->CreateVehicleKit(vehicleId);
-    return true;
+    return true;*/
 }

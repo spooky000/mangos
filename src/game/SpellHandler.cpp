@@ -623,6 +623,8 @@ void WorldSession::HandleSpellClick( WorldPacket & recv_data )
     }
 }
 
+// FEANOR: CHECK
+/*
 void WorldSession::HandleMirrorImageDataRequest( WorldPacket & recv_data )
 {
     uint64 guid;
@@ -710,6 +712,7 @@ void WorldSession::HandleMirrorImageDataRequest( WorldPacket & recv_data )
     }
     SendPacket( &data );
 }
+*/
 
 void WorldSession::HandleUpdateProjectilePosition(WorldPacket& recvPacket)
 {

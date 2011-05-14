@@ -3537,7 +3537,7 @@ SpellMissInfo Unit::SpellHitResult(Unit *pVictim, SpellEntry const *spell, bool 
         // Improved Spell Reflection
         // HACK! tooltip says 20yards, but no such spell in dbc with such data :/
         if (Aura *aura = pVictim->GetAura(59725, EFFECT_INDEX_0))
-            if (Unit *aura_caster = GetMap()->GetUnit(aura->GetCasterGUID()))
+            if (Unit *aura_caster = GetMap()->GetUnit(aura->GetCasterGuid()))
                 if (!pVictim->IsInRange(aura_caster, 0.0f, 20.0f))
                     reflectchance -= aura->GetModifier()->m_amount;
 
@@ -5088,17 +5088,17 @@ void Unit::RemoveAuraHolderDueToSpellByDispel(uint32 spellId, uint32 stackAmount
     // Lifebloom
     else if (spellEntry->SpellFamilyName == SPELLFAMILY_DRUID && spellEntry->SpellFamilyFlags & UI64LIT(0x1000000000))
     {
-        if (Aura* hot = GetAura(SPELL_AURA_DUMMY, SPELLFAMILY_DRUID, UI64LIT(0x1000000000), 0x00000000, casterGUID))
+        if (Aura* hot = GetAura(SPELL_AURA_DUMMY, SPELLFAMILY_DRUID, UI64LIT(0x1000000000), 0x00000000, casterGuid))
         {
             if (Unit* caster = hot->GetCaster())
             {
                 // final heal
                 int32 healamount = hot->GetModifier()->m_amount/hot->GetStackAmount();
-                CastCustomSpell(this, 33778, &(healamount), NULL, NULL, true, NULL, hot, casterGUID);
+                CastCustomSpell(this, 33778, &(healamount), NULL, NULL, true, NULL, hot, casterGuid);
 
                 // mana
                 int32 returnmana = (spellEntry->ManaCostPercentage * caster->GetCreateMana() / 100) / 2;
-                caster->CastCustomSpell(caster, 64372, &returnmana, NULL, NULL, true, NULL, hot, casterGUID);
+                caster->CastCustomSpell(caster, 64372, &returnmana, NULL, NULL, true, NULL, hot, casterGuid);
             }
         }
     }
@@ -8551,22 +8551,11 @@ void Unit::Mount(uint32 mount, uint32 spellId, uint32 vehicleId, uint32 creature
 
         if (vehicleId)
         {
-            if (CreateVehicleKit(vehicleId))
-            {
-                GetVehicleKit()->Reset();
+            SetVehicleId(vehicleId);
+            GetVehicleKit()->Reset();
 
-                // Send others that we now have a vehicle
-                WorldPacket data(SMSG_SET_VEHICLE_REC_ID, 8+4);
-                data << GetPackGUID();
-                data << uint32(vehicleId);
-                SendMessageToSet(&data, true);
-
-                data.Initialize(SMSG_ON_CANCEL_EXPECTED_RIDE_VEHICLE_AURA, 0);
-                ((Player*)this)->GetSession()->SendPacket(&data);
-
-                // mounts can also have accessories
-                GetVehicleKit()->InstallAllAccessories(creatureEntry);
-            }
+            // mounts can also have accessories
+            GetVehicleKit()->InstallAllAccessories(creatureEntry);
         }
     }
 }
@@ -11151,8 +11140,8 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
                 if (Group* group = ((Player*)pImpSRCaster)->GetGroup())
                     for(GroupReference *itr = group->GetFirstMember(); itr != NULL; itr = itr->next())
                         if (Player* member = itr->getSource())
-                            if (SpellAuraHolder* pAuraHolder = member->GetSpellAuraHolder(59725, 0) )
-                                if (pAuraHolder->GetCaster() && pAuraHolder->GetCaster()->GetGUID() == pImpSRCaster->GetGUID() )
+                            if (SpellAuraHolder* pAuraHolder = member->GetSpellAuraHolder(59725, ObjectGuid()) )
+                                if (pAuraHolder->GetCaster() && pAuraHolder->GetCaster()->GetObjectGuid() == pImpSRCaster->GetObjectGuid() )
                                     member->RemoveSpellAuraHolder(pAuraHolder);
 
         triggeredByHolder->SetInUse(false);
@@ -11901,18 +11890,6 @@ struct SetPvPHelper
     bool state;
 };
 
-bool Unit::CreateVehicleKit(uint32 vehicleId)
-{
-    VehicleEntry const *vehicleInfo = sVehicleStore.LookupEntry(vehicleId);
-
-    if (!vehicleInfo)
-        return false;
-
-    m_pVehicleKit = new VehicleKit(this, vehicleInfo);
-    m_updateFlag |= UPDATEFLAG_VEHICLE;
-    return true;
-}
-
 void Unit::RemoveVehicleKit()
 {
     if (!m_pVehicleKit)
@@ -11920,8 +11897,8 @@ void Unit::RemoveVehicleKit()
 
     m_pVehicleKit->RemoveAllPassengers();
 
-    delete m_pVehicleKit;
-    m_pVehicleKit = NULL;
+//    delete m_pVehicleKit;
+//    m_pVehicleKit = NULL;
 
     m_updateFlag &= ~UPDATEFLAG_VEHICLE;
     RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_SPELLCLICK);
@@ -11970,8 +11947,6 @@ void Unit::EnterVehicle(VehicleKit *vehicle, int8 seatId)
 
     InterruptNonMeleeSpells(false);
     RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
-    RemoveSpellsCausingAura(SPELL_AURA_MOD_SHAPESHIFT);
-    RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
 
     if (!vehicle->AddPassenger(this, seatId))
         return;
