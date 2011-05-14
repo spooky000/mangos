@@ -10754,9 +10754,9 @@ bool Aura::IsEffectStacking()
 {
     SpellEntry const *spellProto = GetSpellProto();
 
-    // generic check
+    /*// generic check
     if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_DEBUFF | SPELL_ATTR_EX6_NO_STACK_BUFF)
-        return false;
+        return false;*/
 
     // scrolls don't stack
     if (GetSpellSpecific(spellProto->Id) == SPELL_SCROLL)
