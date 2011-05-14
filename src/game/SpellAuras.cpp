@@ -10766,7 +10766,6 @@ bool Aura::IsEffectStacking()
     switch(GetModifier()->m_auraname)
     {
         case SPELL_AURA_MOD_HIT_CHANCE:                                 // Insect Swarm / Scorpid Sting
-        case SPELL_AURA_HASTE_SPELLS:                                   // Slow / Curse of Tongues
             if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_DEBUFF)
                 return false;
             break;
