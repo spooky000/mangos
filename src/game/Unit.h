@@ -1723,6 +1723,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         float m_threatModifier[MAX_SPELL_SCHOOL];
         float m_modAttackSpeedPct[MAX_ATTACK + 2];
         float m_modSpellSpeedPctNeg;
+        float m_modSpellSpeedPctPos;
 
         // Event handler
         EventProcessor m_Events;
