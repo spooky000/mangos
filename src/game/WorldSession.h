@@ -26,6 +26,8 @@
 #include "Common.h"
 #include "SharedDefines.h"
 #include "ObjectGuid.h"
+#include "AuctionHouseMgr.h"
+#include "Item.h"
 
 struct ItemPrototype;
 struct AuctionEntry;
@@ -350,17 +352,21 @@ class MANGOS_DLL_SPEC WorldSession
         void SendRefundInfo(uint64 GUID);
 
         //auction
-        void SendAuctionHello(Unit * unit);
-        void SendAuctionCommandResult( uint32 auctionId, uint32 Action, uint32 ErrorCode, uint32 bidError = 0);
-        void SendAuctionBidderNotification( uint32 location, uint32 auctionId, ObjectGuid bidderGuid, uint32 bidSum, uint32 diff, uint32 item_template);
-        void SendAuctionOwnerNotification( AuctionEntry * auction );
-        void SendAuctionOutbiddedMail( AuctionEntry * auction, uint32 newPrice );
-        void SendAuctionCancelledToBidderMail( AuctionEntry* auction );
+        void SendAuctionHello(Unit *unit);
+        void SendAuctionCommandResult(AuctionEntry *auc, AuctionAction Action, AuctionError ErrorCode, InventoryResult invError = EQUIP_ERR_OK);
+        void SendAuctionBidderNotification(AuctionEntry *auction);
+        void SendAuctionOwnerNotification(AuctionEntry *auction);
+        void SendAuctionRemovedNotification(AuctionEntry* auction);
+        void SendAuctionOutbiddedMail(AuctionEntry *auction);
+        void SendAuctionCancelledToBidderMail(AuctionEntry *auction);
+        void BuildListAuctionItems(std::list<AuctionEntry*> &auctions, WorldPacket& data, std::wstring const& searchedname, uint32 listfrom, uint32 levelmin,
+            uint32 levelmax, uint32 usable, uint32 inventoryType, uint32 itemClass, uint32 itemSubClass, uint32 quality, uint32& count, uint32& totalcount, bool isFull);
+
         AuctionHouseEntry const* GetCheckedAuctionHouseForAuctioneer(ObjectGuid guid);
 
         //Item Enchantment
-        void SendEnchantmentLog(uint64 Target, uint64 Caster,uint32 ItemID,uint32 SpellID);
-        void SendItemEnchantTimeUpdate(uint64 Playerguid, uint64 Itemguid,uint32 slot,uint32 Duration);
+        void SendEnchantmentLog(ObjectGuid targetGuid, ObjectGuid casterGuid, uint32 itemId, uint32 spellId);
+        void SendItemEnchantTimeUpdate(ObjectGuid playerGuid, ObjectGuid itemGuid, uint32 slot, uint32 duration);
 
         //Taxi
         void SendTaxiStatus(ObjectGuid guid);
@@ -847,8 +853,8 @@ class MANGOS_DLL_SPEC WorldSession
         void HandleCalendarGetNumPending(WorldPacket& recv_data);
 
         void HandleSpellClick(WorldPacket& recv_data);
-        void HandleMirrorImageDataRequest(WorldPacket & recv_data);
-        void HandleUpdateProjectilePosition(WorldPacket & recv_data);
+        void HandleGetMirrorimageData(WorldPacket& recv_data);
+		void HandleUpdateProjectilePosition(WorldPacket & recv_data);
         void HandleAlterAppearanceOpcode(WorldPacket& recv_data);
         void HandleRemoveGlyphOpcode(WorldPacket& recv_data);
         void HandleCharCustomizeOpcode(WorldPacket& recv_data);

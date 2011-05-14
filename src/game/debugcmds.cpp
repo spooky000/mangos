@@ -19,7 +19,6 @@
 #include "Common.h"
 #include "Database/DatabaseEnv.h"
 #include "WorldPacket.h"
-#include "Vehicle.h"
 #include "Player.h"
 #include "Opcodes.h"
 #include "Chat.h"
@@ -93,7 +92,7 @@ bool ChatHandler::HandleDebugSendEquipErrorCommand(char* args)
         return false;
 
     uint8 msg = atoi(args);
-    m_session->GetPlayer()->SendEquipError(msg, NULL, NULL);
+    m_session->GetPlayer()->SendEquipError(InventoryResult(msg), NULL, NULL);
     return true;
 }
 
@@ -103,7 +102,7 @@ bool ChatHandler::HandleDebugSendSellErrorCommand(char* args)
         return false;
 
     uint8 msg = atoi(args);
-    m_session->GetPlayer()->SendSellError(msg, 0, 0, 0);
+    m_session->GetPlayer()->SendSellError(SellResult(msg), 0, ObjectGuid(), 0);
     return true;
 }
 
@@ -113,7 +112,7 @@ bool ChatHandler::HandleDebugSendBuyErrorCommand(char* args)
         return false;
 
     uint8 msg = atoi(args);
-    m_session->GetPlayer()->SendBuyError(msg, 0, 0, 0);
+    m_session->GetPlayer()->SendBuyError(BuyResult(msg), 0, 0, 0);
     return true;
 }
 
@@ -307,7 +306,7 @@ bool ChatHandler::HandleDebugSendChatMsgCommand(char* args)
         return false;
 
     WorldPacket data;
-    ChatHandler::FillMessageData(&data, m_session, type, 0, "chan", m_session->GetPlayer()->GetGUID(), msg, m_session->GetPlayer());
+    ChatHandler::FillMessageData(&data, m_session, type, 0, "chan", m_session->GetPlayer()->GetObjectGuid(), msg, m_session->GetPlayer());
     m_session->SendPacket(&data);
     return true;
 }
@@ -529,7 +528,7 @@ bool ChatHandler::HandleDebugGetItemStateCommand(char* args)
                         error = true; continue;
                     }
 
-                    if (item2->GetOwnerGuid() != player->GetGUID())
+                    if (item2->GetOwnerGuid() != player->GetObjectGuid())
                     {
                         PSendSysMessage("%s in bag %u at slot %u owner (%s) and inventory owner (%s) don't match!",
                             item2->GetGuidStr().c_str(), bag->GetSlot(), item2->GetSlot(),

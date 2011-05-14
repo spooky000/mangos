@@ -221,7 +221,7 @@ void Object::BuildValuesUpdateBlockForPlayer(UpdateData *data, Player *target) c
 
 void Object::BuildOutOfRangeUpdateBlock(UpdateData * data) const
 {
-    data->AddOutOfRangeGUID(GetGUID());
+    data->AddOutOfRangeGUID(GetObjectGuid());
 }
 
 void Object::DestroyForPlayer( Player *target, bool anim ) const
@@ -238,9 +238,9 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
 {
     uint16 moveFlags2 = (isType(TYPEMASK_UNIT) ? ((Unit*)this)->m_movementInfo.GetMovementFlags2() : MOVEFLAG2_NONE);
 
-    if(GetTypeId() == TYPEID_UNIT)
+    /*if(GetTypeId() == TYPEID_UNIT)
         if(((Creature*)this)->GetVehicleKit())
-            moveFlags2 |= MOVEFLAG2_ALLOW_PITCHING;         // always allow pitch
+            moveFlags2 |= MOVEFLAG2_ALLOW_PITCHING;         // always allow pitch - FEANOR TOCHECK */
 
     *data << uint16(updateFlags);                           // update flags
 
@@ -522,9 +522,9 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
     }
 
     // 0x80
-    if(updateFlags & UPDATEFLAG_VEHICLE)
+    if (updateFlags & UPDATEFLAG_VEHICLE)
     {
-        *data << uint32(((Unit*)this)->GetVehicleKit()->GetVehicleId());  // vehicle id
+        *data << uint32(((Unit*)this)->GetVehicleInfo()->GetEntry()->m_ID); // vehicle id
         *data << float(((WorldObject*)this)->GetOrientation());
     }
 
@@ -623,7 +623,7 @@ void Object::BuildValuesUpdate(uint8 updatetype, ByteBuffer * data, UpdateMask *
                     if (IsPerCasterAuraState)
                     {
                         // IsPerCasterAuraState set if related pet caster aura state set already
-                        if (((Unit*)this)->HasAuraStateForCaster(AURA_STATE_CONFLAGRATE,target->GetGUID()))
+                        if (((Unit*)this)->HasAuraStateForCaster(AURA_STATE_CONFLAGRATE, target->GetObjectGuid()))
                             *data << m_uint32Values[index];
                         else
                             *data << (m_uint32Values[index] & ~(1 << (AURA_STATE_CONFLAGRATE-1)));
@@ -1646,17 +1646,17 @@ void WorldObject::SendMessageToSetExcept(WorldPacket *data, Player const* skippe
     }
 }
 
-void WorldObject::SendObjectDeSpawnAnim(uint64 guid)
+void WorldObject::SendObjectDeSpawnAnim(ObjectGuid guid)
 {
     WorldPacket data(SMSG_GAMEOBJECT_DESPAWN_ANIM, 8);
-    data << uint64(guid);
+    data << ObjectGuid(guid);
     SendMessageToSet(&data, true);
 }
 
-void WorldObject::SendGameObjectCustomAnim(uint64 guid)
+void WorldObject::SendGameObjectCustomAnim(ObjectGuid guid)
 {
     WorldPacket data(SMSG_GAMEOBJECT_CUSTOM_ANIM, 8+4);
-    data << uint64(guid);
+    data << ObjectGuid(guid);
     data << uint32(0);                                      // not known what this is
     SendMessageToSet(&data, true);
 }
@@ -1701,7 +1701,7 @@ Creature* WorldObject::SummonCreature(uint32 id, float x, float y, float z, floa
     if (x == 0.0f && y == 0.0f && z == 0.0f)
         pos = CreatureCreatePos(this, GetOrientation(), CONTACT_DISTANCE, ang);
 
-    if (!pCreature->Create(GetMap()->GenerateLocalLowGuid(HIGHGUID_UNIT), pos, cinfo, team))
+    if (!pCreature->Create(GetMap()->GenerateLocalLowGuid(cinfo->GetHighGuid()), pos, cinfo, team))
     {
         delete pCreature;
         return NULL;

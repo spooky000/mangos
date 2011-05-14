@@ -19,7 +19,6 @@
 #include "Map.h"
 #include "MapManager.h"
 #include "Player.h"
-#include "Vehicle.h"
 #include "GridNotifiers.h"
 #include "Log.h"
 #include "GridStates.h"
@@ -1002,7 +1001,7 @@ void Map::RemoveAllObjectsInRemoveList()
             case TYPEID_CORPSE:
             {
                 // ??? WTF
-                Corpse* corpse = GetCorpse(obj->GetGUID());
+                Corpse* corpse = GetCorpse(obj->GetObjectGuid());
                 if (!corpse)
                     sLog.outError("Try delete corpse/bones %u that not in map", obj->GetGUIDLow());
                 else
@@ -1703,13 +1702,11 @@ void Map::ScriptsProcess()
                     break;
                 }
                 case HIGHGUID_UNIT:
+                case HIGHGUID_VEHICLE:
                     source = GetCreature(step.sourceGuid);
                     break;
                 case HIGHGUID_PET:
                     source = GetPet(step.sourceGuid);
-                    break;
-                case HIGHGUID_VEHICLE:
-                    source = GetCreature(step.sourceGuid);
                     break;
                 case HIGHGUID_PLAYER:
                     source = HashMapHolder<Player>::Find(step.sourceGuid);
@@ -1736,13 +1733,11 @@ void Map::ScriptsProcess()
             switch(step.targetGuid.GetHigh())
             {
                 case HIGHGUID_UNIT:
+                case HIGHGUID_VEHICLE:
                     target = GetCreature(step.targetGuid);
                     break;
                 case HIGHGUID_PET:
                     target = GetPet(step.targetGuid);
-                    break;
-                case HIGHGUID_VEHICLE:
-                    target = GetCreature(step.targetGuid);
                     break;
                 case HIGHGUID_PLAYER:
                     target = HashMapHolder<Player>::Find(step.targetGuid);
@@ -3082,9 +3077,9 @@ Player* Map::GetPlayer(ObjectGuid guid)
 }
 
 /**
- * Function return creature (non-pet and then most summoned by spell creatures) that in world at CURRENT map 
+ * Function return creature (non-pet and then most summoned by spell creatures) that in world at CURRENT map
  *
- * @param guid must be creature guid (HIGHGUID_UNIT)
+ * @param guid must be creature or vehicle guid (HIGHGUID_UNIT HIGHGUID_VEHICLE)
  */
 Creature* Map::GetCreature(ObjectGuid guid)
 {
@@ -3092,15 +3087,13 @@ Creature* Map::GetCreature(ObjectGuid guid)
 }
 
 /**
+ * Function return pet that in world at CURRENT map
  *
  * @param guid must be pet guid (HIGHGUID_PET)
  */
-
 Pet* Map::GetPet(ObjectGuid guid)
 {
     return m_objectsStore.find<Pet>(guid.GetRawValue(), (Pet*)NULL);
-    /*Pet* pet = ObjectAccessor::FindPet(guid);         // return only in world pets
-    return pet && pet->GetMap() == this ? pet : NULL;*/
 }
 
 /**
@@ -3141,7 +3134,7 @@ Creature* Map::GetAnyTypeCreature(ObjectGuid guid)
  */
 GameObject* Map::GetGameObject(ObjectGuid guid)
 {
-    return m_objectsStore.find<GameObject>(guid.GetRawValue(), (GameObject*)NULL);
+    return m_objectsStore.find<GameObject>(guid, (GameObject*)NULL);
 }
 
 /**
@@ -3151,7 +3144,7 @@ GameObject* Map::GetGameObject(ObjectGuid guid)
  */
 DynamicObject* Map::GetDynamicObject(ObjectGuid guid)
 {
-    return m_objectsStore.find<DynamicObject>(guid.GetRawValue(), (DynamicObject*)NULL);
+    return m_objectsStore.find<DynamicObject>(guid, (DynamicObject*)NULL);
 }
 
 /**

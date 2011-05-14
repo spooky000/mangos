@@ -198,17 +198,6 @@ void WorldSession::HandleMoveWorldportAckOpcode()
         GetPlayer()->m_taxi.ClearTaxiDestinations();
     }
 
-    // resurrect character at enter into instance where his corpse exist after add to map
-    Corpse *corpse = GetPlayer()->GetCorpse();
-    if (corpse && corpse->GetType() != CORPSE_BONES && corpse->GetMapId() == GetPlayer()->GetMapId())
-    {
-        if( mEntry->IsDungeon() )
-        {
-            GetPlayer()->ResurrectPlayer(0.5f);
-            GetPlayer()->SpawnCorpseBones();
-        }
-    }
-
     if (mInstance)
     {
         Difficulty diff = GetPlayer()->GetDifficulty(mEntry->IsRaid());
@@ -506,6 +495,25 @@ void WorldSession::HandleMoveNotActiveMoverOpcode(WorldPacket &recv_data)
     _player->m_movementInfo = mi;
 }
 
+void WorldSession::HandleDismissControlledVehicle(WorldPacket &recv_data)
+{
+    DEBUG_LOG("WORLD: Recvd CMSG_DISMISS_CONTROLLED_VEHICLE");
+    recv_data.hexlike();
+
+    ObjectGuid guid;
+    MovementInfo mi;
+
+    recv_data >> guid.ReadAsPacked();
+    recv_data >> mi;
+
+    ObjectGuid vehicleGUID = _player->GetCharmGuid();
+
+    if (vehicleGUID.IsEmpty())                              // something wrong here...
+        return;
+
+    _player->m_movementInfo = mi;
+}
+
 void WorldSession::HandleMountSpecialAnimOpcode(WorldPacket& /*recvdata*/)
 {
     //DEBUG_LOG("WORLD: Recvd CMSG_MOUNTSPECIAL_ANIM");
@@ -580,12 +588,12 @@ void WorldSession::HandleMoveWaterWalkAck(WorldPacket& recv_data)
 
 void WorldSession::HandleSummonResponseOpcode(WorldPacket& recv_data)
 {
-    if(!_player->isAlive() || _player->isInCombat() )
+    if (!_player->isAlive() || _player->isInCombat())
         return;
 
-    uint64 summoner_guid;
+    ObjectGuid summonerGuid;
     bool agree;
-    recv_data >> summoner_guid;
+    recv_data >> summonerGuid;
     recv_data >> agree;
 
     _player->SummonIfPossible(agree);

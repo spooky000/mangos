@@ -750,7 +750,7 @@ void Group::StartLootRool(Creature* lootTarget, LootMethod method, Loot* loot, u
 
     LootItem const& lootItem =  loot->items[itemSlot];
 
-    Roll* r = new Roll(lootTarget->GetGUID(), method, lootItem);
+    Roll* r = new Roll(lootTarget->GetObjectGuid(), method, lootItem);
 
     //a vector is filled with only near party members
     for(GroupReference *itr = GetFirstMember(); itr != NULL; itr = itr->next())
@@ -843,7 +843,7 @@ void Group::CountTheRoll(Rolls::iterator& rollI)
 
                 ItemPosCountVec dest;
                 LootItem *item = &(roll->getLoot()->items[roll->itemSlot]);
-                uint8 msg = player->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count );
+                InventoryResult msg = player->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count );
                 if ( msg == EQUIP_ERR_OK )
                 {
                     item->is_looted = true;
@@ -899,7 +899,7 @@ void Group::CountTheRoll(Rolls::iterator& rollI)
                 if(rollvote == ROLL_GREED)
                 {
                     ItemPosCountVec dest;
-                    uint8 msg = player->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count );
+                    InventoryResult msg = player->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count );
                     if ( msg == EQUIP_ERR_OK )
                     {
                         item->is_looted = true;
@@ -1527,7 +1527,7 @@ void Group::UpdateLooterGuid( Creature* creature, bool ifneed )
             {
                 if (pl->IsWithinDist(creature, sWorld.getConfig(CONFIG_FLOAT_GROUP_XP_DISTANCE), false))
                 {
-                    bool refresh = pl->GetLootGUID() == creature->GetGUID();
+                    bool refresh = pl->GetLootGuid() == creature->GetObjectGuid();
 
                     //if(refresh)                           // update loot for new looter
                     //    pl->GetSession()->DoLootRelease(pl->GetLootGUID());
@@ -1548,7 +1548,7 @@ void Group::UpdateLooterGuid( Creature* creature, bool ifneed )
         {
             if (pl->IsWithinDist(creature, sWorld.getConfig(CONFIG_FLOAT_GROUP_XP_DISTANCE), false))
             {
-                bool refresh = pl->GetLootGUID()==creature->GetGUID();
+                bool refresh = pl->GetLootGuid() == creature->GetObjectGuid();
 
                 //if(refresh)                               // update loot for new looter
                 //    pl->GetSession()->DoLootRelease(pl->GetLootGUID());

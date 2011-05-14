@@ -702,6 +702,12 @@ void ObjectMgr::LoadCreatureTemplates()
             const_cast<CreatureInfo*>(cInfo)->MovementType = IDLE_MOTION_TYPE;
         }
 
+        if (cInfo->vehicleId && !sVehicleStore.LookupEntry(cInfo->vehicleId))
+        {
+            sLog.outErrorDb("Creature (Entry: %u) has non-existing vehicle_id (%u), set to 0.", cInfo->Entry, cInfo->vehicleId);
+            const_cast<CreatureInfo*>(cInfo)->vehicleId = 0;
+        }
+
         if(cInfo->equipmentId > 0)                          // 0 no equipment
         {
             if(!GetEquipmentInfo(cInfo->equipmentId))
@@ -1648,17 +1654,17 @@ void ObjectMgr::RemoveGameobjectFromGrid(uint32 guid, GameObjectData const* data
 }
 
 // name must be checked to correctness (if received) before call this function
-uint64 ObjectMgr::GetPlayerGUIDByName(std::string name) const
+ObjectGuid ObjectMgr::GetPlayerGuidByName(std::string name) const
 {
-    uint64 guid = 0;
+    ObjectGuid guid;
 
     CharacterDatabase.escape_string(name);
 
     // Player name safe to sending to DB (checked at login) and this function using
     QueryResult *result = CharacterDatabase.PQuery("SELECT guid FROM characters WHERE name = '%s'", name.c_str());
-    if(result)
+    if (result)
     {
-        guid = ObjectGuid(HIGHGUID_PLAYER, (*result)[0].GetUInt32()).GetRawValue();
+        guid = ObjectGuid(HIGHGUID_PLAYER, (*result)[0].GetUInt32());
 
         delete result;
     }

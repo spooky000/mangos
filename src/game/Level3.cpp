@@ -650,7 +650,7 @@ bool ChatHandler::HandleReloadSpellScriptTargetCommand(char* /*args*/)
 
 bool ChatHandler::HandleReloadSpellTargetPositionCommand(char* /*args*/)
 {
-    sLog.outString( "Re-Loading Spell target coordinates..." );
+    sLog.outString( "Re-Loading spell target destination coordinates..." );
     sSpellMgr.LoadSpellTargetPositions();
     SendGlobalSysMessage("DB table `spell_target_position` (destination coordinates for spell targets) reloaded.");
     return true;
@@ -2485,7 +2485,7 @@ bool ChatHandler::HandleAddItemSetCommand(char* args)
         {
             found = true;
             ItemPosCountVec dest;
-            uint8 msg = plTarget->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, pProto->ItemId, 1 );
+            InventoryResult msg = plTarget->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, pProto->ItemId, 1 );
             if (msg == EQUIP_ERR_OK)
             {
                 Item* item = plTarget->StoreNewItem( dest, pProto->ItemId, true);
@@ -5867,7 +5867,7 @@ bool ChatHandler::HandlePDumpWriteCommand(char *args)
             return false;
         }
 
-        guid = sObjectMgr.GetPlayerGUIDByName(name);
+        guid = sObjectMgr.GetPlayerGuidByName(name);
         if (guid.IsEmpty())
         {
             PSendSysMessage(LANG_PLAYER_NOT_FOUND);
