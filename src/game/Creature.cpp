@@ -684,7 +684,7 @@ void Creature::Regenerate(Powers power)
         case POWER_ENERGY:
             if (GetObjectGuid().IsVehicle())
             {
-                if (VehicleEntry const* vehicleInfo = sVehicleStore.LookupEntry(GetCreatureInfo()->VehicleId))
+                if (VehicleEntry const* vehicleInfo = sVehicleStore.LookupEntry(GetCreatureInfo()->vehicleId))
                 {
 
                     switch (vehicleInfo->m_powerType)

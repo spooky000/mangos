@@ -3486,7 +3486,7 @@ void Aura::HandleAuraMounted(bool apply, bool Real)
         if (minfo)
             display_id = minfo->modelid;
 
-        target->Mount(display_id, GetId(), ci->VehicleId, GetMiscValue());
+        target->Mount(display_id, GetId(), ci->vehicleId, GetMiscValue());
     }
     else
     {
