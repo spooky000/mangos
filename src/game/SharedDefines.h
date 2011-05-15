@@ -264,7 +264,7 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_LEVEL_DAMAGE_CALCULATION       0x00080000            // 19 spelldamage depends on caster level
 #define SPELL_ATTR_STOP_ATTACK_TARGET             0x00100000            // 20 Stop attack after use this spell (and not begin attack if use)
 #define SPELL_ATTR_IMPOSSIBLE_DODGE_PARRY_BLOCK   0x00200000            // 21 Cannot be dodged/parried/blocked
-#define SPELL_ATTR_UNK22                          0x00400000            // 22
+#define SPELL_ATTR_SET_TRACKING_TARGET            0x00400000            // 22 SetTrackingTarget
 #define SPELL_ATTR_UNK23                          0x00800000            // 23 castable while dead?
 #define SPELL_ATTR_CASTABLE_WHILE_MOUNTED         0x01000000            // 24 castable while mounted
 #define SPELL_ATTR_DISABLED_WHILE_ACTIVE          0x02000000            // 25 Activate and start cooldown after aura fade or remove summoned creature or go
@@ -463,10 +463,10 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_EX6_UNK20                      0x00100000            // 20
 #define SPELL_ATTR_EX6_UNK21                      0x00200000            // 21
 #define SPELL_ATTR_EX6_UNK22                      0x00400000            // 22
-#define SPELL_ATTR_EX6_UNK23                      0x00800000            // 23 not set in 3.0.3
+#define SPELL_ATTR_EX6_NO_STACK_DEBUFF            0x00800000            // 23 not set in 3.0.3
 #define SPELL_ATTR_EX6_UNK24                      0x01000000            // 24 not set in 3.0.3
 #define SPELL_ATTR_EX6_UNK25                      0x02000000            // 25 not set in 3.0.3
-#define SPELL_ATTR_EX6_UNK26                      0x04000000            // 26 not set in 3.0.3
+#define SPELL_ATTR_EX6_NO_STACK_BUFF              0x04000000            // 26 not set in 3.0.3
 #define SPELL_ATTR_EX6_UNK27                      0x08000000            // 27 not set in 3.0.3
 #define SPELL_ATTR_EX6_UNK28                      0x10000000            // 28 not set in 3.0.3
 #define SPELL_ATTR_EX6_NO_DMG_MODS                0x20000000            // 29 do not apply damage mods (usually in cases where it has already been applied)
@@ -1086,8 +1086,9 @@ enum WeaponAttackType
     RANGED_ATTACK = 2,
 
     // leave these greater than or equal to MAX_ATTACK
-    NONSTACKING_MOD_MELEE = 3,
-    NONSTACKING_MOD_ALL = 4
+    NONSTACKING_POS_MOD_MELEE = 3,
+    NONSTACKING_NEG_MOD_MELEE = 4,
+    NONSTACKING_MOD_ALL = 5
 };
 
 #define MAX_ATTACK  3
@@ -1177,7 +1178,7 @@ enum Targets
     TARGET_UNIT_PASSENGER_5            = 101,
     TARGET_UNIT_PASSENGER_6            = 102,
     TARGET_UNIT_PASSENGER_7            = 103,
-    TARGET_IN_FRONT_OF_CASTER_90       = 104,
+    TARGET_IN_FRONT_OF_CASTER_30       = 104,
 };
 
 enum SpellMissInfo

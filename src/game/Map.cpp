@@ -19,7 +19,6 @@
 #include "Map.h"
 #include "MapManager.h"
 #include "Player.h"
-#include "Vehicle.h"
 #include "GridNotifiers.h"
 #include "Log.h"
 #include "GridStates.h"
@@ -139,7 +138,7 @@ template<>
 void Map::AddToGrid(Creature* obj, NGridType *grid, Cell const& cell)
 {
     // add to world object registry in grid
-    if(obj->IsPet())
+    if (obj->IsPet())
     {
         (*grid)(cell.CellX(), cell.CellY()).AddWorldObject<Creature>(obj);
         obj->SetCurrentCell(cell);
@@ -183,7 +182,7 @@ template<>
 void Map::RemoveFromGrid(Creature* obj, NGridType *grid, Cell const& cell)
 {
     // remove from world object registry in grid
-    if(obj->IsPet())
+    if (obj->IsPet())
     {
         (*grid)(cell.CellX(), cell.CellY()).RemoveWorldObject<Creature>(obj);
     }
@@ -445,7 +444,7 @@ void Map::Update(const uint32 &t_diff)
             WorldSession * pSession = plr->GetSession();
             MapSessionFilter updater(pSession);
 
-            pSession->Update(t_diff, updater);
+            pSession->Update(updater);
         }
     }
 
@@ -980,7 +979,7 @@ void Map::AddObjectToRemoveList(WorldObject *obj)
     MANGOS_ASSERT(obj->GetMapId()==GetId() && obj->GetInstanceId()==GetInstanceId());
 
     // need clean references at end of update cycle, NOT during it! called at Map::Remove
-    // obj->CleanupsBeforeDelete();                            // remove or simplify at least cross referenced links
+     obj->CleanupsBeforeDelete();                            // remove or simplify at least cross referenced links
 
     i_objectsToRemove.insert(obj);
     //DEBUG_LOG("Object (GUID: %u TypeId: %u ) added to removing list.",obj->GetGUIDLow(),obj->GetTypeId());
@@ -1002,7 +1001,7 @@ void Map::RemoveAllObjectsInRemoveList()
             case TYPEID_CORPSE:
             {
                 // ??? WTF
-                Corpse* corpse = GetCorpse(obj->GetGUID());
+                Corpse* corpse = GetCorpse(obj->GetObjectGuid());
                 if (!corpse)
                     sLog.outError("Try delete corpse/bones %u that not in map", obj->GetGUIDLow());
                 else
@@ -1628,7 +1627,7 @@ void Map::ScriptsStart(ScriptMapMap const& scripts, uint32 id, Object* source, O
     // prepare static data
     ObjectGuid sourceGuid = source->GetObjectGuid();
     ObjectGuid targetGuid = target ? target->GetObjectGuid() : ObjectGuid();
-    ObjectGuid ownerGuid  = (source->GetTypeId()==TYPEID_ITEM) ? ((Item*)source)->GetOwnerGuid() : ObjectGuid();
+    ObjectGuid ownerGuid  = source->isType(TYPEMASK_ITEM) ? ((Item*)source)->GetOwnerGuid() : ObjectGuid();
 
     ///- Schedule script execution for all scripts in the script map
     ScriptMap const *s2 = &(s->second);
@@ -1659,7 +1658,7 @@ void Map::ScriptCommandStart(ScriptInfo const& script, uint32 delay, Object* sou
     // prepare static data
     ObjectGuid sourceGuid = source->GetObjectGuid();
     ObjectGuid targetGuid = target ? target->GetObjectGuid() : ObjectGuid();
-    ObjectGuid ownerGuid  = (source->GetTypeId()==TYPEID_ITEM) ? ((Item*)source)->GetOwnerGuid() : ObjectGuid();
+    ObjectGuid ownerGuid  = source->isType(TYPEMASK_ITEM) ? ((Item*)source)->GetOwnerGuid() : ObjectGuid();
 
     ScriptAction sa;
     sa.sourceGuid = sourceGuid;
@@ -1691,7 +1690,7 @@ void Map::ScriptsProcess()
 
         Object* source = NULL;
 
-        if (!step.sourceGuid.IsEmpty())
+        if (step.sourceGuid)
         {
             switch(step.sourceGuid.GetHigh())
             {
@@ -1703,13 +1702,11 @@ void Map::ScriptsProcess()
                     break;
                 }
                 case HIGHGUID_UNIT:
+                case HIGHGUID_VEHICLE:
                     source = GetCreature(step.sourceGuid);
                     break;
                 case HIGHGUID_PET:
                     source = GetPet(step.sourceGuid);
-                    break;
-                case HIGHGUID_VEHICLE:
-                    source = GetCreature(step.sourceGuid);
                     break;
                 case HIGHGUID_PLAYER:
                     source = HashMapHolder<Player>::Find(step.sourceGuid);
@@ -1731,18 +1728,16 @@ void Map::ScriptsProcess()
 
         Object* target = NULL;
 
-        if (!step.targetGuid.IsEmpty())
+        if (step.targetGuid)
         {
             switch(step.targetGuid.GetHigh())
             {
                 case HIGHGUID_UNIT:
+                case HIGHGUID_VEHICLE:
                     target = GetCreature(step.targetGuid);
                     break;
                 case HIGHGUID_PET:
                     target = GetPet(step.targetGuid);
-                    break;
-                case HIGHGUID_VEHICLE:
-                    target = GetCreature(step.targetGuid);
                     break;
                 case HIGHGUID_PLAYER:
                     target = HashMapHolder<Player>::Find(step.targetGuid);
@@ -3082,25 +3077,23 @@ Player* Map::GetPlayer(ObjectGuid guid)
 }
 
 /**
- * Function return creature (non-pet and then most summoned by spell creatures) that in world at CURRENT map 
+ * Function return creature (non-pet and then most summoned by spell creatures) that in world at CURRENT map
  *
- * @param guid must be creature guid (HIGHGUID_UNIT)
+ * @param guid must be creature or vehicle guid (HIGHGUID_UNIT HIGHGUID_VEHICLE)
  */
 Creature* Map::GetCreature(ObjectGuid guid)
 {
-    return m_objectsStore.find<Creature>(guid.GetRawValue(), (Creature*)NULL);
+    return m_objectsStore.find<Creature>(guid, (Creature*)NULL);
 }
 
 /**
+ * Function return pet that in world at CURRENT map
  *
  * @param guid must be pet guid (HIGHGUID_PET)
  */
-
 Pet* Map::GetPet(ObjectGuid guid)
 {
-    return m_objectsStore.find<Pet>(guid.GetRawValue(), (Pet*)NULL);
-    /*Pet* pet = ObjectAccessor::FindPet(guid);         // return only in world pets
-    return pet && pet->GetMap() == this ? pet : NULL;*/
+    return m_objectsStore.find<Pet>(guid, (Pet*)NULL);
 }
 
 /**
@@ -3141,7 +3134,7 @@ Creature* Map::GetAnyTypeCreature(ObjectGuid guid)
  */
 GameObject* Map::GetGameObject(ObjectGuid guid)
 {
-    return m_objectsStore.find<GameObject>(guid.GetRawValue(), (GameObject*)NULL);
+    return m_objectsStore.find<GameObject>(guid, (GameObject*)NULL);
 }
 
 /**
@@ -3151,7 +3144,7 @@ GameObject* Map::GetGameObject(ObjectGuid guid)
  */
 DynamicObject* Map::GetDynamicObject(ObjectGuid guid)
 {
-    return m_objectsStore.find<DynamicObject>(guid.GetRawValue(), (DynamicObject*)NULL);
+    return m_objectsStore.find<DynamicObject>(guid, (DynamicObject*)NULL);
 }
 
 /**

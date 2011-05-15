@@ -26,7 +26,6 @@
 #include "TemporarySummon.h"
 #include "Totem.h"
 #include "Pet.h"
-#include "Vehicle.h"
 #include "GameObject.h"
 #include "Opcodes.h"
 #include "Chat.h"
@@ -915,8 +914,7 @@ bool ChatHandler::HandleGameObjectDeleteCommand(char* args)
         return false;
     }
 
-    ObjectGuid ownerGuid = obj->GetOwnerGuid();
-    if (!ownerGuid.IsEmpty())
+    if (ObjectGuid ownerGuid = obj->GetOwnerGuid())
     {
         Unit* owner = ObjectAccessor::GetUnit(*m_session->GetPlayer(), ownerGuid);
         if (!owner || !ownerGuid.IsPlayer())
@@ -1256,7 +1254,7 @@ bool ChatHandler::HandleGUIDCommand(char* /*args*/)
 {
     ObjectGuid guid = m_session->GetPlayer()->GetSelectionGuid();
 
-    if (guid.IsEmpty())
+    if (!guid)
     {
         SendSysMessage(LANG_NO_SELECTION);
         SetSentErrorMessage(true);
@@ -1605,7 +1603,6 @@ bool ChatHandler::HandleNpcAddCommand(char* args)
         return false;
 
     CreatureInfo const *cinfo = ObjectMgr::GetCreatureTemplate(id);
-    //FIXME: need vehicle support like GenerateStaticCreatureLowGuid when its will allowed static spawns
     if (!cinfo)
     {
         PSendSysMessage(LANG_COMMAND_INVALIDCREATUREID, id);
@@ -3521,7 +3518,7 @@ bool ChatHandler::HandleWpShowCommand(char* args)
             // (0.001) - There is no other way to compare C++ floats with mySQL floats
             // See also: http://dev.mysql.com/doc/refman/5.0/en/problems-with-float.html
             const char* maxDIFF = "0.01";
-            PSendSysMessage(LANG_WAYPOINT_NOTFOUNDSEARCH, target->GetGUID());
+            PSendSysMessage(LANG_WAYPOINT_NOTFOUNDSEARCH, target->GetObjectGuid().GetRawValue());
 
             result = WorldDatabase.PQuery("SELECT id, point, waittime, emote, spell, textid1, textid2, textid3, textid4, textid5, model1, model2 FROM creature_movement WHERE (abs(position_x - %f) <= %s ) and (abs(position_y - %f) <= %s ) and (abs(position_z - %f) <= %s )",
                 target->GetPositionX(), maxDIFF, target->GetPositionY(), maxDIFF, target->GetPositionZ(), maxDIFF);

@@ -70,7 +70,7 @@ void Pet::AddToWorld()
     ///- Register the pet for guid lookup
     if (!((Creature*)this)->IsInWorld())
     {
-        GetMap()->GetObjectsStore().insert<Pet>(GetGUID(), (Pet*)this);
+        GetMap()->GetObjectsStore().insert<Pet>(GetObjectGuid(), (Pet*)this);
         // if(!IsInWorld())
         sObjectAccessor.AddObject(this);
     }
@@ -83,7 +83,7 @@ void Pet::RemoveFromWorld()
     ///- Remove the pet from the accessor
     if (((Creature*)this)->IsInWorld())
     {
-        GetMap()->GetObjectsStore().erase<Pet>(GetGUID(), (Pet*)NULL);
+        GetMap()->GetObjectsStore().erase<Pet>(GetObjectGuid(), (Pet*)NULL);
         //if(IsInWorld())
         sObjectAccessor.RemoveObject(this);
     }
@@ -220,17 +220,9 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
     {
         case SUMMON_PET:
             petlevel=owner->getLevel();
-            SetByteValue(UNIT_FIELD_BYTES_0, 1, CLASS_MAGE);
-            SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
             break;
         case HUNTER_PET:
-            SetByteValue(UNIT_FIELD_BYTES_0, 1, CLASS_WARRIOR);
-            SetByteValue(UNIT_FIELD_BYTES_0, 2, GENDER_NONE);
-            setPowerType(POWER_FOCUS);
-            SetSheath(SHEATH_STATE_MELEE);
-            SetByteFlag(UNIT_FIELD_BYTES_2, 2, (fields[9].GetUInt8() == 0) ? UNIT_CAN_BE_ABANDONED : UNIT_CAN_BE_RENAMED | UNIT_CAN_BE_ABANDONED);
-            SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
-                                                            // this enables popup window (pet abandon, cancel)
+            SetByteFlag(UNIT_FIELD_BYTES_2, 2, fields[9].GetBool() ? UNIT_CAN_BE_ABANDONED : UNIT_CAN_BE_RENAMED | UNIT_CAN_BE_ABANDONED);
             SetMaxPower(POWER_HAPPINESS, GetCreatePowers(POWER_HAPPINESS));
             SetPower(POWER_HAPPINESS, fields[12].GetUInt32());
             setPowerType(POWER_FOCUS);
@@ -579,7 +571,7 @@ void Pet::Update(uint32 update_diff, uint32 diff)
             if (isControlled())
             {
                 GroupPetList m_groupPets = owner->GetPets();
-                if (m_groupPets.find(GetObjectGuid().GetRawValue()) == m_groupPets.end())
+                if (m_groupPets.find(GetObjectGuid()) == m_groupPets.end())
                 {
                     sLog.outError("Pet %d controlled, but not in list, removed.", GetGUID());
                     Unsummon(getPetType() == HUNTER_PET ? PET_SAVE_AS_DELETED : PET_SAVE_NOT_IN_SLOT, owner);
@@ -692,8 +684,6 @@ void Pet::Unsummon(PetSaveMode mode, Unit* owner /*= NULL*/)
     if (!owner)
         owner = GetOwner();
 
-    m_removed = true;
-
     CombatStop();
 
     if (owner)
@@ -772,7 +762,7 @@ void Pet::Unsummon(PetSaveMode mode, Unit* owner /*= NULL*/)
     }
 
     AddObjectToRemoveList();
-
+    m_removed = true;
 }
 
 void Pet::GivePetXP(uint32 xp)
@@ -895,6 +885,24 @@ bool Pet::InitStatsForLevel(uint32 petlevel, Unit* owner)
     if (!petlevel)
         petlevel = owner->getLevel();
 
+    switch (getPetType())
+    {
+        case SUMMON_PET:
+            SetByteValue(UNIT_FIELD_BYTES_0, 1, CLASS_MAGE);
+
+            // this enables popup window (pet dismiss, cancel)
+            SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
+            break;
+        case HUNTER_PET:
+            SetByteValue(UNIT_FIELD_BYTES_0, 1, CLASS_WARRIOR);
+            SetByteValue(UNIT_FIELD_BYTES_0, 2, GENDER_NONE);
+            SetSheath(SHEATH_STATE_MELEE);
+
+            // this enables popup window (pet abandon, cancel)
+            SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
+            break;
+    }
+
     SetLevel(petlevel);
 
     PetLevelInfo const* pInfo = sObjectMgr.GetPetLevelInfo(cinfo->Entry, petlevel);
@@ -957,6 +965,11 @@ bool Pet::InitStatsForLevel(uint32 petlevel, Unit* owner)
     {
         case SUMMON_PET:
         {
+            SetByteValue(UNIT_FIELD_BYTES_0, 1, CLASS_MAGE);
+
+            // this enables popup window (pet dismiss, cancel)
+            SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
+
             if (cinfo->family == CREATURE_FAMILY_GHOUL)
                 setPowerType(POWER_ENERGY);
             break;
@@ -965,6 +978,13 @@ bool Pet::InitStatsForLevel(uint32 petlevel, Unit* owner)
         {
             if (!pInfo)         //If no pet levelstats in DB - use 1 for default hunter pet
                 pInfo = sObjectMgr.GetPetLevelInfo(1, petlevel);
+
+            SetByteValue(UNIT_FIELD_BYTES_0, 1, CLASS_WARRIOR);
+            SetByteValue(UNIT_FIELD_BYTES_0, 2, GENDER_NONE);
+            SetSheath(SHEATH_STATE_MELEE);
+
+            // this enables popup window (pet abandon, cancel)
+            SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
 
             CreatureFamilyEntry const* cFamily = sCreatureFamilyStore.LookupEntry(cinfo->family);
             if(cFamily && cFamily->minScale > 0.0f && getPetType()==HUNTER_PET)
@@ -1129,7 +1149,7 @@ void Pet::_LoadSpellCooldowns()
         time_t curTime = time(NULL);
 
         WorldPacket data(SMSG_SPELL_COOLDOWN, (8+1+size_t(result->GetRowCount())*8));
-        data << GetGUID();
+        data << ObjectGuid(GetObjectGuid());
         data << uint8(0x0);                                 // flags (0x1, 0x2)
 
         do
@@ -1265,7 +1285,7 @@ void Pet::_LoadAuras(uint32 timediff)
         do
         {
             Field *fields = result->Fetch();
-            uint64 caster_guid = fields[0].GetUInt64();
+            ObjectGuid casterGuid = ObjectGuid(fields[0].GetUInt64());
             uint32 item_lowguid = fields[1].GetUInt32();
             uint32 spellid = fields[2].GetUInt32();
             uint32 stackcount = fields[3].GetUInt32();
@@ -1291,7 +1311,7 @@ void Pet::_LoadAuras(uint32 timediff)
             }
 
             // do not load single target auras (unless they were cast by the player)
-            if (caster_guid != GetGUID() && IsSingleTargetSpell(spellproto))
+            if (casterGuid != GetObjectGuid() && IsSingleTargetSpell(spellproto))
                 continue;
 
             if (remaintime != -1 && !IsPositiveSpell(spellproto))
@@ -1320,7 +1340,7 @@ void Pet::_LoadAuras(uint32 timediff)
                 stackcount = 1;
 
             SpellAuraHolder *holder = CreateSpellAuraHolder(spellproto, this, NULL);
-            holder->SetLoadedState(caster_guid, ObjectGuid(HIGHGUID_ITEM, item_lowguid), stackcount, remaincharges, maxduration, remaintime);
+            holder->SetLoadedState(casterGuid, ObjectGuid(HIGHGUID_ITEM, item_lowguid), stackcount, remaincharges, maxduration, remaintime);
 
             for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
             {
@@ -1382,7 +1402,7 @@ void Pet::_SaveAuras()
 
         //skip all holders from spells that are passive or channeled
         //do not save single target holders (unless they were cast by the player)
-        if (save && !holder->IsPassive() && !IsChanneledSpell(holder->GetSpellProto()) && (holder->GetCasterGUID() == GetGUID() || !holder->IsSingleTarget()))
+        if (save && !holder->IsPassive() && !IsChanneledSpell(holder->GetSpellProto()) && (holder->GetCasterGuid() == GetObjectGuid() || !holder->IsSingleTarget()))
         {
             int32  damage[MAX_EFFECT_INDEX];
             uint32 periodicTime[MAX_EFFECT_INDEX];
@@ -1396,7 +1416,7 @@ void Pet::_SaveAuras()
                 if (Aura *aur = holder->GetAuraByEffectIndex(SpellEffectIndex(i)))
                 {
                     // don't save not own area auras
-                    if (aur->IsAreaAura() && holder->GetCasterGUID() != GetGUID())
+                    if (aur->IsAreaAura() && holder->GetCasterGuid() != GetObjectGuid())
                         continue;
 
                     damage[i] = aur->GetModifier()->m_amount;
@@ -2202,7 +2222,7 @@ void Pet::ApplyStatScalingBonus(Stats stat, bool apply)
 
         SpellAuraHolder* holder = _aura->GetHolder();
 
-        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGUID() != GetGUID())
+        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGuid() != GetObjectGuid())
             continue;
 
         SpellEntry const *spellproto = holder->GetSpellProto();
@@ -2266,7 +2286,7 @@ void Pet::ApplyResistanceScalingBonus(uint32 school, bool apply)
 
         SpellAuraHolder* holder = _aura->GetHolder();
 
-        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGUID() != GetGUID())
+        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGuid() != GetObjectGuid())
             continue;
 
         SpellEntry const *spellproto = holder->GetSpellProto();
@@ -2380,7 +2400,7 @@ void Pet::ApplyAttackPowerScalingBonus(bool apply)
 
         SpellAuraHolder* holder = _aura->GetHolder();
 
-        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGUID() != GetGUID())
+        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGuid() != GetObjectGuid())
             continue;
 
         SpellEntry const *spellproto = holder->GetSpellProto();
@@ -2470,7 +2490,7 @@ void Pet::ApplyDamageScalingBonus(bool apply)
 
         SpellAuraHolder* holder = _aura->GetHolder();
 
-        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGUID() != GetGUID())
+        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGuid() != GetObjectGuid())
             continue;
 
         SpellEntry const *spellproto = holder->GetSpellProto();
@@ -2578,7 +2598,7 @@ void Pet::ApplySpellDamageScalingBonus(bool apply)
 
         SpellAuraHolder* holder = _aura->GetHolder();
 
-        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGUID() != GetGUID())
+        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGuid() != GetObjectGuid())
             continue;
 
         SpellEntry const *spellproto = holder->GetSpellProto();
@@ -2653,7 +2673,7 @@ void Pet::ApplyHitScalingBonus(bool apply)
 
         SpellAuraHolder* holder = _aura->GetHolder();
 
-        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGUID() != GetGUID())
+        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGuid() != GetObjectGuid())
             continue;
 
         SpellEntry const *spellproto = holder->GetSpellProto();
@@ -2707,7 +2727,7 @@ void Pet::ApplySpellHitScalingBonus(bool apply)
 
         SpellAuraHolder* holder = _aura->GetHolder();
 
-        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGUID() != GetGUID())
+        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGuid() != GetObjectGuid())
             continue;
 
         SpellEntry const *spellproto = holder->GetSpellProto();
@@ -2759,7 +2779,7 @@ void Pet::ApplyExpertizeScalingBonus(bool apply)
 
         SpellAuraHolder* holder = _aura->GetHolder();
 
-        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGUID() != GetGUID())
+        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGuid() != GetObjectGuid())
             continue;
 
         SpellEntry const *spellproto = holder->GetSpellProto();
@@ -2813,7 +2833,7 @@ void Pet::ApplyPowerregenScalingBonus(bool apply)
 
         SpellAuraHolder* holder = _aura->GetHolder();
 
-        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGUID() != GetGUID())
+        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGuid() != GetObjectGuid())
             continue;
 
         SpellEntry const *spellproto = holder->GetSpellProto();

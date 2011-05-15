@@ -483,7 +483,7 @@ bool Item::LoadFromDB(uint32 guidLow, Field *fields, ObjectGuid ownerGuid)
     }
 
     // set correct owner
-    if (!ownerGuid.IsEmpty() && GetOwnerGuid() != ownerGuid)
+    if (ownerGuid && GetOwnerGuid() != ownerGuid)
     {
         SetOwnerGuid(ownerGuid);
         need_save = true;
@@ -508,13 +508,7 @@ bool Item::LoadFromDB(uint32 guidLow, Field *fields, ObjectGuid ownerGuid)
 
     // Insert to Refundable map
     if(GetPlayedtimeField())
-    {
-        std::pair<uint64, uint32> ItemInfo;
-        ItemInfo.first = GetGUID();
-        ItemInfo.second = 0; // At this point we can't lookup modified extended cost
-
-        sObjectMgr.mItemRefundableMap.insert(ItemInfo);
-    }
+        sObjectMgr.mItemRefundableMap.insert(std::make_pair<ObjectGuid, uint32>(GetObjectGuid(), 0));
 
     if (need_save)                                          // normal item changed state set not work at loading
     {
@@ -869,7 +863,7 @@ bool Item::CanBeTraded(bool mail, bool trade) const
     {
         if (owner->CanUnequipItem(GetPos(),false) !=  EQUIP_ERR_OK )
             return false;
-        if (owner->GetLootGUID()==GetGUID())
+        if (owner->GetLootGuid() == GetObjectGuid())
             return false;
     }
 
@@ -1095,7 +1089,7 @@ void Item::SendTimeUpdate(Player* owner)
         return;
 
     WorldPacket data(SMSG_ITEM_TIME_UPDATE, (8+4));
-    data << uint64(GetGUID());
+    data << ObjectGuid(GetObjectGuid());
     data << uint32(duration);
     owner->GetSession()->SendPacket(&data);
 }
@@ -1192,7 +1186,7 @@ void Item::BuildUpdateData(UpdateDataMapType& update_players)
     ClearUpdateMask(false);
 }
 
-uint8 Item::CanBeMergedPartlyWith( ItemPrototype const* proto ) const
+InventoryResult Item::CanBeMergedPartlyWith( ItemPrototype const* proto ) const
 {
     // check item type
     if (GetEntry() != proto->ItemId)

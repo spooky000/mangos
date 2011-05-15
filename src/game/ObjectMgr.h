@@ -44,7 +44,6 @@
 #include <limits>
 
 class Group;
-class Guild;
 class ArenaTeam;
 class Item;
 
@@ -404,7 +403,7 @@ struct GCNewsData
 
 typedef std::multimap<uint32, GCNewsData> GCNewsMap;
 
-typedef std::map<uint64, uint32> ItemRefundableMap;
+typedef std::map<ObjectGuid, uint32> ItemRefundableMap;
 
 enum ConditionType
 {                                                           // value1       value2  for the Condition enumed
@@ -526,8 +525,6 @@ class ObjectMgr
 
         typedef UNORDERED_MAP<uint32, Group*> GroupMap;
 
-        typedef std::vector <Guild *> GuildMap;
-
         typedef UNORDERED_MAP<uint32, ArenaTeam*> ArenaTeamMap;
 
         typedef UNORDERED_MAP<uint32, Quest*> QuestMap;
@@ -542,8 +539,8 @@ class ObjectMgr
 
         typedef UNORDERED_MAP<uint32, WeatherZoneChances> WeatherZoneMap;
 
-        Player* GetPlayer(const char* name) const { return ObjectAccessor::FindPlayerByName(name);}
-        Player* GetPlayer(ObjectGuid guid) const { return ObjectAccessor::FindPlayer(guid); }
+        static Player* GetPlayer(const char* name) { return ObjectAccessor::FindPlayerByName(name);}
+        static Player* GetPlayer(ObjectGuid guid) { return ObjectAccessor::FindPlayer(guid); }
 
         static GameObjectInfo const *GetGameObjectInfo(uint32 id) { return sGOStorage.LookupEntry<GameObjectInfo>(id); }
 
@@ -554,13 +551,6 @@ class ObjectMgr
         Group* GetGroupById(uint32 id) const;
         void AddGroup(Group* group);
         void RemoveGroup(Group* group);
-
-        Guild* GetGuildByLeader(ObjectGuid guid) const;
-        Guild* GetGuildById(uint32 GuildId) const;
-        Guild* GetGuildByName(const std::string& guildname) const;
-        std::string GetGuildNameById(uint32 GuildId) const;
-        void AddGuild(Guild* guild);
-        void RemoveGuild(uint32 Id);
 
         ArenaTeam* GetArenaTeamById(uint32 arenateamid) const;
         ArenaTeam* GetArenaTeamByName(const std::string& arenateamname) const;
@@ -619,7 +609,7 @@ class ObjectMgr
         }
         void GetPlayerLevelInfo(uint32 race, uint32 class_,uint32 level, PlayerLevelInfo* info) const;
 
-        uint64 GetPlayerGUIDByName(std::string name) const;
+        ObjectGuid GetPlayerGuidByName(std::string name) const;
         bool GetPlayerNameByGUID(ObjectGuid guid, std::string &name) const;
         Team GetPlayerTeamByGUID(ObjectGuid guid) const;
         uint32 GetPlayerAccountIdByGUID(ObjectGuid guid) const;
@@ -721,7 +711,6 @@ class ObjectMgr
             return NULL;
         }
 
-        void LoadGuilds();
         void LoadArenaTeams();
         void LoadGroups();
         void LoadQuests();
@@ -1187,7 +1176,6 @@ class ObjectMgr
         typedef std::pair<CreatureModelRaceMap::const_iterator, CreatureModelRaceMap::const_iterator> CreatureModelRaceMapBounds;
 
         GroupMap            mGroupMap;
-        GuildMap            mGuildMap;
         ArenaTeamMap        mArenaTeamMap;
 
         QuestAreaTriggerMap mQuestAreaTriggerMap;
