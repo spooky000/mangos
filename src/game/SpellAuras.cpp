@@ -9096,7 +9096,7 @@ void Aura::HandleAuraOpenStable(bool apply, bool Real)
 
     // client auto close stable dialog at !apply aura
 }
-/* FEANOR: CHECK
+
 void Aura::HandleAuraMirrorImage(bool Apply, bool Real)
 {
     if (!Real)
@@ -9111,50 +9111,12 @@ void Aura::HandleAuraMirrorImage(bool Apply, bool Real)
             return;
         // Set display id
         target->SetDisplayId(caster->GetDisplayId());
-        target->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_MIRROR_IMAGE);
+        target->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_CLONED);
     }
     else
     {
         target->SetDisplayId(target->GetNativeDisplayId());
-        target->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_MIRROR_IMAGE);
-    }
-}
-*/
-void Aura::HandleAuraMirrorImage(bool apply, bool Real)
-{
-    if (!Real)
-        return;
-
-    // Target of aura should always be creature (ref Spell::CheckCast)
-    Creature* pCreature = (Creature*)GetTarget();
-
-    if (apply)
-    {
-        // Caster can be player or creature, the unit who pCreature will become an clone of.
-        Unit* caster = GetCaster();
-
-        pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 0, caster->getRace());
-        pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 1, caster->getClass());
-        pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 2, caster->getGender());
-        pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 3, caster->getPowerType());
-
-        pCreature->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_CLONED);
-
-        pCreature->SetDisplayId(caster->GetNativeDisplayId());
-    }
-    else
-    {
-        const CreatureInfo* cinfo = pCreature->GetCreatureInfo();
-        const CreatureModelInfo* minfo = sObjectMgr.GetCreatureModelInfo(pCreature->GetNativeDisplayId());
-
-        pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 0, 0);
-        pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 1, cinfo->unit_class);
-        pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 2, minfo->gender);
-        pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 3, 0);
-
-        pCreature->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_CLONED);
-
-        pCreature->SetDisplayId(pCreature->GetNativeDisplayId());
+        target->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_CLONED);
     }
 }
 
