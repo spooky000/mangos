@@ -1180,8 +1180,7 @@ bool ChatHandler::HandleDebugSetVehicleIdCommand(char* args)
         return false;
     }
 
-    // FEANOR: CHECK
-    /*uint32 vehicleId;
+    uint32 vehicleId;
     if (!ExtractUInt32(&args, vehicleId))
         return false;
 
@@ -1194,6 +1193,6 @@ bool ChatHandler::HandleDebugSetVehicleIdCommand(char* args)
     }
 
     target->RemoveVehicleKit();
-    target->CreateVehicleKit(vehicleId);
-    return true;*/
+    target->SetVehicleId(vehicleId);
+    return true;
 }

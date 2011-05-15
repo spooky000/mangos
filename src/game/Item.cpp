@@ -509,8 +509,8 @@ bool Item::LoadFromDB(uint32 guidLow, Field *fields, ObjectGuid ownerGuid)
     // Insert to Refundable map
     if(GetPlayedtimeField())
     {
-        std::pair<uint64, uint32> ItemInfo;
-        ItemInfo.first = GetGUID();
+        std::pair<ObjectGuid, uint32> ItemInfo;
+        ItemInfo.first = GetObjectGuid();
         ItemInfo.second = 0; // At this point we can't lookup modified extended cost
 
         sObjectMgr.mItemRefundableMap.insert(ItemInfo);

@@ -12459,7 +12459,7 @@ void Player::UpdateSoulboundTradeItems()
             itr = m_itemSoulboundTradeable.erase(itr++);
             continue;
         }
-        if ((*itr)->GetOwnerGuid().GetRawValue() != this->GetGUID())
+        if ((*itr)->GetOwnerGuid() != GetObjectGuid())
         {
             itr = m_itemSoulboundTradeable.erase(itr++);
             continue;
@@ -19588,7 +19588,7 @@ bool Player::BuyItemFromVendorSlot(ObjectGuid vendorGuid, uint32 vendorslot, uin
 
         if (pItem)
             if (pItem->IsEligibleForRefund() && crItem->ExtendedCost)
-                AddRefundableItem(pItem->GetGUID(), crItem->ExtendedCost);
+                AddRefundableItem(pItem->GetObjectGuid(), crItem->ExtendedCost);
     }
     else if (IsEquipmentPos(bag, slot))
     {
@@ -19611,8 +19611,6 @@ bool Player::BuyItemFromVendorSlot(ObjectGuid vendorGuid, uint32 vendorslot, uin
         if (crItem->ExtendedCost)
             TakeExtendedCost(crItem->ExtendedCost, count);
 
-        
-
         pItem = EquipNewItem(dest, item, true);
 
         if (pItem)
@@ -19620,7 +19618,7 @@ bool Player::BuyItemFromVendorSlot(ObjectGuid vendorGuid, uint32 vendorslot, uin
             AutoUnequipOffhandIfNeed();
 
             if (pItem->IsEligibleForRefund() && crItem->ExtendedCost)
-                AddRefundableItem(pItem->GetGUID(), crItem->ExtendedCost);
+                AddRefundableItem(pItem->GetObjectGuid(), crItem->ExtendedCost);
         }
     }
     else
@@ -23213,29 +23211,29 @@ void Player::SetRestType( RestType n_r_type, uint32 areaTriggerId /*= 0*/)
     }
 }
 
-void Player::AddRefundableItem(uint64 itemGUID,  uint32 extendedcost)
+void Player::AddRefundableItem(ObjectGuid itemGuid,  uint32 extendedcost)
 {
-    std::pair<uint64, uint32> RefundableItemInfo;
+    std::pair<ObjectGuid, uint32> RefundableItemInfo;
     
-    if (Item *item = GetItemByGuid(itemGUID))
+    if (Item *item = GetItemByGuid(itemGuid))
     {
         item->SetPlayedtimeField(GetTotalPlayedTime());
 
-        RefundableItemInfo.first = itemGUID;
+        RefundableItemInfo.first = itemGuid;
         RefundableItemInfo.second = extendedcost;
 
         sObjectMgr.mItemRefundableMap.insert(RefundableItemInfo);
     }
 }
 
-void Player::RemoveRefundableItem(uint64 itemGUID)
+void Player::RemoveRefundableItem(ObjectGuid itemGuid)
 {
-    sObjectMgr.mItemRefundableMap.erase(itemGUID);
+    sObjectMgr.mItemRefundableMap.erase(itemGuid);
 }
 
-uint32 Player::LookupRefundableItem(uint64 itemGUID)
+uint32 Player::LookupRefundableItem(ObjectGuid itemGuid)
 {
-    ItemRefundableMap::iterator itr = sObjectMgr.mItemRefundableMap.find(itemGUID);
+    ItemRefundableMap::iterator itr = sObjectMgr.mItemRefundableMap.find(itemGuid);
 
     if (itr != sObjectMgr.mItemRefundableMap.end())
         return itr->second;

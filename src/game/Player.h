@@ -2355,9 +2355,9 @@ class MANGOS_DLL_SPEC Player : public Unit
         /***                ITEM REFUND SYSTEM                 ***/
         /*********************************************************/
 
-        void AddRefundableItem(uint64 itemGUID,  uint32 extendedCost);
-        void RemoveRefundableItem(uint64 itemGUID);
-        uint32 LookupRefundableItem(uint64 itemGUID);
+        void AddRefundableItem(ObjectGuid itemGuid,  uint32 extendedCost);
+        void RemoveRefundableItem(ObjectGuid itemGuid);
+        uint32 LookupRefundableItem(ObjectGuid itemGuid);
 
         bool canSeeSpellClickOn(Creature const* creature) const;
 

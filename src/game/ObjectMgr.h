@@ -403,7 +403,7 @@ struct GCNewsData
 
 typedef std::multimap<uint32, GCNewsData> GCNewsMap;
 
-typedef std::map<uint64, uint32> ItemRefundableMap;
+typedef std::map<ObjectGuid, uint32> ItemRefundableMap;
 
 enum ConditionType
 {                                                           // value1       value2  for the Condition enumed
