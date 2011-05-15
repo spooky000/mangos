@@ -953,7 +953,7 @@ namespace MaNGOS
                 : i_obj(obj), i_originalCaster(originalCaster), i_range(range)
             {
                 i_targetForUnit = i_originalCaster->isType(TYPEMASK_UNIT);
-                i_targetForPlayer = (i_originalCaster->GetTypeId() == TYPEID_PLAYER);
+                i_targetForPlayer = (i_originalCaster->GetObjectGuid().IsVehicle() ? ((Unit*)i_originalCaster)->GetCharmerOrOwnerOrSelf()->GetTypeId() == TYPEID_PLAYER : i_originalCaster->GetTypeId() == TYPEID_PLAYER);
             }
             WorldObject const& GetFocusObject() const { return *i_obj; }
             bool operator()(Unit* u)
@@ -976,11 +976,11 @@ namespace MaNGOS
                 return false;
             }
         private:
-            bool i_targetForUnit;
-            bool i_targetForPlayer;
             WorldObject const* i_obj;
             WorldObject const* i_originalCaster;
             float i_range;
+            bool i_targetForUnit;
+            bool i_targetForPlayer;
     };
 
     class AnyAoETargetUnitInObjectRangeCheck
@@ -1008,9 +1008,9 @@ namespace MaNGOS
             }
 
         private:
-            bool i_targetForPlayer;
             WorldObject const* i_obj;
             float i_range;
+            bool i_targetForPlayer;
     };
 
     // do attack at call of help to friendly crearture

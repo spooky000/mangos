@@ -51,10 +51,10 @@ ObjectAccessor::~ObjectAccessor()
 Unit*
 ObjectAccessor::GetUnit(WorldObject const &u, ObjectGuid guid)
 {
-    if(guid.IsEmpty())
+    if (!guid)
         return NULL;
 
-    if(guid.IsPlayer())
+    if (guid.IsPlayer())
         return FindPlayer(guid);
 
     if (!u.IsInWorld())
@@ -66,9 +66,9 @@ ObjectAccessor::GetUnit(WorldObject const &u, ObjectGuid guid)
 Corpse* ObjectAccessor::GetCorpseInMap(ObjectGuid guid, uint32 mapid)
 {
     Corpse * ret = HashMapHolder<Corpse>::Find(guid);
-    if(!ret)
+    if (!ret)
         return NULL;
-    if(ret->GetMapId() != mapid)
+    if (ret->GetMapId() != mapid)
         return NULL;
 
     return ret;
@@ -77,11 +77,11 @@ Corpse* ObjectAccessor::GetCorpseInMap(ObjectGuid guid, uint32 mapid)
 Player*
 ObjectAccessor::FindPlayer(ObjectGuid guid)
 {
-    if (guid.IsEmpty())
+    if (!guid)
         return NULL;
 
     Player * plr = HashMapHolder<Player>::Find(guid);;
-    if(!plr || !plr->IsInWorld())
+    if (!plr || !plr->IsInWorld())
         return NULL;
 
     return plr;

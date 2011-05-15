@@ -394,7 +394,7 @@ void WorldSession::HandleGossipSelectOptionOpcode( WorldPacket & recv_data )
             _player->PlayerTalkClass->CloseGossip();
         } else {
             _player->PlayerTalkClass->SendTalking(textId);
-            _player->PlayerTalkClass->SendGossipMenu(textId, guid.GetRawValue());
+            _player->PlayerTalkClass->SendGossipMenu(textId, guid);
         }
     }
 
@@ -906,7 +906,7 @@ void WorldSession::HandleRepairItemOpcode( WorldPacket & recv_data )
     float discountMod = _player->GetReputationPriceDiscount(unit);
 
     uint32 TotalCost = 0;
-    if (!itemGuid.IsEmpty())
+    if (itemGuid)
     {
         DEBUG_LOG("ITEM: %s repair of %s", npcGuid.GetString().c_str(), itemGuid.GetString().c_str());
 
