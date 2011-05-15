@@ -362,8 +362,8 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         {
                             uint8 count = 0;
                             for(tbb::concurrent_vector<TargetInfo>::const_iterator ihit= m_UniqueTargetInfo.begin();ihit != m_UniqueTargetInfo.end();++ihit)
-                                if(ihit->targetGUID != m_caster->GetGUID())
-                                    if(Player *target = ObjectAccessor::FindPlayer(ihit->TargetGuid))
+                                if(ihit->targetGUID != m_caster->GetObjectGuid())
+                                    if(Player *target = ObjectAccessor::FindPlayer(ihit->targetGUID))
                                         if(target->HasAura(m_triggeredByAuraSpell->Id))
                                             ++count;
                             if (count)
@@ -8352,7 +8352,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     for(Unit::SpellAuraHolderMap::const_iterator itr = auras.begin(); itr!=auras.end(); ++itr)
                     {
                         if (itr->second->GetSpellProto()->Dispel == DISPEL_DISEASE &&
-                            itr->second->GetCasterGuid() == m_caster->GetGUID())
+                            itr->second->GetCasterGuid() == m_caster->GetObjectGuid())
                         if (Aura* aura =itr->second->GetAuraByEffectIndex(EFFECT_INDEX_0))
                         {
                             uint32 countMin = aura->GetAuraMaxDuration();
