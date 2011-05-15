@@ -45,7 +45,9 @@ bool ForcedDeleteDelayEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
     return true;
 }
 
-GameObject::GameObject() : WorldObject()
+GameObject::GameObject() : WorldObject(),
+    m_goInfo(NULL),
+    m_displayInfo(NULL)
 {
     m_objectType |= TYPEMASK_GAMEOBJECT;
     m_objectTypeId = TYPEID_GAMEOBJECT;
@@ -60,7 +62,6 @@ GameObject::GameObject() : WorldObject()
     m_useTimes = 0;
     m_spellId = 0;
     m_cooldownTime = 0;
-    m_goInfo = NULL;
 
     m_rotation = 0;
 
@@ -75,7 +76,7 @@ void GameObject::AddToWorld()
 {
     ///- Register the gameobject for guid lookup
     if(!IsInWorld())
-        GetMap()->GetObjectsStore().insert<GameObject>(GetGUID(), (GameObject*)this);
+        GetMap()->GetObjectsStore().insert<GameObject>(GetObjectGuid(), (GameObject*)this);
 
     Object::AddToWorld();
 }
@@ -86,8 +87,7 @@ void GameObject::RemoveFromWorld()
     if(IsInWorld())
     {
         // Remove GO from owner
-        ObjectGuid owner_guid = GetOwnerGuid();
-        if (!owner_guid.IsEmpty())
+        if (ObjectGuid owner_guid = GetOwnerGuid())
         {
             if (Unit* owner = ObjectAccessor::GetUnit(*this,owner_guid))
                 owner->RemoveGameObject(this,false);
@@ -98,7 +98,7 @@ void GameObject::RemoveFromWorld()
             }
         }
 
-        GetMap()->GetObjectsStore().erase<GameObject>(GetGUID(), (GameObject*)NULL);
+        GetMap()->GetObjectsStore().erase<GameObject>(GetObjectGuid(), (GameObject*)NULL);
     }
 
     Object::RemoveFromWorld();
@@ -148,8 +148,7 @@ bool GameObject::Create(uint32 guidlow, uint32 name_id, Map *map, uint32 phaseMa
         SetFlag(GAMEOBJECT_FLAGS, (GO_FLAG_TRANSPORT | GO_FLAG_NODESPAWN));
 
     SetEntry(goinfo->id);
-
-    SetUInt32Value(GAMEOBJECT_DISPLAYID, goinfo->displayId);
+    SetDisplayId(goinfo->displayId);
 
     // GAMEOBJECT_BYTES_1, index at 0, 1, 2 and 3
     SetGoState(go_state);
@@ -224,7 +223,7 @@ void GameObject::Update(uint32 update_diff, uint32 p_time)
                             udata.BuildPacket(&packet);
                             ((Player*)caster)->GetSession()->SendPacket(&packet);
 
-                            SendGameObjectCustomAnim(GetGUID());
+                            SendGameObjectCustomAnim(GetObjectGuid());
                         }
 
                         m_lootState = GO_READY;             // can be successfully open with some chance
@@ -341,7 +340,7 @@ void GameObject::Update(uint32 update_diff, uint32 p_time)
                     {
                         Unit *caster =  owner ? owner : ok;
 
-                        caster->CastSpell(ok, goInfo->trap.spellId, true, NULL, NULL, GetGUID());
+                        caster->CastSpell(ok, goInfo->trap.spellId, true, NULL, NULL, GetObjectGuid());
                         // use template cooldown if provided
                         m_cooldownTime = time(NULL) + (goInfo->trap.cooldown ? goInfo->trap.cooldown : uint32(4));
 
@@ -354,7 +353,7 @@ void GameObject::Update(uint32 update_diff, uint32 p_time)
                             //BattleGround gameobjects case
                             if (((Player*)ok)->InBattleGround())
                                 if (BattleGround *bg = ((Player*)ok)->GetBattleGround())
-                                    bg->HandleTriggerBuff(GetGUID());
+                                    bg->HandleTriggerBuff(GetObjectGuid());
                         }
                     }
                 }
@@ -405,7 +404,7 @@ void GameObject::Update(uint32 update_diff, uint32 p_time)
                     for (GuidsSet::const_iterator itr = m_UniqueUsers.begin(); itr != m_UniqueUsers.end(); ++itr)
                     {
                         if (Player* owner = GetMap()->GetPlayer(*itr))
-                            owner->CastSpell(owner, spellId, false, NULL, NULL, GetGUID());
+                            owner->CastSpell(owner, spellId, false, NULL, NULL, GetObjectGuid());
                     }
 
                     ClearAllUsesData();
@@ -416,7 +415,7 @@ void GameObject::Update(uint32 update_diff, uint32 p_time)
                 //any return here in case battleground traps
             }
 
-            if (!GetOwnerGuid().IsEmpty())
+            if (GetOwnerGuid())
             {
                 if (Unit* owner = GetOwner())
                     owner->RemoveGameObject(this, false);
@@ -429,7 +428,7 @@ void GameObject::Update(uint32 update_diff, uint32 p_time)
             // burning flags in some battlegrounds, if you find better condition, just add it
             if (GetGOInfo()->IsDespawnAtAction() || GetGoAnimProgress() > 0)
             {
-                SendObjectDeSpawnAnim(GetGUID());
+                SendObjectDeSpawnAnim(GetObjectGuid());
                 //reset flags
                 SetUInt32Value(GAMEOBJECT_FLAGS, GetGOInfo()->flags);
             }
@@ -474,7 +473,7 @@ void GameObject::AddUniqueUse(Player* player)
 {
     AddUse();
 
-    if (m_firstUser.IsEmpty())
+    if (!m_firstUser)
         m_firstUser = player->GetObjectGuid();
 
     m_UniqueUsers.insert(player->GetObjectGuid());
@@ -491,7 +490,7 @@ void GameObject::Delete(uint32 timeMSToDelete)
         return;
     }
 
-    SendObjectDeSpawnAnim(GetGUID());
+    SendObjectDeSpawnAnim(GetObjectGuid());
 
     SetGoState(GO_STATE_READY);
     SetUInt32Value(GAMEOBJECT_FLAGS, GetGOInfo()->flags);
@@ -880,7 +879,7 @@ void GameObject::SummonLinkedTrapIfAny()
     linkedGO->SetRespawnTime(GetRespawnDelay());
     linkedGO->SetSpellId(GetSpellId());
 
-    if (!GetOwnerGuid().IsEmpty())
+    if (GetOwnerGuid())
     {
         linkedGO->SetOwnerGuid(GetOwnerGuid());
         linkedGO->SetUInt32Value(GAMEOBJECT_LEVEL, GetUInt32Value(GAMEOBJECT_LEVEL));
@@ -1145,7 +1144,7 @@ void GameObject::Use(Unit* user)
                 if (info->goober.pageId)                    // show page...
                 {
                     WorldPacket data(SMSG_GAMEOBJECT_PAGETEXT, 8);
-                    data << GetGUID();
+                    data << ObjectGuid(GetObjectGuid());
                     player->GetSession()->SendPacket(&data);
                 }
                 else if (info->goober.gossipID)             // ...or gossip, if page does not exist
@@ -1191,7 +1190,7 @@ void GameObject::Use(Unit* user)
 
             // this appear to be ok, however others exist in addition to this that should have custom (ex: 190510, 188692, 187389)
             if (time_to_restore && info->goober.customAnim)
-                SendGameObjectCustomAnim(GetGUID());
+                SendGameObjectCustomAnim(GetObjectGuid());
             else
                 SetGoState(GO_STATE_ACTIVE);
 
@@ -1361,7 +1360,7 @@ void GameObject::Use(Unit* user)
             }
             else
             {
-                if (!m_firstUser.IsEmpty() && player->GetObjectGuid() != m_firstUser && info->summoningRitual.castersGrouped)
+                if (m_firstUser && player->GetObjectGuid() != m_firstUser && info->summoningRitual.castersGrouped)
                 {
                     if (Group* group = player->GetGroup())
                     {
@@ -1390,7 +1389,7 @@ void GameObject::Use(Unit* user)
                 return;
 
             // owner is first user for non-wild GO objects, if it offline value already set to current user
-            if (GetOwnerGuid().IsEmpty())
+            if (!GetOwnerGuid())
                 if (Player* firstUser = GetMap()->GetPlayer(m_firstUser))
                     spellCaster = firstUser;
 
@@ -1887,13 +1886,19 @@ bool GameObject::IsFriendlyTo(Unit const* unit) const
     return tester_faction->IsFriendlyTo(*target_faction);
 }
 
+void GameObject::SetDisplayId(uint32 modelId)
+{
+    SetUInt32Value(GAMEOBJECT_DISPLAYID, modelId);
+    m_displayInfo = sGameObjectDisplayInfoStore.LookupEntry(modelId);
+}
+
 float GameObject::GetObjectBoundingRadius() const
 {
     //FIXME:
     // 1. This is clearly hack way because GameObjectDisplayInfoEntry have 6 floats related to GO sizes, but better that use DEFAULT_WORLD_OBJECT_SIZE
     // 2. In some cases this must be only interactive size, not GO size, current way can affect creature target point auto-selection in strange ways for big underground/virtual GOs
-    if (GameObjectDisplayInfoEntry const* dispEntry = sGameObjectDisplayInfoStore.LookupEntry(GetGOInfo()->displayId))
-        return fabs(dispEntry->minX) * GetObjectScale();
+    if (m_displayInfo)
+        return fabs(m_displayInfo->minX) * GetObjectScale();
 
     return DEFAULT_WORLD_OBJECT_SIZE;
 }

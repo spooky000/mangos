@@ -245,7 +245,7 @@ inline bool IsNonCombatSpell(SpellEntry const *spellInfo)
 bool IsPositiveSpell(uint32 spellId);
 bool IsPositiveSpell(SpellEntry const *spellproto);
 bool IsPositiveEffect(SpellEntry const *spellInfo, SpellEffectIndex effIndex);
-bool IsPositiveTarget(uint32 targetA, uint32 targetB);
+bool IsPositiveTarget(uint32 targetA, uint32 targetB, uint32 spellId);
 
 bool IsExplicitPositiveTarget(uint32 targetA);
 bool IsExplicitNegativeTarget(uint32 targetA);
@@ -275,7 +275,7 @@ inline bool IsCasterSourceTarget(uint32 target)
         case TARGET_SELF2:
         case TARGET_DIRECTLY_FORWARD:
         case TARGET_NONCOMBAT_PET:
-        case TARGET_IN_FRONT_OF_CASTER_90:
+        case TARGET_IN_FRONT_OF_CASTER_30:
             return true;
         default:
             break;
@@ -365,7 +365,7 @@ inline bool IsAreaEffectTarget( Targets target )
         case TARGET_AREAEFFECT_GO_AROUND_DEST:
         case TARGET_ALL_RAID_AROUND_CASTER:
         case TARGET_AREAEFFECT_PARTY_AND_CLASS:
-        case TARGET_IN_FRONT_OF_CASTER_90:
+        case TARGET_IN_FRONT_OF_CASTER_30:
             return true;
         default:
             break;

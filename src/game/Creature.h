@@ -53,6 +53,7 @@ enum CreatureFlagsExtra
     CREATURE_FLAG_EXTRA_INVISIBLE       = 0x00000080,       // creature is always invisible for player (mostly trigger creatures)
     CREATURE_FLAG_EXTRA_NOT_TAUNTABLE   = 0x00000100,       // creature is immune to taunt auras and effect attack me
     CREATURE_FLAG_EXTRA_AGGRO_ZONE      = 0x00000200,       // creature sets itself in combat with zone on aggro
+    CREATURE_FLAG_EXTRA_GUARD           = 0x00000400,       // creature is a guard
     CREATURE_FLAG_EXTRA_KEEP_AI         = 0x00001000,       // creature keeps ScriptedAI even after being charmed / controlled (instead of getting PetAI)
 };
 
@@ -123,7 +124,7 @@ struct CreatureInfo
     int32   resistance6;
     uint32  spells[CREATURE_MAX_SPELLS];
     uint32  PetSpellDataId;
-    uint32  VehicleId;
+    uint32  vehicleId;
     uint32  mingold;
     uint32  maxgold;
     char const* AIName;
@@ -143,10 +144,9 @@ struct CreatureInfo
     uint32  ScriptID;
 
     // helpers
-    // completed: return HIGHGUID_UNIT/HIGHGUID_VEHICLE base at currently missing creature template data
     HighGuid GetHighGuid() const
     {
-        return VehicleId ? HIGHGUID_VEHICLE : HIGHGUID_UNIT;
+        return vehicleId ? HIGHGUID_VEHICLE : HIGHGUID_UNIT;
     }
 
     SkillType GetRequiredLootSkill() const
@@ -475,6 +475,8 @@ class MANGOS_DLL_SPEC Creature : public Unit
         void SetCorpseDelay(uint32 delay) { m_corpseDelay = delay; }
         bool IsRacialLeader() const { return GetCreatureInfo()->RacialLeader; }
         bool IsCivilian() const { return GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_CIVILIAN; }
+        bool IsGuard() const { return GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_GUARD; }
+
         bool CanWalk() const { return GetCreatureInfo()->InhabitType & INHABIT_GROUND; }
         bool CanSwim() const { return GetCreatureInfo()->InhabitType & INHABIT_WATER; }
         bool CanFly()  const { return GetCreatureInfo()->InhabitType & INHABIT_AIR; }
@@ -611,7 +613,7 @@ class MANGOS_DLL_SPEC Creature : public Unit
         uint32 GetLootGroupRecipientId() const { return m_lootGroupRecipientId; }
         Player* GetLootRecipient() const;                   // use group cases as prefered
         Group* GetGroupLootRecipient() const;
-        bool HasLootRecipient() const { return m_lootGroupRecipientId || !m_lootRecipientGuid.IsEmpty(); }
+        bool HasLootRecipient() const { return m_lootGroupRecipientId || m_lootRecipientGuid; }
         bool IsGroupLootRecipient() const { return m_lootGroupRecipientId; }
         void SetLootRecipient(Unit* unit);
         void AllLootRemovedFromCorpse();

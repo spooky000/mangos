@@ -31,6 +31,7 @@
 #include "ObjectMgr.h"
 #include "Group.h"
 #include "Guild.h"
+#include "GuildMgr.h"
 #include "World.h"
 #include "BattleGroundMgr.h"
 #include "MapManager.h"
@@ -81,8 +82,7 @@ bool WorldSessionFilter::Process(WorldPacket* packet)
 
 /// WorldSession constructor
 WorldSession::WorldSession(uint32 id, WorldSocket *sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale) :
-LookingForGroup_auto_join(false), LookingForGroup_auto_add(false), m_muteTime(mute_time),
-_player(NULL), m_Socket(sock),_security(sec), _accountId(id), m_expansion(expansion), _logoutTime(0),
+m_muteTime(mute_time), _player(NULL), m_Socket(sock),_security(sec), _accountId(id), m_expansion(expansion), _logoutTime(0),
 m_inQueue(false), m_playerLoading(false), m_playerLogout(false), m_playerRecentlyLogout(false), m_playerSave(false),
 m_sessionDbcLocale(sWorld.GetAvailableDbcLocale(locale)), m_sessionDbLocaleIndex(sObjectMgr.GetIndexForLocale(locale)),
 m_latency(0), m_tutorialState(TUTORIALDATA_UNCHANGED)
@@ -198,7 +198,7 @@ void WorldSession::LogUnprocessedTail(WorldPacket *packet)
 }
 
 /// Update the WorldSession (triggered by World update)
-bool WorldSession::Update(uint32 diff, PacketFilter& updater)
+bool WorldSession::Update(PacketFilter& updater)
 {
     ///- Retrieve packets from the receive queue and call the appropriate handlers
     /// not process packets if socket already closed
@@ -336,8 +336,8 @@ void WorldSession::LogoutPlayer(bool Save)
     {
         sLog.outChar("Account: %d (IP: %s) Logout Character:[%s] (guid: %u)", GetAccountId(), GetRemoteAddress().c_str(), _player->GetName() ,_player->GetGUIDLow());
 
-        if (uint64 lguid = GetPlayer()->GetLootGUID())
-            DoLootRelease(lguid);
+        if (ObjectGuid lootGuid = GetPlayer()->GetLootGuid())
+            DoLootRelease(lootGuid);
 
         ///- If the player just died before logging out, make him appear as a ghost
         //FIXME: logout must be delayed in case lost connection with client in time of combat
@@ -442,7 +442,7 @@ void WorldSession::LogoutPlayer(bool Save)
         stmt.PExecute(uint32(0), GetAccountId());
 
         ///- If the player is in a guild, update the guild roster and broadcast a logout message to other guild members
-        if (Guild *guild = sObjectMgr.GetGuildById(_player->GetGuildId()))
+        if (Guild* guild = sGuildMgr.GetGuildById(_player->GetGuildId()))
         {
             if (MemberSlot* slot = guild->GetMemberSlot(_player->GetObjectGuid()))
             {
@@ -450,7 +450,7 @@ void WorldSession::LogoutPlayer(bool Save)
                 slot->UpdateLogoutTime();
             }
 
-            guild->BroadcastEvent(GE_SIGNED_OFF, _player->GetGUID(), _player->GetName());
+            guild->BroadcastEvent(GE_SIGNED_OFF, _player->GetObjectGuid(), _player->GetName());
         }
 
         ///- Remove pet
@@ -461,17 +461,7 @@ void WorldSession::LogoutPlayer(bool Save)
         ///- empty buyback items and save the player in the database
         // some save parts only correctly work in case player present in map/player_lists (pets, etc)
         if(Save)
-        {
-            uint32 eslot;
-            for(int j = BUYBACK_SLOT_START; j < BUYBACK_SLOT_END; ++j)
-            {
-                eslot = j - BUYBACK_SLOT_START;
-                _player->SetUInt64Value(PLAYER_FIELD_VENDORBUYBACK_SLOT_1 + (eslot * 2), 0);
-                _player->SetUInt32Value(PLAYER_FIELD_BUYBACK_PRICE_1 + eslot, 0);
-                _player->SetUInt32Value(PLAYER_FIELD_BUYBACK_TIMESTAMP_1 + eslot, 0);
-            }
             _player->SaveToDB();
-        }
 
         ///- Leave all channels before player delete...
         _player->CleanupChannels();

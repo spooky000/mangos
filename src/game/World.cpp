@@ -31,7 +31,6 @@
 #include "WorldPacket.h"
 #include "Weather.h"
 #include "Player.h"
-#include "Vehicle.h"
 #include "SkillExtraItems.h"
 #include "SkillDiscovery.h"
 #include "AccountMgr.h"
@@ -39,6 +38,7 @@
 #include "AuctionHouseMgr.h"
 #include "ObjectMgr.h"
 #include "CreatureEventAIMgr.h"
+#include "GuildMgr.h"
 #include "SpellMgr.h"
 #include "Chat.h"
 #include "DBCStores.h"
@@ -1124,7 +1124,7 @@ void World::SetInitialWorldSettings()
     sLog.outString( "Loading Graveyard-zone links...");
     sObjectMgr.LoadGraveyardZones();
 
-    sLog.outString( "Loading Spell target coordinates..." );
+    sLog.outString( "Loading spell target destination coordinates..." );
     sSpellMgr.LoadSpellTargetPositions();
 
     sLog.outString( "Loading spell pet auras..." );
@@ -1234,7 +1234,7 @@ void World::SetInitialWorldSettings()
     sLog.outString();
 
     sLog.outString( "Loading Guilds..." );
-    sObjectMgr.LoadGuilds();
+    sGuildMgr.LoadGuilds();
 
     sLog.outString( "Loading ArenaTeams..." );
     sObjectMgr.LoadArenaTeams();
@@ -1320,8 +1320,6 @@ void World::SetInitialWorldSettings()
     LoginDatabase.PExecute("INSERT INTO uptime (realmid, starttime, startstring, uptime) VALUES('%u', " UI64FMTD ", '%s', 0)",
         realmID, uint64(m_startTime), isoDate);
 
-    m_timers[WUPDATE_OBJECTS].SetInterval(0);
-    m_timers[WUPDATE_SESSIONS].SetInterval(0);
     m_timers[WUPDATE_WEATHERS].SetInterval(1*IN_MILLISECONDS);
     m_timers[WUPDATE_AUCTIONS].SetInterval(MINUTE*IN_MILLISECONDS);
     m_timers[WUPDATE_UPTIME].SetInterval(getConfig(CONFIG_UINT32_UPTIME_UPDATE)*MINUTE*IN_MILLISECONDS);
@@ -1389,7 +1387,8 @@ void World::DetectDBCLang()
         m_lang_confid = LOCALE_enUS;
     }
 
-    ChrRacesEntry const* race = sChrRacesStore.LookupEntry(1);
+    ChrRacesEntry const* race = sChrRacesStore.LookupEntry(RACE_HUMAN);
+    MANGOS_ASSERT(race);
 
     std::string availableLocalsStr;
 
@@ -1474,13 +1473,8 @@ void World::Update(uint32 diff)
         sAuctionMgr.Update();
     }
 
-    /// <li> Handle session updates when the timer has passed
-    if (m_timers[WUPDATE_SESSIONS].Passed())
-    {
-        m_timers[WUPDATE_SESSIONS].Reset();
-
-        UpdateSessions(diff);
-    }
+    /// <li> Handle session updates
+    UpdateSessions(diff);
 
     /// <li> Handle weather updates when the timer has passed
     if (m_timers[WUPDATE_WEATHERS].Passed())
@@ -1512,14 +1506,9 @@ void World::Update(uint32 diff)
     }
 
     /// <li> Handle all other objects
-    if (m_timers[WUPDATE_OBJECTS].Passed())
-    {
-        m_timers[WUPDATE_OBJECTS].Reset();
-        ///- Update objects when the timer has passed (maps, transport, creatures,...)
-        sMapMgr.Update(diff);                // As interval = 0
-
-        sBattleGroundMgr.Update(diff);
-    }
+    ///- Update objects (maps, transport, creatures,...)
+    sMapMgr.Update(diff);
+    sBattleGroundMgr.Update(diff);
 
     ///- Delete all characters which have been deleted X days before
     if (m_timers[WUPDATE_DELETECHARS].Passed())
@@ -1666,7 +1655,7 @@ void World::SendGlobalText(const char* text, WorldSession *self)
 
     while(char* line = ChatHandler::LineFromMessage(pos))
     {
-        ChatHandler::FillMessageData(&data, NULL, CHAT_MSG_SYSTEM, LANG_UNIVERSAL, NULL, 0, line, NULL);
+        ChatHandler::FillMessageData(&data, NULL, CHAT_MSG_SYSTEM, LANG_UNIVERSAL, line);
         SendGlobalMessage(&data, self);
     }
 
@@ -1695,7 +1684,7 @@ void World::SendZoneMessage(uint32 zone, WorldPacket *packet, WorldSession *self
 void World::SendZoneText(uint32 zone, const char* text, WorldSession *self, uint32 team)
 {
     WorldPacket data;
-    ChatHandler::FillMessageData(&data, NULL, CHAT_MSG_SYSTEM, LANG_UNIVERSAL, NULL, 0, text, NULL);
+    ChatHandler::FillMessageData(&data, NULL, CHAT_MSG_SYSTEM, LANG_UNIVERSAL, text);
     SendZoneMessage(zone, &data, self,team);
 }
 
@@ -1935,7 +1924,7 @@ void World::UpdateSessions( uint32 diff )
         WorldSession * pSession = itr->second;
         WorldSessionFilter updater(pSession);
 
-        if(!pSession->Update(diff, updater))    // As interval = 0
+        if(!pSession->Update(updater))
         {
             RemoveQueuedSession(pSession);
             m_sessions.erase(itr);
