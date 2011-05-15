@@ -1495,7 +1495,7 @@ void WorldSession::HandleItemRefundInfoRequest( WorldPacket& recvPacket )
 
 void WorldSession::HandleItemRefundRequest( WorldPacket& recv_data )
 {
-    if( !_player || !_player->IsInWorld() )
+    if (!_player || !_player->IsInWorld())
         return;
 
     sLog.outDebug("Recieved CMSG_ITEM_REFUND_INFO.");
@@ -1511,7 +1511,7 @@ void WorldSession::HandleItemRefundRequest( WorldPacket& recv_data )
 
     if (pItem = _player->GetItemByGuid(ItemGuid))
     {
-        if(pItem->IsEligibleForRefund())
+        if (pItem->IsEligibleForRefund())
         {
             RefundEntry = _player->LookupRefundableItem(ItemGuid);
 
@@ -1520,9 +1520,9 @@ void WorldSession::HandleItemRefundRequest( WorldPacket& recv_data )
                 if (_player->GetTotalPlayedTime() < (pItem->GetPlayedtimeField() + 60*60*2))
                     ex = sItemExtendedCostStore.LookupEntry(RefundEntry);
 
-            if(ex != NULL)
+            if (ex != NULL)
             {
-                if(proto = pItem->GetProto())
+                if (proto = pItem->GetProto())
                 {
                     //We remove the refunded item and refund the cost
                     for (int i = 0; i < 5; ++i)
