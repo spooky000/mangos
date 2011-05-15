@@ -23213,16 +23213,11 @@ void Player::SetRestType( RestType n_r_type, uint32 areaTriggerId /*= 0*/)
 
 void Player::AddRefundableItem(ObjectGuid itemGuid,  uint32 extendedcost)
 {
-    std::pair<ObjectGuid, uint32> RefundableItemInfo;
-    
     if (Item *item = GetItemByGuid(itemGuid))
     {
         item->SetPlayedtimeField(GetTotalPlayedTime());
 
-        RefundableItemInfo.first = itemGuid;
-        RefundableItemInfo.second = extendedcost;
-
-        sObjectMgr.mItemRefundableMap.insert(RefundableItemInfo);
+        sObjectMgr.mItemRefundableMap.insert(std::make_pair<ObjectGuid, uint32>(itemGuid, extendedcost));
     }
 }
 
