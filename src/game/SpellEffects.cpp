@@ -363,7 +363,7 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                             uint8 count = 0;
                             for(tbb::concurrent_vector<TargetInfo>::const_iterator ihit= m_UniqueTargetInfo.begin();ihit != m_UniqueTargetInfo.end();++ihit)
                                 if(ihit->targetGUID != m_caster->GetGUID())
-                                    if(Player *target = ObjectAccessor::FindPlayer(ihit->targetGUID))
+                                    if(Player *target = ObjectAccessor::FindPlayer(ihit->TargetGuid))
                                         if(target->HasAura(m_triggeredByAuraSpell->Id))
                                             ++count;
                             if (count)
@@ -1006,7 +1006,7 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
             case SPELLFAMILY_DEATHKNIGHT:
             {
                 // Blood Boil - bonus for diseased targets
-                if (m_spellInfo->SpellFamilyFlags & 0x00040000 && unitTarget->GetAura(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DEATHKNIGHT, 0, 0x00000002, m_caster->GetGUID()))
+                if (m_spellInfo->SpellFamilyFlags & 0x00040000 && unitTarget->GetAura(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DEATHKNIGHT, 0, 0x00000002, m_caster->GetObjectGuid()))
                 {
                     damage += damage / 2;
                     damage += int32(m_caster->GetTotalAttackPowerValue(BASE_ATTACK)* 0.035f);
@@ -2669,7 +2669,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     unitTarget->SetByteValue(UNIT_FIELD_BYTES_1,0,UNIT_STAND_STATE_STAND);
                     unitTarget->GetMotionMaster()->Clear();
                     unitTarget->GetMotionMaster()->MoveFollow(pCaster,PET_FOLLOW_DIST,unitTarget->GetAngle(pCaster));
-                    ((Player*)pCaster)->KilledMonsterCredit(unitTarget->GetEntry(),unitTarget->GetGUID());
+                    ((Player*)pCaster)->KilledMonsterCredit(unitTarget->GetEntry(),unitTarget->GetObjectGuid());
                     return;
                 }
                 case 55818:                                 // Hurl Boulder
@@ -8328,7 +8328,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                 // Glyph of Starfire
                 case 54846:
                 {
-                    if (Aura* aura = unitTarget->GetAura(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, UI64LIT(0x00000002), 0, m_caster->GetGUID()))
+                    if (Aura* aura = unitTarget->GetAura(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, UI64LIT(0x00000002), 0, m_caster->GetObjectGuid()))
                     {
                         uint32 countMin = aura->GetAuraMaxDuration();
                         uint32 countMax = GetSpellMaxDuration(aura->GetSpellProto());
@@ -10327,7 +10327,7 @@ void Spell::EffectTransmitted(SpellEffectIndex eff_idx)
                 if (!cBomb)
                     return;
                 cBomb->setFaction(team);
-                cBomb->SetCharmerGuid(m_caster->GetGUID());
+                cBomb->SetCharmerGuid(m_caster->GetObjectGuid());
                 bg->EventSpawnGOSA(((Player*)m_caster),cBomb,fx,fy,fz);
             }
         }

@@ -2159,7 +2159,7 @@ void Guild::MoveFromBankToChar( Player * pl, uint8 BankTab, uint8 BankTabSlot, u
             }
 
             //remove from refundable map
-            pl->RemoveRefundableItem(pItemChar->GetGUID());
+            pl->RemoveRefundableItem(pItemChar->GetObjectGuid());
 
             CharacterDatabase.BeginTransaction();
             LogBankEvent(GUILD_BANK_LOG_WITHDRAW_ITEM, BankTab, pl->GetGUIDLow(), pItemBank->GetEntry(), pItemBank->GetCount());

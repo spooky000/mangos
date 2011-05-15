@@ -1553,13 +1553,14 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         Unit* GetCharm() const;
         Unit* GetCreator() const;
         void Uncharm();
-        Unit* GetCharmerOrOwner() const { return !GetCharmerGuid().IsEmpty() ? GetCharmer() : GetOwner(); }
-        Unit* GetCharmerOrOwnerOrSelf()
+        Unit* GetCharmerOrOwner() const { return GetCharmerGuid() ? GetCharmer() : GetOwner(); }
+        Unit* GetCharmOrPet() const { return !GetCharmGuid().IsEmpty() ? GetCharm() : (Unit*)GetPet(); }
+        Unit* GetCharmerOrOwnerOrSelf() const
         {
             if(Unit* u = GetCharmerOrOwner())
                 return u;
 
-            return this;
+            return (Unit*)this;
         }
         bool IsCharmerOrOwnerPlayerOrPlayerItself() const;
         Player* GetCharmerOrOwnerPlayerOrPlayerItself();

@@ -3083,7 +3083,7 @@ Player* Map::GetPlayer(ObjectGuid guid)
  */
 Creature* Map::GetCreature(ObjectGuid guid)
 {
-    return m_objectsStore.find<Creature>(guid.GetRawValue(), (Creature*)NULL);
+    return m_objectsStore.find<Creature>(guid, (Creature*)NULL);
 }
 
 /**
@@ -3093,7 +3093,7 @@ Creature* Map::GetCreature(ObjectGuid guid)
  */
 Pet* Map::GetPet(ObjectGuid guid)
 {
-    return m_objectsStore.find<Pet>(guid.GetRawValue(), (Pet*)NULL);
+    return m_objectsStore.find<Pet>(guid, (Pet*)NULL);
 }
 
 /**

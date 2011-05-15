@@ -6091,7 +6091,7 @@ bool Unit::IsInPartyWith(Unit const *unit) const
     if(this == unit)
       return true;
 
-   const Unit *u1 = GetCharmerOrOwnerOrSelf();
+    const Unit *u1 = GetCharmerOrOwnerOrSelf();
     const Unit *u2 = unit->GetCharmerOrOwnerOrSelf();
     if(u1 == u2)
         return true;

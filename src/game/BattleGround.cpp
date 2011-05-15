@@ -1379,7 +1379,7 @@ void BattleGround::AddPlayer(Player *plr)
 
 uint32 BattleGround::GetPlayerScore(Player *Source, uint32 type)
 {
-    BattleGroundScoreMap::const_iterator itr = m_PlayerScores.find(Source->GetGUID());
+    BattleGroundScoreMap::const_iterator itr = m_PlayerScores.find(Source->GetObjectGuid());
 
     if(itr == m_PlayerScores.end())                         // player not found...
         return 0;
