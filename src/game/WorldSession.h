@@ -347,9 +347,9 @@ class MANGOS_DLL_SPEC WorldSession
             }
         }
         //used with item_page table
-        bool SendItemInfo( uint32 itemid, WorldPacket data );
+        bool SendItemInfo(uint32 itemid, WorldPacket data);
         //used with item refund system
-        void SendRefundInfo(uint64 GUID);
+        void SendRefundInfo(ObjectGuid ItemGuid);
 
         //auction
         void SendAuctionHello(Unit *unit);

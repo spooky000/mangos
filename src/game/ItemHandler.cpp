@@ -1487,7 +1487,7 @@ void WorldSession::HandleItemRefundInfoRequest( WorldPacket& recvPacket )
 
     sLog.outDebug("Recieved CMSG_ITEMREFUNDINFO.");
 
-    uint64 itemGUID;
+    ObjectGuid itemGUID;
     recvPacket >> itemGUID;
 
     SendRefundInfo(itemGUID);
@@ -1500,20 +1500,20 @@ void WorldSession::HandleItemRefundRequest( WorldPacket& recv_data )
 
     sLog.outDebug("Recieved CMSG_ITEM_REFUND_INFO.");
 
-    uint64 GUID;
+    ObjectGuid ItemGuid;
     uint32 error = 1;
     Item* pItem = NULL;
     uint32 RefundEntry;
     ItemExtendedCostEntry const* ex = NULL;
     ItemPrototype const* proto = NULL;
  
-    recv_data >> GUID;
+    recv_data >> ItemGuid;
 
-    if (pItem = _player->GetItemByGuid(GUID))
+    if (pItem = _player->GetItemByGuid(ItemGuid))
     {
         if(pItem->IsEligibleForRefund())
         {
-            RefundEntry = _player->LookupRefundableItem(GUID);
+            RefundEntry = _player->LookupRefundableItem(ItemGuid);
 
             // If the item is refundable we look up the extendedcost
             if (RefundEntry != 0 && pItem->GetPlayedtimeField() != 0)
@@ -1536,7 +1536,7 @@ void WorldSession::HandleItemRefundRequest( WorldPacket& recv_data )
                     // Remove Item from player
                     _player->DestroyItem( pItem->GetBagSlot(),pItem->GetSlot(), true);
                     // Remove Item from refundable map
-                    _player->RemoveRefundableItem(GUID);
+                    _player->RemoveRefundableItem(ItemGuid);
 
                     // we were successful!
                     error = 0;
@@ -1546,7 +1546,7 @@ void WorldSession::HandleItemRefundRequest( WorldPacket& recv_data )
     }
 
     WorldPacket packet(SMSG_ITEM_PURCHASE_REFUND_RESULT, 60);
-    packet << uint64(GUID);
+    packet << ItemGuid;
     packet << uint32(error);
 
     if (error == 0)
@@ -1567,18 +1567,18 @@ void WorldSession::HandleItemRefundRequest( WorldPacket& recv_data )
     sLog.outDebug("Sent SMSG_ITEM_REFUND_RESULT.");
 }
 
-void WorldSession::SendRefundInfo(uint64 itemGUID)
+void WorldSession::SendRefundInfo(ObjectGuid itemGuid)
 {
     if (!_player || !_player->IsInWorld())
         return;
 
-    Item* pItem = _player->GetItemByGuid(itemGUID);
+    Item* pItem = _player->GetItemByGuid(itemGuid);
     if (pItem == NULL)
         return;
 
     if (pItem->IsEligibleForRefund())
     {
-        uint32 RefundEntry = _player->LookupRefundableItem(itemGUID);
+        uint32 RefundEntry = _player->LookupRefundableItem(itemGuid);
 
         if (!RefundEntry || pItem->GetPlayedtimeField() == 0)
             return;
@@ -1590,7 +1590,7 @@ void WorldSession::SendRefundInfo(uint64 itemGUID)
             return;
 
         WorldPacket packet(SMSG_SET_ITEM_PURCHASE_DATA, 68);
-        packet << uint64( itemGUID );
+        packet << itemGuid;
         packet << uint32( proto->BuyPrice );
         packet << uint32( ex->reqhonorpoints );
         packet << uint32( ex->reqarenapoints );
