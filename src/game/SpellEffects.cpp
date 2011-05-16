@@ -10080,7 +10080,7 @@ void Spell::EffectKnockBack(SpellEffectIndex eff_idx)
     if(!unitTarget)
         return;
 
-	// Can't knockback vehicles
+    // Can't knockback vehicles
     if (unitTarget->GetObjectGuid().IsVehicle())
         return;
 
