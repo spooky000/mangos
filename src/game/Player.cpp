@@ -8035,7 +8035,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                 {
                     if (go->GetGoType() == GAMEOBJECT_TYPE_CHEST)
                     {
-                        if (go->GetGOInfo()->chest.groupLootRules == 1  || sWorld.getConfig(CONFIG_BOOL_LOOT_CHESTS_IGNORE_DB))
+                        if (go->GetGOInfo()->chest.groupLootRules == 1/* || sWorld.getConfig(CONFIG_BOOL_LOOT_CHESTS_IGNORE_DB)*/)
                         {
                             group->UpdateLooterGuid(go,true);
                             switch (group->GetLootMethod())
@@ -8081,7 +8081,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
 
             if ((go->getLootState() == GO_ACTIVATED) && (go->GetGoType() == GAMEOBJECT_TYPE_CHEST))
             {
-                if (go->GetGOInfo()->chest.groupLootRules == 1 || sWorld.getConfig(CONFIG_BOOL_LOOT_CHESTS_IGNORE_DB))
+                if (go->GetGOInfo()->chest.groupLootRules == 1/* || sWorld.getConfig(CONFIG_BOOL_LOOT_CHESTS_IGNORE_DB)*/)
                 {
                     if(Group* group = GetGroup())
                     {
