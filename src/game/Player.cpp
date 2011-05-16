@@ -19151,7 +19151,7 @@ bool Player::ActivateTaxiPathTo(std::vector<uint32> const& nodes, Creature* npc 
     // taximaster case
     if (npc)
     {
-        // not let cheating with start flight mounted0
+        // not let cheating with start flight mounted
         if (IsMounted() || GetVehicle())
         {
             WorldPacket data(SMSG_ACTIVATETAXIREPLY, 4);
