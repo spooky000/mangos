@@ -470,7 +470,7 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     case 47496:
                     {
                         // Special Effect only for caster (ghoul in this case)
-                        if (unitTarget->GetEntry() == 26125 && (unitTarget->GetGUID() == m_caster->GetGUID()))
+                        if (unitTarget->GetEntry() == 26125 && (unitTarget->GetObjectGuid() == m_caster->GetObjectGuid()))
                         {
                             // After explode the ghoul must be killed
                             unitTarget->DealDamage(unitTarget, unitTarget->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
@@ -572,7 +572,7 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     case 52942:
                     {
                         // don't damage self and only players
-                        if(unitTarget->GetGUID() == m_caster->GetGUID() || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                        if(unitTarget->GetObjectGuid() == m_caster->GetObjectGuid() || unitTarget->GetTypeId() != TYPEID_PLAYER)
                             return;
                         
                         float radius = sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[0])->Radius;
@@ -2391,7 +2391,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     if (!m_caster || !m_caster->isAlive() || !m_originalCaster || !m_originalCaster->GetCharmer() || m_originalCaster->GetCharmer()->GetTypeId() != TYPEID_PLAYER)
                         return;
 
-                    ((Player*)m_originalCaster->GetCharmer())->KilledMonsterCredit(m_caster->GetEntry(), m_caster->GetGUID());
+                    ((Player*)m_originalCaster->GetCharmer())->KilledMonsterCredit(m_caster->GetEntry(), m_caster->GetObjectGuid());
                         return;
                 }*/
                 case 51866:                                 // Kick Nass

@@ -1172,7 +1172,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 {
                     Unit* caster = triggeredByAura->GetCaster();
                     // it should not be triggered from other ignites
-                    if (caster && pVictim && caster->GetGUID() == pVictim->GetGUID())
+                    if (caster && pVictim && caster->GetObjectGuid() == pVictim->GetObjectGuid())
                     {
                         Unit::AuraList const& auras = caster->GetAurasByType(SPELL_AURA_ADD_FLAT_MODIFIER);
                         for (Unit::AuraList::const_iterator i = auras.begin(); i != auras.end(); i++)
