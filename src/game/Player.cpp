@@ -20931,7 +20931,7 @@ bool Player::HasQuestForGO(int32 GOId) const
 
 void Player::UpdateForQuestWorldObjects()
 {
-    if(m_clientGUIDs.empty())
+    if(m_clientGUIDs.empty() || !GetMap())
         return;
 
     UpdateData udata;
