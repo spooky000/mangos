@@ -2042,7 +2042,7 @@ void Unit::DealMeleeDamage(CalcDamageInfo *damageInfo, bool durabilityLoss)
                 uint32 damage=(*i)->GetModifier()->m_amount;
                 SpellEntry const *i_spellProto = (*i)->GetSpellProto();
                 // Thorns
-                if (i_spellProto->SpellFamilyName == SPELLFAMILY_DRUID && i_spellProto->SpellFamilyFlags & UI64LIT(0x00000100))
+                if (i_spellProto && i_spellProto->SpellFamilyName == SPELLFAMILY_DRUID && i_spellProto->SpellFamilyFlags & UI64LIT(0x00000100))
                 {
                     Unit::AuraList const& dummyList = pVictim->GetAurasByType(SPELL_AURA_DUMMY);
                     for(Unit::AuraList::const_iterator iter = dummyList.begin(); iter != dummyList.end(); ++iter)
@@ -4352,7 +4352,8 @@ int32 Unit::GetMaxPositiveAuraModifierByMiscValue(AuraType auratype, int32 misc_
     for(AuraList::const_iterator i = mTotalAuraList.begin();i != mTotalAuraList.end(); ++i)
     {
         Modifier* mod = (*i)->GetModifier();
-        if (!(nonStackingOnly && (*i)->IsStacking()) && mod->m_miscvalue == misc_value && mod->m_amount > modifier)
+        if (!(nonStackingOnly && (*i)->IsStacking()) && mod->m_amount > modifier &&
+            (mod->m_miscvalue == misc_value || mod->m_miscvalue < 0))
             modifier = mod->m_amount;
     }
 
@@ -4445,7 +4446,8 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
         for (SpellAuraHolderMap::iterator iter = spair.first; iter != spair.second; ++iter)
         {
             SpellAuraHolder *foundHolder = iter->second;
-            if (foundHolder->GetCasterGuid() == holder->GetCasterGuid())
+            if (foundHolder->GetCasterGuid() == holder->GetCasterGuid() ||
+                holder->GetCasterGuid().IsPet() && holder->GetCasterGuid().IsPet())
             {
                 // Aura can stack on self -> Stack it;
                 if (aurSpellInfo->StackAmount)
@@ -6684,12 +6686,13 @@ void Unit::RemoveGuardians()
 {
     while (!m_guardianPets.empty())
     {
-        if (Pet* pet = GetMap()->GetPet(*m_guardianPets.begin()))
-            pet->Unsummon(PET_SAVE_AS_DELETED, this);
+        ObjectGuid guid = *m_guardianPets.begin();
 
-        m_guardianPets.erase(m_guardianPets.begin());
+        if (Pet* pet = GetMap()->GetPet(guid))
+            pet->Unsummon(PET_SAVE_AS_DELETED, this); // can remove pet guid from m_guardianPets
+
+        m_guardianPets.erase(guid);
     }
-    m_guardianPets.clear();
 }
 
 Pet* Unit::FindGuardianWithEntry(uint32 entry)

@@ -809,7 +809,7 @@ void CreatureEventAI::ProcessAction(CreatureEventAI_Action const& action, uint32
                 return;
             }
 
-            pInst->SetData64(action.set_inst_data64.field, target->GetObjectGuid().GetRawValue());
+            pInst->SetData64(action.set_inst_data64.field, target->GetObjectGuid());
             break;
         }
         case ACTION_T_UPDATE_TEMPLATE:

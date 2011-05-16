@@ -21,13 +21,17 @@
 
 #include "Common.h"
 #include "SharedDefines.h"
+#include "Platform/Define.h"
 #include "Policies/Singleton.h"
 #include "DBCStructure.h"
+#include "Item.h"
+#include <ace/RW_Thread_Mutex.h>
 
-class Item;
 class Player;
 class Unit;
 class WorldPacket;
+
+struct ItemProtoType;
 
 #define MIN_AUCTION_TIME (12*HOUR)
 #define MAX_AUCTION_SORT 12
@@ -55,6 +59,10 @@ enum AuctionAction
 
 struct AuctionEntry
 {
+    AuctionEntry() : m_deleted(false) {};
+
+    bool   m_deleted;
+
     uint32 Id;
     uint32 itemGuidLow;
     uint32 itemTemplate;
@@ -78,6 +86,9 @@ struct AuctionEntry
     void DeleteFromDB() const;
     void SaveToDB() const;
 
+    bool IsDeleted() const { return m_deleted; };
+    void SetDeleted() { m_deleted = true; };
+
     // -1,0,+1 order result
     int CompareAuctionEntry(uint32 column, const AuctionEntry *auc, Player* viewPlayer) const;
 };
@@ -98,6 +109,9 @@ class AuctionHouseObject
         uint32 GetCount() { return AuctionsMap.size(); }
 
         AuctionEntryMap *GetAuctions() { return &AuctionsMap; }
+
+        AuctionEntryMap::iterator GetAuctionsBegin() {return AuctionsMap.begin();}
+        AuctionEntryMap::iterator GetAuctionsEnd() {return AuctionsMap.end();}
 
         void AddAuction(AuctionEntry *ah)
         {
@@ -145,11 +159,15 @@ class AuctionHouseMgr
         ~AuctionHouseMgr();
 
         typedef UNORDERED_MAP<uint32, Item*> ItemMap;
+        typedef ACE_RW_Thread_Mutex          LockType;
+        typedef ACE_Read_Guard<LockType>     ReadGuard;
+        typedef ACE_Write_Guard<LockType>    WriteGuard;
 
         AuctionHouseObject* GetAuctionsMap(AuctionHouseEntry const* house);
 
         Item* GetAItem(uint32 id)
         {
+            ReadGuard guard(i_lock);
             ItemMap::const_iterator itr = mAitems.find(id);
             if (itr != mAitems.end())
             {
@@ -168,6 +186,8 @@ class AuctionHouseMgr
         static uint32 GetAuctionHouseTeam(AuctionHouseEntry const* house);
         static AuctionHouseEntry const* GetAuctionHouseEntry(Unit* unit);
 
+        LockType& GetLock() { return i_lock; }
+
     public:
         //load first auction items, because of check if item exists, when loading
         void LoadAuctionItems();
@@ -175,6 +195,9 @@ class AuctionHouseMgr
 
         void AddAItem(Item* it);
         bool RemoveAItem(uint32 id);
+
+        void AddAItemToRemoveList(Item* item);
+        void ClearRemovedAItems();
 
         void Update();
 
@@ -184,6 +207,9 @@ class AuctionHouseMgr
         AuctionHouseObject  mNeutralAuctions;
 
         ItemMap             mAitems;
+
+        LockType            i_lock;
+        std::queue<Item*>   m_deletedItems;
 };
 
 #define sAuctionMgr MaNGOS::Singleton<AuctionHouseMgr>::Instance()
