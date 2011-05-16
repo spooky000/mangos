@@ -66,6 +66,7 @@ class WorldSession;
 class Creature;
 class GameObject;
 class Player;
+class Group;
 class Unit;
 class Map;
 class UpdateMask;

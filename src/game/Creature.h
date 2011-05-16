@@ -609,15 +609,8 @@ class MANGOS_DLL_SPEC Creature : public Unit
         bool lootForSkin;
 
         void PrepareBodyLootState();
-        ObjectGuid GetLootRecipientGuid() const { return m_lootRecipientGuid; }
-        uint32 GetLootGroupRecipientId() const { return m_lootGroupRecipientId; }
-        Player* GetLootRecipient() const;                   // use group cases as prefered
-        Group* GetGroupLootRecipient() const;
-        bool HasLootRecipient() const { return m_lootGroupRecipientId || m_lootRecipientGuid; }
-        bool IsGroupLootRecipient() const { return m_lootGroupRecipientId; }
         void SetLootRecipient(Unit* unit);
         void AllLootRemovedFromCorpse();
-        Player* GetOriginalLootRecipient() const;           // ignore group changes/etc, not for looting
 
         SpellEntry const *ReachWithSpellAttack(Unit *pVictim);
         SpellEntry const *ReachWithSpellCure(Unit *pVictim);
