@@ -10832,7 +10832,7 @@ bool Aura::IsEffectStacking()
         case SPELL_AURA_MOD_PARTY_MAX_HEALTH:                           // Commanding Shout / Blood Pact
         case SPELL_AURA_MOD_HEALING_PCT:                                // Mortal Strike / Wound Poison / Aimed Shot / Furious Attacks
         case SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK:                    // Wrath of Air Totem / Mind-Numbing Poison and many more
-        case SPELL_AURA_MOD_STAT:                                       // Gift/Mark of the Wild / Priest Stamina
+        //case SPELL_AURA_MOD_STAT:                                       // Gift/Mark of the Wild / Priest Stamina
                 return false;
             break;
         case SPELL_AURA_MOD_DAMAGE_PERCENT_DONE:                        // Ferocious Inspiration / Sanctified Retribution
