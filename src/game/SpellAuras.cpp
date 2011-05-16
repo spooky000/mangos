@@ -6109,13 +6109,15 @@ void Aura::HandleAuraModResistanceExclusive(bool apply, bool /*Real*/)
 
 void Aura::HandleAuraModResistance(bool apply, bool /*Real*/)
 {
+    Unit *target = GetTarget();
+
     for(int8 x = SPELL_SCHOOL_NORMAL; x < MAX_SPELL_SCHOOL;x++)
     {
         if(m_modifier.m_miscvalue & int32(1<<x))
         {
-            GetTarget()->HandleStatModifier(UnitMods(UNIT_MOD_RESISTANCE_START + x), TOTAL_VALUE, float(m_modifier.m_amount), apply);
-            if(GetTarget()->GetTypeId() == TYPEID_PLAYER || ((Creature*)GetTarget())->IsPet())
-                GetTarget()->ApplyResistanceBuffModsMod(SpellSchools(x), m_modifier.m_amount > 0, float(m_modifier.m_amount), apply);
+            float change = target->CheckAuraStackingAndApply(this, UnitMods(UNIT_MOD_RESISTANCE_START + x), TOTAL_VALUE, float(m_modifier.m_amount), apply);
+            if (change != 0)
+                target->ApplyResistanceBuffModsMod(SpellSchools(x), m_modifier.m_amount > 0, float(m_modifier.m_amount), apply);
         }
     }
 }
@@ -6171,15 +6173,17 @@ void Aura::HandleAuraModStat(bool apply, bool /*Real*/)
         return;
     }
 
+    Unit *target = GetTarget();
+
     for(int32 i = STAT_STRENGTH; i < MAX_STATS; i++)
     {
         // -1 or -2 is all stats ( misc < -2 checked in function beginning )
         if (m_modifier.m_miscvalue < 0 || m_modifier.m_miscvalue == i)
         {
             //m_target->ApplyStatMod(Stats(i), m_modifier.m_amount,apply);
-            float change = GetTarget()->CheckAuraStackingAndApply(this, UnitMods(UNIT_MOD_STAT_START + i), TOTAL_VALUE, float(m_modifier.m_amount), apply, 0, i+1);
+            float change = target->CheckAuraStackingAndApply(this, UnitMods(UNIT_MOD_STAT_START + i), TOTAL_VALUE, float(m_modifier.m_amount), apply, 0, i+1);
             if (change != 0)
-                GetTarget()->ApplyStatBuffMod(Stats(i), (change < 0 && !IsStacking() ? -change : change), apply);
+                target->ApplyStatBuffMod(Stats(i), (change < 0 && !IsStacking() ? -change : change), apply);
         }
     }
 }
