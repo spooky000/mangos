@@ -708,10 +708,6 @@ class MANGOS_DLL_SPEC Creature : public Unit
         bool CreateFromProto(uint32 guidlow, CreatureInfo const* cinfo, Team team, const CreatureData *data = NULL, GameEventCreatureData const* eventData =NULL);
         bool InitEntry(uint32 entry, const CreatureData* data = NULL, GameEventCreatureData const* eventData = NULL);
 
-        uint32 m_groupLootTimer;                            // (msecs)timer used for group loot
-        uint32 m_groupLootId;                               // used to find group which is looting corpse
-        void StopGroupLoot();
-
         // vendor items
         VendorItemCounts m_vendorItemCounts;
 
@@ -721,8 +717,6 @@ class MANGOS_DLL_SPEC Creature : public Unit
         static float _GetDamageMod(int32 Rank);
 
         uint32 m_lootMoney;
-        ObjectGuid m_lootRecipientGuid;                     // player who will have rights for looting if m_lootGroupRecipient==0 or group disbanded
-        uint32 m_lootGroupRecipientId;                      // group who will have rights for looting if set and exist
 
         /// Timers
         uint32 m_corpseDecayTimer;                          // (msecs)timer for death or corpse disappearance
