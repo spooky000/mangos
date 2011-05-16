@@ -1139,7 +1139,7 @@ bool Item::IsBindedNotWith( Player const* player ) const
         return false;
 
     if (HasFlag(ITEM_FIELD_FLAGS, ITEM_DYNFLAG_BOP_TRADEABLE))
-        if (allowedGUIDs.find(player->GetGUIDLow()) != allowedGUIDs.end())
+        if (allowedGUIDs.find(player->GetObjectGuid().GetCounter()) != allowedGUIDs.end())
             return false;
 
     // has loot with diff owner
