@@ -1024,56 +1024,6 @@ void Creature::PrepareBodyLootState()
 }
 
 /**
- * Return original player who tap creature, it can be different from player/group allowed to loot so not use it for loot code
- */
-Player* Creature::GetOriginalLootRecipient() const
-{
-    return m_lootRecipientGuid ? ObjectAccessor::FindPlayer(m_lootRecipientGuid) : NULL;
-}
-
-/**
- * Return group if player tap creature as group member, independent is player after leave group or stil be group member
- */
-Group* Creature::GetGroupLootRecipient() const
-{
-    // original recipient group if set and not disbanded
-    return m_lootGroupRecipientId ? sObjectMgr.GetGroupById(m_lootGroupRecipientId) : NULL;
-}
-
-/**
- * Return player who can loot tapped creature (member of group or single player)
- *
- * In case when original player tap creature as group member then group tap prefered.
- * This is for example important if player after tap leave group.
- * If group not exist or disbanded or player tap creature not as group member return player
- */
-Player* Creature::GetLootRecipient() const
-{
-    // original recipient group if set and not disbanded
-    Group* group = GetGroupLootRecipient();
-
-    // original recipient player if online
-    Player* player = GetOriginalLootRecipient();
-
-    // if group not set or disbanded return original recipient player if any
-    if (!group)
-        return player;
-
-    // group case
-
-    // return player if it still be in original recipient group
-    if (player && player->GetGroup() == group)
-        return player;
-
-    // find any in group
-    for(GroupReference *itr = group->GetFirstMember(); itr != NULL; itr = itr->next())
-        if (Player *p = itr->getSource())
-            return p;
-
-    return NULL;
-}
-
-/**
  * Set player and group (if player group member) who tap creature
  */
 void Creature::SetLootRecipient(Unit *unit)

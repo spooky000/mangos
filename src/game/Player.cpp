@@ -8031,6 +8031,37 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                                 return;
                             }
 
+                if (Group* group = this->GetGroup())
+                {
+                    if (go->GetGoType() == GAMEOBJECT_TYPE_CHEST)
+                    {
+                        if (go->GetGOInfo()->chest.groupLootRules == 1  || sWorld.getConfig(CONFIG_BOOL_LOOT_CHESTS_IGNORE_DB))
+                        {
+                            group->UpdateLooterGuid(go,true);
+                            switch (group->GetLootMethod())
+                            {
+                                case GROUP_LOOT:
+                                // GroupLoot delete items over threshold (threshold even not implemented), and roll them. Items with quality<threshold, round robin
+                                     group->GroupLoot(go, loot);
+                                     permission = GROUP_PERMISSION;
+                                     break;
+                                case NEED_BEFORE_GREED:
+                                     group->NeedBeforeGreed(go, loot);
+                                     permission = GROUP_PERMISSION;
+                                     break;
+                                case MASTER_LOOT:
+                                     group->MasterLoot(go, loot);
+                                     permission = MASTER_PERMISSION;
+                                     break;
+                                default:
+                                     break;
+                             }
+                         }
+                         else
+                             permission = GROUP_PERMISSION;
+                     }
+                 }
+
                 // Entry 0 in fishing loot template used for store junk fish loot at fishing fail it junk allowed by config option
                 // this is overwrite fishinghole loot for example
                 if (loot_type == LOOT_FISHING_FAIL)
@@ -8046,6 +8077,41 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                     go->getFishLoot(loot,this);
 
                 go->SetLootState(GO_ACTIVATED);
+            }
+
+            if ((go->getLootState() == GO_ACTIVATED) && (go->GetGoType() == GAMEOBJECT_TYPE_CHEST))
+            {
+                if (go->GetGOInfo()->chest.groupLootRules == 1 || sWorld.getConfig(CONFIG_BOOL_LOOT_CHESTS_IGNORE_DB))
+                {
+                    if(Group* group = GetGroup())
+                    {
+                        if (group == go->GetGroupLootRecipient())
+                        {
+                            if (group->GetLootMethod() == FREE_FOR_ALL)
+                                permission = ALL_PERMISSION;
+                            else if (group->GetLooterGuid() == GetObjectGuid())
+                            {
+                                if (group->GetLootMethod() == MASTER_LOOT)
+                                    permission = MASTER_PERMISSION;
+                                else
+                                    permission = ALL_PERMISSION;
+                            }
+                            else
+                                permission = GROUP_PERMISSION;
+                        }
+                        else
+                            permission = NONE_PERMISSION;
+                    }
+               }
+               else
+                   permission = ALL_PERMISSION;
+            }
+            // the player whose group may loot the corpse
+            Player* recipient = go->GetLootRecipient();
+            if (!recipient)
+            {
+                go->SetLootRecipient(this);
+                recipient = this;
             }
             break;
         }
