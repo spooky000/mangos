@@ -633,24 +633,6 @@ void Creature::Update(uint32 update_diff, uint32 diff)
     }
 }
 
-void Creature::StartGroupLoot( Group* group, uint32 timer )
-{
-    m_groupLootId = group->GetId();
-    m_groupLootTimer = timer;
-}
-
-void Creature::StopGroupLoot()
-{
-    if (!m_groupLootId)
-        return;
-
-    if (Group* group = sObjectMgr.GetGroupById(m_groupLootId))
-        group->EndRoll();
-
-    m_groupLootTimer = 0;
-    m_groupLootId = 0;
-}
-
 void Creature::Regenerate(Powers power)
 {
     uint32 curValue = GetPower(power);
