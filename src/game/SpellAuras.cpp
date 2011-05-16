@@ -11056,7 +11056,7 @@ void Aura::HandleAuraSetVehicle(bool apply, bool real)
             target->RemoveVehicleKit();
 
     WorldPacket data(SMSG_SET_VEHICLE_REC_ID, target->GetPackGUID().size()+4);
-    data.appendPackGUID(target->GetGUID());
+    data.appendPackGUID(target->GetObjectGuid());
     data << uint32(apply ? vehicleId : 0);
     target->SendMessageToSet(&data, true);
 

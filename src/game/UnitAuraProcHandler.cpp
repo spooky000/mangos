@@ -602,14 +602,6 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     triggered_spell_id = 25997;
                     break;
                 }
-                // Petrified Bark normal and heroic mode
-                case 62337:
-                case 62933:
-                {
-                    basepoints[0] = damage;
-                    triggered_spell_id = 62379;
-                    break;
-                }
                 // Sweeping Strikes (NPC spells may be)
                 case 18765:
                 case 35429:
@@ -968,11 +960,12 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 }
                 // Petrified Bark
                 case 62337:
+                case 62933:
                 {
                     triggered_spell_id = 62379;
                     basepoints[0] = damage;
-                    // this == pVictim, why? :/ temp. workaround
-                    target = SelectRandomUnfriendlyTarget(getVictim());
+                    target = pVictim;
+                    //target = SelectRandomUnfriendlyTarget(getVictim());
                     break;
                 }
                 // Shadowfiend Death (Gain mana if pet dies with Glyph of Shadowfiend)
@@ -1179,7 +1172,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 {
                     Unit* caster = triggeredByAura->GetCaster();
                     // it should not be triggered from other ignites
-                    if (caster && pVictim && caster->GetGUID() == pVictim->GetGUID())
+                    if (caster && pVictim && caster->GetObjectGuid() == pVictim->GetObjectGuid())
                     {
                         Unit::AuraList const& auras = caster->GetAurasByType(SPELL_AURA_ADD_FLAT_MODIFIER);
                         for (Unit::AuraList::const_iterator i = auras.begin(); i != auras.end(); i++)
