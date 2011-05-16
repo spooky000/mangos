@@ -10807,7 +10807,7 @@ bool Aura::IsEffectStacking()
     // some hardcoded checks are needed (given attrEx6 not present)
     switch(GetModifier()->m_auraname)
     {
-        case SPELL_AURA_MOD_HIT_CHANCE:                                 // Insect Swarm / Scorpid Sting
+        /*case SPELL_AURA_MOD_HIT_CHANCE:                                 // Insect Swarm / Scorpid Sting
             if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_DEBUFF)
                 return false;
             break;
@@ -10824,11 +10824,11 @@ bool Aura::IsEffectStacking()
         case SPELL_AURA_MOD_SPELL_CRIT_CHANCE:                          // Elemental Oath
             if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_BUFF)
                 return false;
-            break;
+            break;*/
         // these effects never stack
         case SPELL_AURA_MOD_MELEE_HASTE:
         case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:
-        case SPELL_AURA_MOD_RESISTANCE;
+        case SPELL_AURA_MOD_RESISTANCE:
         case SPELL_AURA_MOD_PARTY_MAX_HEALTH:                           // Commanding Shout / Blood Pact
         case SPELL_AURA_MOD_HEALING_PCT:                                // Mortal Strike / Wound Poison / Aimed Shot / Furious Attacks
         case SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK:                    // Wrath of Air Totem / Mind-Numbing Poison and many more
