@@ -962,11 +962,9 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 case 62337:
                 case 62933:
                 {
-                    triggered_spell_id = 62379;
-                    basepoints[0] = damage;
-                    target = pVictim;
-                    //target = SelectRandomUnfriendlyTarget(getVictim());
-                    break;
+                    int32 bp0 = damage;
+                    pVictim->CastCustomSpell(pVictim, 62379, &bp0, NULL, NULL, true, NULL, NULL, GetObjectGuid());
+                    return SPELL_AURA_PROC_OK;
                 }
                 // Shadowfiend Death (Gain mana if pet dies with Glyph of Shadowfiend)
                 case 57989:
