@@ -460,7 +460,7 @@ m_isPersistent(false), m_in_use(0), m_spellAuraHolder(holder)
             // Calculate new periodic timer
             int32 ticks = oldDuration / _periodicTime;
 
-            _periodicTime = new_duration / ticks;
+            _periodicTime =  ticks == 0 ? new_duration : new_duration / ticks;
 
             m_modifier.periodictime = _periodicTime;
         }
@@ -1544,7 +1544,7 @@ void Aura::TriggerSpell()
                         if (target->GetTypeId() != TYPEID_UNIT)
                             return;
 
-                        if (Unit* caster = GetCaster())	 	
+                        if (Unit* caster = GetCaster())
                             caster->CastSpell(caster, 38495, true, NULL, this);
                         else
                             return;
@@ -5818,7 +5818,7 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
             {
                 case 48018:
                     if (apply)
-                        target->CastSpell(target, 62388, true);                
+                        target->CastSpell(target, 62388, true);
                     else
                     {
                         target->RemoveGameObject(spell->Id,true);
@@ -7732,7 +7732,7 @@ void Aura::HandleSchoolAbsorb(bool apply, bool Real)
                 // Send activate cooldown timer (possible 0) at client side
                 WorldPacket data(SMSG_MODIFY_COOLDOWN, (4+8+4));
                 data << spellProto->Id;
-                data << plr->GetGUID();
+                data << plr->GetObjectGuid();
                 data << end_time*IN_MILLISECONDS;
                 plr->SendDirectMessage(&data);
             }
@@ -9297,12 +9297,6 @@ bool Aura::IsLastAuraOnHolder()
             return false;
     return true;
 }
-
-/*bool Aura::HasMechanic(uint32 mechanic) const
-{
-    return GetSpellProto()->Mechanic == mechanic ||
-        GetSpellProto()->EffectMechanic[m_effIndex] == mechanic;
-}*/
 
 SpellAuraHolder::SpellAuraHolder(SpellEntry const* spellproto, Unit *target, WorldObject *caster, Item *castItem) :
 m_spellProto(spellproto), m_target(target), m_castItemGuid(castItem ? castItem->GetObjectGuid() : ObjectGuid()),
