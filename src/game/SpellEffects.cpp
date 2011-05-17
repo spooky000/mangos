@@ -7122,7 +7122,7 @@ void Spell::EffectThreat(SpellEffectIndex /*eff_idx*/)
 
     // Wind Shear: guessed values
     if (m_spellInfo->Id == 57994)
-        damage = -(30 * (m_caster->getLevel() - 10));
+        damage = -int32((30 * (m_caster->getLevel() - 10)));
 
     unitTarget->AddThreat(m_caster, float(damage+bonus), false, GetSpellSchoolMask(m_spellInfo), m_spellInfo);
 }
