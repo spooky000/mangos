@@ -4123,7 +4123,7 @@ void Spell::finish(bool ok)
         m_caster->resetAttackTimer(RANGED_ATTACK);*/
 
     // Clear combo at finish state
-    if(m_caster->m_movedPlayer && NeedsComboPoints(m_spellInfo))
+    if(NeedsComboPoints(m_spellInfo))
     {
         // Not drop combopoints if negative spell and if any miss on enemy exist
         bool needDrop = true;
@@ -4142,7 +4142,7 @@ void Spell::finish(bool ok)
             }
         }
         if (needDrop)
-            m_caster->m_movedPlayer->ClearComboPoints();
+            m_caster->ClearComboPoints();
     }
 
     // potions disabled by client, send event "not in combat" if need

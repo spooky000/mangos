@@ -425,8 +425,6 @@ Player::Player (WorldSession *session): Unit(), m_mover(this), m_camera(this), m
     if(GetSession()->GetSecurity() == SEC_PLAYER)
         SetAcceptWhispers(true);
 
-    m_comboPoints = 0;
-
     m_usedTalentCount = 0;
     m_questRewardTalentCount = 0;
 
@@ -575,8 +573,6 @@ Player::Player (WorldSession *session): Unit(), m_mover(this), m_camera(this), m
     m_summon_x = 0.0f;
     m_summon_y = 0.0f;
     m_summon_z = 0.0f;
-
-    m_movedPlayer = this;
 
     m_contestedPvPTimer = 0;
 
