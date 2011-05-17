@@ -7358,6 +7358,7 @@ uint32 Unit::SpellDamageBonusTaken(Unit *pCaster, SpellEntry const *spellProto, 
         {
             // Cheat Death
             case 2109:
+            {
                 if(GetTypeId() != TYPEID_PLAYER)
                     continue;
 
@@ -7365,9 +7366,10 @@ uint32 Unit::SpellDamageBonusTaken(Unit *pCaster, SpellEntry const *spellProto, 
                 if (mod < float((*i)->GetModifier()->m_amount))
                     mod = float((*i)->GetModifier()->m_amount);
                 TakenTotalMod *= (mod+100.0f)/100.0f;
-            break;
+            }break;
             // Ebon Plague
             case 1933:
+            {
                 if ((*i)->GetMiscValue() & (spellProto ? GetSpellSchoolMask(spellProto) : 0))
                 {
                     if(spellProto && spellProto->Dispel == DISPEL_DISEASE)
@@ -7375,7 +7377,7 @@ uint32 Unit::SpellDamageBonusTaken(Unit *pCaster, SpellEntry const *spellProto, 
                     else
                         TakenTotalMod *= ((*i)->GetModifier()->m_amount + 100.0f) / 100.0f;
                 }
-            break;
+            }break;
             case 20911:                                     // Blessing of Sanctuary
             case 25899:                                     // Greater Blessing of Sanctuary
                 // don't stack with Vigilance dmg reduction effect (calculated above)
