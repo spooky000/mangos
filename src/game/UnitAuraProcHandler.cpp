@@ -2386,6 +2386,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                         case POWER_ENERGY: triggered_spell_id = 71882; break;
                         case POWER_RAGE:   triggered_spell_id = 71883; break;
                         case POWER_MANA:   triggered_spell_id = 71881; break;
+                        case POWER_RUNIC_POWER:   triggered_spell_id = 71884; break;
                         default:
                             return SPELL_AURA_PROC_FAILED;
                     }
