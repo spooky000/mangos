@@ -978,8 +978,7 @@ void Map::AddObjectToRemoveList(WorldObject *obj)
 {
     MANGOS_ASSERT(obj->GetMapId()==GetId() && obj->GetInstanceId()==GetInstanceId());
 
-    // need clean references at end of update cycle, NOT during it! called at Map::Remove
-     obj->CleanupsBeforeDelete();                            // remove or simplify at least cross referenced links
+    obj->CleanupsBeforeDelete();                            // remove or simplify at least cross referenced links
 
     i_objectsToRemove.insert(obj);
     //DEBUG_LOG("Object (GUID: %u TypeId: %u ) added to removing list.",obj->GetGUIDLow(),obj->GetTypeId());
@@ -3193,16 +3192,27 @@ WorldObject* Map::GetWorldObject(ObjectGuid guid)
 void Map::SendObjectUpdates()
 {
     UpdateDataMapType update_players;
-    for (std::set<Object*>::const_iterator it = i_objectsToClientUpdate.begin();it!= i_objectsToClientUpdate.end();++it)
-        (*it)->BuildUpdateData(update_players);
 
-    i_objectsToClientUpdate.clear();
+    while(!i_objectsToClientUpdateQueue.empty())
+    {
+        if (i_objectsToClientNotUpdate.find(i_objectsToClientUpdateQueue.front()) == i_objectsToClientNotUpdate.end())
+            i_objectsToClientUpdate.insert(i_objectsToClientUpdateQueue.front());
+        i_objectsToClientUpdateQueue.pop();
+    }
+    i_objectsToClientNotUpdate.clear();
+
+    while(!i_objectsToClientUpdate.empty())
+    {
+        Object* obj = *i_objectsToClientUpdate.begin();
+        i_objectsToClientUpdate.erase(i_objectsToClientUpdate.begin());
+        obj->BuildUpdateData(update_players);
+    }
 
     WorldPacket packet;                                     // here we allocate a std::vector with a size of 0x10000
     for(UpdateDataMapType::iterator iter = update_players.begin(); iter != update_players.end(); ++iter)
     {
-        if (iter->second.BuildPacket(&packet))
-            iter->first->GetSession()->SendPacket(&packet);
+        iter->second.BuildPacket(&packet);
+        iter->first->GetSession()->SendPacket(&packet);
         packet.clear();                                     // clean the string
     }
 }
