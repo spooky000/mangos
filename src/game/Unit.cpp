@@ -271,6 +271,8 @@ Unit::Unit() :
     for (int i = 0; i < MAX_MOVE_TYPE; ++i)
         m_speed_rate[i] = 1.0f;
 
+    m_charmInfo = NULL;
+
     // remove aurastates allowing special moves
     for(int i=0; i < MAX_REACTIVE; ++i)
         m_reactiveTimer[i] = 0;
@@ -6681,15 +6683,19 @@ void Unit::RemoveGuardian( Pet* pet )
 
 void Unit::RemoveGuardians()
 {
+    if (m_guardianPets.empty())
+        return;
+
     while (!m_guardianPets.empty())
     {
         ObjectGuid guid = *m_guardianPets.begin();
 
-        if (Pet* pet = GetMap()->GetPet(guid))
-            pet->Unsummon(PET_SAVE_AS_DELETED, this); // can remove pet guid from m_guardianPets
-
-        m_guardianPets.erase(guid);
+        if (Pet* pet = _GetPet(guid))
+            pet->Unsummon(PET_SAVE_AS_DELETED, this);
+        else
+            m_guardianPets.erase(guid);
     }
+    m_guardianPets.clear();
 }
 
 Pet* Unit::FindGuardianWithEntry(uint32 entry)
@@ -10426,9 +10432,10 @@ void Unit::CleanupsBeforeDelete()
 {
     if(m_uint32Values)                                      // only for fully created object
     {
-        RemoveVehicleKit();
-        ExitVehicle();
-
+        if (GetVehicle())
+            ExitVehicle();
+        if (GetVehicleKit())
+            RemoveVehicleKit();
         InterruptNonMeleeSpells(true);
         m_Events.KillAllEvents(false);                      // non-delatable (currently casted spells) will not deleted now but it will deleted at call in Map::RemoveAllObjectsInRemoveList
         CombatStop();

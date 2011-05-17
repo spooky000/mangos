@@ -71,7 +71,6 @@ void Pet::AddToWorld()
     if (!((Creature*)this)->IsInWorld())
     {
         GetMap()->GetObjectsStore().insert<Pet>(GetObjectGuid(), (Pet*)this);
-        // if(!IsInWorld())
         sObjectAccessor.AddObject(this);
     }
 
@@ -84,7 +83,6 @@ void Pet::RemoveFromWorld()
     if (((Creature*)this)->IsInWorld())
     {
         GetMap()->GetObjectsStore().erase<Pet>(GetObjectGuid(), (Pet*)NULL);
-        //if(IsInWorld())
         sObjectAccessor.RemoveObject(this);
     }
 
@@ -690,6 +688,8 @@ void Pet::Unsummon(PetSaveMode mode, Unit* owner /*= NULL*/)
     if (!owner)
         owner = GetOwner();
 
+    m_removed = true;
+
     CombatStop();
 
     if (owner)
@@ -768,7 +768,6 @@ void Pet::Unsummon(PetSaveMode mode, Unit* owner /*= NULL*/)
     }
 
     AddObjectToRemoveList();
-    m_removed = true;
 }
 
 void Pet::GivePetXP(uint32 xp)
@@ -890,24 +889,6 @@ bool Pet::InitStatsForLevel(uint32 petlevel, Unit* owner)
 
     if (!petlevel)
         petlevel = owner->getLevel();
-
-    switch (getPetType())
-    {
-        case SUMMON_PET:
-            SetByteValue(UNIT_FIELD_BYTES_0, 1, CLASS_MAGE);
-
-            // this enables popup window (pet dismiss, cancel)
-            SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
-            break;
-        case HUNTER_PET:
-            SetByteValue(UNIT_FIELD_BYTES_0, 1, CLASS_WARRIOR);
-            SetByteValue(UNIT_FIELD_BYTES_0, 2, GENDER_NONE);
-            SetSheath(SHEATH_STATE_MELEE);
-
-            // this enables popup window (pet abandon, cancel)
-            SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
-            break;
-    }
 
     SetLevel(petlevel);
 
