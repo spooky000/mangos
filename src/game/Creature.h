@@ -34,7 +34,6 @@
 struct SpellEntry;
 
 class CreatureAI;
-class Group;
 class Quest;
 class Player;
 class WorldSession;

@@ -1047,7 +1047,7 @@ void WorldSession::HandleMoveUnRootAck(WorldPacket& recv_data)
     recv_data >> guid;
 
     // now can skip not our packet
-    if(_player->GetGUID() != guid)
+    if(_player->GetObjectGuid() != guid)
     {
         recv_data.rpos(recv_data.wpos());                   // prevent warnings spam
         return;
@@ -1611,7 +1611,6 @@ void WorldSession::HandleHearthandResurrect(WorldPacket & /*recv_data*/)
 
 void WorldSession::HandleInstanceLockResponse(WorldPacket& recvPacket)
 {
-    printf("\n ! got HandleInstanceLockResponse ! \n ");
     uint8 accept;
     recvPacket >> accept;
 

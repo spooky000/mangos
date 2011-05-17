@@ -282,7 +282,6 @@ Unit::Unit() :
 
     m_comboPoints = 0;
 
-    m_auraUpdateMask = 0;
 }
 
 Unit::~Unit()
