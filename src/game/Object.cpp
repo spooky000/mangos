@@ -1220,6 +1220,9 @@ bool WorldObject::IsWithinLOSInMap(const WorldObject* obj) const
 
 bool WorldObject::IsWithinLOS(float ox, float oy, float oz) const
 {
+    if(GetMapId() == 616) // Uber Eye of Eternity hack :D
+        return true;
+
     float x,y,z;
     GetPosition(x,y,z);
     VMAP::IVMapManager *vMapManager = VMAP::VMapFactory::createOrGetVMapManager();
