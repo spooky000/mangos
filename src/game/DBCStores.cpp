@@ -621,6 +621,10 @@ void LoadDBCStores(const std::string& dataPath)
     sfix15->Effect[EFFECT_INDEX_0] = SPELL_EFFECT_KILL_CREDIT_PERSONAL;
     sfix15->EffectImplicitTargetA[EFFECT_INDEX_1] = TARGET_SELF;
 
+    // Wind Shear
+    SpellEntry *sfix16 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(57994));
+    sfix16->EffectBasePoints[1] = 1;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);
