@@ -606,22 +606,7 @@ void Creature::Update(uint32 update_diff, uint32 diff)
             if (IsPet())                           // Regenerated before
                 break;
 
-            if(m_regenTimer > 0)
-            {
-                if(update_diff >= m_regenTimer)
-                    m_regenTimer = 0;
-                else
-                    m_regenTimer -= update_diff;
-            }
-            if (m_regenTimer != 0)
-                break;
-
-            if (!isInCombat() || IsPolymorphed())
-                RegenerateHealth();
-
-            Regenerate(getPowerType());
-            m_regenTimer = REGEN_TIME_FULL;
-
+            RegenerateAll(update_diff);
             break;
         }
         case CORPSE_FALLING:
@@ -631,6 +616,26 @@ void Creature::Update(uint32 update_diff, uint32 diff)
         default:
             break;
     }
+}
+
+void Creature::RegenerateAll(uint32 update_diff)
+{
+    if(m_regenTimer > 0)
+    {
+        if(update_diff >= m_regenTimer)
+            m_regenTimer = 0;
+        else
+            m_regenTimer -= update_diff;
+    }
+    if (m_regenTimer != 0)
+        return;
+
+    if (!isInCombat() || IsPolymorphed())
+        RegenerateHealth();
+
+    Regenerate(getPowerType());
+
+    m_regenTimer = REGEN_TIME_FULL;
 }
 
 void Creature::Regenerate(Powers power)
