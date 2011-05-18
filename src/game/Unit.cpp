@@ -4540,6 +4540,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
                     // can be only single (this check done at _each_ aura add
                     RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
                     bStop = true;
+                    break;
                 }
             }
 
