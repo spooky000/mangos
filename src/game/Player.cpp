@@ -18272,8 +18272,13 @@ void Player::_SaveStats()
 
     stmt = CharacterDatabase.CreateStatement(insertStats, "INSERT INTO character_stats (guid, maxhealth, maxpower1, maxpower2, maxpower3, maxpower4, maxpower5, maxpower6, maxpower7, "
         "strength, agility, stamina, intellect, spirit, armor, resHoly, resFire, resNature, resFrost, resShadow, resArcane, "
-        "blockPct, dodgePct, parryPct, critPct, rangedCritPct, spellCritPct, attackPower, rangedAttackPower, spellPower) "
-        "VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        "blockPct, dodgePct, parryPct, critPct, rangedCritPct, spellCritPct, spellCritPct1, spellCritPct2, spellCritPct3, spellCritPct4, spellCritPct5, spellCritPct6, "
+        "attackPower, rangedAttackPower, spellPower, attackSpeed, offhandAttackSpeed, rangedAttackSpeed, minDamage, maxDamage, minOffhandDamage, maxOffhandDamage, "
+        "attackPowerMod, attackPowerMultiplier, rangedAttackPowerMod, rangedAttackPowerMultiplier, minRangedDamage, maxRangedDamage, flags, expertise, offhandExpertise, "
+        "modDmgDonePos, modDmgDoneNeg, modDmgDonePct, spellPene, armorPene, combatRating1, combatRating2, combatRating3, combatRating4, combatRating5, combatRating6, combatRating7, combatRating8, combatRating9, combatRating10, "
+        "combatRating11, combatRating12, combatRating13, combatRating14, combatRating15, combatRating16, combatRating17, combatRating18, combatRating19, combatRating20, combatRating21, combatRating22, combatRating23, combatRating24, "
+        "combatRating0, blockValue) "
+        "VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     stmt.addUInt32(GetGUIDLow());
     stmt.addUInt32(GetMaxHealth());
@@ -18289,10 +18294,39 @@ void Player::_SaveStats()
     stmt.addFloat(GetFloatValue(PLAYER_PARRY_PERCENTAGE));
     stmt.addFloat(GetFloatValue(PLAYER_CRIT_PERCENTAGE));
     stmt.addFloat(GetFloatValue(PLAYER_RANGED_CRIT_PERCENTAGE));
-    stmt.addFloat(GetFloatValue(PLAYER_SPELL_CRIT_PERCENTAGE1));
-    stmt.addUInt32(GetUInt32Value(UNIT_FIELD_ATTACK_POWER));
-    stmt.addUInt32(GetUInt32Value(UNIT_FIELD_RANGED_ATTACK_POWER));
-    stmt.addUInt32(GetBaseSpellPowerBonus());
+    for(int i = 0; i < 7; ++i)
+        stmt.addFloat(GetFloatValue(PLAYER_SPELL_CRIT_PERCENTAGE1 + i));
+
+       stmt.addUInt32(GetUInt32Value(UNIT_FIELD_ATTACK_POWER));
+       stmt.addUInt32(GetUInt32Value(UNIT_FIELD_RANGED_ATTACK_POWER));
+       stmt.addUInt32(GetBaseSpellPowerBonus());
+       stmt.addUInt32(GetUInt32Value(UNIT_FIELD_BASEATTACKTIME));
+       stmt.addUInt32(GetUInt32Value(UNIT_FIELD_BASEATTACKTIME+1));
+       stmt.addUInt32(GetUInt32Value(UNIT_FIELD_RANGEDATTACKTIME));
+       stmt.addFloat((UNIT_FIELD_MINDAMAGE));
+       stmt.addFloat((UNIT_FIELD_MAXDAMAGE));
+       stmt.addFloat((UNIT_FIELD_MINOFFHANDDAMAGE));
+       stmt.addFloat((UNIT_FIELD_MAXOFFHANDDAMAGE));
+       stmt.addUInt32(GetUInt32Value(UNIT_FIELD_ATTACK_POWER_MODS));
+       stmt.addFloat((UNIT_FIELD_ATTACK_POWER_MULTIPLIER));
+       stmt.addUInt32(GetUInt32Value(UNIT_FIELD_RANGED_ATTACK_POWER_MODS));
+       stmt.addFloat(GetFloatValue(UNIT_FIELD_RANGED_ATTACK_POWER_MULTIPLIER));
+       stmt.addFloat(GetFloatValue(UNIT_FIELD_MINRANGEDDAMAGE));
+       stmt.addFloat(GetFloatValue(UNIT_FIELD_MAXRANGEDDAMAGE));
+       stmt.addUInt32(GetUInt32Value(PLAYER_FLAGS));
+       stmt.addUInt32(GetUInt32Value(PLAYER_EXPERTISE));
+       stmt.addUInt32(GetUInt32Value(PLAYER_OFFHAND_EXPERTISE));
+       stmt.addUInt32(GetUInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_POS));
+       stmt.addUInt32(GetUInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_NEG));
+       stmt.addUInt32(GetUInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_PCT));
+       stmt.addUInt32(GetUInt32Value(PLAYER_FIELD_MOD_TARGET_RESISTANCE));
+       stmt.addUInt32(GetUInt32Value(PLAYER_FIELD_MOD_TARGET_PHYSICAL_RESISTANCE));;
+
+    for(int i = 0; i < MAX_COMBAT_RATING; ++i)
+       stmt.addUInt32(GetUInt32Value(PLAYER_FIELD_COMBAT_RATING_1 + i));
+
+    stmt.addUInt32(GetUInt32Value(PLAYER_SHIELD_BLOCK));
+
 
     stmt.Execute();
 }
