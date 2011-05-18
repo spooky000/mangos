@@ -3153,6 +3153,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     else if (m_spellInfo->Effect[effIndex] == SPELL_EFFECT_TRIGGER_SPELL)
                         targetUnitMap.push_back(m_caster);
                     break;
+                case SPELL_EFFECT_FRIEND_SUMMON:
                 case SPELL_EFFECT_SUMMON_PLAYER:
                     if (m_caster->GetTypeId()==TYPEID_PLAYER && ((Player*)m_caster)->GetSelectionGuid())
                         if (Player* target = sObjectMgr.GetPlayer(((Player*)m_caster)->GetSelectionGuid()))
@@ -3768,8 +3769,8 @@ void Spell::handle_immediate()
     // start channeling if applicable
     if (IsChanneledSpell(m_spellInfo) && m_duration)
     {
-            m_spellState = SPELL_STATE_CASTING;
-            SendChannelStart(m_duration);
+        m_spellState = SPELL_STATE_CASTING;
+        SendChannelStart(m_duration);
     }
 
     // process immediate effects (items, ground, etc.) also initialize some variables
@@ -6020,7 +6021,11 @@ SpellCastResult Spell::CheckCast(bool strict)
                     return SPELL_FAILED_BAD_TARGETS;
 
                 Player* target = sObjectMgr.GetPlayer(((Player*)m_caster)->GetSelectionGuid());
-                if (!target || ((Player*)m_caster) == target || !target->IsInSameRaidWith((Player*)m_caster))
+
+                if ( !target || ((Player*)m_caster) == target)
+                    return SPELL_FAILED_BAD_TARGETS;
+
+                if (!target->IsInSameRaidWith((Player*)m_caster) && m_spellInfo->Id != 48955)
                     return SPELL_FAILED_BAD_TARGETS;
 
                 // check if our map is dungeon
@@ -6441,25 +6446,6 @@ SpellCastResult Spell::CheckCasterAuras() const
     if (unitflag & UNIT_FLAG_STUNNED && (!(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_STUNNED) ||
         (m_spellInfo->Id == 33206 && !m_caster->HasAura(63248))))
         prevented_reason = SPELL_FAILED_STUNNED;
-    /*if (unitflag & UNIT_FLAG_STUNNED)
-    {
-        // spell is usable while stunned, check if caster has only mechanic stun auras, another stun types must prevent cast spell
-        if (m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_STUNNED)
-        {
-            bool is_stun_mechanic = true;
-            Unit::AuraList const& stunAuras = m_caster->GetAurasByType(SPELL_AURA_MOD_STUN);
-            for (Unit::AuraList::const_iterator itr = stunAuras.begin(); itr != stunAuras.end(); ++itr)
-                if (!(*itr)->HasMechanic(MECHANIC_STUN))
-                {
-                    is_stun_mechanic = false;
-                    break;
-                }
-            if (!is_stun_mechanic)
-                prevented_reason = SPELL_FAILED_STUNNED;
-        }
-        else
-            prevented_reason = SPELL_FAILED_STUNNED;
-    }*/
     else if (unitflag & UNIT_FLAG_CONFUSED && !(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_CONFUSED))
         prevented_reason = SPELL_FAILED_CONFUSED;
     else if (unitflag & UNIT_FLAG_FLEEING && !(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_FEARED))
@@ -6511,7 +6497,7 @@ SpellCastResult Spell::CheckCasterAuras() const
                     switch(aura->GetModifier()->m_auraname)
                     {
                         case SPELL_AURA_MOD_STUN:
-                            if (!(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_STUNNED)/* || !aura->HasMechanic(MECHANIC_STUN)*/)
+                            if (!(m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_USABLE_WHILE_STUNNED))
                                 return SPELL_FAILED_STUNNED;
                             break;
                         case SPELL_AURA_MOD_CONFUSE:
@@ -7446,6 +7432,7 @@ bool Spell::CheckTarget( Unit* target, SpellEffectIndex eff )
     // Check targets for LOS visibility (except spells without range limitations )
     switch(m_spellInfo->Effect[eff])
     {
+        case SPELL_EFFECT_FRIEND_SUMMON:
         case SPELL_EFFECT_SUMMON_PLAYER:                    // from anywhere
             break;
         case SPELL_EFFECT_DUMMY:
@@ -7907,7 +7894,7 @@ void Spell::DoSummonSnakes(SpellEffectIndex eff_idx)
     GameObject* pTrap = m_caster->GetMap()->GetGameObject(m_originalCasterGUID);
     if (!pTrap)
     {
-        sLog.outError("EffectSummonSnakes faild to find trap for caster %s (GUID: %u)",m_caster->GetName(),m_caster->GetObjectGuid().GetCounter());
+        sLog.outError("EffectSummonSnakes faild to find trap for caster %s (GUID: %u)", m_caster->GetName(), m_caster->GetObjectGuid().GetCounter());
         return;
     }
 
@@ -7931,7 +7918,7 @@ void Spell::DoSummonSnakes(SpellEffectIndex eff_idx)
         if (!pSummon->IsPositionValid())
         {
             sLog.outError("EffectSummonSnakes failed to summon snakes for Unit %s (GUID: %u) bacause of invalid position (x = %f, y = %f, z = %f map = %u)"
-                ,m_caster->GetName(),m_caster->GetObjectGuid().GetCounter(), position_x, position_y, position_z, m_caster->GetMap());
+                ,m_caster->GetName(), m_caster->GetObjectGuid().GetCounter(), position_x, position_y, position_z, m_caster->GetMap());
             delete pSummon;
             continue;
         }

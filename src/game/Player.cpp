@@ -15601,8 +15601,8 @@ bool Player::LoadFromDB(ObjectGuid guid, SqlQueryHolder *holder )
     //"resettalents_time, trans_x, trans_y, trans_z, trans_o, transguid, extra_flags, stable_slots, at_login, zone, online, death_expire_time, taxi_path, dungeon_difficulty,"
     // 39           40                41                42                    43          44          45              46           47               48              49
     //"arenaPoints, totalHonorPoints, todayHonorPoints, yesterdayHonorPoints, totalKills, todayKills, yesterdayKills, chosenTitle, knownCurrencies, watchedFaction, drunk,"
-    // 50      51      52      53      54      55      56      57      58         59          60             61              62      63           64
-    //"health, power1, power2, power3, power4, power5, power6, power7, specCount, activeSpec, exploredZones, equipmentCache, ammoId, knownTitles, actionBars  FROM characters WHERE guid = '%u'", GUID_LOPART(m_guid));
+    // 50      51      52      53      54      55      56      57      58         59          60             61              62      63           64          65
+    //"health, power1, power2, power3, power4, power5, power6, power7, specCount, activeSpec, exploredZones, equipmentCache, ammoId, knownTitles, actionBars, grantableLevels  FROM characters WHERE guid = '%u'", GUID_LOPART(m_guid));
     QueryResult *result = holder->GetResult(PLAYER_LOGIN_QUERY_LOADFROM);
 
     if(!result)
@@ -22615,7 +22615,7 @@ void Player::UnsummonPetTemporaryIfAny()
     GroupPetList m_groupPetsTmp = GetPets();  // Original list may be modified in this function
     for (GroupPetList::const_iterator itr = m_groupPetsTmp.begin(); itr != m_groupPetsTmp.end(); ++itr)
     {
-        if (Pet* _pet = GetMap()->GetPet(*itr))
+        if (Pet* _pet = ObjectAccessor::FindPet(*itr))
         {
             if (!_pet->isTemporarySummoned())
                 _pet->Unsummon(PET_SAVE_AS_CURRENT, this);
