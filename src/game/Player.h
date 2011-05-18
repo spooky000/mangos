@@ -2192,6 +2192,22 @@ class MANGOS_DLL_SPEC Player : public Unit
         void ChangeSpeakTime(int utime);
 
         /*********************************************************/
+        /***               REFER-A-FRIEND SYSTEM               ***/
+        /*********************************************************/
+        void SendReferFriendError(ReferAFriendError err, Player * target = NULL);
+        ReferAFriendError GetReferFriendError(Player * target, bool summon);
+        void AccessGrantableLevel(ObjectGuid guid) { m_curGrantLevelGiverGuid = guid; }
+        bool IsAccessGrantableLevel(ObjectGuid guid) { return m_curGrantLevelGiverGuid == guid; }
+        uint32 GetGrantableLevels() { return m_GrantableLevelsCount; }
+        void ChangeGrantableLevels(uint8 increase = 0);
+        bool CheckRAFConditions();
+        AccountLinkedState GetAccountLinkedState();
+        bool IsReferAFriendLinked(Player * target);
+        void LoadAccountLinkedState();
+        std::vector<uint32> m_referredAccounts;
+        std::vector<uint32> m_referalAccounts;
+
+        /*********************************************************/
         /***                 VARIOUS SYSTEMS                   ***/
         /*********************************************************/
         bool HasMovementFlag(MovementFlags f) const;        // for script access to m_movementInfo.HasMovementFlag
