@@ -6041,6 +6041,21 @@ SpellCastResult Spell::CheckCast(bool strict)
                 }
                 break;
             }
+            case SPELL_EFFECT_FRIEND_SUMMON:
+            {
+                if(m_caster->GetTypeId() != TYPEID_PLAYER)
+                    return SPELL_FAILED_BAD_TARGETS;
+
+                if(((Player*)m_caster)->GetSelectionGuid().IsEmpty())
+                    return SPELL_FAILED_BAD_TARGETS;
+
+                Player* target = sObjectMgr.GetPlayer(((Player*)m_caster)->GetSelectionGuid());
+
+                if (!target || !target->IsReferAFriendLinked(((Player*)m_caster)))
+                    return SPELL_FAILED_BAD_TARGETS;
+
+                break;
+            }
             case SPELL_EFFECT_RESURRECT:
             case SPELL_EFFECT_RESURRECT_NEW:
             {
