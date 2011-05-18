@@ -9027,7 +9027,7 @@ void Aura::HandleAuraControlVehicle(bool apply, bool Real)
         return;
 
     Unit* target = GetTarget();
-    if (!target->IsVehicle())
+    if (!target->GetVehicleKit())
         return;
 
     // TODO: Check for free seat
@@ -11050,7 +11050,8 @@ void Aura::HandleAuraSetVehicle(bool apply, bool real)
 
     if (apply)
     {
-        target->SetVehicleId(vehicleId);
+        if (!target->SetVehicleId(vehicleId))
+            return;
     }
     else
         if (target->GetVehicleKit())

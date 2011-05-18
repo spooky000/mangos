@@ -185,8 +185,7 @@ void GlobalCooldownMgr::CancelGlobalCooldown(SpellEntry const* spellInfo)
 
 Unit::Unit() :
     i_motionMaster(this), m_ThreatManager(this), m_HostileRefManager(this),
-    m_charmInfo(NULL),
-    m_vehicleInfo(NULL)
+    m_charmInfo(NULL)
 {
     m_objectType |= TYPEMASK_UNIT;
     m_objectTypeId = TYPEID_UNIT;
@@ -300,7 +299,6 @@ Unit::~Unit()
     }
 
     delete m_charmInfo;
-    delete m_vehicleInfo;
 
     // those should be already removed at "RemoveFromWorld()" call
     MANGOS_ASSERT(m_gameObj.size() == 0);
@@ -8572,11 +8570,22 @@ void Unit::Mount(uint32 mount, uint32 spellId, uint32 vehicleId, uint32 creature
 
         if (vehicleId)
         {
-            SetVehicleId(vehicleId);
-            GetVehicleKit()->Reset();
+            if (SetVehicleId(vehicleId))
+            {
+                GetVehicleKit()->Reset();
 
-            // mounts can also have accessories
-            GetVehicleKit()->InstallAllAccessories(creatureEntry);
+                // Send others that we now have a vehicle
+                WorldPacket data(SMSG_SET_VEHICLE_REC_ID, 8+4);
+                data << GetPackGUID();
+                data << uint32(vehicleId);
+                SendMessageToSet(&data, true);
+
+                data.Initialize(SMSG_ON_CANCEL_EXPECTED_RIDE_VEHICLE_AURA, 0);
+                ((Player*)this)->GetSession()->SendPacket(&data);
+
+                // mounts can also have accessories
+                GetVehicleKit()->InstallAllAccessories(creatureEntry);
+            }
         }
     }
 }
@@ -11967,6 +11976,18 @@ struct SetPvPHelper
     bool state;
 };
 
+bool Unit::SetVehicleId(uint32 vehicleId)
+{
+    VehicleEntry const *vehicleInfo = sVehicleStore.LookupEntry(vehicleId);
+
+    if (!vehicleInfo)
+        return false;
+
+    m_pVehicleKit = new VehicleKit(this, vehicleInfo);
+    m_updateFlag |= UPDATEFLAG_VEHICLE;
+    return true;
+}
+
 void Unit::RemoveVehicleKit()
 {
     if (!m_pVehicleKit)
@@ -11974,8 +11995,8 @@ void Unit::RemoveVehicleKit()
 
     m_pVehicleKit->RemoveAllPassengers();
 
-//    delete m_pVehicleKit;
-//    m_pVehicleKit = NULL;
+    delete m_pVehicleKit;
+    m_pVehicleKit = NULL;
 
     m_updateFlag &= ~UPDATEFLAG_VEHICLE;
     RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_SPELLCLICK);
@@ -12024,6 +12045,8 @@ void Unit::EnterVehicle(VehicleKit *vehicle, int8 seatId)
 
     InterruptNonMeleeSpells(false);
     RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
+    RemoveSpellsCausingAura(SPELL_AURA_MOD_SHAPESHIFT);
+    RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
 
     if (!vehicle->AddPassenger(this, seatId))
         return;
@@ -12466,32 +12489,3 @@ ObjectGuid const& Unit::GetCreatorGuid() const
     }
 }
 
-void Unit::SetVehicleId(uint32 entry)
-{
-    delete m_vehicleInfo;
-
-    if (entry)
-    {
-        VehicleEntry const* ventry = sVehicleStore.LookupEntry(entry);
-        MANGOS_ASSERT(ventry != NULL);
-
-        m_vehicleInfo = new VehicleInfo(ventry);
-        m_updateFlag |= UPDATEFLAG_VEHICLE;
-
-        if (!m_pVehicleKit)
-            m_pVehicleKit = new VehicleKit(this);
-    }
-    else
-    {
-        m_vehicleInfo = NULL;
-        m_updateFlag &= ~UPDATEFLAG_VEHICLE;
-    }
-
-    if (GetTypeId() == TYPEID_PLAYER)
-    {
-        WorldPacket data(SMSG_SET_VEHICLE_REC_ID, 16);
-        data << GetPackGUID();
-        data << uint32(entry);
-        SendMessageToSet(&data, true);
-    }
-}
