@@ -235,12 +235,12 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
 
         void AddUpdateObject(Object *obj)
         {
-            i_objectsToClientUpdateQueue.push(obj);
+            i_objectsToClientUpdate.insert(obj);
         }
 
         void RemoveUpdateObject(Object *obj)
         {
-            i_objectsToClientNotUpdate.insert(obj);
+            i_objectsToClientUpdate.erase(obj);
         }
 
         // DynObjects currently
@@ -289,8 +289,6 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
 
         void SendObjectUpdates();
         std::set<Object *> i_objectsToClientUpdate;
-        std::set<Object *> i_objectsToClientNotUpdate;
-        std::queue<Object*> i_objectsToClientUpdateQueue;
 
     protected:
 
