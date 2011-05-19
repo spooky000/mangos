@@ -625,6 +625,13 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix16 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(57994));
     sfix16->EffectBasePoints[1] = 1;
 
+    // Conjure Mana Gem filling
+    for(int i = 0; i < 7; ++i)
+    {
+        SpellEntry *sfix17 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(54407+i));
+        sfix17->manaCost = 0;
+    }
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);
