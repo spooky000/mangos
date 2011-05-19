@@ -6688,19 +6688,15 @@ void Unit::RemoveGuardian( Pet* pet )
 
 void Unit::RemoveGuardians()
 {
-    if (m_guardianPets.empty())
-        return;
-
     while (!m_guardianPets.empty())
     {
         ObjectGuid guid = *m_guardianPets.begin();
 
-        if (Pet* pet = _GetPet(guid))
-            pet->Unsummon(PET_SAVE_AS_DELETED, this);
-        else
-            m_guardianPets.erase(guid);
+        if (Pet* pet = GetMap()->GetPet(guid))
+            pet->Unsummon(PET_SAVE_AS_DELETED, this); // can remove pet guid from m_guardianPets
+
+        m_guardianPets.erase(guid);
     }
-    m_guardianPets.clear();
 }
 
 Pet* Unit::FindGuardianWithEntry(uint32 entry)
