@@ -239,8 +239,7 @@ Unit::Unit() :
         m_auraModifiersGroup[i][BASE_PCT] = 1.0f;
         m_auraModifiersGroup[i][TOTAL_VALUE] = 0.0f;
         m_auraModifiersGroup[i][TOTAL_PCT] = 1.0f;
-        m_auraModifiersGroup[i][NONSTACKING_VALUE_POS] = 0.0f;
-        m_auraModifiersGroup[i][NONSTACKING_VALUE_NEG] = 0.0f;
+        m_auraModifiersGroup[i][NONSTACKING_VALUE] = 0.0f;
         m_auraModifiersGroup[i][NONSTACKING_PCT] = 0.0f;
         m_auraModifiersGroup[i][NONSTACKING_PCT_MINOR] = 0.0f;
     }
@@ -4698,11 +4697,8 @@ float Unit::CheckAuraStackingAndApply(Aura *Aur, UnitMods unitMod, UnitModifierT
 
     if (!Aur->IsStacking())
     {
-        bool bIsPositive = amount > 0;
-        float current = GetModifierValue(unitMod, modifierType);
-
         if (modifierType == TOTAL_VALUE)
-            modifierType = bIsPositive ? NONSTACKING_VALUE_POS : NONSTACKING_VALUE_NEG;
+            modifierType = NONSTACKING_VALUE;
         else if (modifierType == TOTAL_PCT)
             modifierType = NONSTACKING_PCT;
         // need a sanity check here?
@@ -4717,6 +4713,9 @@ float Unit::CheckAuraStackingAndApply(Aura *Aur, UnitMods unitMod, UnitModifierT
             spellProto->SpellFamilyFlags & UI64LIT(0x0000000000008000)))
             modifierType = NONSTACKING_PCT_MINOR;
 
+        bool bIsPositive = amount > 0;
+        float current = GetModifierValue(unitMod, modifierType);
+		
         if (bIsPositive && amount < current ||               // value does not change as a result of applying/removing this aura
             !bIsPositive && amount > current)
         {
@@ -4750,7 +4749,7 @@ float Unit::CheckAuraStackingAndApply(Aura *Aur, UnitMods unitMod, UnitModifierT
 
         HandleStatModifier(unitMod, modifierType, amount, apply);
 
-        if (modifierType == NONSTACKING_VALUE_POS || modifierType == NONSTACKING_VALUE_NEG)
+        if (modifierType == NONSTACKING_VALUE)
             amount -= current;
         else
         {
@@ -10016,8 +10015,7 @@ bool Unit::HandleStatModifier(UnitMods unitMod, UnitModifierType modifierType, f
             break;
         case NONSTACKING_PCT:
         case NONSTACKING_PCT_MINOR:
-        case NONSTACKING_VALUE_POS:
-        case NONSTACKING_VALUE_NEG:
+        case NONSTACKING_VALUE:
             m_auraModifiersGroup[unitMod][modifierType] = amount;
             break;
 
@@ -10089,7 +10087,7 @@ float Unit::GetModifierValue(UnitMods unitMod, UnitModifierType modifierType) co
     }
     else if(modifierType == TOTAL_VALUE)
     {
-        return m_auraModifiersGroup[unitMod][TOTAL_VALUE] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE_POS] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE_NEG];
+        return m_auraModifiersGroup[unitMod][TOTAL_VALUE] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE];
     }
     else
         return m_auraModifiersGroup[unitMod][modifierType];
@@ -10105,7 +10103,7 @@ float Unit::GetTotalStatValue(Stats stat) const
     // value = ((base_value * base_pct) + total_value) * total_pct
     float value  = m_auraModifiersGroup[unitMod][BASE_VALUE] + GetCreateStat(stat);
     value *= m_auraModifiersGroup[unitMod][BASE_PCT];
-    value += (m_auraModifiersGroup[unitMod][TOTAL_VALUE] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE_POS] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE_NEG]);
+    value += (m_auraModifiersGroup[unitMod][TOTAL_VALUE] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE];
     value *= m_auraModifiersGroup[unitMod][TOTAL_PCT] * ((m_auraModifiersGroup[unitMod][NONSTACKING_PCT] + m_auraModifiersGroup[unitMod][NONSTACKING_PCT_MINOR] + 100.0f) / 100.0f);
 
     return value;
@@ -10124,7 +10122,7 @@ float Unit::GetTotalAuraModValue(UnitMods unitMod) const
 
     float value  = m_auraModifiersGroup[unitMod][BASE_VALUE];
     value *= m_auraModifiersGroup[unitMod][BASE_PCT];
-    value += (m_auraModifiersGroup[unitMod][TOTAL_VALUE] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE_POS] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE_NEG]);
+    value += (m_auraModifiersGroup[unitMod][TOTAL_VALUE] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE];
     value *= m_auraModifiersGroup[unitMod][TOTAL_PCT] * ((m_auraModifiersGroup[unitMod][NONSTACKING_PCT] + m_auraModifiersGroup[unitMod][NONSTACKING_PCT_MINOR] + 100.0f) / 100.0f);
 
     return value;
