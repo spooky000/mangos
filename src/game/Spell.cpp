@@ -5500,6 +5500,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                     {
                         case SPELL_TARGET_TYPE_GAMEOBJECT:
                         {
+                            // FEANOR: Check this for adding more objects...
                             GameObject* p_GameObject = NULL;
 
                             if (i_spellST->second.targetEntry)
