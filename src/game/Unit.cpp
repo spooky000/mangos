@@ -4520,7 +4520,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
             }
 
              // Judgements and scrolls are always single 
-            if (GetSpellSpecific(holder->GetId()) == SPELL_JUDGEMENT ||
+            /*if (GetSpellSpecific(holder->GetId()) == SPELL_JUDGEMENT ||
                 GetSpellSpecific(holder->GetId()) == SPELL_SCROLL)
             {
                 RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
@@ -4548,7 +4548,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
             }
 
             if (bStop)
-                break;
+                break;*/
 
             // Hacky fix for Malygos' Power Spark
             if(foundHolder->GetId() == 55849)
