@@ -853,6 +853,26 @@ bool ChatHandler::HandleReloadSpellScriptsCommand(char* args)
     return true;
 }
 
+bool ChatHandler::HandleReloadAreaTriggerDBScripts(char* args)
+{
+    if (sScriptMgr.IsScriptScheduled())
+    {
+        SendSysMessage("DB scripts used currently, please attempt reload later.");
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    if (*args != 'a')
+        sLog.outString( "Re-Loading Scripts from `areatrigger_db_scripts`...");
+
+    sScriptMgr.LoadDBAreaTriggerScripts();
+
+    if (*args != 'a')
+        SendGlobalSysMessage("DB table `areatrigger_db_scripts` reloaded.");
+
+    return true;
+}
+
 bool ChatHandler::HandleReloadDbScriptStringCommand(char* /*args*/)
 {
     sLog.outString( "Re-Loading Script strings from `db_script_string`...");

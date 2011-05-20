@@ -41,6 +41,7 @@
 #include "Pet.h"
 #include "SocialMgr.h"
 #include "DBCEnums.h"
+#include "ScriptMgr.h"
 
 void WorldSession::HandleRepopRequestOpcode( WorldPacket & recv_data )
 {
@@ -717,6 +718,9 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPacket & recv_data)
 
     if (sScriptMgr.OnAreaTrigger(pl, atEntry))
         return;
+
+    if(pl->IsInWorld())
+        pl->GetMap()->ScriptsStart(sAreaTriggerScripts, atEntry->id, pl, pl);
 
     uint32 quest_id = sObjectMgr.GetQuestForAreaTrigger( Trigger_ID );
     if ( quest_id && pl->isAlive() && pl->IsActiveQuest(quest_id) )

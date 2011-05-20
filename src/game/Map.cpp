@@ -1809,7 +1809,7 @@ void Map::ScriptsProcess()
             }
         }
 
-        if( !requirement_passed )
+        if (!requirement_passed)
         {
             m_scriptSchedule.erase(iter);
             sScriptMgr.DecreaseScheduledScriptCount();

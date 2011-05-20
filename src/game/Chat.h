@@ -390,6 +390,7 @@ class ChatHandler
         bool HandleReloadAchievementRewardCommand(char* args);
         bool HandleReloadAreaTriggerTavernCommand(char* args);
         bool HandleReloadAreaTriggerTeleportCommand(char* args);
+        bool HandleReloadAreaTriggerDBScripts(char* args);
         bool HandleReloadEventScriptsCommand(char* args);
         bool HandleReloadEventAITextsCommand(char* args);
         bool HandleReloadEventAISummonsCommand(char* args);

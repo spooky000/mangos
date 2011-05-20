@@ -1207,6 +1207,9 @@ void World::SetInitialWorldSettings()
     sLog.outString( "Loading Waypoint scripts..." );        // before loading from creature_movement
     sScriptMgr.LoadCreatureMovementScripts();
 
+    sLog.outString( "Loading DB AreaTrigger scripts..." );
+    sScriptMgr.LoadDBAreaTriggerScripts();
+
     sLog.outString( "Loading Waypoints..." );
     sLog.outString();
     sWaypointMgr.Load();
