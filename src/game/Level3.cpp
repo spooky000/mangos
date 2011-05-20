@@ -3831,9 +3831,13 @@ bool ChatHandler::HandleReviveCommand(char* args)
     ObjectGuid target_guid;
     if (!ExtractPlayerTarget(&args, &target, &target_guid))
     {
-        m_session->GetPlayer()->ResurrectPlayer(0.5f);
-        m_session->GetPlayer()->SpawnCorpseBones();
-        return true;
+        if(m_session && m_session->GetPlayer())
+        {
+            m_session->GetPlayer()->ResurrectPlayer(0.5f);
+            m_session->GetPlayer()->SpawnCorpseBones();
+            return true;
+        }
+        return false;
     }
 
     if (target)
