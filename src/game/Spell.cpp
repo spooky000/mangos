@@ -1791,6 +1791,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 71340:                                 // Pact of darkfallen (hack for script work)
                 case 63387:                                 // Rapid Burst
                 case 64531:                                 // Rapid Burst
+                case 62042:                                 // Stormhammer
                     unMaxTargets = 1;
                     break;
                 case 28542:                                 // Life Drain
