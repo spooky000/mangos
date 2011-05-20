@@ -962,11 +962,9 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 case 62337:
                 case 62933:
                 {
-                    triggered_spell_id = 62379;
-                    basepoints[0] = damage;
-                    target = pVictim;
-                    //target = SelectRandomUnfriendlyTarget(getVictim());
-                    break;
+                    int32 bp0 = damage;
+                    pVictim->CastCustomSpell(pVictim, 62379, &bp0, NULL, NULL, true, NULL, NULL, GetObjectGuid());
+                    return SPELL_AURA_PROC_OK;
                 }
                 // Shadowfiend Death (Gain mana if pet dies with Glyph of Shadowfiend)
                 case 57989:
@@ -2388,6 +2386,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                         case POWER_ENERGY: triggered_spell_id = 71882; break;
                         case POWER_RAGE:   triggered_spell_id = 71883; break;
                         case POWER_MANA:   triggered_spell_id = 71881; break;
+                        case POWER_RUNIC_POWER:   triggered_spell_id = 71884; break;
                         default:
                             return SPELL_AURA_PROC_FAILED;
                     }

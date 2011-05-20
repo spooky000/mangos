@@ -367,7 +367,6 @@ void WorldSession::HandleAuctionSellItem(WorldPacket & recv_data)
         Item *newItem = it->CloneItem(stackSize, pl);
 
         pl->RemoveRefundableItem(it->GetObjectGuid());
-        pl->MoveItemFromInventory(it->GetBagSlot(), it->GetSlot(), true);
 
         pl->DestroyItemCount(it, stackSize, true);
 

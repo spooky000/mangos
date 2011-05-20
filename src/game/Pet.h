@@ -174,8 +174,9 @@ class Pet : public Creature
         bool isTemporarySummoned() const { return m_duration > 0; }
 
         bool IsPermanentPetFor(Player* owner);              // pet have tab in character windows and set UNIT_FIELD_PETNUMBER
+
         bool Create (uint32 guidlow, CreatureCreatePos& cPos, CreatureInfo const* cinfo, uint32 pet_number, Unit* owner);
-        bool CreateBaseAtCreature(Creature* creature, Unit* owner);        
+        bool CreateBaseAtCreature(Creature* creature, Unit* owner);
         bool LoadPetFromDB( Player* owner,uint32 petentry = 0,uint32 petnumber = 0, bool current = false );
         void SavePetToDB(PetSaveMode mode);
         void Unsummon(PetSaveMode mode, Unit* owner = NULL);
@@ -193,6 +194,8 @@ class Pet : public Creature
                 return m_autospells[pos];
         }
 
+        void RegenerateAll(uint32 update_diff);             // overwrite Creature::RegenerateAll
+        void Regenerate(Powers power, uint32 diff);
         HappinessState GetHappinessState();
         void GivePetXP(uint32 xp);
         void GivePetLevel(uint32 level);
@@ -225,7 +228,6 @@ class Pet : public Creature
         void CastPetAuras(bool current);
         void CastPetAura(PetAura const* aura);
 
-        void Regenerate(Powers power, uint32 diff);
         void RegenerateHealth(uint32 diff);
         float OCTRegenHPPerSpirit();
         float OCTRegenMPPerSpirit();

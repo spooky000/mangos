@@ -70,12 +70,14 @@ int32 CalculateSpellDuration(SpellEntry const *spellInfo, Unit const* caster)
     {
         int32 maxduration = GetSpellMaxDuration(spellInfo);
 
-        if (duration != maxduration && caster->GetTypeId() == TYPEID_PLAYER)
-            duration += int32((maxduration - duration) * ((Player*)caster)->GetComboPoints() / 5);
+        if (duration != maxduration)
+            duration += int32((maxduration - duration) * caster->GetComboPoints() / 5);
 
         if (Player* modOwner = caster->GetSpellModOwner())
         {
             modOwner->ApplySpellMod(spellInfo->Id, SPELLMOD_DURATION, duration);
+
+            duration = modOwner->CalculateSpellDurationWithHaste(spellInfo, duration);
 
             if (duration < 0)
                 duration = 0;

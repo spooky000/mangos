@@ -247,8 +247,7 @@ Item::Item( )
 
 bool Item::Create( uint32 guidlow, uint32 itemid, Player const* owner)
 {
-    Object::_Create(ObjectGuid(HIGHGUID_ITEM, guidlow));
-//    Object::_Create(guidlow, 0, HIGHGUID_ITEM);
+    Object::_Create(guidlow, 0, HIGHGUID_ITEM);
 
     SetEntry(itemid);
     SetObjectScale(DEFAULT_OBJECT_SCALE);
@@ -1139,7 +1138,7 @@ bool Item::IsBindedNotWith( Player const* player ) const
         return false;
 
     if (HasFlag(ITEM_FIELD_FLAGS, ITEM_DYNFLAG_BOP_TRADEABLE))
-        if (allowedGUIDs.find(player->GetGUIDLow()) != allowedGUIDs.end())
+        if (allowedGUIDs.find(player->GetObjectGuid().GetCounter()) != allowedGUIDs.end())
             return false;
 
     // has loot with diff owner
