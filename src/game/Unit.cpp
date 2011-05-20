@@ -12547,7 +12547,7 @@ uint32 Unit::CalculateSpellDurationWithHaste(SpellEntry const* spellProto, uint3
 
     // Apply haste to duration
 
-    uint32 duration = ceil(float(duration) * GetFloatValue(UNIT_MOD_CAST_SPEED));
+    uint32 duration = ceil(float(oldduration) * GetFloatValue(UNIT_MOD_CAST_SPEED));
 
     return duration;
 }
