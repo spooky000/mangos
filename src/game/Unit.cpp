@@ -12488,7 +12488,7 @@ ObjectGuid const& Unit::GetCreatorGuid() const
     }
 }
 
-uint32 Unit::CalculateAuraPeriodicTimeWithHaste(SpellEntry const* spellProto, uint32 oldPeriodicTime)
+uint32 Unit::CalculateAuraPeriodicTimeWithHaste(SpellEntry const* spellProto, uint32 oldPeriodicTime, SpellEffectIndex eff)
 {
     if (!spellProto || oldPeriodicTime == 0)
         return 0;
@@ -12511,10 +12511,13 @@ uint32 Unit::CalculateAuraPeriodicTimeWithHaste(SpellEntry const* spellProto, ui
     if (!applyHaste)
         return oldPeriodicTime;
 
-    Player* modOwner = GetSpellModOwner();
     uint32 _periodicTime = oldPeriodicTime;
 
-    int32 ticks = ceil(float(GetSpellDuration(spellProto)) / float(_periodicTime));
+    int32 ticks;
+    if(IsChanneledSpell(spellProto))
+        ticks = ceil(float(GetSpellDuration(spellProto)) / float(spellProto->EffectAmplitude[eff]));
+    else
+        ticks = ceil(float(GetSpellDuration(spellProto)) / float(_periodicTime));
 
     // Calculate new periodic timer
     _periodicTime = ticks == 0 ? _periodicTime : CalculateSpellDuration(spellProto, this) / ticks;
@@ -12546,7 +12549,6 @@ uint32 Unit::CalculateSpellDurationWithHaste(SpellEntry const* spellProto, uint3
         return oldduration;
 
     // Apply haste to duration
-
     uint32 duration = ceil(float(oldduration) * GetFloatValue(UNIT_MOD_CAST_SPEED));
 
     return duration;
