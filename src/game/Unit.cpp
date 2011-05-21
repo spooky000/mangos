@@ -6275,7 +6275,13 @@ bool Unit::Attack(Unit *victim, bool meleeAttack)
 
     // player cannot attack while mounted or in vehicle
     if(GetTypeId()==TYPEID_PLAYER && (IsMounted() || GetVehicle()))
-        return false;
+    {
+        if (!(GetVehicle() && GetVehicle()->GetSeatInfo(this) &&
+            GetVehicle()->GetSeatInfo(this)->m_flags & (SEAT_FLAG_CAN_CAST | SEAT_FLAG_CAN_ATTACK)))
+        {
+                return false;
+        }
+    }
 
     // nobody can attack GM in GM-mode
     if(victim->GetTypeId()==TYPEID_PLAYER)
