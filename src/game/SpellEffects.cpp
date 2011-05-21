@@ -7977,7 +7977,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, spellId, true);
                     return;
                 }
-                case 48810:                                 // Death's Door
+                /*case 48810:                                 // Death's Door
                 {
                     if (m_caster->GetTypeId() != TYPEID_PLAYER)
                         return;
@@ -7999,7 +7999,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     // Binding Death
                     m_caster->CastSpell(m_caster, 48808, true);
                     return;
-                }
+                }*/
                 case 48811:                                 // Despawn Forgotten Soul
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)

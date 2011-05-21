@@ -344,8 +344,7 @@ OpcodeHandler opcodeTable[NUM_MSG_TYPES] =
     /*0x13B*/ { "CMSG_CANCEL_CHANNELLING",                      STATUS_LOGGEDIN, PROCESS_THREADUNSAFE, &WorldSession::HandleCancelChanneling          },
     /*0x13C*/ { "SMSG_AI_REACTION",                             STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_ServerSide               },
     /*0x13D*/ { "CMSG_SET_SELECTION",                           STATUS_LOGGEDIN, PROCESS_INPLACE,      &WorldSession::HandleSetSelectionOpcode        },
-    /*0x13E*/ { "CMSG_DELETEEQUIPMENT_SET",                     STA
-    TUS_LOGGEDIN, PROCESS_THREADUNSAFE, &WorldSession::HandleEquipmentSetDeleteOpcode  },
+    /*0x13E*/ { "CMSG_DELETEEQUIPMENT_SET",                     STATUS_LOGGEDIN, PROCESS_THREADUNSAFE, &WorldSession::HandleEquipmentSetDeleteOpcode  },
     /*0x13F*/ { "CMSG_INSTANCE_LOCK_RESPONSE",                  STATUS_LOGGEDIN, PROCESS_THREADUNSAFE, &WorldSession::HandleInstanceLockResponse      },
     /*0x140*/ { "CMSG_DEBUG_PASSIVE_AURA",                      STATUS_NEVER,    PROCESS_INPLACE,      &WorldSession::Handle_NULL                     },
     /*0x141*/ { "CMSG_ATTACKSWING",                             STATUS_LOGGEDIN, PROCESS_INPLACE,      &WorldSession::HandleAttackSwingOpcode         },
