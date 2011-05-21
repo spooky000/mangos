@@ -3206,11 +3206,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                         case SPELL_AURA_ADD_PCT_MODIFIER:
                             targetUnitMap.push_back(m_caster);
                             break;
-                        case SPELL_AURA_DUMMY:
-                        {
-                            SetTargetMap(effIndex, m_spellInfo->EffectImplicitTargetB[effIndex], targetUnitMap);
-                            return;
-                        }
                         case SPELL_AURA_PERIODIC_TRIGGER_SPELL:
                         case SPELL_AURA_PERIODIC_DAMAGE:
                         {
