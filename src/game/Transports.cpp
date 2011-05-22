@@ -171,7 +171,8 @@ void MapManager::LoadTransportNPCs()
         {
             if ((*itr)->GetEntry() == transportEntry)
             {
-                (*itr)->AddNPCPassenger(entry, tX, tY, tZ, tO, anim);
+                if(!(*itr)->AddNPCPassenger(entry, tX, tY, tZ, tO, anim))
+                    sLog.outError("Cannot add %i passenger to %i transport", transportEntry, (*itr)->GetEntry());
                 break;
             }
         }
@@ -685,7 +686,7 @@ bool Transport::AddNPCPassenger(uint32 entry, float x, float y, float z, float o
     if (!pCreature->Create(map->GenerateLocalLowGuid(HIGHGUID_UNIT), pos, cinfo))
     {
         delete pCreature;
-        return 0;
+        return false;
     }
 
     pCreature->SetTransport(this);
@@ -709,7 +710,7 @@ bool Transport::AddNPCPassenger(uint32 entry, float x, float y, float z, float o
     {
         sLog.outError("Creature (guidlow %d, entry %d) not created. Suggested coordinates isn't valid (X: %f Y: %f)", pCreature->GetGUIDLow(), pCreature->GetEntry(), pCreature->GetPositionX(), pCreature->GetPositionY());
         delete pCreature;
-        return 0;
+        return false;
     }
 
     map->Add(pCreature);
