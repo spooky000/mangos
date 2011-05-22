@@ -2189,6 +2189,18 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 else
                     unMaxTargets = 1;
             }
+            // Starfall - exclude stealthed targets
+            else if (m_spellInfo->Id == 50286)
+            {
+                for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
+                {
+                    next = itr;
+                    ++next;
+
+                    if (!(*itr)->isVisibleForOrDetect(m_caster, m_caster, false, false, false))
+                        targetUnitMap.erase(itr);
+                }
+            }
             break;
         }
         case TARGET_AREAEFFECT_INSTANT:
