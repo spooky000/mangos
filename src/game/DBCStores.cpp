@@ -640,6 +640,10 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix19 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(47569));
     sfix19->Attributes &= ~SPELL_ATTR_NOT_SHAPESHIFT;
 
+    // Evocation - Add interrupt flag
+    SpellEntry *sfix20 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(12051));
+    sfix20->InterruptFlags |= SPELL_INTERRUPT_FLAG_INTERRUPT;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);
