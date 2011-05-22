@@ -632,6 +632,7 @@ void LoadDBCStores(const std::string& dataPath)
         sfix17->manaCost = 0;
     }
 
+    // Mana Shield (rank 2)
     SpellEntry *sfix18 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(8494));
     sfix18->procChance = 0;
 
