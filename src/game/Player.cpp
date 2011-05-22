@@ -17550,7 +17550,7 @@ void Player::SaveToDB()
     uberInsert.addFloat(finiteAlways(m_movementInfo.GetTransportPos()->y));
     uberInsert.addFloat(finiteAlways(m_movementInfo.GetTransportPos()->z));
     uberInsert.addFloat(finiteAlways(m_movementInfo.GetTransportPos()->o));
-    if (m_transport)
+    if (GetTransport())
         uberInsert.addUInt32(m_transport->GetGUIDLow());
     else
         uberInsert.addUInt32(0);
