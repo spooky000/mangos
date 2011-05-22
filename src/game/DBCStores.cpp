@@ -636,6 +636,10 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix18 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(8494));
     sfix18->procChance = 0;
 
+    // Improved Shadowform (Rank 1)
+    SpellEntry *sfix19 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(47569));
+    sfix19->Attributes &= ~SPELL_ATTR_NOT_SHAPESHIFT;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);
