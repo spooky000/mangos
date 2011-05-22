@@ -2019,7 +2019,7 @@ void Aura::TriggerSpell()
         }
     }
 
-    Unit* triggerCaster = triggerTarget;
+    /*Unit* triggerCaster = triggerTarget;
     WorldObject* triggerTargetObject = NULL;
 
     // for channeled spell cast applied from aura owner to channel target (persistent aura affects already applied to true target)
@@ -2048,17 +2048,18 @@ void Aura::TriggerSpell()
                 triggerTarget = target;
             }
         }
-    }
+    }*/
 
     // All ok cast by default case
     if (triggeredSpellInfo)
-    {
+        triggerTarget->CastSpell(triggerTarget, triggeredSpellInfo, true, NULL, this, casterGUID);
+    /*{
         if (triggerTargetObject)
             triggerCaster->CastSpell(triggerTargetObject->GetPositionX(), triggerTargetObject->GetPositionY(), triggerTargetObject->GetPositionZ(),
                 triggeredSpellInfo, true, NULL, this, casterGUID);
         else
             triggerCaster->CastSpell(triggerTarget, triggeredSpellInfo, true, NULL, this, casterGUID);
-    }
+    }*/
     else
     {
         if (Unit* caster = GetCaster())
