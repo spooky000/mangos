@@ -1067,7 +1067,6 @@ void Creature::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
     CreatureData& data = sObjectMgr.NewOrExistCreatureData(GetGUIDLow());
 
     uint32 displayId = GetNativeDisplayId();
-    uint32 transGUID = (GetTransport()) ? GetTransport()->GetGUID() : 0;
 
     // check if it's a custom model and if not, use 0 for displayId
     CreatureInfo const *cinfo = GetCreatureInfo();
@@ -1096,11 +1095,6 @@ void Creature::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
     data.posY = GetPositionY();
     data.posZ = GetPositionZ();
     data.orientation = GetOrientation();
-    data.trans_x = GetTransOffsetX();
-    data.trans_y = GetTransOffsetY();
-    data.trans_y = GetTransOffsetZ();
-    data.trans_o = GetTransOffsetO();
-    data.transguid = transGUID;
     data.spawntimesecs = m_respawnDelay;
     // prevent add data integrity problems
     data.spawndist = GetDefaultMovementType()==IDLE_MOTION_TYPE ? 0 : m_respawnradius;
@@ -1131,11 +1125,6 @@ void Creature::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
         << GetPositionY() << ","
         << GetPositionZ() << ","
         << GetOrientation() << ","
-        << GetTransOffsetX() << ","
-        << GetTransOffsetY() << ","
-        << GetTransOffsetZ() << ","
-        << GetTransOffsetO() << ","
-        << transGUID << ","
         << m_respawnDelay << ","                            //respawn time
         << (float) m_respawnradius << ","                   //spawn distance (float)
         << (uint32) (0) << ","                              //currentwaypoint
@@ -1313,31 +1302,6 @@ bool Creature::LoadFromDB(uint32 guidlow, Map *map)
         return false;
 
     CreatureCreatePos pos(map, data->posX, data->posY, data->posZ, data->orientation, data->phaseMask);
-
-    if (data->transguid > 0)
-    {
-        m_movementInfo.SetTransportData(ObjectGuid(HIGHGUID_MO_TRANSPORT, data->transguid), data->trans_x, data->trans_y, data->trans_z, data->trans_o, 0, -1);
-        
-        for (MapManager::TransportSet::const_iterator iter = sMapMgr.m_Transports.begin(); iter != sMapMgr.m_Transports.end(); ++iter)
-        {
-            if ((*iter)->GetGUIDLow() == data->transguid)
-            {
-                SetTransport(*iter);
-                GetTransport()->AddPassenger(this);
-
-                SetLocationMapId(GetTransport()->GetMapId());
-                Relocate(GetTransport()->GetPositionX() + data->trans_x, GetTransport()->GetPositionY() + data->trans_y, GetTransport()->GetPositionZ() + data->trans_z, data->trans_o);
-                break;
-            }
-        }
-    }
-    else if (GetTransport())
-    {
-        m_movementInfo.SetTransportData(ObjectGuid(GetTransport()->GetGUID()), GetTransOffsetX(), GetTransOffsetY(), GetTransOffsetZ(), GetTransOffsetO(), 0, -1);
-        GetTransport()->AddPassenger(this);
-        SetLocationMapId(GetTransport()->GetMapId());
-        Relocate(GetTransport()->GetPositionX() + GetTransOffsetX(), GetTransport()->GetPositionY() + GetTransOffsetY(), GetTransport()->GetPositionZ() + GetTransOffsetZ(), GetTransOffsetO());
-    }
 
     if (!Create(guidlow, pos, cinfo, TEAM_NONE, data, eventData))
         return false;

@@ -40,6 +40,8 @@ class Transport : public GameObject
         typedef std::set<Unit*> UnitSet;
         UnitSet const& GetUnitPassengers() const { return _passengers; }
 
+        bool AddNPCPassenger(uint32 entry, float x, float y, float z, float o, uint32 anim=0);
+
         void BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target);
 
     private:
