@@ -258,7 +258,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
                 if (unit->GetTransport())
                 {
                     unit->m_movementInfo.AddMovementFlag(MOVEFLAG_ONTRANSPORT);
-                    unit->m_movementInfo.SetTransportData(unit->GetTransport()->GetGUID(), unit->GetTransOffsetX(), unit->GetTransOffsetY(), unit->GetTransOffsetZ(), unit->GetTransOffsetO(), 0, 0);
+                    unit->m_movementInfo.SetTransportData(unit->GetTransport()->GetObjectGuid(), unit->GetTransOffsetX(), unit->GetTransOffsetY(), unit->GetTransOffsetZ(), unit->GetTransOffsetO(), 0, 0);
                 }
 
                 if (((Creature*)unit)->CanFly())
