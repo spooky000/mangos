@@ -1255,11 +1255,11 @@ void ObjectMgr::LoadCreatures()
         data.posY               = fields[ 6].GetFloat();
         data.posZ               = fields[ 7].GetFloat();
         data.orientation        = fields[ 8].GetFloat();
-        data.trans_x			= fields[ 9].GetFloat();
-        data.trans_y			= fields[10].GetFloat();
-        data.trans_z			= fields[11].GetFloat();
-        data.trans_o			= fields[12].GetFloat();
-        data.transguid			= fields[13].GetUInt32();
+        data.trans_x            = fields[ 9].GetFloat();
+        data.trans_y            = fields[10].GetFloat();
+        data.trans_z            = fields[11].GetFloat();
+        data.trans_o            = fields[12].GetFloat();
+        data.transguid          = fields[13].GetUInt32();
         data.spawntimesecs      = fields[14].GetUInt32();
         data.spawndist          = fields[15].GetFloat();
         data.currentwaypoint    = fields[16].GetUInt32();

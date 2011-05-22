@@ -186,9 +186,7 @@ Creature::~Creature()
     CleanupsBeforeDelete();
 
     if (GetTransport())
-    {
         GetTransport()->RemovePassenger(this);
-    }
 
     m_vendorItemCounts.clear();
 
@@ -1314,7 +1312,7 @@ bool Creature::LoadFromDB(uint32 guidlow, Map *map)
     if (map->GetCreature(data->GetObjectGuid(guidlow)))
         return false;
 
-	CreatureCreatePos pos(map, data->posX, data->posY, data->posZ, data->orientation, data->phaseMask);
+    CreatureCreatePos pos(map, data->posX, data->posY, data->posZ, data->orientation, data->phaseMask);
 
     if (data->transguid > 0)
     {
