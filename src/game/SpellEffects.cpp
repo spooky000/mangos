@@ -489,9 +489,9 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         if (!unitTarget)
                             return;
 
-                        // 200 * 2 ^ stack_amount
-                        SpellAuraHolder *holder = unitTarget->GetSpellAuraHolder(62039);
-                        damage = 200 * int32(pow(2.0f, (holder ? float(holder->GetStackAmount()) : 0)));
+                        // no damage info in spell? simple power 400 * 2^stack (from Tooltip) - for better performence 200 << (shift) Stack
+                        if (SpellAuraHolder *holder = unitTarget->GetSpellAuraHolder(62039))
+                            damage = 200 << holder->GetStackAmount();
                         break;
                     }
                     // Tympanic Tantrum
