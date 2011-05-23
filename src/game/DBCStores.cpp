@@ -644,6 +644,11 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix20 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(12051));
     sfix20->InterruptFlags |= SPELL_INTERRUPT_FLAG_INTERRUPT;
 
+    // Heart of the Phoenix - Make it give 100% Health and instant cast
+    SpellEntry *sfix21 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(54114));
+    sfix21->EffectBasePoints[EFFECT_INDEX_0] = 99; // 100% Health
+    sfix21->CastingTimeIndex = 1;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);
