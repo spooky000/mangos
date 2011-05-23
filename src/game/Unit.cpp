@@ -10748,6 +10748,10 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                 case COMMAND_FOLLOW:                        //spellid=1792  //FOLLOW
                     if (petGuid.IsVehicle())
                         return;
+
+                    if(GetEntry() == 1863) // Succubus' Seduction (interrupt on follow command)
+                        InterruptSpell(CURRENT_CHANNELED_SPELL, false);
+
                     AttackStop();
                     GetMotionMaster()->MoveFollow(owner,PET_FOLLOW_DIST,((Pet*)this)->GetPetFollowAngle());
                     GetCharmInfo()->SetCommandState( COMMAND_FOLLOW );
