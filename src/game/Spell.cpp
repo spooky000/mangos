@@ -1184,7 +1184,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
     }
 
     // recheck deflect for delayed spells on target with Deterrence,
-    if (m_spellInfo->speed && unit->HasAura(19263))
+    if (m_spellInfo->speed && unit->HasAura(19263) && !(m_spellInfo->SpellFamilyName == SPELLFAMILY_WARLOCK && m_spellInfo->SpellIconID == 3178))
     {
         caster->SendSpellMiss(unit, m_spellInfo->Id, SPELL_MISS_DEFLECT);
         missInfo = SPELL_MISS_DEFLECT;
