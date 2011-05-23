@@ -375,6 +375,7 @@ class MANGOS_DLL_SPEC Aura
         void HandleAuraLinked(bool apply, bool Real);
         void HandleAuraSetVehicle(bool apply, bool Real);
         void HandleAuraStopNaturalManaRegen(bool apply, bool real);
+        void HandleModDamagePctTaken(bool apply, bool real);
 
         virtual ~Aura();
 
