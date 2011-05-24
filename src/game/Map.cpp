@@ -105,17 +105,13 @@ private:
 
     void CleanSingle(WorldObject * obj, bool destroy)
     {
-        // Cleanup should be not visible for clients, i.e. object should be invisible already
-        // This is a pure hack, need implement worldobject invisibility
-        WorldPacket data(SMSG_DESTROY_OBJECT, 9);
-        data << obj->GetObjectGuid();
-        data << uint8(0);                            // WotLK (bool), may be despawn animation
-        obj->SendMessageToSet(&data, false);         // unsure about 'self' parameter
-
         if (destroy)
             obj->CleanupsBeforeDelete();
         else
             obj->RemoveFromWorld();
+
+        // TODO: cleanup should be not visible to clients, this should be called before cleanup
+        obj->UpdateObjectVisibility();
 
         // TODO: move it to WorldObject::RemoveFromWorld
         if (obj->isActiveObject())

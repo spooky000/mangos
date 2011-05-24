@@ -261,8 +261,6 @@ void ObjectGridUnloader::Unload(GridType &grid)
 {
     TypeContainerVisitor<ObjectGridUnloader, GridTypeMapContainer > unloader(*this);
     grid.Visit(unloader);
-    TypeContainerVisitor<ObjectGridUnloader, WorldTypeMapContainer > world_unloader(*this);
-    grid.Visit(world_unloader);
 }
 
 template<class T>
