@@ -57,8 +57,8 @@ void BattleGroundDS::Update(uint32 diff)
                     if(Player *plr = sObjectMgr.GetPlayer(itr->first))
                     {
                         // Remove Demonic Circle
-                        if(GameObject* obj = plr->GetGameObject(48018))
-                            obj->Delete();
+                        //if(GameObject* obj = plr->GetGameObject(48018))
+                        //    obj->Delete();
 
                         if(plr->GetPositionZ() < 11.0f)
                             continue;
