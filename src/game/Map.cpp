@@ -3266,3 +3266,8 @@ uint32 Map::GenerateLocalLowGuid(HighGuid guidhigh)
     MANGOS_ASSERT(0);
     return 0;
 }
+
+void Map::ProcessDestructions()
+{
+    m_destructor->ProcessDestructions();
+}
