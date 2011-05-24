@@ -524,7 +524,7 @@ void Creature::Update(uint32 update_diff, uint32 diff)
                 if (AI())
                     AI()->JustRespawned();
 
-                GetMap()->Add(this);
+                UpdateVisibilityAndView();
             }
             break;
         }
@@ -555,8 +555,6 @@ void Creature::Update(uint32 update_diff, uint32 diff)
                     else
                         StopGroupLoot();
                 }
-                m_Events.Update(update_diff);
-                _UpdateSpells(update_diff);
             }
 
             break;
@@ -2401,24 +2399,21 @@ void Creature::ClearTemporaryFaction()
     setFaction(GetCreatureInfo()->faction_A);
 }
 
+struct DoNothingVisitor
+{
+    template<class T> void Visit(GridRefManager<T>&){}
+};
+
 void Creature::SetActiveObjectState( bool on )
 {
     if(m_isActiveObject==on)
         return;
 
-    bool world = IsInWorld();
-
-    Map* map;
-    if(world)
+    if (IsInWorld())
     {
-        map = GetMap();
-        map->Remove(this,false);
+        DoNothingVisitor grid_loader;
+        Cell::VisitAllObjects(this, grid_loader, GetMap()->GetVisibilityDistance(), false);
     }
-
-    m_isActiveObject = on;
-
-    if(world)
-        map->Add(this);
 }
 
 void Creature::SendMonsterMoveWithSpeedToCurrentDestination(Player* player)
