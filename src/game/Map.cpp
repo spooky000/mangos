@@ -137,6 +137,7 @@ private:
             break;
         case TYPEID_CORPSE:
             ((Corpse*)obj)->GetGridRef().delink();
+            break;
         default:
             sLog.outError("ObjectDestructor::CleanSingle: not expected object typeId: %u", obj->GetTypeId());
             break;
@@ -2872,7 +2873,7 @@ void Map::ScriptsProcess()
                     break;
                 }
 
-                if (source->GetTypeId() != TYPEID_PLAYER) 
+                if (source->GetTypeId() != TYPEID_PLAYER)
                 {
                     sLog.outError("SCRIPT_COMMAND_ADD_QUEST_COUNT call for non-player (QuestId: %u TypeId is %u), skipping.",step.script->add_quest_count.quest_id, uint32(source->GetTypeId()));
                     break;
