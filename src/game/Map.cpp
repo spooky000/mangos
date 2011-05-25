@@ -36,23 +36,10 @@
 #include "MapPersistentStateMgr.h"
 #include "VMapFactory.h"
 #include "BattleGroundMgr.h"
-#include "CreatureEventAI.h"
-
-struct IDestructible
-{
-    bool destroy;
-
-    IDestructible(bool _destroy) : destroy(_destroy) {}
-    IDestructible() : destroy(true) {}
-
-    virtual void CleanReferences() = 0;
-    virtual ~IDestructible() {}
-};
 
 class ObjectDestructor
 {
-    typedef IDestructible  DestructibleType;
-    typedef UNORDERED_SET<DestructibleType*> ContainerType;
+    typedef UNORDERED_MAP<WorldObject*, bool> ContainerType;
     ContainerType m_objectsToDestroy;
 
 public:
@@ -60,13 +47,26 @@ public:
     explicit ObjectDestructor() {}
     ~ObjectDestructor() { MANGOS_ASSERT(m_objectsToDestroy.empty()); }
 
-    void DestroyLater(DestructibleType * destr)
+    void DestroyLater(WorldObject* obj)
     {
-        ContainerType::iterator it = m_objectsToDestroy.find(destr);
+        RemoveLater(obj, true);
+    }
+
+    void RemoveLater(WorldObject* obj)
+    {
+        RemoveLater(obj, false);
+    }
+
+    void RemoveLater(WorldObject* obj, bool destroy)
+    {
+        ContainerType::iterator it = m_objectsToDestroy.find(obj);
         if (it != m_objectsToDestroy.end())
-            sLog.outError("ObjectDestructor::RemoveLater: called few times for same object");
+        {
+            sLog.outError("ObjectDestructor::RemoveLater: called twice, destroy is: %s", destroy ? "true" : "false");
+            it->second = destroy;
+        }
         else
-            m_objectsToDestroy.insert(destr);
+            m_objectsToDestroy.insert(ContainerType::value_type(obj,destroy));
     }
 
     void ProcessDestructions()
@@ -74,7 +74,7 @@ public:
         if (m_objectsToDestroy.empty())
             return;
 
-        std::vector<DestructibleType*> to_destroy;
+        std::vector<WorldObject*> to_destroy;
         to_destroy.reserve(m_objectsToDestroy.size() + m_objectsToDestroy.size() / 8u);
 
         // Scoped cleanup
@@ -83,26 +83,27 @@ public:
         while(!m_objectsToDestroy.empty())
         {
             pair = m_objectsToDestroy.begin();
-            DestructibleType * obj = *pair;
+            WorldObject * obj = pair->first;
+            bool destroy = pair->second;
             m_objectsToDestroy.erase(pair);
 
-            obj->CleanReferences();
-            if (obj->destroy)
+            CleanSingle(obj, destroy);
+            if (destroy)
                 to_destroy.push_back(obj);
         }
 
-        for (std::vector<DestructibleType*>::iterator it = to_destroy.begin(); it != to_destroy.end(); ++it)
-            delete (*it);
+        for (std::vector<WorldObject*>::iterator it = to_destroy.begin(); it != to_destroy.end(); ++it)
+        {
+            WorldObject * obj = *it;
+            if (obj->isType(TYPEMASK_UNIT) && !((Unit*)obj)->IsCleaned())
+                sLog.outError("Object %s wasn't fully cleaned, may crash later", obj->GetName());
+            delete obj;
+        }
     }
-};
 
-struct DestructibleWorldObject : public IDestructible
-{
-    WorldObject* obj;
+private:
 
-    DestructibleWorldObject(WorldObject * object, bool _destroy) : obj(object), IDestructible(_destroy) {}
-
-    virtual void CleanReferences()
+    void CleanSingle(WorldObject * obj, bool destroy)
     {
         if (destroy)
             obj->CleanupsBeforeDelete();
@@ -146,30 +147,8 @@ struct DestructibleWorldObject : public IDestructible
                 sObjectAccessor.RemoveObject((Player*)obj);
         }
     }
-
-    virtual ~DestructibleWorldObject()
-    {
-        if (obj->isType(TYPEMASK_UNIT) && !((Unit*)obj)->IsCleaned())
-            sLog.outError("Object %s wasn't fully cleaned, may crash later", obj->GetName());
-        delete obj;
-    }
 };
-
-struct DestructibleGrid : public IDestructible
-{
-    NGridType* obj;
-    Map * map;
-
-    DestructibleGrid(NGridType * object, Map * _map) : IDestructible(true), obj(object), map(_map) {}
-
-    virtual void CleanReferences() {}
-
-    virtual ~DestructibleGrid()
-    {
-        map->setNGrid(NULL, obj->getX(), obj->getY());
-        delete obj;
-    }
-};
+#include "CreatureEventAI.h"
 
 Map::~Map()
 {
@@ -715,14 +694,14 @@ void Map::Remove(Player *player, bool destroy)
         m_mapRefIter = m_mapRefIter->nocheck_prev();
     player->GetMapRef().unlink();
 
-    m_destructor->DestroyLater(new DestructibleWorldObject(player,destroy));
+    m_destructor->RemoveLater(player, destroy);
 }
 
 template<class T>
 void
 Map::Remove(T *obj, bool destroy)
 {
-    m_destructor->DestroyLater(new DestructibleWorldObject(obj,destroy));
+    m_destructor->RemoveLater(obj, destroy);
 }
 
 void
@@ -854,7 +833,8 @@ bool Map::UnloadGrid(const uint32 &x, const uint32 &y, bool pForce)
         unloader.MoveToRespawnN();
         unloader.UnloadN();
 
-        m_destructor->DestroyLater(new DestructibleGrid(grid,this));
+        delete getNGrid(x, y);
+        setNGrid(NULL, x, y);
     }
 
     int gx = (MAX_NUMBER_OF_GRIDS - 1) - x;
@@ -1035,7 +1015,7 @@ inline void Map::setNGrid(NGridType *grid, uint32 x, uint32 y)
 void Map::AddObjectToRemoveList(WorldObject *obj)
 {
     MANGOS_ASSERT(obj->GetMapId()==GetId() && obj->GetInstanceId()==GetInstanceId());
-    m_destructor->DestroyLater(new DestructibleWorldObject(obj,true));
+    m_destructor->DestroyLater(obj);
 }
 
 void Map::RemoveAllObjectsInRemoveList()

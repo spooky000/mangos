@@ -253,8 +253,6 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         void CreateInstanceData(bool load);
         InstanceData* GetInstanceData() { return i_data; }
         uint32 GetScriptId() const { return i_script_id; }
-        void setNGrid(NGridType* grid, uint32 x, uint32 y);
-
     private:
         void LoadMapAndVMap(int gx, int gy);
 
@@ -287,6 +285,7 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         bool isGridObjectDataLoaded(uint32 x, uint32 y) const { return getNGrid(x,y)->isGridObjectDataLoaded(); }
         void setGridObjectDataLoaded(bool pLoaded, uint32 x, uint32 y) { getNGrid(x,y)->setGridObjectDataLoaded(pLoaded); }
 
+        void setNGrid(NGridType* grid, uint32 x, uint32 y);
         void ScriptsProcess();
 
         ObjectDestructor* m_destructor;
