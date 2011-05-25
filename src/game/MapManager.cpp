@@ -245,9 +245,6 @@ MapManager::Update(uint32 diff)
         helper.Update((uint32)i_timer.GetCurrent());
     }
 
-    for(MapMapType::iterator iter=i_maps.begin(); iter != i_maps.end(); ++iter)
-        iter->second->ProcessDestructions();
-
     //remove all maps which can be unloaded
     MapMapType::iterator iter = i_maps.begin();
     while(iter != i_maps.end())

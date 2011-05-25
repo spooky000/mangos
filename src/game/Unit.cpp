@@ -309,21 +309,20 @@ Unit::~Unit()
 
 void Unit::Update( uint32 update_diff, uint32 p_time )
 {
-    if(!IsInWorld())
-        return;
-
-    /*if(p_time > m_AurasCheck)
-    {
-    m_AurasCheck = 2000;
-    _UpdateAura();
-    }else
-    m_AurasCheck -= p_time;*/
-
     // WARNING! Order of execution here is important, do not change.
     // Spells must be processed with event system BEFORE they go to _UpdateSpells.
     // Or else we may have some SPELL_STATE_FINISHED spells stalled in pointers, that is bad.
+    if(!IsInWorld())
+        return;
+
+    sWorld.m_spellUpdateLock.acquire();
     m_Events.Update( update_diff );
+
+    if(!IsInWorld())
+        return;
+
     _UpdateSpells( update_diff );
+    sWorld.m_spellUpdateLock.release();
 
     CleanupDeletedAuras();
 
@@ -10494,25 +10493,6 @@ void Unit::CleanupsBeforeDelete()
         GetMotionMaster()->Clear(false);                    // remove different non-standard movement generators.
     }
     WorldObject::CleanupsBeforeDelete();
-}
-
-bool Unit::IsCleaned() const
-{
-    bool cleaned =
-        m_Events.Empty() &&
-        m_spellAuraHolders.empty() &&
-        m_deletedHolders.empty() &&
-        m_deletedAuras.empty() &&
-        m_singleCastSpellTargets.empty() &&
-        m_ThreatManager.isThreatListEmpty() &&
-
-        m_guardianPets.empty() &&
-        m_gameObj.empty() &&
-        m_dynObjGUIDs.empty() &&
-
-        !GetCharm();
-
-    return cleaned;
 }
 
 CharmInfo* Unit::InitCharmInfo(Unit *charm)

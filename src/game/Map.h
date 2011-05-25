@@ -52,7 +52,6 @@ class BattleGroundPersistentState;
 struct ScriptInfo;
 class BattleGround;
 class GridMap;
-class ObjectDestructor;
 
 // GCC have alternative #pragma pack(N) syntax and old gcc version not support pack(push,N), also any gcc version not support it at some platform
 #if defined( __GNUC__ )
@@ -118,7 +117,6 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         static void DeleteFromWorld(Player* player);        // player object will deleted at call
 
         virtual void Update(const uint32&);
-        void ProcessDestructions();
 
         void MessageBroadcast(Player *, WorldPacket *, bool to_self);
         void MessageBroadcast(WorldObject *, WorldPacket *);
@@ -232,7 +230,8 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         Unit* GetUnit(ObjectGuid guid);                     // only use if sure that need objects at current map, specially for player case
         WorldObject* GetWorldObject(ObjectGuid guid);       // only use if sure that need objects at current map, specially for player case
 
-        TypeUnorderedMapContainer<AllMapStoredObjectTypes>& GetObjectsStore() { return m_objectsStore; }
+        typedef TypeUnorderedMapContainer<AllMapStoredObjectTypes, ObjectGuid> MapStoredObjectTypesContainer;
+        MapStoredObjectTypesContainer& GetObjectsStore() { return m_objectsStore; }
 
         void AddUpdateObject(Object *obj)
         {
@@ -241,7 +240,7 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
 
         void RemoveUpdateObject(Object *obj)
         {
-            i_objectsToClientUpdate.erase( obj );
+            i_objectsToClientUpdate.erase(obj);
         }
 
         // DynObjects currently
@@ -288,10 +287,9 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         void setNGrid(NGridType* grid, uint32 x, uint32 y);
         void ScriptsProcess();
 
-        ObjectDestructor* m_destructor;
-
         void SendObjectUpdates();
         std::set<Object *> i_objectsToClientUpdate;
+
     protected:
 
         MapEntry const* i_mapEntry;
@@ -308,7 +306,7 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         typedef std::set<WorldObject*> ActiveNonPlayers;
         ActiveNonPlayers m_activeNonPlayers;
         ActiveNonPlayers::iterator m_activeNonPlayersIter;
-        TypeUnorderedMapContainer<AllMapStoredObjectTypes> m_objectsStore;
+        MapStoredObjectTypesContainer m_objectsStore;
     private:
         time_t i_gridExpiry;
 

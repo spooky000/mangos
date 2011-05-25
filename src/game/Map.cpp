@@ -36,124 +36,11 @@
 #include "MapPersistentStateMgr.h"
 #include "VMapFactory.h"
 #include "BattleGroundMgr.h"
-
-class ObjectDestructor
-{
-    typedef UNORDERED_MAP<WorldObject*, bool> ContainerType;
-    ContainerType m_objectsToDestroy;
-
-public:
-
-    explicit ObjectDestructor() {}
-    ~ObjectDestructor() { MANGOS_ASSERT(m_objectsToDestroy.empty()); }
-
-    void DestroyLater(WorldObject* obj)
-    {
-        RemoveLater(obj, true);
-    }
-
-    void RemoveLater(WorldObject* obj)
-    {
-        RemoveLater(obj, false);
-    }
-
-    void RemoveLater(WorldObject* obj, bool destroy)
-    {
-        ContainerType::iterator it = m_objectsToDestroy.find(obj);
-        if (it != m_objectsToDestroy.end())
-        {
-            sLog.outError("ObjectDestructor::RemoveLater: called twice, destroy is: %s", destroy ? "true" : "false");
-            it->second = destroy;
-        }
-        else
-            m_objectsToDestroy.insert(ContainerType::value_type(obj,destroy));
-    }
-
-    void ProcessDestructions()
-    {
-        if (m_objectsToDestroy.empty())
-            return;
-
-        std::vector<WorldObject*> to_destroy;
-        to_destroy.reserve(m_objectsToDestroy.size() + m_objectsToDestroy.size() / 8u);
-
-        // Scoped cleanup
-        // used 'while' loop: m_objectsToDestroy might be modified because of deep calls in CleanSingle 
-        ContainerType::iterator pair;
-        while(!m_objectsToDestroy.empty())
-        {
-            pair = m_objectsToDestroy.begin();
-            WorldObject * obj = pair->first;
-            bool destroy = pair->second;
-            m_objectsToDestroy.erase(pair);
-
-            CleanSingle(obj, destroy);
-            if (destroy)
-                to_destroy.push_back(obj);
-        }
-
-        for (std::vector<WorldObject*>::iterator it = to_destroy.begin(); it != to_destroy.end(); ++it)
-        {
-            WorldObject * obj = *it;
-            if (obj->isType(TYPEMASK_UNIT) && !((Unit*)obj)->IsCleaned())
-                sLog.outError("Object %s wasn't fully cleaned, may crash later", obj->GetName());
-            delete obj;
-        }
-    }
-
-private:
-
-    void CleanSingle(WorldObject * obj, bool destroy)
-    {
-        if (destroy)
-            obj->CleanupsBeforeDelete();
-        else
-            obj->RemoveFromWorld();
-
-        // TODO: cleanup should be not visible to clients, this should be called before cleanup
-        obj->UpdateObjectVisibility();
-
-        // TODO: move it to WorldObject::RemoveFromWorld
-        if (obj->isActiveObject())
-            obj->GetMap()->RemoveFromActive(obj);
-
-        switch(obj->GetTypeId())
-        {
-        case TYPEID_PLAYER:
-            ((Player*)obj)->GetGridRef().delink();
-            break;
-        case TYPEID_UNIT:
-            ((Creature*)obj)->GetGridRef().delink();
-            break;
-        case TYPEID_DYNAMICOBJECT:
-            ((DynamicObject*)obj)->GetGridRef().delink();
-            break;
-        case TYPEID_GAMEOBJECT:
-            ((GameObject*)obj)->GetGridRef().delink();
-            break;
-        case TYPEID_CORPSE:
-            ((Corpse*)obj)->GetGridRef().delink();
-            break;
-        default:
-            sLog.outError("ObjectDestructor::CleanSingle: not expected object typeId: %u", obj->GetTypeId());
-            break;
-        }
-
-        if (destroy)
-        {
-            if (!sWorld.getConfig(CONFIG_BOOL_SAVE_RESPAWN_TIME_IMMEDIATELY))
-                obj->SaveRespawnTime();
-            if (obj->isType(TYPEMASK_PLAYER))
-                sObjectAccessor.RemoveObject((Player*)obj);
-        }
-    }
-};
 #include "CreatureEventAI.h"
 
 Map::~Map()
 {
     UnloadAll(true);
-    m_destructor->ProcessDestructions();
 
     if(!m_scriptSchedule.empty())
         sScriptMgr.DecreaseScheduledScriptCount(m_scriptSchedule.size());
@@ -170,8 +57,6 @@ Map::~Map()
     //release reference count
     if(m_TerrainData->Release())
         sTerrainMgr.UnloadTerrain(m_TerrainData->GetMapId());
-
-    delete m_destructor;
 }
 
 void Map::LoadMapAndVMap(int gx,int gy)
@@ -192,7 +77,6 @@ Map::Map(uint32 id, time_t expiry, uint32 InstanceId, uint8 SpawnMode)
   i_gridExpiry(expiry), m_TerrainData(sTerrainMgr.LoadTerrain(id)),
   i_data(NULL), i_script_id(0)
 {
-    m_destructor = new ObjectDestructor();
     m_CreatureGuids.Set(sObjectMgr.GetFirstTemporaryCreatureLowGuid());
     m_GameObjectGuids.Set(sObjectMgr.GetFirstTemporaryGameObjectLowGuid());
 
@@ -655,13 +539,6 @@ void Map::Update(const uint32 &t_diff)
         }
     }
 
-    ///- Process necessary scripts
-    if (!m_scriptSchedule.empty())
-        ScriptsProcess();
-
-    if(i_data)
-        i_data->Update(t_diff);
-
     // Send world objects and item update field changes
     SendObjectUpdates();
 
@@ -678,12 +555,24 @@ void Map::Update(const uint32 &t_diff)
             sMapMgr.UpdateGridState(grid->GetGridState(), *this, *grid, *info, grid->getX(), grid->getY(), t_diff);
         }
     }
+
+    ///- Process necessary scripts
+    if (!m_scriptSchedule.empty())
+        ScriptsProcess();
+
+    if(i_data)
+        i_data->Update(t_diff);
 }
 
-void Map::Remove(Player *player, bool destroy)
+void Map::Remove(Player *player, bool remove)
 {
     if (i_data)
         i_data->OnPlayerLeave(player);
+
+    if(remove)
+        player->CleanupsBeforeDelete();
+    else
+        player->RemoveFromWorld();
 
     // this may be called during Map::Update
     // after decrement+unlink, ++m_mapRefIter will continue correctly
@@ -693,15 +582,80 @@ void Map::Remove(Player *player, bool destroy)
     if(m_mapRefIter == player->GetMapRef())
         m_mapRefIter = m_mapRefIter->nocheck_prev();
     player->GetMapRef().unlink();
+    CellPair p = MaNGOS::ComputeCellPair(player->GetPositionX(), player->GetPositionY());
+    if(p.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || p.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP)
+    {
+        // invalid coordinates
+        player->ResetMap();
 
-    m_destructor->RemoveLater(player, destroy);
+        if( remove )
+            DeleteFromWorld(player);
+
+        return;
+    }
+
+    Cell cell(p);
+
+    if( !getNGrid(cell.data.Part.grid_x, cell.data.Part.grid_y) )
+    {
+        sLog.outError("Map::Remove() i_grids was NULL x:%d, y:%d",cell.data.Part.grid_x,cell.data.Part.grid_y);
+        return;
+    }
+
+    DEBUG_FILTER_LOG(LOG_FILTER_PLAYER_MOVES, "Remove player %s from grid[%u,%u]", player->GetName(), cell.GridX(), cell.GridY());
+    NGridType *grid = getNGrid(cell.GridX(), cell.GridY());
+    MANGOS_ASSERT(grid != NULL);
+
+    RemoveFromGrid(player,grid,cell);
+
+    SendRemoveTransports(player);
+    UpdateObjectVisibility(player,cell,p);
+
+    player->ResetMap();
+    if( remove )
+        DeleteFromWorld(player);
 }
 
 template<class T>
 void
-Map::Remove(T *obj, bool destroy)
+Map::Remove(T *obj, bool remove)
 {
-    m_destructor->RemoveLater(obj, destroy);
+    CellPair p = MaNGOS::ComputeCellPair(obj->GetPositionX(), obj->GetPositionY());
+    if(p.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || p.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP )
+    {
+        sLog.outError("Map::Remove: Object (GUID: %u TypeId:%u) have invalid coordinates X:%f Y:%f grid cell [%u:%u]", obj->GetGUIDLow(), obj->GetTypeId(), obj->GetPositionX(), obj->GetPositionY(), p.x_coord, p.y_coord);
+        return;
+    }
+
+    Cell cell(p);
+    if( !loaded(GridPair(cell.data.Part.grid_x, cell.data.Part.grid_y)) )
+        return;
+
+    DEBUG_LOG("Remove object (GUID: %u TypeId:%u) from grid[%u,%u]", obj->GetGUIDLow(), obj->GetTypeId(), cell.data.Part.grid_x, cell.data.Part.grid_y);
+    NGridType *grid = getNGrid(cell.GridX(), cell.GridY());
+    MANGOS_ASSERT( grid != NULL );
+
+    if(obj->isActiveObject())
+        RemoveFromActive(obj);
+
+    if(remove)
+        obj->CleanupsBeforeDelete();
+    else
+        obj->RemoveFromWorld();
+
+    UpdateObjectVisibility(obj,cell,p);                     // i think will be better to call this function while object still in grid, this changes nothing but logically is better(as for me)
+    RemoveFromGrid(obj,grid,cell);
+
+    obj->ResetMap();
+    if( remove )
+    {
+        // if option set then object already saved at this moment
+        if(!sWorld.getConfig(CONFIG_BOOL_SAVE_RESPAWN_TIME_IMMEDIATELY))
+            obj->SaveRespawnTime();
+
+        // Note: In case resurrectable corpse and pet its removed from global lists in own destructor
+        delete obj;
+    }
 }
 
 void
@@ -829,10 +783,18 @@ bool Map::UnloadGrid(const uint32 &x, const uint32 &y, bool pForce)
 
         DEBUG_LOG("Unloading grid[%u,%u] for map %u", x,y, i_id);
         ObjectGridUnloader unloader(*grid);
+
+        // Finish remove and delete all creatures with delayed remove before moving to respawn grids
+        // Must know real mob position before move
+        RemoveAllObjectsInRemoveList();
+
         // move creatures to respawn grids if this is diff.grid or to remove list
         unloader.MoveToRespawnN();
-        unloader.UnloadN();
 
+        // Finish remove and delete all creatures with delayed remove before unload
+        RemoveAllObjectsInRemoveList();
+
+        unloader.UnloadN();
         delete getNGrid(x, y);
         setNGrid(NULL, x, y);
     }
@@ -1015,12 +977,16 @@ inline void Map::setNGrid(NGridType *grid, uint32 x, uint32 y)
 void Map::AddObjectToRemoveList(WorldObject *obj)
 {
     MANGOS_ASSERT(obj->GetMapId()==GetId() && obj->GetInstanceId()==GetInstanceId());
-    m_destructor->DestroyLater(obj);
+
+    // need clean references at end of update cycle, NOT during it! called at Map::Remove
+    // obj->CleanupsBeforeDelete();                            // remove or simplify at least cross referenced links
+
+    i_objectsToRemove.insert(obj);
+    //DEBUG_LOG("Object (GUID: %u TypeId: %u ) added to removing list.",obj->GetGUIDLow(),obj->GetTypeId());
 }
 
 void Map::RemoveAllObjectsInRemoveList()
 {
-    return;
     if(i_objectsToRemove.empty())
         return;
 
@@ -2869,7 +2835,7 @@ void Map::ScriptsProcess()
                     break;
                 }
 
-                if (source->GetTypeId() != TYPEID_PLAYER)
+                if (source->GetTypeId() != TYPEID_PLAYER) 
                 {
                     sLog.outError("SCRIPT_COMMAND_ADD_QUEST_COUNT call for non-player (QuestId: %u TypeId is %u), skipping.",step.script->add_quest_count.quest_id, uint32(source->GetTypeId()));
                     break;
@@ -3262,9 +3228,4 @@ uint32 Map::GenerateLocalLowGuid(HighGuid guidhigh)
 
     MANGOS_ASSERT(0);
     return 0;
-}
-
-void Map::ProcessDestructions()
-{
-    m_destructor->ProcessDestructions();
 }

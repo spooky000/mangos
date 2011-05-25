@@ -75,7 +75,6 @@ class MANGOS_DLL_DECL ObjectGridUnloader
 
         void Unload(GridType &grid);
         template<class T> void Visit(GridRefManager<T> &m);
-        void Visit(CameraMapType &) {}
     private:
         NGridType &i_grid;
 };

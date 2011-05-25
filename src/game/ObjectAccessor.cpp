@@ -219,7 +219,7 @@ ObjectAccessor::ConvertCorpseForPlayer(ObjectGuid player_guid, bool insignia)
     // do not load the map if it's not loaded
     Map *map = sMapMgr.FindMap(corpse->GetMapId(), corpse->GetInstanceId());
     if(map)
-        map->Remove(corpse, true);
+        map->Remove(corpse, false);
 
     // remove corpse from DB
     corpse->DeleteFromDB();
@@ -259,9 +259,7 @@ ObjectAccessor::ConvertCorpseForPlayer(ObjectGuid player_guid, bool insignia)
     }
 
     // all references to the corpse should be removed at this point
-    // If there is no map -- delete corpse manually
-    if (!map)
-        delete corpse;
+    delete corpse;
 
     return bones;
 }
