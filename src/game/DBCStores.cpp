@@ -649,6 +649,12 @@ void LoadDBCStores(const std::string& dataPath)
     sfix21->EffectBasePoints[EFFECT_INDEX_0] = 99; // 100% Health
     sfix21->CastingTimeIndex = 1;
 
+    // Magic Suppression rank 1 and 3 (2 is fine ^^)
+    SpellEntry *sfix22 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49224));
+    sfix22->procCharges = 0;
+    SpellEntry *sfix23 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49611));
+    sfix23->procCharges = 0;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);
