@@ -37,7 +37,6 @@ BattleGroundRV::BattleGroundRV()
 
 BattleGroundRV::~BattleGroundRV()
 {
-
 }
 
 void BattleGroundRV::Reset()
@@ -45,6 +44,8 @@ void BattleGroundRV::Reset()
     //call parent's class reset
     BattleGround::Reset();
     m_uiTeleport = 22000;
+    m_uiFireTimer = 90000;
+    m_uiPillarSwitch = 45000 + urand(0, 30000);
 }
 
 void BattleGroundRV::Update(uint32 diff)
@@ -54,7 +55,7 @@ void BattleGroundRV::Update(uint32 diff)
     if (GetStatus() == STATUS_IN_PROGRESS)
     {
         // teleport buggers
-        if(m_uiTeleport < diff)
+        if (m_uiTeleport < diff)
         {
             for(BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
             {
@@ -68,6 +69,22 @@ void BattleGroundRV::Update(uint32 diff)
         }
         else
             m_uiTeleport -= diff;
+
+        if (m_uiPillarSwitch < diff)
+        {
+            // Handle Pillars switch
+            m_uiPillarSwitch = 45000 + urand(0, 30000);
+        }
+        else
+            m_uiPillarSwitch -= diff;
+
+        if (m_uiFireTimer < diff)
+        {
+            // Handle Fire-lines
+            m_uiFireTimer = 90000 + urand(0, 30000);
+        }
+        else
+            m_uiFireTimer -= diff;
     }
 }
 
