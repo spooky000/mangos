@@ -94,6 +94,7 @@ void BattleGroundRV::StartingEventCloseDoors()
 
 void BattleGroundRV::StartingEventOpenDoors()
 {
+    OpenDoorEvent(BG_EVENT_DOOR);
 }
 
 bool BattleGroundRV::SetupBattleGround()
