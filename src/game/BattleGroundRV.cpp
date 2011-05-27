@@ -40,9 +40,35 @@ BattleGroundRV::~BattleGroundRV()
 
 }
 
+void BattleGroundRV::Reset()
+{
+    //call parent's class reset
+    BattleGround::Reset();
+    m_uiTeleport = 22000;
+}
+
 void BattleGroundRV::Update(uint32 diff)
 {
     BattleGround::Update(diff);
+
+    if (GetStatus() == STATUS_IN_PROGRESS)
+    {
+        // teleport buggers
+        if(m_uiTeleport < diff)
+        {
+            for(BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+            {
+                Player * plr = sObjectMgr.GetPlayer(itr->first);
+                if (plr && plr->GetPositionZ() < 27)
+                    plr->TeleportTo(618, plr->GetPositionX(), plr->GetPositionY(), 29, plr->GetOrientation(), false);
+                if (plr && plr->GetPositionZ() < 27)
+                    plr->TeleportTo(618, plr->GetPositionX(), plr->GetPositionY(), 29, plr->GetOrientation(), false);
+            }
+            m_uiTeleport = 1000;
+        }
+        else
+            m_uiTeleport -= diff;
+    }
 }
 
 void BattleGroundRV::StartingEventCloseDoors()
@@ -53,6 +79,11 @@ void BattleGroundRV::StartingEventOpenDoors()
 {
 }
 
+bool BattleGroundRV::SetupBattleGround()
+{
+    return true;
+}
+
 void BattleGroundRV::AddPlayer(Player *plr)
 {
     BattleGround::AddPlayer(plr);
@@ -60,22 +91,69 @@ void BattleGroundRV::AddPlayer(Player *plr)
     BattleGroundRVScore* sc = new BattleGroundRVScore;
 
     m_PlayerScores[plr->GetObjectGuid()] = sc;
+
+    UpdateWorldState(0xe11, GetAlivePlayersCountByTeam(ALLIANCE));
+    UpdateWorldState(0xe10, GetAlivePlayersCountByTeam(HORDE));
 }
 
 void BattleGroundRV::RemovePlayer(Player * /*plr*/, ObjectGuid /*guid*/)
 {
+    if (GetStatus() == STATUS_WAIT_LEAVE)
+        return;
+
+    UpdateWorldState(0xe11, GetAlivePlayersCountByTeam(ALLIANCE));
+    UpdateWorldState(0xe10, GetAlivePlayersCountByTeam(HORDE));
+
+    CheckArenaWinConditions();
 }
 
 void BattleGroundRV::HandleKillPlayer(Player* player, Player* killer)
 {
+    if (GetStatus() != STATUS_IN_PROGRESS)
+        return;
+
+    if (!killer)
+    {
+        sLog.outError("BattleGroundRV: Killer player not found");
+        return;
+    }
+
     BattleGround::HandleKillPlayer(player, killer);
+
+    UpdateWorldState(0xe11, GetAlivePlayersCountByTeam(ALLIANCE));
+    UpdateWorldState(0xe10, GetAlivePlayersCountByTeam(HORDE));
+
+    CheckArenaWinConditions();
 }
 
-void BattleGroundRV::HandleAreaTrigger(Player * /*Source*/, uint32 /*Trigger*/)
+bool BattleGroundRV::HandlePlayerUnderMap(Player *player)
 {
-}
-
-bool BattleGroundRV::SetupBattleGround()
-{
+    player->TeleportTo(GetMapId(), 763.5f, -284, 28.276f, player->GetOrientation(), false);
     return true;
 }
+
+void BattleGroundRV::HandleAreaTrigger(Player * Source, uint32 Trigger)
+{
+    if (GetStatus() != STATUS_IN_PROGRESS)
+        return;
+
+    switch(Trigger)
+    {
+        case 5224:
+        case 5226:
+        case 5473:
+        case 5474:
+            break;
+        default:
+            sLog.outError("WARNING: Unhandled AreaTrigger in Battleground: %u", Trigger);
+            Source->GetSession()->SendAreaTriggerMessage("Warning: Unhandled AreaTrigger in Battleground: %u", Trigger);
+            break;
+    }
+}
+
+void BattleGroundRV::FillInitialWorldStates(WorldPacket &data, uint32& count)
+{
+    FillInitialWorldState(data, count, 0xe11, GetAlivePlayersCountByTeam(ALLIANCE));
+    FillInitialWorldState(data, count, 0xe10, GetAlivePlayersCountByTeam(HORDE));
+    FillInitialWorldState(data, count, 0xe1a, 1);
+ }
