@@ -655,6 +655,10 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix23 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49611));
     sfix23->procCharges = 0;
 
+    // Divine Hymn
+    SpellEntry *sfix24 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(64844));
+    sfix24->DmgClass = SPELL_DAMAGE_CLASS_MAGIC;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);
