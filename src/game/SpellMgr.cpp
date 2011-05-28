@@ -686,9 +686,10 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
         case 27130:                                         // Amplify Magic - Rank 5
         case 33946:                                         // Amplify Magic - Rank 6
         case 43017:                                         // Amplify Magic - Rank 7
-        case 12042:                                         // Arcane Power        
+        case 12042:                                         // Arcane Power
             return true;
         case 62470:                                         // Deafening Thunder
+        case 63355:                                         // Crunch Armor
             return false;
         default:
             break;
