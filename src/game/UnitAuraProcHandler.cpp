@@ -4245,7 +4245,7 @@ SpellAuraProcResult Unit::HandleAddFlatModifierAuraProc(Unit* pVictim, uint32 /*
                 return SPELL_AURA_PROC_CANT_TRIGGER;
             break;
         }
-        case 31656:
+        case 31656:                             // Empowered Fire
         case 31657:
         case 31658:
         {
