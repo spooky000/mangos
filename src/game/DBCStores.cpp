@@ -659,6 +659,10 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix24 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(64844));
     sfix24->DmgClass = SPELL_DAMAGE_CLASS_MAGIC;
 
+    // Searing Flames
+    SpellEntry *sfix25 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(62661));
+    sfix25->InterruptFlags |= SPELL_INTERRUPT_FLAG_INTERRUPT;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);
