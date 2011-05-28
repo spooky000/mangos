@@ -1165,35 +1165,6 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     triggered_spell_id = 12654;
                     break;
                 }
-                // Empowered Fire (mana regen)
-                case 12654:
-                {
-                    Unit* caster = triggeredByAura->GetCaster();
-                    // it should not be triggered from other ignites
-                    if (caster && pVictim && caster->GetObjectGuid() == pVictim->GetObjectGuid())
-                    {
-                        Unit::AuraList const& auras = caster->GetAurasByType(SPELL_AURA_ADD_FLAT_MODIFIER);
-                        for (Unit::AuraList::const_iterator i = auras.begin(); i != auras.end(); i++)
-                        {
-                            switch((*i)->GetId())
-                            {
-                                case 31656:
-                                case 31657:
-                                case 31658:
-                                {
-                                    if(roll_chance_i(int32((*i)->GetSpellProto()->procChance)))
-                                    {
-                                        caster->CastSpell(caster, 67545, true);
-                                        return SPELL_AURA_PROC_OK;
-                                    }
-                                    else
-                                        return SPELL_AURA_PROC_FAILED;
-                                }
-                            }
-                        } 
-                    }
-                    return SPELL_AURA_PROC_FAILED;
-                }
                 // Glyph of Ice Block
                 case 56372:
                 {
@@ -4261,15 +4232,37 @@ SpellAuraProcResult Unit::HandleModDamageFromCasterAuraProc(Unit* pVictim, uint3
     return triggeredByAura->GetCasterGuid() == pVictim->GetObjectGuid() ? SPELL_AURA_PROC_OK : SPELL_AURA_PROC_FAILED;
 }
 
-SpellAuraProcResult Unit::HandleAddFlatModifierAuraProc(Unit* /*pVictim*/, uint32 /*damage*/, Aura* triggeredByAura, SpellEntry const * /*procSpell*/, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/)
+SpellAuraProcResult Unit::HandleAddFlatModifierAuraProc(Unit* pVictim, uint32 /*damage*/, Aura* triggeredByAura, SpellEntry const * /*procSpell*/, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/)
 {
     SpellEntry const *spellInfo = triggeredByAura->GetSpellProto();
 
-    if (spellInfo->Id == 55166)                             // Tidal Force
+    switch (spellInfo->Id)
     {
-        // Remove only single aura from stack
-        if (triggeredByAura->GetStackAmount() > 1 && !triggeredByAura->GetHolder()->ModStackAmount(-1))
-            return SPELL_AURA_PROC_CANT_TRIGGER;
+        case 55166:                             // Tidal Force
+        {
+            // Remove only single aura from stack
+            if (triggeredByAura->GetStackAmount() > 1 && !triggeredByAura->GetHolder()->ModStackAmount(-1))
+                return SPELL_AURA_PROC_CANT_TRIGGER;
+            break;
+        }
+        case 31656:
+        case 31657:
+        case 31658:
+        {
+            Unit* caster = triggeredByAura->GetCaster();
+            // it should not be triggered from other ignites
+            if (caster && caster->GetObjectGuid() == GetObjectGuid())
+            {
+                if(roll_chance_i(int32(spellInfo->procChance)))
+                {
+                    caster->CastSpell(caster, 67545, true);
+                    return SPELL_AURA_PROC_OK;
+                }
+                else
+                    return SPELL_AURA_PROC_FAILED;
+            }
+            return SPELL_AURA_PROC_FAILED;
+        }
     }
 
     return SPELL_AURA_PROC_OK;
