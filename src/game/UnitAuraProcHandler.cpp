@@ -3506,6 +3506,7 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
             // Barkskin
             else if(auraSpellInfo->Id == 22812)
             {
+                bool found = false;
                 Unit::AuraList const& auras = GetAurasByType(SPELL_AURA_ADD_FLAT_MODIFIER);
                 for (Unit::AuraList::const_iterator i = auras.begin(); i != auras.end(); i++)
                 {
@@ -3515,13 +3516,14 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                         case 16839:
                         case 16840:
                         {
+                            found = true;
                             if(!roll_chance_i((*i)->GetSpellProto()->CalculateSimpleValue(EFFECT_INDEX_2)))
                                 return SPELL_AURA_PROC_FAILED;
                         }
-                        default:
-                            return SPELL_AURA_PROC_FAILED;
                     }
                 }
+                if (!found)
+                    return SPELL_AURA_PROC_FAILED;
             }
             // Druid T9 Feral Relic (Lacerate, Swipe, Mangle, and Shred)
             else if (auraSpellInfo->Id==67353)
