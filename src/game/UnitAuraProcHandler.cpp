@@ -4470,6 +4470,20 @@ SpellAuraProcResult Unit::HandleRemoveByDamageProc(Unit* pVictim, uint32 damage,
 
 SpellAuraProcResult Unit::HandleRemoveByDamageChanceProc(Unit* pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown)
 {
+    switch (triggeredByAura->GetSpellProto()->Id)
+    {
+        case 62283:                               // Iron Roots (Freya)
+        case 62930:
+        case 62438:
+        case 62861:
+        case 58373:                               // Glyph of Hamstring
+        case 23694:                               // Improved Hamstring
+        case 61969:                               // Flash Freeze (Hodir)
+        case 62469:                               // Freeze (Hodir)
+        // don't remove
+            return SPELL_AURA_PROC_CANT_TRIGGER;
+    }
+
     // The chance to dispel an aura depends on the damage taken with respect to the casters level.
     uint32 max_dmg = getLevel() > 8 ? 25 * getLevel() - 150 : 50;
     float chance = float(damage) / max_dmg * 100.0f;
