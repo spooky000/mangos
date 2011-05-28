@@ -2104,6 +2104,10 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 // Judgement of Wisdom
                 case 20186:
                 {
+                    // only at real damage
+                    if (!damage)
+                        return SPELL_AURA_PROC_FAILED;
+
                     if (pVictim->getPowerType() == POWER_MANA)
                     {
                         // PPM per victim
