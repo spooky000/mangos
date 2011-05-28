@@ -3407,7 +3407,13 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 trigger_spell_id = 12721;
                 break;
             }
-            if (auraSpellInfo->Id == 50421)             // Scent of Blood
+            else if (auraSpellInfo->SpellIconID == 2961)    // Taste for Blood
+            {
+                // only at real damage
+                if (!damage)
+                    return SPELL_AURA_PROC_FAILED;
+            }
+            else if (auraSpellInfo->Id == 50421)            // Scent of Blood
                 trigger_spell_id = 50422;
             break;
         case SPELLFAMILY_WARLOCK:
