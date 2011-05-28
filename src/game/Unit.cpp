@@ -2540,7 +2540,7 @@ void Unit::CalculateDamageAbsorbAndResist(Unit *pCaster, SpellSchoolMask schoolM
                     pCaster->DealDamage(caster, ab_damage, NULL, damagetype, schoolMask, 0, false);
                     continue;
                 }
-                // Will of Necropolis
+                // Will of the Necropolis
                 if (spellProto->SpellIconID == 857)
                 {
                     // Apply absorb only on damage below 35% hp
