@@ -2449,12 +2449,14 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     targetUnitMap.push_back(m_caster);
                     break;
                 default:
-                    {
                     FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
-                        if(m_spellInfo->Id == 49821) // Mind Sear damage shouldn't apply to aura target
-                            targetUnitMap.remove(m_targets.getUnitTarget());
-                    }
                     break;
+            }
+            // Mark of the Faceless         Mind Sear
+            if (m_spellInfo->Id == 63278 || m_spellInfo->Id == 49821)
+            {
+                if(Unit* currentTarget = m_targets.getUnitTarget())
+                    targetUnitMap.remove(currentTarget);
             }
             break;
         }
