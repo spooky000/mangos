@@ -126,10 +126,12 @@ class MANGOS_DLL_DECL ObjectAccessor : public MaNGOS::Singleton<ObjectAccessor, 
         // For call from Player/Corpse AddToWorld/RemoveFromWorld only
         void AddObject(Corpse *object) { HashMapHolder<Corpse>::Insert(object); }
         void AddObject(Player *object) { HashMapHolder<Player>::Insert(object); }
-        void AddObject(Pet *object)    { HashMapHolder<Pet>::Insert(object); }
         void RemoveObject(Corpse *object) { HashMapHolder<Corpse>::Remove(object); }
         void RemoveObject(Player *object) { HashMapHolder<Player>::Remove(object); }
-        void RemoveObject(Pet *object)    { HashMapHolder<Pet>::Remove(object); }
+
+        // For call from Pet AddToWorld/RemoveFromWorld only
+        void AddObject(Pet* object) { HashMapHolder<Pet>::Insert(object); }
+        void RemoveObject(Pet* object) { HashMapHolder<Pet>::Remove(object); }
 
     private:
 
@@ -140,6 +142,7 @@ class MANGOS_DLL_DECL ObjectAccessor : public MaNGOS::Singleton<ObjectAccessor, 
 
         LockType i_playerGuard;
         LockType i_corpseGuard;
+        LockType i_petGuard;
 };
 
 #define sObjectAccessor ObjectAccessor::Instance()

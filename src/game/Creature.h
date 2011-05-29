@@ -34,7 +34,6 @@
 struct SpellEntry;
 
 class CreatureAI;
-class Group;
 class Quest;
 class Player;
 class WorldSession;
@@ -461,7 +460,7 @@ class MANGOS_DLL_SPEC Creature : public Unit
 
         void Update(uint32 update_diff, uint32 time);       // overwrite Unit::Update
 
-        //virtual void RegenerateAll(uint32 update_diff);
+        virtual void RegenerateAll(uint32 update_diff);
         void GetRespawnCoord(float &x, float &y, float &z, float* ori = NULL, float* dist =NULL) const;
         uint32 GetEquipmentId() const { return m_equipmentId; }
 
@@ -609,15 +608,8 @@ class MANGOS_DLL_SPEC Creature : public Unit
         bool lootForSkin;
 
         void PrepareBodyLootState();
-        ObjectGuid GetLootRecipientGuid() const { return m_lootRecipientGuid; }
-        uint32 GetLootGroupRecipientId() const { return m_lootGroupRecipientId; }
-        Player* GetLootRecipient() const;                   // use group cases as prefered
-        Group* GetGroupLootRecipient() const;
-        bool HasLootRecipient() const { return m_lootGroupRecipientId || m_lootRecipientGuid; }
-        bool IsGroupLootRecipient() const { return m_lootGroupRecipientId; }
         void SetLootRecipient(Unit* unit);
         void AllLootRemovedFromCorpse();
-        Player* GetOriginalLootRecipient() const;           // ignore group changes/etc, not for looting
 
         SpellEntry const *ReachWithSpellAttack(Unit *pVictim);
         SpellEntry const *ReachWithSpellCure(Unit *pVictim);
@@ -669,8 +661,6 @@ class MANGOS_DLL_SPEC Creature : public Unit
         static void AddToRemoveListInMaps(uint32 db_guid, CreatureData const* data);
         static void SpawnInMaps(uint32 db_guid, CreatureData const* data);
 
-        void StartGroupLoot(Group* group, uint32 timer);
-
         void SendZoneUnderAttackMessage(Player* attacker);
 
         void SetInCombatWithZone();
@@ -715,10 +705,6 @@ class MANGOS_DLL_SPEC Creature : public Unit
         bool CreateFromProto(uint32 guidlow, CreatureInfo const* cinfo, Team team, const CreatureData *data = NULL, GameEventCreatureData const* eventData =NULL);
         bool InitEntry(uint32 entry, const CreatureData* data = NULL, GameEventCreatureData const* eventData = NULL);
 
-        uint32 m_groupLootTimer;                            // (msecs)timer used for group loot
-        uint32 m_groupLootId;                               // used to find group which is looting corpse
-        void StopGroupLoot();
-
         // vendor items
         VendorItemCounts m_vendorItemCounts;
 
@@ -728,8 +714,6 @@ class MANGOS_DLL_SPEC Creature : public Unit
         static float _GetDamageMod(int32 Rank);
 
         uint32 m_lootMoney;
-        ObjectGuid m_lootRecipientGuid;                     // player who will have rights for looting if m_lootGroupRecipient==0 or group disbanded
-        uint32 m_lootGroupRecipientId;                      // group who will have rights for looting if set and exist
 
         /// Timers
         uint32 m_corpseDecayTimer;                          // (msecs)timer for death or corpse disappearance

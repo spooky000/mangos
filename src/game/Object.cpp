@@ -255,6 +255,12 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
                 /*if (((Creature*)unit)->hasUnitState(UNIT_STAT_MOVING))
                     unit->m_movementInfo.SetMovementFlags(MOVEFLAG_FORWARD);*/
 
+                if (unit->GetTransport())
+                {
+                    unit->m_movementInfo.AddMovementFlag(MOVEFLAG_ONTRANSPORT);
+                    unit->m_movementInfo.SetTransportData(unit->GetTransport()->GetObjectGuid(), unit->GetTransOffsetX(), unit->GetTransOffsetY(), unit->GetTransOffsetZ(), unit->GetTransOffsetO(), 0, 0);
+                }
+
                 if (((Creature*)unit)->CanFly())
                 {
                     // (ok) most seem to have this
@@ -263,7 +269,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
                     /*if (!((Creature*)unit)->hasUnitState(UNIT_STAT_MOVING))
                     {
                         // (ok) possibly some "hover" mode
-                        unit->m_movementInfo.AddMovementFlag(MOVEFLAG_ROOT);
+                        // unit->m_movementInfo.AddMovementFlag(MOVEFLAG_ROOT);
                     }
                     else*/
                     {
@@ -520,7 +526,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
     // 0x80
     if (updateFlags & UPDATEFLAG_VEHICLE)
     {
-        *data << uint32(((Unit*)this)->GetVehicleInfo()->GetEntry()->m_ID); // vehicle id
+        *data << uint32(((Unit*)this)->GetVehicleKit()->GetVehicleId());  // vehicle id
         *data << float(((WorldObject*)this)->GetOrientation());
     }
 
@@ -1048,7 +1054,8 @@ void Object::MarkForClientUpdate()
 }
 
 WorldObject::WorldObject()
-    : m_isActiveObject(false), m_currMap(NULL), m_mapId(0), m_InstanceId(0), m_phaseMask(PHASEMASK_NORMAL)
+    : m_isActiveObject(false), m_currMap(NULL), m_mapId(0), m_InstanceId(0), m_phaseMask(PHASEMASK_NORMAL),
+    m_groupLootTimer(0), m_groupLootId(0), m_lootGroupRecipientId(0), m_name("")
 {
 }
 
@@ -1209,16 +1216,68 @@ bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool
     return distsq < maxdist * maxdist;
 }
 
+bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D, Unit * unit, Player * plr) const
+{
+    float sizefactor = GetObjectBoundingRadius() + obj->GetObjectBoundingRadius();
+    float maxdist = dist2compare + sizefactor;
+
+    if (unit->GetTransport() && plr->GetTransport() &&  plr->GetTransport()->GetGUIDLow() == unit->GetTransport()->GetGUIDLow())
+    {
+        float dtx = unit->m_movementInfo.GetTransportPos()->x - plr->m_movementInfo.GetTransportPos()->x;
+        float dty = unit->m_movementInfo.GetTransportPos()->y - plr->m_movementInfo.GetTransportPos()->y;
+        float disttsq = dtx * dtx + dty * dty;
+        if (is3D)
+        {
+            float dtz = unit->m_movementInfo.GetTransportPos()->z - plr->m_movementInfo.GetTransportPos()->z;
+            disttsq += dtz * dtz;
+        }
+        return disttsq < (maxdist * maxdist);
+    }
+
+    float dx = GetPositionX() - obj->GetPositionX();
+    float dy = GetPositionY() - obj->GetPositionY();
+    float distsq = dx*dx + dy*dy;
+    if(is3D)
+    {
+        float dz = GetPositionZ() - obj->GetPositionZ();
+        distsq += dz*dz;
+    }
+
+    return distsq < maxdist * maxdist;
+}
+
 bool WorldObject::IsWithinLOSInMap(const WorldObject* obj) const
 {
     if (!IsInMap(obj)) return false;
     float ox,oy,oz;
     obj->GetPosition(ox,oy,oz);
+
+    if(GetMapId() == 617) // Dalaran Arena Waterfall
+        if(GameObject * pWaterfall = ((WorldObject*)this)->GetClosestGameObjectWithEntry(this, 194395/*191877*/, 60))
+            if(pWaterfall->isSpawned())
+                if(pWaterfall->IsInBetween(this, obj, pWaterfall->GetObjectBoundingRadius()))
+                    return false;
+
+    if(GetMapId() == 618)
+    {
+        for(int i = 0; i < 4; ++i)
+        {
+            const int pillars[4] = {194583, 194584, 194585, 194587};
+            if(GameObject * pPillar = ((WorldObject*)this)->GetClosestGameObjectWithEntry(this, pillars[i], 35))
+                if(pPillar->GetGoState() == GO_STATE_ACTIVE)
+                    if(pPillar->IsInBetween(this, obj, pPillar->GetObjectBoundingRadius()))
+                        return false;
+        }
+    }
+
     return(IsWithinLOS(ox, oy, oz ));
 }
 
 bool WorldObject::IsWithinLOS(float ox, float oy, float oz) const
 {
+    if(GetMapId() == 616) // Uber Eye of Eternity hack :D
+        return true;
+
     float x,y,z;
     GetPosition(x,y,z);
     VMAP::IVMapManager *vMapManager = VMAP::VMapFactory::createOrGetVMapManager();
@@ -1312,6 +1371,21 @@ bool WorldObject::IsInRange3d(float x, float y, float z, float minRange, float m
 
     float maxdist = maxRange + sizefactor;
     return distsq < maxdist * maxdist;
+}
+
+bool WorldObject::IsInBetween(const WorldObject *obj1, const WorldObject *obj2, float size) const
+{
+    if(GetPositionX() > std::max(obj1->GetPositionX(), obj2->GetPositionX())
+        || GetPositionX() < std::min(obj1->GetPositionX(), obj2->GetPositionX())
+        || GetPositionY() > std::max(obj1->GetPositionY(), obj2->GetPositionY())
+        || GetPositionY() < std::min(obj1->GetPositionY(), obj2->GetPositionY()))
+        return false;
+
+    if(!size)
+        size = GetObjectBoundingRadius() / 2;
+
+    float angle = obj1->GetAngle(this) - obj1->GetAngle(obj2);
+    return abs(sin(angle)) * GetExactDist2d(obj1->GetPositionX(), obj1->GetPositionY()) < size;
 }
 
 float WorldObject::GetAngle(const WorldObject* obj) const
@@ -2019,7 +2093,7 @@ Creature* WorldObject::GetClosestCreatureWithEntry(WorldObject* pSource, uint32 
 }
 
 //return closest gameobject in grid, with range from pSource
-GameObject* WorldObject::GetClosestGameObjectWithEntry(WorldObject* pSource, uint32 uiEntry, float fMaxSearchRange)
+GameObject* WorldObject::GetClosestGameObjectWithEntry(const WorldObject* pSource, uint32 uiEntry, float fMaxSearchRange)
 {
     GameObject* pGameObject = NULL;
 
@@ -2143,4 +2217,100 @@ bool WorldObject::PrintCoordinatesError(float x, float y, float z, char const* d
 {
     sLog.outError("%s with invalid %s coordinates: mapid = %uu, x = %f, y = %f, z = %f", GetGuidStr().c_str(), descr, GetMapId(), x, y, z);
     return false;                                           // always false for continue assert fail
+}
+
+void WorldObject::StartGroupLoot( Group* group, uint32 timer )
+{
+    m_groupLootId = group->GetId();
+    m_groupLootTimer = timer;
+}
+
+void WorldObject::StopGroupLoot()
+{
+    if (!m_groupLootId)
+        return;
+
+    if (Group* group = sObjectMgr.GetGroupById(m_groupLootId))
+        group->EndRoll();
+
+    m_groupLootTimer = 0;
+    m_groupLootId = 0;
+}
+
+/**
+ * Return original player who tap creature, it can be different from player/group allowed to loot so not use it for loot code
+ */
+Player* WorldObject::GetOriginalLootRecipient() const
+{
+    return !m_lootRecipientGuid.IsEmpty() ? ObjectAccessor::FindPlayer(m_lootRecipientGuid) : NULL;
+}
+
+/**
+ * Return group if player tap creature as group member, independent is player after leave group or stil be group member
+ */
+Group* WorldObject::GetGroupLootRecipient() const
+{
+    // original recipient group if set and not disbanded
+    return m_lootGroupRecipientId ? sObjectMgr.GetGroupById(m_lootGroupRecipientId) : NULL;
+}
+
+/**
+ * Return player who can loot tapped creature (member of group or single player)
+ *
+ * In case when original player tap creature as group member then group tap prefered.
+ * This is for example important if player after tap leave group.
+ * If group not exist or disbanded or player tap creature not as group member return player
+ */
+Player* WorldObject::GetLootRecipient() const
+{
+    // original recipient group if set and not disbanded
+    Group* group = GetGroupLootRecipient();
+
+    // original recipient player if online
+    Player* player = GetOriginalLootRecipient();
+
+    // if group not set or disbanded return original recipient player if any
+    if (!group)
+        return player;
+
+    // group case
+
+    // return player if it still be in original recipient group
+    if (player && player->GetGroup() == group)
+        return player;
+
+    // find any in group
+    for(GroupReference *itr = group->GetFirstMember(); itr != NULL; itr = itr->next())
+        if (Player *p = itr->getSource())
+            return p;
+
+    return NULL;
+}
+
+/**
+ * Set player and group (if player group member) who tap creature
+ */
+void WorldObject::SetLootRecipient(Unit *unit)
+{
+    // set the player whose group should receive the right
+    // to loot the creature after it dies
+    // should be set to NULL after the loot disappears
+
+    if (!unit)
+    {
+        m_lootRecipientGuid.Clear();
+        m_lootGroupRecipientId = 0;
+        return;
+    }
+
+    Player* player = unit->GetCharmerOrOwnerPlayerOrPlayerItself();
+    if(!player)                                             // normal creature, no player involved
+        return;
+
+    // set player for non group case or if group will disbanded
+    m_lootRecipientGuid = player->GetObjectGuid();
+
+    // set group for group existed case including if player will leave group at loot time
+    if (Group* group = player->GetGroup())
+        m_lootGroupRecipientId = group->GetId();
 }

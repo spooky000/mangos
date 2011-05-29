@@ -41,6 +41,7 @@
 #include "Pet.h"
 #include "SocialMgr.h"
 #include "DBCEnums.h"
+#include "ScriptMgr.h"
 
 void WorldSession::HandleRepopRequestOpcode( WorldPacket & recv_data )
 {
@@ -718,6 +719,9 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPacket & recv_data)
     if (sScriptMgr.OnAreaTrigger(pl, atEntry))
         return;
 
+    if(pl->IsInWorld())
+        pl->GetMap()->ScriptsStart(sAreaTriggerScripts, atEntry->id, pl, pl);
+
     uint32 quest_id = sObjectMgr.GetQuestForAreaTrigger( Trigger_ID );
     if ( quest_id && pl->isAlive() && pl->IsActiveQuest(quest_id) )
     {
@@ -1047,7 +1051,7 @@ void WorldSession::HandleMoveUnRootAck(WorldPacket& recv_data)
     recv_data >> guid;
 
     // now can skip not our packet
-    if(_player->GetGUID() != guid)
+    if(_player->GetObjectGuid() != guid)
     {
         recv_data.rpos(recv_data.wpos());                   // prevent warnings spam
         return;
@@ -1611,7 +1615,6 @@ void WorldSession::HandleHearthandResurrect(WorldPacket & /*recv_data*/)
 
 void WorldSession::HandleInstanceLockResponse(WorldPacket& recvPacket)
 {
-    printf("\n ! got HandleInstanceLockResponse ! \n ");
     uint8 accept;
     recvPacket >> accept;
 

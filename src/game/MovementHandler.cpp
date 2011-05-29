@@ -66,7 +66,6 @@ void WorldSession::HandleMoveWorldportAckOpcode()
     {
         if (Totem* totem = GetPlayer()->GetTotem(TOTEM_SLOT_AIR))
             totem->UnSummon();
-
         GetPlayer()->RemoveAurasDueToSpell(6495);
     }
 
@@ -77,6 +76,7 @@ void WorldSession::HandleMoveWorldportAckOpcode()
     WorldLocation old_loc;
     GetPlayer()->GetPosition(old_loc);
 
+    // get the teleport destination
     WorldLocation &loc = GetPlayer()->GetTeleportDest();
 
     // possible errors in the coordinate validity check (only cheating case possible)
@@ -623,10 +623,12 @@ void WorldSession::HandleMoverRelocation(MovementInfo& movementInfo)
                 {
                     if ((*iter)->GetObjectGuid() == movementInfo.GetTransportGuid())
                     {
-                        plMover->m_transport = (*iter);
+                        plMover->SetTransport(*iter);
                         (*iter)->AddPassenger(plMover);
+
                         if (plMover->GetVehicleKit())
                             plMover->GetVehicleKit()->RemoveAllPassengers();
+
                         break;
                     }
                 }

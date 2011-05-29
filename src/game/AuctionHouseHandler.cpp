@@ -365,9 +365,9 @@ void WorldSession::HandleAuctionSellItem(WorldPacket & recv_data)
             continue;
 
         Item *newItem = it->CloneItem(stackSize, pl);
+        newItem->RemoveFromUpdateQueueOf(pl);               // item not planned to adding to inventory
 
         pl->RemoveRefundableItem(it->GetObjectGuid());
-        pl->MoveItemFromInventory(it->GetBagSlot(), it->GetSlot(), true);
 
         pl->DestroyItemCount(it, stackSize, true);
 

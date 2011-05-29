@@ -394,7 +394,7 @@ bool LootItem::AllowedForPlayer(Player const * player) const
 
 void LootItem::AddAllowedLooter(const Player *player)
 {
-    allowedGUIDs.insert(player->GetGUIDLow());
+    allowedGUIDs.insert(player->GetObjectGuid().GetCounter());
 }
 
 LootSlotType LootItem::GetSlotTypeForSharedLoot(PermissionTypes permission, Player* viewer, bool condition_ok /*= false*/) const

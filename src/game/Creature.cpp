@@ -41,7 +41,9 @@
 #include "MapPersistentStateMgr.h"
 #include "BattleGroundMgr.h"
 #include "Spell.h"
+#include "Transports.h"
 #include "Util.h"
+#include "Unit.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "CellImpl.h"
@@ -159,8 +161,7 @@ bool CreatureCreatePos::Relocate(Creature* cr) const
 
 Creature::Creature(CreatureSubtype subtype) :
 Unit(), i_AI(NULL),
-lootForPickPocketed(false), lootForBody(false), lootForSkin(false), m_groupLootTimer(0), m_groupLootId(0),
-m_lootMoney(0), m_lootGroupRecipientId(0),
+lootForPickPocketed(false), lootForBody(false), lootForSkin(false), m_lootMoney(0),
 m_corpseDecayTimer(0), m_respawnTime(0), m_respawnDelay(300), m_corpseDelay(60), m_respawnradius(5.0f),
 m_subtype(subtype), m_defaultMovementType(IDLE_MOTION_TYPE), m_equipmentId(0),
 m_AlreadyCallAssistance(false), m_AlreadySearchedAssistance(false),
@@ -183,6 +184,9 @@ m_creatureInfo(NULL), m_splineFlags(SPLINEFLAG_WALKMODE)
 Creature::~Creature()
 {
     CleanupsBeforeDelete();
+
+    if (GetTransport())
+        GetTransport()->RemovePassenger(this);
 
     m_vendorItemCounts.clear();
 
@@ -551,8 +555,6 @@ void Creature::Update(uint32 update_diff, uint32 diff)
                     else
                         StopGroupLoot();
                 }
-                m_Events.Update(update_diff);
-                _UpdateSpells(update_diff);
             }
 
             break;
@@ -607,22 +609,7 @@ void Creature::Update(uint32 update_diff, uint32 diff)
             if (IsPet())                           // Regenerated before
                 break;
 
-            if(m_regenTimer > 0)
-            {
-                if(update_diff >= m_regenTimer)
-                    m_regenTimer = 0;
-                else
-                    m_regenTimer -= update_diff;
-            }
-            if (m_regenTimer != 0)
-                break;
-
-            if (!isInCombat() || IsPolymorphed())
-                RegenerateHealth();
-
-            Regenerate(getPowerType());
-            m_regenTimer = REGEN_TIME_FULL;
-
+            RegenerateAll(update_diff);
             break;
         }
         case CORPSE_FALLING:
@@ -634,22 +621,24 @@ void Creature::Update(uint32 update_diff, uint32 diff)
     }
 }
 
-void Creature::StartGroupLoot( Group* group, uint32 timer )
+void Creature::RegenerateAll(uint32 update_diff)
 {
-    m_groupLootId = group->GetId();
-    m_groupLootTimer = timer;
-}
-
-void Creature::StopGroupLoot()
-{
-    if (!m_groupLootId)
+    if(m_regenTimer > 0)
+    {
+        if(update_diff >= m_regenTimer)
+            m_regenTimer = 0;
+        else
+            m_regenTimer -= update_diff;
+    }
+    if (m_regenTimer != 0)
         return;
 
-    if (Group* group = sObjectMgr.GetGroupById(m_groupLootId))
-        group->EndRoll();
+    if (!isInCombat() || IsPolymorphed())
+        RegenerateHealth();
 
-    m_groupLootTimer = 0;
-    m_groupLootId = 0;
+    Regenerate(getPowerType());
+
+    m_regenTimer = REGEN_TIME_FULL;
 }
 
 void Creature::Regenerate(Powers power)
@@ -1021,56 +1010,6 @@ void Creature::PrepareBodyLootState()
 
     RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
     RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
-}
-
-/**
- * Return original player who tap creature, it can be different from player/group allowed to loot so not use it for loot code
- */
-Player* Creature::GetOriginalLootRecipient() const
-{
-    return m_lootRecipientGuid ? ObjectAccessor::FindPlayer(m_lootRecipientGuid) : NULL;
-}
-
-/**
- * Return group if player tap creature as group member, independent is player after leave group or stil be group member
- */
-Group* Creature::GetGroupLootRecipient() const
-{
-    // original recipient group if set and not disbanded
-    return m_lootGroupRecipientId ? sObjectMgr.GetGroupById(m_lootGroupRecipientId) : NULL;
-}
-
-/**
- * Return player who can loot tapped creature (member of group or single player)
- *
- * In case when original player tap creature as group member then group tap prefered.
- * This is for example important if player after tap leave group.
- * If group not exist or disbanded or player tap creature not as group member return player
- */
-Player* Creature::GetLootRecipient() const
-{
-    // original recipient group if set and not disbanded
-    Group* group = GetGroupLootRecipient();
-
-    // original recipient player if online
-    Player* player = GetOriginalLootRecipient();
-
-    // if group not set or disbanded return original recipient player if any
-    if (!group)
-        return player;
-
-    // group case
-
-    // return player if it still be in original recipient group
-    if (player && player->GetGroup() == group)
-        return player;
-
-    // find any in group
-    for(GroupReference *itr = group->GetFirstMember(); itr != NULL; itr = itr->next())
-        if (Player *p = itr->getSource())
-            return p;
-
-    return NULL;
 }
 
 /**
@@ -1682,7 +1621,7 @@ bool Creature::IsImmuneToSpell(SpellEntry const* spellInfo)
     if (!spellInfo)
         return false;
 
-    if (GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->Mechanic - 1)))
+    if (!IsPet() && GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->Mechanic - 1)))
         return true;
 
     return Unit::IsImmuneToSpell(spellInfo);
@@ -1690,7 +1629,7 @@ bool Creature::IsImmuneToSpell(SpellEntry const* spellInfo)
 
 bool Creature::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex index) const
 {
-    if (GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->EffectMechanic[index] - 1)))
+    if (!IsPet() && GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->EffectMechanic[index] - 1)))
         return true;
 
     // Taunt immunity special flag check

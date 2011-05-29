@@ -853,6 +853,26 @@ bool ChatHandler::HandleReloadSpellScriptsCommand(char* args)
     return true;
 }
 
+bool ChatHandler::HandleReloadAreaTriggerDBScripts(char* args)
+{
+    if (sScriptMgr.IsScriptScheduled())
+    {
+        SendSysMessage("DB scripts used currently, please attempt reload later.");
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    if (*args != 'a')
+        sLog.outString( "Re-Loading Scripts from `areatrigger_db_scripts`...");
+
+    sScriptMgr.LoadDBAreaTriggerScripts();
+
+    if (*args != 'a')
+        SendGlobalSysMessage("DB table `areatrigger_db_scripts` reloaded.");
+
+    return true;
+}
+
 bool ChatHandler::HandleReloadDbScriptStringCommand(char* /*args*/)
 {
     sLog.outString( "Re-Loading Script strings from `db_script_string`...");
@@ -3810,7 +3830,15 @@ bool ChatHandler::HandleReviveCommand(char* args)
     Player* target;
     ObjectGuid target_guid;
     if (!ExtractPlayerTarget(&args, &target, &target_guid))
+    {
+        if(m_session && m_session->GetPlayer())
+        {
+            m_session->GetPlayer()->ResurrectPlayer(0.5f);
+            m_session->GetPlayer()->SpawnCorpseBones();
+            return true;
+        }
         return false;
+    }
 
     if (target)
     {
@@ -4901,7 +4929,7 @@ bool ChatHandler::HandleResetTalentsCommand(char* args)
             Unit *owner = creature->GetOwner();
             if(owner && owner->GetTypeId() == TYPEID_PLAYER && ((Pet *)creature)->IsPermanentPetFor((Player*)owner))
             {
-                ((Pet *)creature)->resetTalents(true);
+                ((Pet *)creature)->resetTalents();
                 ((Player*)owner)->SendTalentsInfoData(true);
 
                 ChatHandler((Player*)owner).SendSysMessage(LANG_RESET_PET_TALENTS);

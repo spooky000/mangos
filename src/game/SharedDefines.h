@@ -417,7 +417,7 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_EX5_UNK7                       0x00000080            // 7
 #define SPELL_ATTR_EX5_UNK8                       0x00000100            // 8
 #define SPELL_ATTR_EX5_START_PERIODIC_AT_APPLY    0x00000200            // 9  begin periodic tick at aura apply
-#define SPELL_ATTR_EX5_UNK10                      0x00000400            // 10
+#define SPELL_ATTR_EX5_HIDE_DURATION              0x00000400            // 10 do not send duration to client
 #define SPELL_ATTR_EX5_UNK11                      0x00000800            // 11
 #define SPELL_ATTR_EX5_UNK12                      0x00001000            // 12
 #define SPELL_ATTR_EX5_AFFECTED_BY_HASTE          0x00002000            // 13 haste affects duration (e.g. 8050 since 3.3.3)
@@ -987,7 +987,7 @@ enum Mechanics
     MECHANIC_FEAR             = 5,
     MECHANIC_GRIP             = 6,
     MECHANIC_ROOT             = 7,
-    MECHANIC_PACIFY           = 8,                          //0 spells use this mechanic
+    MECHANIC_SLOW_ATTACK      = 8,
     MECHANIC_SILENCE          = 9,
     MECHANIC_SLEEP            = 10,
     MECHANIC_SNARE            = 11,
@@ -1016,14 +1016,14 @@ enum Mechanics
 #define FIRST_MECHANIC          1
 #define MAX_MECHANIC            32
 
-// Used for spell 42292 Immune Movement Impairment and Loss of Control (0x49967da6)
+// Used for spell 42292 Immune Movement Impairment and Loss of Control (0x49967ca6)
 #define IMMUNE_TO_MOVEMENT_IMPAIRMENT_AND_LOSS_CONTROL_MASK ( \
     (1<<(MECHANIC_CHARM   -1))|(1<<(MECHANIC_DISORIENTED-1))|(1<<(MECHANIC_FEAR  -1))| \
-    (1<<(MECHANIC_ROOT    -1))|(1<<(MECHANIC_PACIFY     -1))|(1<<(MECHANIC_SLEEP -1))| \
-    (1<<(MECHANIC_SNARE   -1))|(1<<(MECHANIC_STUN       -1))|(1<<(MECHANIC_FREEZE-1))| \
-    (1<<(MECHANIC_KNOCKOUT-1))|(1<<(MECHANIC_POLYMORPH  -1))|(1<<(MECHANIC_BANISH-1))| \
-    (1<<(MECHANIC_SHACKLE -1))|(1<<(MECHANIC_TURN       -1))|(1<<(MECHANIC_HORROR-1))| \
-    (1<<(MECHANIC_DAZE    -1))|(1<<(MECHANIC_SAPPED     -1)))
+    (1<<(MECHANIC_ROOT    -1))|(1<<(MECHANIC_SLEEP      -1))|(1<<(MECHANIC_SNARE -1))| \
+    (1<<(MECHANIC_STUN    -1))|(1<<(MECHANIC_FREEZE     -1))|(1<<(MECHANIC_KNOCKOUT-1))| \
+    (1<<(MECHANIC_POLYMORPH  -1))|(1<<(MECHANIC_BANISH  -1))|(1<<(MECHANIC_SHACKLE -1))| \
+    (1<<(MECHANIC_TURN       -1))|(1<<(MECHANIC_HORROR  -1))|(1<<(MECHANIC_DAZE    -1))| \
+    (1<<(MECHANIC_SAPPED     -1)))
 
 #define IMMUNE_TO_ROOT_AND_SNARE_MASK ( \
     (1<<(MECHANIC_ROOT-1))|(1<<(MECHANIC_SNARE-1)))

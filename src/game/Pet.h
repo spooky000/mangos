@@ -174,8 +174,9 @@ class Pet : public Creature
         bool isTemporarySummoned() const { return m_duration > 0; }
 
         bool IsPermanentPetFor(Player* owner);              // pet have tab in character windows and set UNIT_FIELD_PETNUMBER
+
         bool Create (uint32 guidlow, CreatureCreatePos& cPos, CreatureInfo const* cinfo, uint32 pet_number, Unit* owner);
-        bool CreateBaseAtCreature(Creature* creature, Unit* owner);        
+        bool CreateBaseAtCreature(Creature* creature, Unit* owner);
         bool LoadPetFromDB( Player* owner,uint32 petentry = 0,uint32 petnumber = 0, bool current = false );
         void SavePetToDB(PetSaveMode mode);
         void Unsummon(PetSaveMode mode, Unit* owner = NULL);
@@ -193,6 +194,8 @@ class Pet : public Creature
                 return m_autospells[pos];
         }
 
+        void RegenerateAll(uint32 update_diff);             // overwrite Creature::RegenerateAll
+        void Regenerate(Powers power, uint32 diff);
         HappinessState GetHappinessState();
         void GivePetXP(uint32 xp);
         void GivePetLevel(uint32 level);
@@ -225,7 +228,6 @@ class Pet : public Creature
         void CastPetAuras(bool current);
         void CastPetAura(PetAura const* aura);
 
-        void Regenerate(Powers power, uint32 diff);
         void RegenerateHealth(uint32 diff);
         float OCTRegenHPPerSpirit();
         float OCTRegenMPPerSpirit();
@@ -266,9 +268,8 @@ class Pet : public Creature
 
         void InitPetCreateSpells();
 
-        bool resetTalents(bool no_cost = false);
+        bool resetTalents();
         static void resetTalentsForAllPetsOf(Player* owner, Pet* online_pet = NULL);
-        uint32 resetTalentsCost() const;
         void InitTalentForLevel();
 
         uint8 GetMaxTalentPointsForLevel(uint32 level);
@@ -276,8 +277,6 @@ class Pet : public Creature
         void SetFreeTalentPoints(uint8 points) { SetByteValue(UNIT_FIELD_BYTES_1, 1, points); }
         void UpdateFreeTalentPoints(bool resetIfNeed = true);
 
-        uint32  m_resetTalentsCost;
-        time_t  m_resetTalentsTime;
         uint32  m_usedTalentCount;
 
         const uint64& GetAuraUpdateMask() const { return m_auraUpdateMask; }

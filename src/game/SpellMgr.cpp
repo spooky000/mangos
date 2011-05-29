@@ -70,12 +70,14 @@ int32 CalculateSpellDuration(SpellEntry const *spellInfo, Unit const* caster)
     {
         int32 maxduration = GetSpellMaxDuration(spellInfo);
 
-        if (duration != maxduration && caster->GetTypeId() == TYPEID_PLAYER)
-            duration += int32((maxduration - duration) * ((Player*)caster)->GetComboPoints() / 5);
+        if (duration != maxduration)
+            duration += int32((maxduration - duration) * caster->GetComboPoints() / 5);
 
         if (Player* modOwner = caster->GetSpellModOwner())
         {
             modOwner->ApplySpellMod(spellInfo->Id, SPELLMOD_DURATION, duration);
+
+            duration = modOwner->CalculateSpellDurationWithHaste(spellInfo, duration);
 
             if (duration < 0)
                 duration = 0;
@@ -407,7 +409,7 @@ SpellSpecific GetSpellSpecific(uint32 spellId)
                 if ((spellInfo->AttributesEx2 & SPELL_ATTR_EX2_FOOD_BUFF) || spellInfo->SpellIconID == 2560)
                     return SPELL_WELL_FED;
 
-                else if (spellInfo->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MOD_STAT &&  spellInfo->Attributes & SPELL_ATTR_NOT_SHAPESHIFT &&
+                else if (spellInfo->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MOD_STAT && spellInfo->SpellFamilyName == SPELLFAMILY_GENERIC &&
                      spellInfo->SchoolMask & SPELL_SCHOOL_MASK_NATURE && spellInfo->PreventionType == SPELL_PREVENTION_TYPE_SILENCE)
                      return SPELL_SCROLL;
             }
@@ -684,8 +686,11 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
         case 27130:                                         // Amplify Magic - Rank 5
         case 33946:                                         // Amplify Magic - Rank 6
         case 43017:                                         // Amplify Magic - Rank 7
-        case 12042:                                         // Arcane Power        
-        return true;
+        case 12042:                                         // Arcane Power
+            return true;
+        case 62470:                                         // Deafening Thunder
+        case 63355:                                         // Crunch Armor
+            return false;
         default:
             break;
     }
@@ -713,6 +718,19 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
         case SPELL_EFFECT_HEAL_PCT:
         case SPELL_EFFECT_ENERGIZE_PCT:
             return true;
+
+        case SPELL_EFFECT_PERSISTENT_AREA_AURA:
+            switch(spellproto->Id)
+            {
+                case 62821:                                 // Toasty Fire (Ulduar Hodir); unclear why this spell has SPELL_ATTR_EX_NEGATIVE
+                    return true;
+                case 63540:                                 // Paralytic Field (Ulduar Thorim)
+                case 62241:
+                    return false;
+                default:
+                    break;
+            }
+            break;
 
             // non-positive aura use
         case SPELL_EFFECT_APPLY_AURA:
@@ -2096,6 +2114,21 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                         (spellInfo_2->Id == 68529 && spellInfo_1->Id == 68530))
                         return true;
 
+                    // BG_WS_SPELL_FOCUSED_ASSAULT & BG_WS_SPELL_BRUTAL_ASSAULT
+                    if ((spellInfo_1->Id == 46392 && spellInfo_2->Id == 46393) ||
+                        (spellInfo_1->Id == 46393 && spellInfo_2->Id == 46392))
+                        return true;
+
+                    // Dark Essence & Light Essence
+                    if ((spellInfo_1->Id == 65684 && spellInfo_2->Id == 65686) ||
+                        (spellInfo_2->Id == 65684 && spellInfo_1->Id == 65686))
+                        return true;
+
+                    //Potent Fungus and Mini must remove each other (Amanitar encounter, Ahn'kahet)
+                    if ((spellInfo_1->Id == 57055 && spellInfo_2->Id == 56648) ||
+                        (spellInfo_2->Id == 57055 && spellInfo_1->Id == 56648))
+                        return true;
+
                     // Thunderfury
                     if ((spellInfo_1->Id == 21992 && spellInfo_2->Id == 27648) ||
                         (spellInfo_2->Id == 21992 && spellInfo_1->Id == 27648))
@@ -2335,6 +2368,11 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                     (spellInfo_2->SpellIconID == 456 && spellInfo_1->SpellIconID == 2006))
                     return false;
 
+                // Glyph of Revenge (triggered), and Sword and Board (triggered)
+                if ((spellInfo_1->SpellIconID == 856 && spellInfo_2->SpellIconID == 2780) ||
+                    (spellInfo_2->SpellIconID == 856 && spellInfo_1->SpellIconID == 2780))
+                    return false;
+
                 // Defensive/Berserker/Battle stance aura can not stack (needed for dummy auras)
                 if (((spellInfo_1->SpellFamilyFlags & UI64LIT(0x800000)) && (spellInfo_2->SpellFamilyFlags & UI64LIT(0x800000))) ||
                     ((spellInfo_2->SpellFamilyFlags & UI64LIT(0x800000)) && (spellInfo_1->SpellFamilyFlags & UI64LIT(0x800000))))
@@ -2392,6 +2430,11 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
         case SPELLFAMILY_DRUID:
             if (spellInfo_2->SpellFamilyName == SPELLFAMILY_DRUID)
             {
+                // Mark/Gift of the Wild
+                if (spellInfo_1->SpellFamilyName == SPELLFAMILY_DRUID && spellInfo_1->SpellFamilyFlags & UI64LIT(0x0000000000040000) &&
+                    spellInfo_2->SpellFamilyName == SPELLFAMILY_DRUID && spellInfo_2->SpellFamilyFlags & UI64LIT(0x0000000000040000))
+                    return true;
+
                 //Omen of Clarity and Blood Frenzy
                 if (((spellInfo_1->SpellFamilyFlags == UI64LIT(0x0) && spellInfo_1->SpellIconID == 108) && (spellInfo_2->SpellFamilyFlags & UI64LIT(0x20000000000000))) ||
                     ((spellInfo_2->SpellFamilyFlags == UI64LIT(0x0) && spellInfo_2->SpellIconID == 108) && (spellInfo_1->SpellFamilyFlags & UI64LIT(0x20000000000000))))
@@ -2511,6 +2554,10 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                     ((spellInfo_2->SpellFamilyFlags & UI64LIT(0x4)) && (spellInfo_1->SpellFamilyFlags & UI64LIT(0x00000004000))))
                     return false;
 
+                // Deterrence
+                if (spellInfo_1->SpellIconID == 83 && spellInfo_2->SpellIconID == 83)
+                    return false;
+
                 // Bestial Wrath
                 if (spellInfo_1->SpellIconID == 1680 && spellInfo_2->SpellIconID == 1680)
                     return false;
@@ -2559,6 +2606,11 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
 
                 // Divine Sacrifice and Divine Guardian
                 if (spellInfo_1->SpellIconID == 3837 && spellInfo_2->SpellIconID == 3837)
+                    return false;
+
+                // Blood Corruption, Holy Vengeance, Righteous Vengeance
+                if ((spellInfo_1->SpellIconID == 2292 && spellInfo_2->SpellIconID == 3025) ||
+                    (spellInfo_2->SpellIconID == 2292 && spellInfo_1->SpellIconID == 3025))
                     return false;
             }
 
@@ -2640,6 +2692,13 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
         bool isModifier = false;
         for (int i = 0; i < MAX_EFFECT_INDEX; ++i)
         {
+            // stack all DoT auras
+            if (spellInfo_1->EffectApplyAuraName[i] == SPELL_AURA_PERIODIC_DAMAGE ||
+                spellInfo_1->EffectApplyAuraName[i] == SPELL_AURA_PERIODIC_DAMAGE_PERCENT ||
+                spellInfo_2->EffectApplyAuraName[i] == SPELL_AURA_PERIODIC_DAMAGE ||
+                spellInfo_2->EffectApplyAuraName[i] == SPELL_AURA_PERIODIC_DAMAGE_PERCENT)
+                return false;
+
             if (spellInfo_1->EffectApplyAuraName[i] == SPELL_AURA_ADD_FLAT_MODIFIER ||
                 spellInfo_1->EffectApplyAuraName[i] == SPELL_AURA_ADD_PCT_MODIFIER  ||
                 spellInfo_2->EffectApplyAuraName[i] == SPELL_AURA_ADD_FLAT_MODIFIER ||

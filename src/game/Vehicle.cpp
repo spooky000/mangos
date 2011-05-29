@@ -25,27 +25,22 @@
 #include "Util.h"
 #include "WorldPacket.h"
 
-VehicleInfo::VehicleInfo(VehicleEntry const* entry) :
-    m_vehicleEntry(entry)
-{
-}
-
-VehicleKit::VehicleKit(Unit* base) : m_pBase(base), m_uiNumFreeSeats(0)
+VehicleKit::VehicleKit(Unit* base, VehicleEntry const* vehicleInfo) : m_vehicleInfo(vehicleInfo), m_pBase(base), m_uiNumFreeSeats(0)
 {
     for (uint32 i = 0; i < MAX_VEHICLE_SEAT; ++i)
     {
-        uint32 seatId = GetBase()->GetVehicleInfo()->GetEntry()->m_seatID[i];
+        uint32 seatId = m_vehicleInfo->m_seatID[i];
 
         if (!seatId)
             continue;
 
         if(base)
         {
-            if(GetBase()->GetVehicleInfo()->GetEntry()->m_flags & VEHICLE_FLAG_NO_STRAFE)
-                GetBase()->m_movementInfo.AddMovementFlag2(MOVEFLAG2_NO_STRAFE);
+            if(m_vehicleInfo->m_flags & VEHICLE_FLAG_NO_STRAFE)
+                base->m_movementInfo.AddMovementFlag2(MOVEFLAG2_NO_STRAFE);
 
-            if(GetBase()->GetVehicleInfo()->GetEntry()->m_flags & VEHICLE_FLAG_NO_JUMPING)
-                GetBase()->m_movementInfo.AddMovementFlag2(MOVEFLAG2_NO_JUMPING);
+            if(m_vehicleInfo->m_flags & VEHICLE_FLAG_NO_JUMPING)
+                base->m_movementInfo.AddMovementFlag2(MOVEFLAG2_NO_JUMPING);
         }
 
         if (VehicleSeatEntry const *seatInfo = sVehicleSeatStore.LookupEntry(seatId))
@@ -176,7 +171,16 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
 
     if (seat->second.seatInfo->m_flags & SEAT_FLAG_UNATTACKABLE || seat->second.seatInfo->m_flags & SEAT_FLAG_CAN_CONTROL)
     {
-        passenger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+        // some exceptions where passengets should be targetable, seems that flag is wrong
+        switch (m_pBase->GetEntry())
+        {
+            //case 33118:                  // Ignis slag pot
+            case 32934:                  // Kologarn Right Arm
+                break;
+            default:
+                passenger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                break;
+        }
         passenger->RemoveSpellsCausingAura(SPELL_AURA_MOD_SHAPESHIFT);
     }
 
@@ -192,7 +196,7 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
 
         passenger->SetCharm(m_pBase);
 
-        if(m_pBase->HasAuraType(SPELL_AURA_FLY) || m_pBase->HasAuraType(SPELL_AURA_MOD_FLIGHT_SPEED))
+        if(m_pBase->HasAuraType(SPELL_AURA_FLY) || m_pBase->HasAuraType(SPELL_AURA_MOD_FLIGHT_SPEED) || ((Creature*)m_pBase)->CanFly())
         {
             WorldPacket data;
             data.Initialize(SMSG_MOVE_SET_CAN_FLY, 12);
@@ -204,6 +208,8 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
         if (passenger->GetTypeId() == TYPEID_PLAYER)
         {
             m_pBase->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
+            if(m_pBase->GetMap() && !m_pBase->GetMap()->IsBattleGround())
+                m_pBase->setFaction(passenger->getFaction());
 
             if (CharmInfo* charmInfo = m_pBase->InitCharmInfo(m_pBase))
             {
@@ -312,7 +318,6 @@ void VehicleKit::RemovePassenger(Unit *passenger)
         if (((Creature*)m_pBase)->AI())
             ((Creature*)m_pBase)->AI()->PassengerBoarded(passenger, seat->first, false);
     }
-
 }
 
 void VehicleKit::Reset()

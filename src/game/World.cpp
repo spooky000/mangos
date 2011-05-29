@@ -874,7 +874,6 @@ void World::LoadConfigSettings(bool reload)
     setConfig(CONFIG_BOOL_VMAP_INDOOR_CHECK, "vmap.enableIndoorCheck", true);
     bool enableLOS = sConfig.GetBoolDefault("vmap.enableLOS", false);
     bool enableHeight = sConfig.GetBoolDefault("vmap.enableHeight", false);
-    std::string ignoreMapIds = sConfig.GetStringDefault("vmap.ignoreMapIds", "");
     std::string ignoreSpellIds = sConfig.GetStringDefault("vmap.ignoreSpellIds", "");
 
     if (!enableHeight)
@@ -1208,6 +1207,9 @@ void World::SetInitialWorldSettings()
     sLog.outString( "Loading Waypoint scripts..." );        // before loading from creature_movement
     sScriptMgr.LoadCreatureMovementScripts();
 
+    sLog.outString( "Loading DB AreaTrigger scripts..." );
+    sScriptMgr.LoadDBAreaTriggerScripts();
+
     sLog.outString( "Loading Waypoints..." );
     sLog.outString();
     sWaypointMgr.Load();
@@ -1351,6 +1353,9 @@ void World::SetInitialWorldSettings()
     //Not sure if this can be moved up in the sequence (with static data loading) as it uses MapManager
     sLog.outString( "Loading Transports..." );
     sMapMgr.LoadTransports();
+
+    sLog.outString( "Loading Transport NPCs..." );
+    sMapMgr.LoadTransportNPCs();
 
     sLog.outString("Deleting expired bans..." );
     LoginDatabase.Execute("DELETE FROM ip_banned WHERE unbandate<=UNIX_TIMESTAMP() AND unbandate<>bandate");

@@ -64,7 +64,9 @@ class WorldPacket;
 class UpdateData;
 class WorldSession;
 class Creature;
+class GameObject;
 class Player;
+class Group;
 class Unit;
 class Map;
 class UpdateMask;
@@ -502,6 +504,7 @@ class MANGOS_DLL_SPEC WorldObject : public Object
         bool IsWithinDist3d(float x, float y, float z, float dist2compare) const;
         bool IsWithinDist2d(float x, float y, float dist2compare) const;
         bool _IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D) const;
+        bool _IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D, Unit * unit, Player * player) const;
 
         // use only if you will sure about placing both object at same map
         bool IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D = true) const
@@ -513,12 +516,22 @@ class MANGOS_DLL_SPEC WorldObject : public Object
         {
             return obj && IsInMap(obj) && _IsWithinDist(obj,dist2compare,is3D);
         }
+        bool IsWithinDistInMap(WorldObject const* obj, float dist2compare, Unit * unit, Player * player, bool is3D = true) const
+        {
+            return obj && IsInMap(obj) && _IsWithinDist(obj,dist2compare,is3D,unit,player);
+        }
         bool IsWithinLOS(float x, float y, float z) const;
         bool IsWithinLOSInMap(const WorldObject* obj) const;
         bool GetDistanceOrder(WorldObject const* obj1, WorldObject const* obj2, bool is3D = true) const;
         bool IsInRange(WorldObject const* obj, float minRange, float maxRange, bool is3D = true) const;
         bool IsInRange2d(float x, float y, float minRange, float maxRange) const;
         bool IsInRange3d(float x, float y, float z, float minRange, float maxRange) const;
+
+        bool IsInBetween(const WorldObject *obj1, const WorldObject *obj2, float size = 0) const;
+        float GetExactDist2dSq(float x, float y) const
+        { float dx = m_position.x - x; float dy = m_position.y - y; return dx*dx + dy*dy; }
+        float GetExactDist2d(const float x, const float y) const
+        { return sqrt(GetExactDist2dSq(x, y)); }
 
         float GetAngle( const WorldObject* obj ) const;
         float GetAngle( const float x, const float y ) const;
@@ -582,9 +595,19 @@ class MANGOS_DLL_SPEC WorldObject : public Object
         GameObject* SummonGameObject(uint32 id, float x, float y, float z, float ang, uint32 despwtime);
         Creature* SummonCreature(uint32 id, float x, float y, float z, float ang,TempSummonType spwtype,uint32 despwtime, bool asActiveObject = false, bool setOwnerGuid = false);
 
+        void StartGroupLoot(Group* group, uint32 timer);
+        void StopGroupLoot();
+        ObjectGuid GetLootRecipientGuid() const { return m_lootRecipientGuid; }
+        uint32 GetLootGroupRecipientId() const { return m_lootGroupRecipientId; }
+        Player* GetLootRecipient() const;                   // use group cases as prefered
+        Group* GetGroupLootRecipient() const;
+        bool HasLootRecipient() const { return m_lootGroupRecipientId || !m_lootRecipientGuid.IsEmpty(); }
+        bool IsGroupLootRecipient() const { return m_lootGroupRecipientId; }
+        void SetLootRecipient(Unit* unit);
+        Player* GetOriginalLootRecipient() const;           // ignore group changes/etc, not for looting
         // helper functions to select units
         Creature* GetClosestCreatureWithEntry(WorldObject* pSource, uint32 uiEntry, float fMaxSearchRange);
-        GameObject* GetClosestGameObjectWithEntry(WorldObject* pSource, uint32 uiEntry, float fMaxSearchRange);
+        GameObject* GetClosestGameObjectWithEntry(const WorldObject* pSource, uint32 uiEntry, float fMaxSearchRange);
         void GetGameObjectListWithEntryInGrid(std::list<GameObject*>& lList, uint32 uiEntry, float fMaxSearchRange);
         void GetCreatureListWithEntryInGrid(std::list<Creature*>& lList, uint32 uiEntry, float fMaxSearchRange);
 
@@ -602,6 +625,12 @@ class MANGOS_DLL_SPEC WorldObject : public Object
         //mapId/instanceId should be set in SetMap() function!
         void SetLocationMapId(uint32 _mapId) { m_mapId = _mapId; }
         void SetLocationInstanceId(uint32 _instanceId) { m_InstanceId = _instanceId; }
+
+        uint32 m_groupLootTimer;                            // (msecs)timer used for group loot
+        uint32 m_groupLootId;                               // used to find group which is looting corpse
+
+        ObjectGuid m_lootRecipientGuid;                     // player who will have rights for looting if m_lootGroupRecipient==0 or group disbanded
+        uint32 m_lootGroupRecipientId;                      // group who will have rights for looting if set and exist
 
         std::string m_name;
 
