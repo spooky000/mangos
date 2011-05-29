@@ -2274,7 +2274,7 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                             int32 damage = 50 << GetStackAmount();
                             target->CastCustomSpell(target, 63338, &damage, 0, 0, true, 0, 0, caster->GetObjectGuid()); // damage spell
                             damage = damage >> 1;
-                            target->CastCustomSpell(target, 63337, &damage, 0, 0, true, 0, 0, caster->GetObjectGuid()); // manareg spell
+                            target->CastCustomSpell(target, 63337, &damage, 0, 0, true);
                         }
                         return;
                     case 63624:                             // Learn a Second Talent Specialization

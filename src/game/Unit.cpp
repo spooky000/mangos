@@ -8027,6 +8027,10 @@ bool Unit::IsImmuneToSpell(SpellEntry const* spellInfo)
 
 bool Unit::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex index) const
 {
+    // Saronite Vapors mana gain spell
+    if (spellInfo->Id == 63337)
+        return false;
+
     //If m_immuneToEffect type contain this effect type, IMMUNE effect.
     uint32 effect = spellInfo->Effect[index];
     SpellImmuneList const& effectList = m_spellImmune[IMMUNITY_EFFECT];
