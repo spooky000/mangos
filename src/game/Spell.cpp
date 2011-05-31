@@ -396,8 +396,8 @@ Spell::Spell( Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid o
     // AoE spells, spells with non-magic DmgClass or SchoolMask or with SPELL_ATTR_EX2_CANT_REFLECTED cannot be reflected
     if (m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC &&
         m_spellInfo->SchoolMask != SPELL_SCHOOL_MASK_NORMAL &&
-        !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_CANT_REFLECTED) &&
-        !IsAreaOfEffectSpell(m_spellInfo))
+        !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_CANT_REFLECTED) &&                // Thunderstorm should be reflectable
+        (!IsAreaOfEffectSpell(m_spellInfo) || (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN && m_spellInfo->SpellFamilyFlags & UI64LIT(0x00200000000000))))
     {
         for(int j = 0; j < MAX_EFFECT_INDEX; ++j)
         {
@@ -836,7 +836,7 @@ void Spell::prepareDataForTriggerSystem()
         switch (m_spellInfo->SpellFamilyName)
         {
             case SPELLFAMILY_MAGE:
-                // Arcane Missles / Blizzard triggers need do it
+                // Arcane Missiles / Blizzard triggers need do it
                 if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000000000200080))
                     m_canTrigger = true;
                 // Clearcasting trigger need do it
@@ -1184,7 +1184,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
     }
 
     // recheck deflect for delayed spells on target with Deterrence,
-    if (m_spellInfo->speed && unit->HasAura(19263))
+    if (m_spellInfo->speed && unit->HasAura(19263) && !(m_spellInfo->SpellFamilyName == SPELLFAMILY_WARLOCK && m_spellInfo->SpellIconID == 3178))
     {
         caster->SendSpellMiss(unit, m_spellInfo->Id, SPELL_MISS_DEFLECT);
         missInfo = SPELL_MISS_DEFLECT;
@@ -1408,8 +1408,15 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
             }
 
             // not break stealth by cast targeting
-            if ((!(m_spellInfo->AttributesEx & SPELL_ATTR_EX_NOT_BREAK_STEALTH) && m_spellInfo->Id != 51690 && m_spellInfo->Id != 53198 && m_spellInfo->Id != 3600 && m_spellInfo->Id != 58838) || (m_spellInfo->SpellFamilyName == SPELLFAMILY_ROGUE && m_spellInfo->SpellFamilyFlags == SPELLFAMILYFLAG_ROGUE_SAP))
-                unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+            if (!(m_spellInfo->AttributesEx & SPELL_ATTR_EX_NOT_BREAK_STEALTH) || (m_spellInfo->SpellFamilyName == SPELLFAMILY_ROGUE && m_spellInfo->SpellFamilyFlags == SPELLFAMILYFLAG_ROGUE_SAP))
+            {
+                // dirty hacks! Earthbind Totem, Mass Dispel, Sap, Killing Spree, Hand of Salvation, Starfall, Mirror Image spell. maybe the attribute flag is wrong
+                if (m_spellInfo->Id != 3600 && m_spellInfo->Id != 32375 && m_spellInfo->Id != 32592 && m_spellInfo->Id != 72734 &&
+                    m_spellInfo->Id != 51690 && m_spellInfo->Id != 53055 && m_spellInfo->Id != 58838 && m_spellInfo->Id != 53198)
+                {
+                    unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+                }
+            }
 
             // can cause back attack (if detected), stealth removed at Spell::cast if spell break it
             if (!(m_spellInfo->AttributesEx3 & SPELL_ATTR_EX3_NO_INITIAL_AGGRO) && !IsPositiveSpell(m_spellInfo->Id) &&
@@ -1425,6 +1432,21 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
                 if (!unit->IsStandState() && !unit->hasUnitState(UNIT_STAT_STUNNED))
                     unit->SetStandState(UNIT_STAND_STATE_STAND);
 
+                if (!unit->isInCombat() && unit->GetTypeId() != TYPEID_PLAYER && ((Creature*)unit)->AI())
+                    ((Creature*)unit)->AI()->AttackedBy(realCaster);
+
+                unit->AddThreat(realCaster);
+                unit->SetInCombatWith(realCaster);
+                realCaster->SetInCombatWith(unit);
+
+                if (Player *attackedPlayer = unit->GetCharmerOrOwnerPlayerOrPlayerItself())
+                    realCaster->SetContestedPvP(attackedPlayer);
+            }
+
+            // some AoE spells don't break stealth but they set in combat with targets
+            // Mass Dispel
+            if (m_spellInfo->Id == 32592)
+            {
                 if (!unit->isInCombat() && unit->GetTypeId() != TYPEID_PLAYER && ((Creature*)unit)->AI())
                     ((Creature*)unit)->AI()->AttackedBy(realCaster);
 
@@ -1791,6 +1813,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 71340:                                 // Pact of darkfallen (hack for script work)
                 case 63387:                                 // Rapid Burst
                 case 64531:                                 // Rapid Burst
+                case 62042:                                 // Stormhammer
                     unMaxTargets = 1;
                     break;
                 case 28542:                                 // Life Drain
@@ -2165,6 +2188,18 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 else
                     unMaxTargets = 1;
             }
+            // Starfall - exclude stealthed targets
+            else if (m_spellInfo->Id == 50286)
+            {
+                for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
+                {
+                    next = itr;
+                    ++next;
+
+                    if (!(*itr)->isVisibleForOrDetect(m_caster, m_caster, false, false, false))
+                        targetUnitMap.erase(itr);
+                }
+            }
             break;
         }
         case TARGET_AREAEFFECT_INSTANT:
@@ -2414,12 +2449,14 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     targetUnitMap.push_back(m_caster);
                     break;
                 default:
-                    {
                     FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
-                        if(m_spellInfo->Id == 49821) // Mind Sear damage shouldn't apply to aura target
-                            targetUnitMap.remove(m_targets.getUnitTarget());
-                    }
                     break;
+            }
+            // Mark of the Faceless         Mind Sear
+            if (m_spellInfo->Id == 63278 || m_spellInfo->Id == 49821)
+            {
+                if(Unit* currentTarget = m_targets.getUnitTarget())
+                    targetUnitMap.remove(currentTarget);
             }
             break;
         }
@@ -3205,11 +3242,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                         case SPELL_AURA_ADD_PCT_MODIFIER:
                             targetUnitMap.push_back(m_caster);
                             break;
-                        case SPELL_AURA_DUMMY:
-                        {
-                            SetTargetMap(effIndex, m_spellInfo->EffectImplicitTargetB[effIndex], targetUnitMap);
-                            return;
-                        }
                         case SPELL_AURA_PERIODIC_TRIGGER_SPELL:
                         case SPELL_AURA_PERIODIC_DAMAGE:
                         {
@@ -3585,6 +3617,12 @@ void Spell::cast(bool skipCheck)
                 if (m_caster->HasAura(58375))               // Glyph of Blocking
                     AddTriggeredSpell(58374);               // Glyph of Blocking
             }
+            // Bloodsurge (triggered), Sudden Death (triggered)
+            else if (m_spellInfo->Id == 46916 || m_spellInfo->Id == 52437)
+                // Item - Warrior T10 Melee 4P Bonus
+                if (Aura *aur = m_caster->GetAura(70847, EFFECT_INDEX_0))
+                    if (roll_chance_i(aur->GetModifier()->m_amount))
+                        AddTriggeredSpell(70849);           // Extra Charge!
             break;
         }
         case SPELLFAMILY_PRIEST:
@@ -3617,6 +3655,12 @@ void Spell::cast(bool skipCheck)
             // Faerie Fire (Feral)
             if (m_spellInfo->Id == 16857 && m_caster->GetShapeshiftForm() != FORM_CAT)
                 AddTriggeredSpell(60089);
+            // Clearcasting
+            else if (m_spellInfo->Id == 16870)
+            {
+                if (m_caster->HasAura(70718))               // Item - Druid T10 Balance 2P Bonus
+                    AddPrecastSpell(70721);                 // Omen of Doom
+            }
             // Berserk (Bear Mangle part)
             else if (m_spellInfo->Id == 50334)
                 AddTriggeredSpell(58923);
@@ -3632,8 +3676,11 @@ void Spell::cast(bool skipCheck)
             break;
         case SPELLFAMILY_HUNTER:
         {
+            // Deterrence
+            if (m_spellInfo->Id == 19263)
+                AddPrecastSpell(67801);
             // Kill Command
-            if (m_spellInfo->Id == 34026)
+            else if (m_spellInfo->Id == 34026)
             {
                 if (m_caster->HasAura(37483))               // Improved Kill Command - Item set bonus
                     m_caster->CastSpell(m_caster, 37482, true);// Exploited Weakness
@@ -3691,6 +3738,13 @@ void Spell::cast(bool skipCheck)
             // Chains of Ice
             if (m_spellInfo->Id == 45524)
                 AddTriggeredSpell(55095);                   // Frost Fever
+            break;
+        }
+        case SPELLFAMILY_WARLOCK:
+        {
+            // Consume shadows - invisible detect part
+            if (m_spellInfo->SpellIconID == 207 && (m_spellInfo->SpellFamilyFlags & UI64LIT(0x000000000000000002000000)))
+                AddPrecastSpell(54501);                     // Consume shadows - MOD_STEALTH_DETECT
             break;
         }
         default:
@@ -3765,15 +3819,15 @@ void Spell::handle_immediate()
     if (!spellInfo)
         return;
 
-    // start channeling if applicable
+    // process immediate effects (items, ground, etc.) also initialize some variables
+    _handle_immediate_phase();
+
+    // start channeling if applicable (after _handle_immediate_phase for get persistent effect dynamic object for channel target
     if (IsChanneledSpell(m_spellInfo) && m_duration)
     {
         m_spellState = SPELL_STATE_CASTING;
         SendChannelStart(m_duration);
     }
-
-    // process immediate effects (items, ground, etc.) also initialize some variables
-    _handle_immediate_phase();
 
     for(TargetList::iterator ihit = m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
     {
@@ -4631,8 +4685,11 @@ void Spell::SendChannelStart(uint32 duration)
 {
     WorldObject* target = NULL;
 
+    // select dynobject created by first effect if any
+    if (m_spellInfo->Effect[EFFECT_INDEX_0] == SPELL_EFFECT_PERSISTENT_AREA_AURA)
+        target = m_caster->GetDynObject(m_spellInfo->Id, EFFECT_INDEX_0);
     // select first not resisted target from target list for _0_ effect
-    if (!m_UniqueTargetInfo.empty())
+    else if (!m_UniqueTargetInfo.empty())
     {
         for(TargetList::const_iterator itr = m_UniqueTargetInfo.begin(); itr != m_UniqueTargetInfo.end(); ++itr)
         {

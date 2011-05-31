@@ -1207,6 +1207,9 @@ void World::SetInitialWorldSettings()
     sLog.outString( "Loading Waypoint scripts..." );        // before loading from creature_movement
     sScriptMgr.LoadCreatureMovementScripts();
 
+    sLog.outString( "Loading DB AreaTrigger scripts..." );
+    sScriptMgr.LoadDBAreaTriggerScripts();
+
     sLog.outString( "Loading Waypoints..." );
     sLog.outString();
     sWaypointMgr.Load();
@@ -1350,6 +1353,9 @@ void World::SetInitialWorldSettings()
     //Not sure if this can be moved up in the sequence (with static data loading) as it uses MapManager
     sLog.outString( "Loading Transports..." );
     sMapMgr.LoadTransports();
+
+    sLog.outString( "Loading Transport NPCs..." );
+    sMapMgr.LoadTransportNPCs();
 
     sLog.outString("Deleting expired bans..." );
     LoginDatabase.Execute("DELETE FROM ip_banned WHERE unbandate<=UNIX_TIMESTAMP() AND unbandate<>bandate");

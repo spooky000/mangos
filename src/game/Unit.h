@@ -288,10 +288,11 @@ enum UnitModifierType
     BASE_PCT = 1,
     TOTAL_VALUE = 2,
     TOTAL_PCT = 3,
-    NONSTACKING_VALUE = 4,
-    NONSTACKING_PCT = 5,
-    NONSTACKING_PCT_MINOR = 6,
-    MODIFIER_TYPE_END = 7
+    NONSTACKING_VALUE_POS = 4,
+    NONSTACKING_VALUE_NEG = 5,
+    NONSTACKING_PCT = 6,
+    NONSTACKING_PCT_MINOR = 7,
+    MODIFIER_TYPE_END = 8
 };
 
 enum WeaponDamageRange
@@ -1445,8 +1446,6 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         bool isFrozen() const;
         bool IsIgnoreUnitState(SpellEntry const *spell, IgnoreUnitState ignoreState);
 
-        void RemoveSpellbyDamageTaken(AuraType auraType, uint32 damage);
-
         bool isTargetableForAttack(bool inversAlive = false) const;
         bool isPassiveToHostile() { return HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PASSIVE); }
 
@@ -1893,6 +1892,8 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         SpellAuraProcResult HandleModDamagePercentDoneAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
         SpellAuraProcResult HandlePeriodicDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
         SpellAuraProcResult HandleModRating(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
+        SpellAuraProcResult HandleRemoveByDamageProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
+        SpellAuraProcResult HandleRemoveByDamageChanceProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
         SpellAuraProcResult HandleManaShieldAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
         SpellAuraProcResult HandleNULLProc(Unit* /*pVictim*/, uint32 /*damage*/, Aura* /*triggeredByAura*/, SpellEntry const* /*procSpell*/, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/)
         {
@@ -1950,7 +1951,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         uint32 CalcNotIgnoreAbsorbDamage( uint32 damage, SpellSchoolMask damageSchoolMask, SpellEntry const* spellInfo = NULL);
         uint32 CalcNotIgnoreDamageRedunction( uint32 damage, SpellSchoolMask damageSchoolMask);
         int32 CalculateAuraDuration(SpellEntry const* spellProto, uint32 effectMask, int32 duration, Unit const* caster);
-        uint32 CalculateAuraPeriodicTimeWithHaste(SpellEntry const* spellProto, uint32 periodicTime);
+        uint32 CalculateAuraPeriodicTimeWithHaste(SpellEntry const* spellProto, uint32 periodicTime, SpellEffectIndex eff);
         uint32 CalculateSpellDurationWithHaste(SpellEntry const* spellProto, uint32 duration);
 
         float CalculateLevelPenalty(SpellEntry const* spellProto) const;

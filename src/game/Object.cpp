@@ -255,6 +255,12 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
                 /*if (((Creature*)unit)->hasUnitState(UNIT_STAT_MOVING))
                     unit->m_movementInfo.SetMovementFlags(MOVEFLAG_FORWARD);*/
 
+                if (unit->GetTransport())
+                {
+                    unit->m_movementInfo.AddMovementFlag(MOVEFLAG_ONTRANSPORT);
+                    unit->m_movementInfo.SetTransportData(unit->GetTransport()->GetObjectGuid(), unit->GetTransOffsetX(), unit->GetTransOffsetY(), unit->GetTransOffsetZ(), unit->GetTransOffsetO(), 0, 0);
+                }
+
                 if (((Creature*)unit)->CanFly())
                 {
                     // (ok) most seem to have this
@@ -263,7 +269,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
                     /*if (!((Creature*)unit)->hasUnitState(UNIT_STAT_MOVING))
                     {
                         // (ok) possibly some "hover" mode
-                        unit->m_movementInfo.AddMovementFlag(MOVEFLAG_ROOT);
+                        // unit->m_movementInfo.AddMovementFlag(MOVEFLAG_ROOT);
                     }
                     else*/
                     {
@@ -1210,11 +1216,60 @@ bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool
     return distsq < maxdist * maxdist;
 }
 
+bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D, Unit * unit, Player * plr) const
+{
+    float sizefactor = GetObjectBoundingRadius() + obj->GetObjectBoundingRadius();
+    float maxdist = dist2compare + sizefactor;
+
+    if (unit->GetTransport() && plr->GetTransport() &&  plr->GetTransport()->GetGUIDLow() == unit->GetTransport()->GetGUIDLow())
+    {
+        float dtx = unit->m_movementInfo.GetTransportPos()->x - plr->m_movementInfo.GetTransportPos()->x;
+        float dty = unit->m_movementInfo.GetTransportPos()->y - plr->m_movementInfo.GetTransportPos()->y;
+        float disttsq = dtx * dtx + dty * dty;
+        if (is3D)
+        {
+            float dtz = unit->m_movementInfo.GetTransportPos()->z - plr->m_movementInfo.GetTransportPos()->z;
+            disttsq += dtz * dtz;
+        }
+        return disttsq < (maxdist * maxdist);
+    }
+
+    float dx = GetPositionX() - obj->GetPositionX();
+    float dy = GetPositionY() - obj->GetPositionY();
+    float distsq = dx*dx + dy*dy;
+    if(is3D)
+    {
+        float dz = GetPositionZ() - obj->GetPositionZ();
+        distsq += dz*dz;
+    }
+
+    return distsq < maxdist * maxdist;
+}
+
 bool WorldObject::IsWithinLOSInMap(const WorldObject* obj) const
 {
     if (!IsInMap(obj)) return false;
     float ox,oy,oz;
     obj->GetPosition(ox,oy,oz);
+
+    if(GetMapId() == 617) // Dalaran Arena Waterfall
+        if(GameObject * pWaterfall = ((WorldObject*)this)->GetClosestGameObjectWithEntry(this, 194395/*191877*/, 60))
+            if(pWaterfall->isSpawned())
+                if(pWaterfall->IsInBetween(this, obj, pWaterfall->GetObjectBoundingRadius()))
+                    return false;
+
+    if(GetMapId() == 618)
+    {
+        for(int i = 0; i < 4; ++i)
+        {
+            const int pillars[4] = {194583, 194584, 194585, 194587};
+            if(GameObject * pPillar = ((WorldObject*)this)->GetClosestGameObjectWithEntry(this, pillars[i], 35))
+                if(pPillar->GetGoState() == GO_STATE_ACTIVE)
+                    if(pPillar->IsInBetween(this, obj, pPillar->GetObjectBoundingRadius()))
+                        return false;
+        }
+    }
+
     return(IsWithinLOS(ox, oy, oz ));
 }
 
@@ -1316,6 +1371,21 @@ bool WorldObject::IsInRange3d(float x, float y, float z, float minRange, float m
 
     float maxdist = maxRange + sizefactor;
     return distsq < maxdist * maxdist;
+}
+
+bool WorldObject::IsInBetween(const WorldObject *obj1, const WorldObject *obj2, float size) const
+{
+    if(GetPositionX() > std::max(obj1->GetPositionX(), obj2->GetPositionX())
+        || GetPositionX() < std::min(obj1->GetPositionX(), obj2->GetPositionX())
+        || GetPositionY() > std::max(obj1->GetPositionY(), obj2->GetPositionY())
+        || GetPositionY() < std::min(obj1->GetPositionY(), obj2->GetPositionY()))
+        return false;
+
+    if(!size)
+        size = GetObjectBoundingRadius() / 2;
+
+    float angle = obj1->GetAngle(this) - obj1->GetAngle(obj2);
+    return abs(sin(angle)) * GetExactDist2d(obj1->GetPositionX(), obj1->GetPositionY()) < size;
 }
 
 float WorldObject::GetAngle(const WorldObject* obj) const
@@ -2023,7 +2093,7 @@ Creature* WorldObject::GetClosestCreatureWithEntry(WorldObject* pSource, uint32 
 }
 
 //return closest gameobject in grid, with range from pSource
-GameObject* WorldObject::GetClosestGameObjectWithEntry(WorldObject* pSource, uint32 uiEntry, float fMaxSearchRange)
+GameObject* WorldObject::GetClosestGameObjectWithEntry(const WorldObject* pSource, uint32 uiEntry, float fMaxSearchRange)
 {
     GameObject* pGameObject = NULL;
 

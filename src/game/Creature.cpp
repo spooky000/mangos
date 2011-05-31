@@ -41,7 +41,9 @@
 #include "MapPersistentStateMgr.h"
 #include "BattleGroundMgr.h"
 #include "Spell.h"
+#include "Transports.h"
 #include "Util.h"
+#include "Unit.h"
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "CellImpl.h"
@@ -182,6 +184,9 @@ m_creatureInfo(NULL), m_splineFlags(SPLINEFLAG_WALKMODE)
 Creature::~Creature()
 {
     CleanupsBeforeDelete();
+
+    if (GetTransport())
+        GetTransport()->RemovePassenger(this);
 
     m_vendorItemCounts.clear();
 
@@ -550,8 +555,6 @@ void Creature::Update(uint32 update_diff, uint32 diff)
                     else
                         StopGroupLoot();
                 }
-                m_Events.Update(update_diff);
-                _UpdateSpells(update_diff);
             }
 
             break;
@@ -1618,7 +1621,7 @@ bool Creature::IsImmuneToSpell(SpellEntry const* spellInfo)
     if (!spellInfo)
         return false;
 
-    if (GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->Mechanic - 1)))
+    if (!IsPet() && GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->Mechanic - 1)))
         return true;
 
     return Unit::IsImmuneToSpell(spellInfo);
@@ -1626,7 +1629,7 @@ bool Creature::IsImmuneToSpell(SpellEntry const* spellInfo)
 
 bool Creature::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex index) const
 {
-    if (GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->EffectMechanic[index] - 1)))
+    if (!IsPet() && GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->EffectMechanic[index] - 1)))
         return true;
 
     // Taunt immunity special flag check

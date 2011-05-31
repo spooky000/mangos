@@ -239,7 +239,8 @@ Unit::Unit() :
         m_auraModifiersGroup[i][BASE_PCT] = 1.0f;
         m_auraModifiersGroup[i][TOTAL_VALUE] = 0.0f;
         m_auraModifiersGroup[i][TOTAL_PCT] = 1.0f;
-        m_auraModifiersGroup[i][NONSTACKING_VALUE] = 0.0f;
+        m_auraModifiersGroup[i][NONSTACKING_VALUE_POS] = 0.0f;
+        m_auraModifiersGroup[i][NONSTACKING_VALUE_NEG] = 0.0f;
         m_auraModifiersGroup[i][NONSTACKING_PCT] = 0.0f;
         m_auraModifiersGroup[i][NONSTACKING_PCT_MINOR] = 0.0f;
     }
@@ -308,21 +309,20 @@ Unit::~Unit()
 
 void Unit::Update( uint32 update_diff, uint32 p_time )
 {
-    if(!IsInWorld())
-        return;
-
-    /*if(p_time > m_AurasCheck)
-    {
-    m_AurasCheck = 2000;
-    _UpdateAura();
-    }else
-    m_AurasCheck -= p_time;*/
-
     // WARNING! Order of execution here is important, do not change.
     // Spells must be processed with event system BEFORE they go to _UpdateSpells.
     // Or else we may have some SPELL_STATE_FINISHED spells stalled in pointers, that is bad.
+    if(!IsInWorld())
+        return;
+
+    sWorld.m_spellUpdateLock.acquire();
     m_Events.Update( update_diff );
+
+    if(!IsInWorld())
+        return;
+
     _UpdateSpells( update_diff );
+    sWorld.m_spellUpdateLock.release();
 
     CleanupDeletedAuras();
 
@@ -653,51 +653,6 @@ bool Unit::HasAuraType(AuraType auraType) const
     return (!m_modAuras[auraType].empty());
 }
 
-/* Called by DealDamage for auras that have a chance to be dispelled on damage taken. */
-void Unit::RemoveSpellbyDamageTaken(AuraType auraType, uint32 damage)
-{
-    if(!HasAuraType(auraType))
-        return;
-
-    // The chance to dispel an aura depends on the damage taken with respect to the casters level.
-    uint32 max_dmg = getLevel() > 8 ? 25 * getLevel() - 150 : 50;
-    float chance = float(damage) / max_dmg * 100.0f;
-    if (roll_chance_f(chance))
-    {
-        // manually remove auras except ones that shouldn't be removed. TODO: better way of removing except some auras
-        if (auraType == SPELL_AURA_MOD_ROOT)
-        {
-            AuraList const &auras = GetAurasByType(SPELL_AURA_MOD_ROOT);
-            AuraList::const_iterator tmp;
-            for (AuraList::const_iterator itr = auras.begin(); itr != auras.end();)
-            {
-                tmp = itr;
-                tmp++;
-                switch ((*itr)->GetId())
-                {
-                    case 62283:                               // Iron Roots (Freya)
-                    case 62930:
-                    case 62438:
-                    case 62861:
-                    case 58373:                               // Glyph of Hamstring
-                    case 23694:                               // Improved Hamstring
-                    case 61969:                               // Flash Freeze (Hodir)
- 	                case 62469:                               // Freeze (Hodir)
-                        // don't remove
-                        break;
-                    default:
-                        RemoveAurasDueToSpell((*itr)->GetId());
-                        break;
-                }
-                itr = tmp;
-            }
-            return;
-        }
-
-        RemoveSpellsCausingAura(auraType);
-    }
-}
-
 void Unit::DealDamageMods(Unit *pVictim, uint32 &damage, uint32* absorb)
 {
     if (!pVictim->isAlive() || pVictim->IsTaxiFlying() || (pVictim->GetTypeId() == TYPEID_UNIT && ((Creature*)pVictim)->IsInEvadeMode()))
@@ -737,7 +692,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         pVictim->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
 
     // Divine Storm heal hack
-    if ( spellProto && spellProto->Id == 53385 )
+    if (spellProto && spellProto->Id == 53385)
     {
         int32 divineDmg = damage * (25 + (HasAura(63220) ? 15 : 0)) / 100; //25%, if has Glyph of Divine Storm -> 40%
         CastCustomSpell(this, 54171, &divineDmg, NULL, NULL, true);
@@ -780,11 +735,6 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             return 0;
         }
     }
-    if (!spellProto || !IsSpellHaveAura(spellProto,SPELL_AURA_MOD_FEAR))
-        pVictim->RemoveSpellbyDamageTaken(SPELL_AURA_MOD_FEAR, damage);
-    // root type spells do not dispel the root effect
-    if (!spellProto || !(spellProto->Mechanic == MECHANIC_ROOT || IsSpellHaveAura(spellProto,SPELL_AURA_MOD_ROOT)))
-        pVictim->RemoveSpellbyDamageTaken(SPELL_AURA_MOD_ROOT, damage);
 
     // no xp,health if type 8 /critters/
     if (pVictim->GetTypeId() == TYPEID_UNIT && pVictim->GetCreatureType() == CREATURE_TYPE_CRITTER)
@@ -1161,19 +1111,6 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             // if damage pVictim call AI reaction
             if(pVictim->GetTypeId()==TYPEID_UNIT && ((Creature*)pVictim)->AI())
                 ((Creature*)pVictim)->AI()->AttackedBy(this);
-        }
-
-        // polymorphed, hex and other negative transformed cases
-        uint32 morphSpell = pVictim->getTransForm();
-        if (morphSpell && !IsPositiveSpell(morphSpell))
-        {
-            if (SpellEntry const* morphEntry = sSpellStore.LookupEntry(morphSpell))
-            {
-                if (IsSpellHaveAura(morphEntry, SPELL_AURA_MOD_CONFUSE))
-                    pVictim->RemoveAurasDueToSpell(morphSpell);
-                else if (IsSpellHaveAura(morphEntry, SPELL_AURA_MOD_PACIFY_SILENCE))
-                    pVictim->RemoveSpellbyDamageTaken(SPELL_AURA_MOD_PACIFY_SILENCE, damage);
-            }
         }
 
         if(damagetype == DIRECT_DAMAGE || damagetype == SPELL_DIRECT_DAMAGE)
@@ -2540,7 +2477,7 @@ void Unit::CalculateDamageAbsorbAndResist(Unit *pCaster, SpellSchoolMask schoolM
                     pCaster->DealDamage(caster, ab_damage, NULL, damagetype, schoolMask, 0, false);
                     continue;
                 }
-                // Will of Necropolis
+                // Will of the Necropolis
                 if (spellProto->SpellIconID == 857)
                 {
                     // Apply absorb only on damage below 35% hp
@@ -3020,23 +2957,26 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst (const Unit *pVictim, WeaponAttack
     }
 
     // parry chances
-    // check if attack comes from behind, nobody can parry or block if attacker is behind
-    if (!from_behind)
+    // check if attack comes from behind, nobody can parry or block if attacker is behind if not have
+    if (!from_behind || pVictim->HasAuraType(SPELL_AURA_MOD_PARRY_FROM_BEHIND_PERCENT))
     {
         // Reduce parry chance by attacker expertise rating
         if (GetTypeId() == TYPEID_PLAYER)
-            parry_chance-= int32(((Player*)this)->GetExpertiseDodgeOrParryReduction(attType)*100);
+            parry_chance -= int32(((Player*)this)->GetExpertiseDodgeOrParryReduction(attType)*100);
         else
             parry_chance -= GetTotalAuraModifier(SPELL_AURA_MOD_EXPERTISE)*25;
 
-        if(pVictim->GetTypeId()==TYPEID_PLAYER || !(((Creature*)pVictim)->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_NO_PARRY) )
+        if (parry_chance > 0 && (pVictim->GetTypeId()==TYPEID_PLAYER || !(((Creature*)pVictim)->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_NO_PARRY)))
         {
-            int32 tmp2 = int32(parry_chance);
-            if (   (tmp2 > 0)                                   // check if unit _can_ parry
-                && ((tmp2 -= skillBonus) > 0)
-                && (roll < (sum += tmp2)))
+            parry_chance -= skillBonus;
+
+            //if (from_behind) -- only 100% currently and not 100% sure way value apply
+            //    parry_chance = int32(parry_chance * (pVictim->GetTotalAuraMultiplier(SPELL_AURA_MOD_PARRY_FROM_BEHIND_PERCENT) - 1);
+
+            if (parry_chance > 0 &&                         // check if unit _can_ parry
+                (roll < (sum += parry_chance)))
             {
-                DEBUG_FILTER_LOG(LOG_FILTER_COMBAT, "RollMeleeOutcomeAgainst: PARRY <%d, %d)", sum-tmp2, sum);
+                DEBUG_FILTER_LOG(LOG_FILTER_COMBAT, "RollMeleeOutcomeAgainst: PARRY <%d, %d)", sum - parry_chance, sum);
                 return MELEE_HIT_PARRY;
             }
         }
@@ -3312,24 +3252,35 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit *pVictim, SpellEntry const *spell)
     if (spell->Attributes & SPELL_ATTR_IMPOSSIBLE_DODGE_PARRY_BLOCK)
         return SPELL_MISS_NONE;
 
+    bool from_behind = !pVictim->HasInArc(M_PI_F,this);
+
     // Ranged attack cannot be parry/dodge only deflect
     if (attType == RANGED_ATTACK)
     {
-        int32 deflect_chance = pVictim->GetTotalAuraModifier(SPELL_AURA_DEFLECT_SPELLS)*100;
-        tmp+=deflect_chance;
-        if (roll < tmp)
-            return SPELL_MISS_DEFLECT;
+        // only if in front or special ability
+        if (!from_behind || pVictim->HasAuraType(SPELL_AURA_MOD_PARRY_FROM_BEHIND_PERCENT))
+        {
+            int32 deflect_chance = pVictim->GetTotalAuraModifier(SPELL_AURA_DEFLECT_SPELLS)*100;
+
+            //if (from_behind) -- only 100% currently and not 100% sure way value apply
+            //    deflect_chance = int32(deflect_chance * (pVictim->GetTotalAuraMultiplier(SPELL_AURA_MOD_PARRY_FROM_BEHIND_PERCENT) - 1);
+
+            tmp += deflect_chance;
+            if (roll < tmp)
+                return SPELL_MISS_DEFLECT;
+        }
         return SPELL_MISS_NONE;
     }
 
     // Check for attack from behind
-    if (!pVictim->HasInArc(M_PI_F,this))
+    if (from_behind)
     {
         // Can`t dodge from behind in PvP (but its possible in PvE)
         if (GetTypeId() == TYPEID_PLAYER && pVictim->GetTypeId() == TYPEID_PLAYER)
             canDodge = false;
-        // Can`t parry
-        canParry = false;
+        // Can`t parry without special ability
+        if (!pVictim->HasAuraType(SPELL_AURA_MOD_PARRY_FROM_BEHIND_PERCENT))
+            canParry = false;
     }
     // Check creatures flags_extra for disable parry
     if(pVictim->GetTypeId()==TYPEID_UNIT)
@@ -3385,6 +3336,9 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit *pVictim, SpellEntry const *spell)
             parryChance -= GetTotalAuraModifier(SPELL_AURA_MOD_EXPERTISE)*25;
         if (parryChance < 0)
             parryChance = 0;
+
+        //if (from_behind) -- only 100% currently and not 100% sure way value apply
+        //    parryChance = int32(parryChance * (pVictim->GetTotalAuraMultiplier(SPELL_AURA_MOD_PARRY_FROM_BEHIND_PERCENT) - 1));
 
         tmp += parryChance;
         if (roll < tmp)
@@ -3474,10 +3428,20 @@ SpellMissInfo Unit::MagicSpellHitResult(Unit *pVictim, SpellEntry const *spell)
     if (rand < tmp)
         return SPELL_MISS_MISS;
 
-    int32 deflect_chance = pVictim->GetTotalAuraModifier(SPELL_AURA_DEFLECT_SPELLS)*100;
-    tmp+=deflect_chance;
-    if (rand < tmp)
-        return SPELL_MISS_DEFLECT;
+    bool from_behind = !pVictim->HasInArc(M_PI_F,this);
+
+    // cast by caster in front of victim or behind with special ability
+    if (!from_behind || pVictim->HasAuraType(SPELL_AURA_MOD_PARRY_FROM_BEHIND_PERCENT))
+    {
+        int32 deflect_chance = pVictim->GetTotalAuraModifier(SPELL_AURA_DEFLECT_SPELLS)*100;
+
+        //if (from_behind) -- only 100% currently and not 100% sure way value apply
+        //    deflect_chance = int32(deflect_chance * (pVictim->GetTotalAuraMultiplier(SPELL_AURA_MOD_PARRY_FROM_BEHIND_PERCENT)) - 1);
+
+        tmp += deflect_chance;
+        if (rand < tmp)
+            return SPELL_MISS_DEFLECT;
+    }
 
     return SPELL_MISS_NONE;
 }
@@ -3648,7 +3612,8 @@ float Unit::GetUnitDodgeChance() const
 {
     if (IsNonMeleeSpellCasted(false) || hasUnitState(UNIT_STAT_STUNNED))
         return 0.0f;
-    if( GetTypeId() == TYPEID_PLAYER )
+
+    if (GetTypeId() == TYPEID_PLAYER)
         return GetFloatValue(PLAYER_DODGE_PERCENTAGE);
     else
     {
@@ -4352,8 +4317,7 @@ int32 Unit::GetMaxPositiveAuraModifierByMiscValue(AuraType auratype, int32 misc_
     for(AuraList::const_iterator i = mTotalAuraList.begin();i != mTotalAuraList.end(); ++i)
     {
         Modifier* mod = (*i)->GetModifier();
-        if (!(nonStackingOnly && (*i)->IsStacking()) && mod->m_amount > modifier &&
-            (mod->m_miscvalue == misc_value || mod->m_miscvalue < 0))
+        if (!(nonStackingOnly && (*i)->IsStacking()) && mod->m_amount > modifier && mod->m_miscvalue == misc_value)
             modifier = mod->m_amount;
     }
 
@@ -4520,7 +4484,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
             }
 
              // Judgements and scrolls are always single 
-            /*if (GetSpellSpecific(holder->GetId()) == SPELL_JUDGEMENT ||
+            if (GetSpellSpecific(holder->GetId()) == SPELL_JUDGEMENT ||
                 GetSpellSpecific(holder->GetId()) == SPELL_SCROLL)
             {
                 RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
@@ -4538,7 +4502,8 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
                 // m_auraname can be modified to SPELL_AURA_NONE for area auras, use original
                 AuraType aurNameReal = AuraType(aurSpellInfo->EffectApplyAuraName[i]);
 
-                if (aurNameReal == SPELL_AURA_PERIODIC_ENERGIZE)
+                // problem with stacking comes for negative auras, so let's check positive auras exceptions for speedup
+                if (foundHolder->IsPositive() && aurNameReal != SPELL_AURA_PERIODIC_HEAL)
                 {
                     // can be only single (this check done at _each_ aura add
                     RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
@@ -4548,7 +4513,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
             }
 
             if (bStop)
-                break;*/
+                break;
 
             // Hacky fix for Malygos' Power Spark
             if(foundHolder->GetId() == 55849)
@@ -4697,10 +4662,14 @@ float Unit::CheckAuraStackingAndApply(Aura *Aur, UnitMods unitMod, UnitModifierT
 
     if (!Aur->IsStacking())
     {
+        bool bIsPositive = amount > 0;
+
         if (modifierType == TOTAL_VALUE)
-            modifierType = NONSTACKING_VALUE;
+            modifierType = bIsPositive ? NONSTACKING_VALUE_POS : NONSTACKING_VALUE_NEG;
         else if (modifierType == TOTAL_PCT)
             modifierType = NONSTACKING_PCT;
+
+        float current = GetModifierValue(unitMod, modifierType);
         // need a sanity check here?
 
         // special case: minor and major categories for armor reduction debuffs
@@ -4712,9 +4681,6 @@ float Unit::CheckAuraStackingAndApply(Aura *Aur, UnitMods unitMod, UnitModifierT
             spellProto->SpellFamilyName == SPELLFAMILY_WARLOCK &&               // Curse of Weakness
             spellProto->SpellFamilyFlags & UI64LIT(0x0000000000008000)))
             modifierType = NONSTACKING_PCT_MINOR;
-
-        bool bIsPositive = amount > 0;
-        float current = GetModifierValue(unitMod, modifierType);
 		
         if (bIsPositive && amount < current ||               // value does not change as a result of applying/removing this aura
             !bIsPositive && amount > current)
@@ -4749,7 +4715,7 @@ float Unit::CheckAuraStackingAndApply(Aura *Aur, UnitMods unitMod, UnitModifierT
 
         HandleStatModifier(unitMod, modifierType, amount, apply);
 
-        if (modifierType == NONSTACKING_VALUE)
+        if (modifierType == NONSTACKING_VALUE_POS || modifierType == NONSTACKING_VALUE_NEG)
             amount -= current;
         else
         {
@@ -6273,7 +6239,13 @@ bool Unit::Attack(Unit *victim, bool meleeAttack)
 
     // player cannot attack while mounted or in vehicle
     if(GetTypeId()==TYPEID_PLAYER && (IsMounted() || GetVehicle()))
-        return false;
+    {
+        if (!(GetVehicle() && GetVehicle()->GetSeatInfo(this) &&
+            GetVehicle()->GetSeatInfo(this)->m_flags & (SEAT_FLAG_CAN_CAST | SEAT_FLAG_CAN_ATTACK)))
+        {
+                return false;
+        }
+    }
 
     // nobody can attack GM in GM-mode
     if(victim->GetTypeId()==TYPEID_PLAYER)
@@ -6879,6 +6851,10 @@ void Unit::SendEnergizeSpellLog(Unit *pVictim, uint32 SpellID, uint32 Damage, Po
 
 void Unit::EnergizeBySpell(Unit *pVictim, uint32 SpellID, uint32 Damage, Powers powertype)
 {
+    // don't energize isolated units (banished)
+    if (pVictim->hasUnitState(UNIT_STAT_ISOLATED))
+        return;
+
     SendEnergizeSpellLog(pVictim, SpellID, Damage, powertype);
     // needs to be called after sending spell log
     pVictim->ModifyPower(powertype, Damage);
@@ -7598,6 +7574,20 @@ bool Unit::IsSpellCrit(Unit *pVictim, SpellEntry const *spellProto, SpellSchoolM
                             }
                         }
                         break;
+                        // Improved Faerie Fire
+                        if(pVictim->HasAura(770) || pVictim->HasAura(16857))
+                        {
+                            AuraList const& ImprovedAura = GetAurasByType(SPELL_AURA_DUMMY);
+                            for(AuraList::const_iterator iter = ImprovedAura.begin(); iter != ImprovedAura.end(); ++iter)
+                            {
+                                if((*iter)->GetEffIndex() == 0 && (*iter)->GetSpellProto()->SpellIconID == 109 && (*iter)->GetSpellProto()->SpellFamilyName == SPELLFAMILY_DRUID)
+                                {
+                                    crit_chance += (*iter)->GetModifier()->m_amount;
+                                    break;
+                                }
+                            }
+                        }
+                        break;
                     case SPELLFAMILY_PALADIN:
                         // Sacred Shield
                         if (spellProto->SpellFamilyFlags & UI64LIT(0x0000000040000000))
@@ -8037,6 +8027,10 @@ bool Unit::IsImmuneToSpell(SpellEntry const* spellInfo)
 
 bool Unit::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex index) const
 {
+    // Saronite Vapors mana gain spell
+    if (spellInfo->Id == 63337)
+        return false;
+
     //If m_immuneToEffect type contain this effect type, IMMUNE effect.
     uint32 effect = spellInfo->Effect[index];
     SpellImmuneList const& effectList = m_spellImmune[IMMUNITY_EFFECT];
@@ -8422,11 +8416,9 @@ uint32 Unit::MeleeDamageBonusTaken(Unit *pCaster, uint32 pdamage,WeaponAttackTyp
     if (!mDummyAuras.empty())
     for(AuraList::const_iterator i = mDummyAuras.begin(); i != mDummyAuras.end(); ++i)
     {
-      if ((*i)->GetId())
-        switch((*i)->GetSpellProto()->SpellIconID)
+        switch((*i)->GetId())
         {
-            //Cheat Death
-            case 2109:
+            case 45182:                                     // Cheating Death
                 if((*i)->GetModifier()->m_miscvalue & SPELL_SCHOOL_MASK_NORMAL)
                 {
                     if(GetTypeId() != TYPEID_PLAYER)
@@ -8439,17 +8431,10 @@ uint32 Unit::MeleeDamageBonusTaken(Unit *pCaster, uint32 pdamage,WeaponAttackTyp
                     TakenPercent *= (mod + 100.0f) / 100.0f;
                 }
                 break;
-            // Ebon Plague
-            case 1933:
-                if ((*i)->GetMiscValue() & (spellProto ? GetSpellSchoolMask(spellProto) : 0))
-                    TakenPercent *= ((*i)->GetModifier()->m_amount + 100.0f) / 100.0f;
-                break;
             case 20911:                                     // Blessing of Sanctuary
             case 25899:                                     // Greater Blessing of Sanctuary
-                // don't stack with Vigilance dmg reduction effect (calculated above)
-                if (!HasAura(68066))
-                    TakenPercent *= ((*i)->GetModifier()->m_amount + 100.0f) / 100.0f;
-            break;
+                TakenPercent *= ((*i)->GetModifier()->m_amount + 100.0f) / 100.0f;
+                break;
         }
     }
 
@@ -10015,7 +10000,8 @@ bool Unit::HandleStatModifier(UnitMods unitMod, UnitModifierType modifierType, f
             break;
         case NONSTACKING_PCT:
         case NONSTACKING_PCT_MINOR:
-        case NONSTACKING_VALUE:
+        case NONSTACKING_VALUE_POS:
+        case NONSTACKING_VALUE_NEG:
             m_auraModifiersGroup[unitMod][modifierType] = amount;
             break;
 
@@ -10087,7 +10073,7 @@ float Unit::GetModifierValue(UnitMods unitMod, UnitModifierType modifierType) co
     }
     else if(modifierType == TOTAL_VALUE)
     {
-        return m_auraModifiersGroup[unitMod][TOTAL_VALUE] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE];
+        return m_auraModifiersGroup[unitMod][TOTAL_VALUE] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE_POS] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE_NEG];
     }
     else
         return m_auraModifiersGroup[unitMod][modifierType];
@@ -10103,7 +10089,7 @@ float Unit::GetTotalStatValue(Stats stat) const
     // value = ((base_value * base_pct) + total_value) * total_pct
     float value  = m_auraModifiersGroup[unitMod][BASE_VALUE] + GetCreateStat(stat);
     value *= m_auraModifiersGroup[unitMod][BASE_PCT];
-    value += (m_auraModifiersGroup[unitMod][TOTAL_VALUE] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE]);
+    value += (m_auraModifiersGroup[unitMod][TOTAL_VALUE] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE_POS] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE_NEG]);
     value *= m_auraModifiersGroup[unitMod][TOTAL_PCT] * ((m_auraModifiersGroup[unitMod][NONSTACKING_PCT] + m_auraModifiersGroup[unitMod][NONSTACKING_PCT_MINOR] + 100.0f) / 100.0f);
 
     return value;
@@ -10122,7 +10108,7 @@ float Unit::GetTotalAuraModValue(UnitMods unitMod) const
 
     float value  = m_auraModifiersGroup[unitMod][BASE_VALUE];
     value *= m_auraModifiersGroup[unitMod][BASE_PCT];
-    value += (m_auraModifiersGroup[unitMod][TOTAL_VALUE] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE]);
+    value += (m_auraModifiersGroup[unitMod][TOTAL_VALUE] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE_POS] + m_auraModifiersGroup[unitMod][NONSTACKING_VALUE_NEG]);
     value *= m_auraModifiersGroup[unitMod][TOTAL_PCT] * ((m_auraModifiersGroup[unitMod][NONSTACKING_PCT] + m_auraModifiersGroup[unitMod][NONSTACKING_PCT_MINOR] + 100.0f) / 100.0f);
 
     return value;
@@ -10445,8 +10431,10 @@ void Unit::CleanupsBeforeDelete()
     {
         if (GetVehicle())
             ExitVehicle();
+
         if (GetVehicleKit())
             RemoveVehicleKit();
+
         InterruptNonMeleeSpells(true);
         m_Events.KillAllEvents(false);                      // non-delatable (currently casted spells) will not deleted now but it will deleted at call in Map::RemoveAllObjectsInRemoveList
         CombatStop();
@@ -10715,6 +10703,10 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                 case COMMAND_FOLLOW:                        //spellid=1792  //FOLLOW
                     if (petGuid.IsVehicle())
                         return;
+
+                    if(GetEntry() == 1863) // Succubus' Seduction (interrupt on follow command)
+                        InterruptSpell(CURRENT_CHANNELED_SPELL, false);
+
                     AttackStop();
                     GetMotionMaster()->MoveFollow(owner,PET_FOLLOW_DIST,((Pet*)this)->GetPetFollowAngle());
                     GetCharmInfo()->SetCommandState( COMMAND_FOLLOW );
@@ -11952,6 +11944,9 @@ void Unit::MonsterJump(float x, float y, float z, float o, uint32 transitTime, u
 
     if (GetTypeId() != TYPEID_PLAYER)
     {
+        // Interrupt spells cause of movement
+        InterruptNonMeleeSpells(false);
+
         Creature* c = (Creature*)this;
         // Creature relocation acts like instant movement generator, so current generator expects interrupt/reset calls to react properly
         if (!c->GetMotionMaster()->empty())
@@ -12488,7 +12483,7 @@ ObjectGuid const& Unit::GetCreatorGuid() const
     }
 }
 
-uint32 Unit::CalculateAuraPeriodicTimeWithHaste(SpellEntry const* spellProto, uint32 oldPeriodicTime)
+uint32 Unit::CalculateAuraPeriodicTimeWithHaste(SpellEntry const* spellProto, uint32 oldPeriodicTime, SpellEffectIndex eff)
 {
     if (!spellProto || oldPeriodicTime == 0)
         return 0;
@@ -12511,10 +12506,13 @@ uint32 Unit::CalculateAuraPeriodicTimeWithHaste(SpellEntry const* spellProto, ui
     if (!applyHaste)
         return oldPeriodicTime;
 
-    Player* modOwner = GetSpellModOwner();
     uint32 _periodicTime = oldPeriodicTime;
 
-    int32 ticks = ceil(float(GetSpellDuration(spellProto)) / float(_periodicTime));
+    int32 ticks;
+    if(IsChanneledSpell(spellProto))
+        ticks = ceil(float(GetSpellDuration(spellProto)) / float(spellProto->EffectAmplitude[eff]));
+    else
+        ticks = ceil(float(GetSpellDuration(spellProto)) / float(_periodicTime));
 
     // Calculate new periodic timer
     _periodicTime = ticks == 0 ? _periodicTime : CalculateSpellDuration(spellProto, this) / ticks;
@@ -12546,7 +12544,6 @@ uint32 Unit::CalculateSpellDurationWithHaste(SpellEntry const* spellProto, uint3
         return oldduration;
 
     // Apply haste to duration
-
     uint32 duration = ceil(float(oldduration) * GetFloatValue(UNIT_MOD_CAST_SPEED));
 
     return duration;

@@ -33,6 +33,7 @@ ScriptMapMap sGameObjectScripts;
 ScriptMapMap sEventScripts;
 ScriptMapMap sGossipScripts;
 ScriptMapMap sCreatureMovementScripts;
+ScriptMapMap sAreaTriggerScripts;
 
 INSTANTIATE_SINGLETON_1(ScriptMgr);
 
@@ -741,6 +742,22 @@ void ScriptMgr::LoadCreatureMovementScripts()
 
     // checks are done in WaypointManager::Load
 }
+
+void ScriptMgr::LoadDBAreaTriggerScripts()
+{
+    LoadScripts(sAreaTriggerScripts, "areatrigger_db_scripts");
+
+    // check ids
+    for(ScriptMapMap::const_iterator itr = sAreaTriggerScripts.begin(); itr != sAreaTriggerScripts.end(); ++itr)
+    {
+        if (!sAreaTriggerStore.LookupEntry(itr->first))
+        {
+            sLog.outErrorDb("Table `areatrigger_db_scripts` has not existing areatrigger (Id: %u) as script id", itr->first);
+            continue;
+        }
+    }
+}
+
 
 void ScriptMgr::LoadDbScriptStrings()
 {

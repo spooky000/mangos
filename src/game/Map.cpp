@@ -898,11 +898,11 @@ void Map::SendInitSelf( Player * player )
     player->BuildCreateUpdateBlockForPlayer(&data, player);
 
     // build other passengers at transport also (they always visible and marked as visible and will not send at visibility update at add to map
-    if(Transport* transport = player->GetTransport())
+    if (Transport* transport = player->GetTransport())
     {
-        for(Transport::PlayerSet::const_iterator itr = transport->GetPassengers().begin();itr!=transport->GetPassengers().end();++itr)
+        for(Transport::UnitSet::const_iterator itr = transport->GetUnitPassengers().begin(); itr != transport->GetUnitPassengers().end(); ++itr)
         {
-            if(player!=(*itr) && player->HaveAtClient(*itr))
+            if (player != (*itr) && player->HaveAtClient(*itr))
             {
                 (*itr)->BuildCreateUpdateBlockForPlayer(&data, player);
             }
@@ -979,7 +979,7 @@ void Map::AddObjectToRemoveList(WorldObject *obj)
     MANGOS_ASSERT(obj->GetMapId()==GetId() && obj->GetInstanceId()==GetInstanceId());
 
     // need clean references at end of update cycle, NOT during it! called at Map::Remove
-     obj->CleanupsBeforeDelete();                            // remove or simplify at least cross referenced links
+    // obj->CleanupsBeforeDelete();                            // remove or simplify at least cross referenced links
 
     i_objectsToRemove.insert(obj);
     //DEBUG_LOG("Object (GUID: %u TypeId: %u ) added to removing list.",obj->GetGUIDLow(),obj->GetTypeId());
@@ -1809,7 +1809,7 @@ void Map::ScriptsProcess()
             }
         }
 
-        if( !requirement_passed )
+        if (!requirement_passed)
         {
             m_scriptSchedule.erase(iter);
             sScriptMgr.DecreaseScheduledScriptCount();

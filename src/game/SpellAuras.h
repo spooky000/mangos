@@ -374,6 +374,8 @@ class MANGOS_DLL_SPEC Aura
         void HandleAuraAddMechanicAbilities(bool apply, bool Real);
         void HandleAuraLinked(bool apply, bool Real);
         void HandleAuraSetVehicle(bool apply, bool Real);
+        void HandleAuraStopNaturalManaRegen(bool apply, bool real);
+        void HandleModDamagePctTaken(bool apply, bool real);
 
         virtual ~Aura();
 
@@ -439,6 +441,8 @@ class MANGOS_DLL_SPEC Aura
         void SetRemoveMode(AuraRemoveMode mode) { m_removeMode = mode; }
 
         virtual Unit* GetTriggerTarget() const { return m_spellAuraHolder->GetTarget(); }
+
+        int32 CalculateCrowdControlAuraAmount(Unit * caster);
 
         // add/remove SPELL_AURA_MOD_SHAPESHIFT (36) linked auras
         void HandleShapeshiftBoosts(bool apply);

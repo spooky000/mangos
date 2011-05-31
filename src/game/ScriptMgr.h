@@ -356,6 +356,7 @@ extern ScriptMapMap sGameObjectScripts;
 extern ScriptMapMap sEventScripts;
 extern ScriptMapMap sGossipScripts;
 extern ScriptMapMap sCreatureMovementScripts;
+extern ScriptMapMap sAreaTriggerScripts;
 
 enum ScriptLoadResult
 {
@@ -378,6 +379,7 @@ class ScriptMgr
         void LoadSpellScripts();
         void LoadGossipScripts();
         void LoadCreatureMovementScripts();
+        void LoadDBAreaTriggerScripts();
 
         void LoadDbScriptStrings();
 

@@ -632,6 +632,37 @@ void LoadDBCStores(const std::string& dataPath)
         sfix17->manaCost = 0;
     }
 
+    // Mana Shield (rank 2)
+    SpellEntry *sfix18 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(8494));
+    sfix18->procChance = 0;
+
+    // Improved Shadowform (Rank 1)
+    SpellEntry *sfix19 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(47569));
+    sfix19->Attributes &= ~SPELL_ATTR_NOT_SHAPESHIFT;
+
+    // Evocation - Add interrupt flag
+    SpellEntry *sfix20 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(12051));
+    sfix20->InterruptFlags |= SPELL_INTERRUPT_FLAG_INTERRUPT;
+
+    // Heart of the Phoenix - Make it give 100% Health and instant cast
+    SpellEntry *sfix21 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(54114));
+    sfix21->EffectBasePoints[EFFECT_INDEX_0] = 99; // 100% Health
+    sfix21->CastingTimeIndex = 1;
+
+    // Magic Suppression rank 1 and 3 (2 is fine ^^)
+    SpellEntry *sfix22 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49224));
+    sfix22->procCharges = 0;
+    SpellEntry *sfix23 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49611));
+    sfix23->procCharges = 0;
+
+    // Divine Hymn
+    SpellEntry *sfix24 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(64844));
+    sfix24->DmgClass = SPELL_DAMAGE_CLASS_MAGIC;
+
+    // Searing Flames
+    SpellEntry *sfix25 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(62661));
+    sfix25->InterruptFlags |= SPELL_INTERRUPT_FLAG_INTERRUPT;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);

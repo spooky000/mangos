@@ -1371,7 +1371,7 @@ void BattleGround::AddPlayer(Player *plr)
 
     // setup BG group membership
     PlayerAddedToBGCheckIfBGIsRunning(plr);
-    AddOrSetPlayerToCorrectBgGroup(plr, guid, team);
+    AddOrSetPlayerToCorrectBgGroup(plr, team);
 
     // Log
     DETAIL_LOG("BATTLEGROUND: Player %s joined the battle.", plr->GetName());
@@ -1417,8 +1417,9 @@ uint32 BattleGround::GetDamageDoneForTeam(Team team)
 }
 
 /* this method adds player to his team's bg group, or sets his correct group if player is already in bg group */
-void BattleGround::AddOrSetPlayerToCorrectBgGroup(Player *plr, ObjectGuid plr_guid, Team team)
+void BattleGround::AddOrSetPlayerToCorrectBgGroup(Player *plr, Team team)
 {
+    ObjectGuid plr_guid = plr->GetObjectGuid();
     if (Group* group = GetBgRaid(team))                     // raid already exist
     {
         if (group->IsMember(plr_guid))
@@ -1443,18 +1444,18 @@ void BattleGround::AddOrSetPlayerToCorrectBgGroup(Player *plr, ObjectGuid plr_gu
 }
 
 // This method should be called when player logs into running battleground
-void BattleGround::EventPlayerLoggedIn(Player* player, ObjectGuid plr_guid)
+void BattleGround::EventPlayerLoggedIn(Player* player)
 {
     // player is correct pointer
     for(OfflineQueue::iterator itr = m_OfflineQueue.begin(); itr != m_OfflineQueue.end(); ++itr)
     {
-        if (*itr == plr_guid)
+        if (*itr == player->GetObjectGuid())
         {
             m_OfflineQueue.erase(itr);
             break;
         }
     }
-    m_Players[plr_guid].OfflineRemoveTime = 0;
+    m_Players[player->GetObjectGuid()].OfflineRemoveTime = 0;
     PlayerAddedToBGCheckIfBGIsRunning(player);
     // if battleground is starting, then add preparation aura
     // we don't have to do that, because preparation aura isn't removed when player logs out
