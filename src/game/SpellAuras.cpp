@@ -10981,6 +10981,7 @@ bool Aura::IsEffectStacking()
                 return false;
             break;
         case SPELL_AURA_MOD_RESISTANCE_PCT:                                         // Sunder Armor / Sting
+        case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:
         case SPELL_AURA_HASTE_SPELLS:                                               // Mind-Numbing Poison
         case SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN:                                   // Ebon Plague (spell not implemented) / Earth and Moon
             if (spellProto->SpellFamilyName == SPELLFAMILY_WARRIOR &&               // Sunder Armor
