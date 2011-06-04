@@ -1855,6 +1855,9 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 25991:                                 // Poison Bolt Volley (Pincess Huhuran)
                     unMaxTargets = 15;
                     break;
+                case 64604:                                 //Freya - Nature bomb
+                    unMaxTargets = urand(10,15);
+                    break;
                 case 69075:                                 // Bone Storm
                 case 70834:                                 // Bone Storm
                 case 70835:                                 // Bone Storm
