@@ -6629,10 +6629,7 @@ void Unit::SetPet(Pet* pet)
         AddPetToList(pet);
 
         if(GetTypeId() == TYPEID_PLAYER)
-        {
-            ((Player*)this)->AddKnownPetName(pet->GetCharmInfo()->GetPetNumber(),pet->GetName());
             ((Player*)this)->SendPetGUIDs();
-        }
     }
     else
         SetPetGuid(ObjectGuid());
@@ -7226,6 +7223,13 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
                         }
                     }
                 }
+            }
+            // Glyph of Shadow word: Death
+            else if (spellProto->SpellFamilyFlags & UI64LIT(0x0000000200000000))
+            {
+                if (pVictim->HasAuraState(AURA_STATE_HEALTHLESS_35_PERCENT))
+                    if (Aura* aur = GetAura(55682, EFFECT_INDEX_0))
+                        DoneTotalMod *= (aur->GetModifier()->m_amount + 100.0f) / 100.0f;
             }
             break;
         }
