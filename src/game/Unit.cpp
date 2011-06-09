@@ -11204,9 +11204,9 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
                 if (Group* group = ((Player*)pImpSRCaster)->GetGroup())
                     for(GroupReference *itr = group->GetFirstMember(); itr != NULL; itr = itr->next())
                         if (Player* member = itr->getSource())
-                            if (SpellAuraHolder* pAuraHolder = member->GetSpellAuraHolder(59725, ObjectGuid()) )
-                                if (pAuraHolder->GetCaster() && pAuraHolder->GetCaster()->GetObjectGuid() == pImpSRCaster->GetObjectGuid() )
-                                    member->RemoveSpellAuraHolder(pAuraHolder);
+                            if (Aura* pAura = member->GetAura(59725, EFFECT_INDEX_0) )
+                                if (pAura->GetCaster() == pImpSRCaster)
+                                    member->RemoveAura(pAura);
 
         triggeredByHolder->SetInUse(false);
     }
