@@ -720,14 +720,14 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                             continue;
 
                         // Immolate
-                        if ((*i)->GetSpellProto()->SpellFamilyFlags & UI64LIT(0x0000000000000004))
+                        if ((*i)->GetSpellProto()->IsFitToFamilyMask(UI64LIT(0x0000000000000004)))
                         {
                             aura = *i;                      // it selected always if exist
                             break;
                         }
 
                         // Shadowflame
-                        if ((*i)->GetSpellProto()->SpellFamilyFlags2 & 0x00000002)
+                        if ((*i)->GetSpellProto()->IsFitToFamilyMask(UI64LIT(0x0000000000000000), 0x00000002))
                             aura = *i;                      // remember but wait possible Immolate as primary priority
                     }
 
@@ -3412,7 +3412,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
         case SPELLFAMILY_DRUID:
         {
             // Starfall
-            if (m_spellInfo->SpellFamilyFlags2 & 0x00000100)
+            if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0000000000000000), 0x00000100))
             {
                 //Shapeshifting into an animal form or mounting cancels the effect.
                 if(m_caster->GetCreatureType() == CREATURE_TYPE_BEAST || m_caster->IsMounted())
@@ -3810,7 +3810,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 return;
             }
             // Lava Lash
-            if (m_spellInfo->SpellFamilyFlags2 & 0x00000004)
+            if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0000000000000000), 0x00000004))
             {
                 if (m_caster->GetTypeId()!=TYPEID_PLAYER)
                     return;
@@ -4151,17 +4151,6 @@ void Spell::EffectTriggerSpell(SpellEffectIndex effIndex)
             unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_ROOT);
             unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_DECREASE_SPEED);
             unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_STALKED);
-
-            // if this spell is given to NPC it must handle rest by it's own AI
-            if (unitTarget->GetTypeId() != TYPEID_PLAYER)
-                return;
-
-            uint32 spellId = 1784;
-            // reset cooldown on it if needed
-            if (((Player*)unitTarget)->HasSpellCooldown(spellId))
-                ((Player*)unitTarget)->RemoveSpellCooldown(spellId);
-
-            m_caster->CastSpell(unitTarget, spellId, true);
             return;
         }
         // just skip
@@ -7381,6 +7370,11 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     return;
                 }
+                case 24320:                                 // Poisonous Blood
+                {
+                    unitTarget->CastSpell(unitTarget, 24321, true, NULL, NULL, m_caster->GetObjectGuid());
+                    return;
+                }
                 case 24590:                                 // Brittle Armor - need remove one 24575 Brittle Armor aura
                     unitTarget->RemoveAuraHolderFromStack(24575);
                     return;
@@ -7958,7 +7952,18 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     // Torture the Torturer: High Executor's Branding Iron Impact
                     unitTarget->CastSpell(unitTarget, 48614, true);
                     return;
+                case 48724:                                 // The Denouncement: Commander Jordan On Death
+                case 48726:                                 // The Denouncement: Lead Cannoneer Zierhut On Death
+                case 48728:                                 // The Denouncement: Blacksmith Goodman On Death
+                case 48730:                                 // The Denouncement: Stable Master Mercer On Death
+                {
+                    // Compelled
+                    if (!unitTarget || !m_caster->HasAura(48714))
+                        return;
 
+                    unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
+                    return;
+                }
                 // Gender spells
                 case 48762:                                 // A Fall from Grace: Scarlet Raven Priest Image - Master
                 case 45759:                                 // Warsong Orc Disguise
@@ -8291,18 +8296,6 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         unitTarget->CastSpell(unitTarget, 48809, true);
                     return;
                 }
-                case 48724:                                 // Q: The Denouncement
-                case 48726:
-                case 48728:
-                case 48730:
-                {
-                    if(!unitTarget)
-                        return;
-                    // triggered spell is stored in m_spellInfo->EffectBasePoints[0]
-                    unitTarget->CastSpell(unitTarget, damage, true);
-                    return;
-                }
-                
                 case 50252:                                 // Q: In Service of Blood/Unholy/Frost
                 case 47724:
                 case 47703:
@@ -8705,6 +8698,10 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 66747, true);
                     return;
                 }
+                case 68861:                                 // Consume Soul (ICC FoS: Bronjahm)
+                    if (unitTarget)
+                        unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
+                    return;
                 case 69377:                                 // Fortitude
                 {
                     if (!unitTarget)
@@ -8806,6 +8803,13 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                         ((Creature*)pCaster)->ForcedDespawn();
                     }
+                    return;
+                }
+                case 72034:                                 // Whiteout
+                case 72096:                                 // Whiteout (heroic)
+                {
+                    // cast Whiteout visual
+                    m_caster->CastSpell(unitTarget, 72036, true);
                     return;
                 }
             }
@@ -9310,27 +9314,19 @@ void Spell::EffectDuel(SpellEffectIndex eff_idx)
     Player *target = (Player*)unitTarget;
 
     // caster or target already have requested duel
-    if( caster->duel || target->duel || !target->GetSocial() || target->GetSocial()->HasIgnore(caster->GetObjectGuid()) )
+    if (caster->duel || target->duel || !target->GetSocial() || target->GetSocial()->HasIgnore(caster->GetObjectGuid()))
         return;
 
     // Players can only fight a duel with each other outside (=not inside dungeons and not in capital cities)
-    // Don't have to check the target's map since you cannot challenge someone across maps
-    uint32 mapid = caster->GetMapId();
-    if( mapid != 0 && mapid != 1 && mapid != 530 && mapid != 571 && mapid != 609)
+    AreaTableEntry const* casterAreaEntry = GetAreaEntryByAreaID(caster->GetAreaId());
+    if (casterAreaEntry && !(casterAreaEntry->flags & AREA_FLAG_DUEL))
     {
         SendCastResult(SPELL_FAILED_NO_DUELING);            // Dueling isn't allowed here
         return;
     }
 
-    AreaTableEntry const* casterAreaEntry = GetAreaEntryByAreaID(caster->GetZoneId());
-    if(casterAreaEntry && (casterAreaEntry->flags & AREA_FLAG_CAPITAL) )
-    {
-        SendCastResult(SPELL_FAILED_NO_DUELING);            // Dueling isn't allowed here
-        return;
-    }
-
-    AreaTableEntry const* targetAreaEntry = GetAreaEntryByAreaID(target->GetZoneId());
-    if(targetAreaEntry && (targetAreaEntry->flags & AREA_FLAG_CAPITAL) )
+    AreaTableEntry const* targetAreaEntry = GetAreaEntryByAreaID(target->GetAreaId());
+    if (targetAreaEntry && !(targetAreaEntry->flags & AREA_FLAG_DUEL))
     {
         SendCastResult(SPELL_FAILED_NO_DUELING);            // Dueling isn't allowed here
         return;
