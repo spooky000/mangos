@@ -964,23 +964,13 @@ bool ChatHandler::HandleGameObjectTurnCommand(char* args)
         return false;
     }
 
-    float o;
-    if (!ExtractOptFloat(&args, o, m_session->GetPlayer()->GetOrientation()))
-        return false;
+    float z_rot, y_rot, x_rot;
+    if (!ExtractFloat(&args, z_rot) || !ExtractOptFloat(&args, y_rot, 0) || !ExtractOptFloat(&args, x_rot, 0))
+        return false;         
 
-    Map* map = obj->GetMap();
-    map->Remove(obj,false);
-
-    obj->Relocate(obj->GetPositionX(), obj->GetPositionY(), obj->GetPositionZ(), o);
-    obj->UpdateRotationFields();
-
-    map->Add(obj);
-
+    obj->SetRotationAngles(z_rot, y_rot, x_rot);
     obj->SaveToDB();
-    obj->Refresh();
-
     PSendSysMessage(LANG_COMMAND_TURNOBJMESSAGE, obj->GetGUIDLow(), obj->GetGOInfo()->name, obj->GetGUIDLow());
-
     return true;
 }
 
@@ -1643,7 +1633,7 @@ bool ChatHandler::HandleNpcAddCommand(char* args)
         float tY = chr->GetTransOffsetY();
         float tZ = chr->GetTransOffsetZ();
         float tO = chr->GetTransOffsetO();
-        pCreature->m_movementInfo.SetTransportData(ObjectGuid(chr->GetTransport()->GetGUID()), tX, tY, tZ, tO, 0, -1);
+        pCreature->m_movementInfo.SetTransportData(ObjectGuid(chr->GetTransport()->GetObjectGuid()), tX, tY, tZ, tO, 0, -1);
         map->CreatureRelocation(pCreature, chr->GetTransport()->GetPositionX() + tX, chr->GetTransport()->GetPositionY() + tY, chr->GetTransport()->GetPositionZ() + tZ, chr->GetTransOffsetO());
         chr->GetTransport()->AddPassenger(pCreature);
         

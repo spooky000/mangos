@@ -92,7 +92,13 @@ enum eScriptCommand
                                                             // datalong2=creature entry, datalong3=search radius
     SCRIPT_COMMAND_ATTACK_START             = 26,           // source = Creature (or WorldObject when creature entry are defined), target = Player
                                                             // datalong2 = creature entry (searching for a buddy, closest to source), datalong3 = creature search radius
-
+    SCRIPT_COMMAND_GO_LOCK_STATE            = 27,           // source or target must be WorldObject
+                                                            // datalong= 1=lock, 2=unlock, 4=set not-interactable, 8=set interactable
+                                                            // datalong2= go entry, datalong3= go search radius
+    SCRIPT_COMMAND_STAND_STATE              = 28,           // source = Unit (or WorldObject when creature entry defined), target = Unit (or none)
+                                                            // datalong = stand state (enum UnitStandStateType)
+                                                            // datalong2 = creature entry (searching for a buddy, closest to source), datalong3 = creature search radius
+                                                            // data_flags = flag_target_as_source           = 0x01
     SCRIPT_COMMAND_ADD_QUEST_COUNT          = 30,           // source = any, target = any, datalong = quest_id, datalong2 = quest_field, dataint = increment value
     SCRIPT_COMMAND_TEMP_SUMMON_OBJECT       = 31,           // source = any (summoner), datalong=gameobject entry, datalong2=despawn_delay
     SCRIPT_COMMAND_SET_ENTRY                = 32,           // source = any target = creature only, datalong = entry to transform datalong2 = bool (preserve HP and MP)
@@ -290,6 +296,22 @@ struct ScriptInfo
             uint32 empty2;                                  // datalong4
             uint32 flags;                                   // data_flags
         } attack;
+
+        struct                                              // SCRIPT_COMMAND_GO_LOCK_STATE (27)
+        {
+            uint32 lockState;                               // datalong
+            uint32 goEntry;                                 // datalong2
+            uint32 searchRadius;                            // datalong3
+        } goLockState;
+
+        struct                                              // SCRIPT_COMMAND_STAND_STATE (28)
+        {
+            uint32 stand_state;                             // datalong
+            uint32 creatureEntry;                           // datalong2
+            uint32 searchRadius;                            // datalong3
+            uint32 unused1;                                 // datalong4
+            uint32 flags;                                   // data_flags
+        } standState;
 
         struct                                              // SCRIPT_COMMAND_ADD_QUEST_COUNT (30)
         {

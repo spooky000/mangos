@@ -240,7 +240,7 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
                 data << (uint32)LANG_UNIVERSAL;
                 data << (uint64)1;
                 data << (uint32)LANG_UNIVERSAL;
-                data << (uint64)GetPlayer()->GetGUID();
+                data << ObjectGuid(GetPlayer()->GetObjectGuid());
                 data << (uint32)(strlen(msg.c_str())+1);
                 data << msg.c_str();
                 data << (uint8)4;
