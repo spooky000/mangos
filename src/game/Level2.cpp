@@ -1633,7 +1633,7 @@ bool ChatHandler::HandleNpcAddCommand(char* args)
         float tY = chr->GetTransOffsetY();
         float tZ = chr->GetTransOffsetZ();
         float tO = chr->GetTransOffsetO();
-        pCreature->m_movementInfo.SetTransportData(ObjectGuid(chr->GetTransport()->GetGUID()), tX, tY, tZ, tO, 0, -1);
+        pCreature->m_movementInfo.SetTransportData(ObjectGuid(chr->GetTransport()->GetObjectGuid()), tX, tY, tZ, tO, 0, -1);
         map->CreatureRelocation(pCreature, chr->GetTransport()->GetPositionX() + tX, chr->GetTransport()->GetPositionY() + tY, chr->GetTransport()->GetPositionZ() + tZ, chr->GetTransOffsetO());
         chr->GetTransport()->AddPassenger(pCreature);
         
