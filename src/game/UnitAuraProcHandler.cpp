@@ -4530,7 +4530,7 @@ SpellAuraProcResult Unit::HandleRemoveByDamageChanceProc(Unit* pVictim, uint32 d
             return SPELL_AURA_PROC_FAILED;
         int32 damageLeft = triggeredByAura->GetModifier()->m_amount;
         // No damage left
-        if (damageLeft < damage )
+        if (damageLeft < damage)
             return HandleRemoveByDamageProc(pVictim, damage, triggeredByAura, procSpell, procFlag, procEx, cooldown);
         else
             triggeredByAura->GetModifier()->m_amount = (damageLeft-damage);
