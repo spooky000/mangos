@@ -226,6 +226,18 @@ inline bool IsPassiveSpellStackableWithRanks(SpellEntry const* spellProto)
     return !IsSpellHaveEffect(spellProto,SPELL_EFFECT_APPLY_AURA);
 }
 
+inline bool IsSpellRemoveAllMovementAndControlLossEffects(SpellEntry const* spellProto)
+{
+    return spellProto->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MECHANIC_IMMUNITY &&
+        spellProto->EffectMiscValue[EFFECT_INDEX_0] == 1 &&
+        spellProto->EffectApplyAuraName[EFFECT_INDEX_1] == 0 &&
+        spellProto->EffectApplyAuraName[EFFECT_INDEX_2] == 0 &&
+        (spellProto->AttributesEx & SPELL_ATTR_EX_DISPEL_AURAS_ON_IMMUNITY)/* && -- all above selected spells have SPELL_ATTR_EX5_* mask
+        ((spellProto->AttributesEx5 &
+            (SPELL_ATTR_EX5_USABLE_WHILE_CONFUSED|SPELL_ATTR_EX5_USABLE_WHILE_FEARED|SPELL_ATTR_EX5_USABLE_WHILE_STUNNED)) ==
+            (SPELL_ATTR_EX5_USABLE_WHILE_CONFUSED|SPELL_ATTR_EX5_USABLE_WHILE_FEARED|SPELL_ATTR_EX5_USABLE_WHILE_STUNNED))*/;
+}
+
 inline bool IsDeathOnlySpell(SpellEntry const *spellInfo)
 {
     return spellInfo->AttributesEx3 & SPELL_ATTR_EX3_CAST_ON_DEAD
@@ -520,7 +532,7 @@ bool IsDiminishingReturnsGroupDurationLimited(DiminishingGroup group);
 DiminishingReturnsType GetDiminishingReturnsGroupType(DiminishingGroup group);
 int32 GetDiminishingReturnsLimitDuration(DiminishingGroup group, SpellEntry const* spellproto);
 
-MANGOS_DLL_SPEC SpellEntry const* GetSpellEntryByDifficulty(uint32 id, Difficulty difficulty);
+MANGOS_DLL_SPEC SpellEntry const* GetSpellEntryByDifficulty(uint32 id, Difficulty difficulty, bool isRaid);
 
 // Spell proc event related declarations (accessed using SpellMgr functions)
 enum ProcFlags
@@ -797,6 +809,9 @@ typedef std::pair<SpellLearnSpellMap::const_iterator,SpellLearnSpellMap::const_i
 typedef std::multimap<uint32, SkillLineAbilityEntry const*> SkillLineAbilityMap;
 typedef std::pair<SkillLineAbilityMap::const_iterator,SkillLineAbilityMap::const_iterator> SkillLineAbilityMapBounds;
 
+typedef std::multimap<uint32, SkillRaceClassInfoEntry const*> SkillRaceClassInfoMap;
+typedef std::pair<SkillRaceClassInfoMap::const_iterator,SkillRaceClassInfoMap::const_iterator> SkillRaceClassInfoMapBounds;
+
 typedef std::multimap<uint32, uint32> PetLevelupSpellSet;
 typedef std::map<uint32, PetLevelupSpellSet> PetLevelupSpellMap;
 
@@ -1042,6 +1057,7 @@ class SpellMgr
         static bool IsProfessionSpell(uint32 spellId);
         static bool IsPrimaryProfessionSpell(uint32 spellId);
         bool IsPrimaryProfessionFirstRankSpell(uint32 spellId) const;
+        uint32 GetProfessionSpellMinLevel(uint32 spellId);
 
         bool IsSkillBonusSpell(uint32 spellId) const;
 
@@ -1058,6 +1074,11 @@ class SpellMgr
         SkillLineAbilityMapBounds GetSkillLineAbilityMapBounds(uint32 spell_id) const
         {
             return mSkillLineAbilityMap.equal_range(spell_id);
+        }
+
+        SkillRaceClassInfoMapBounds GetSkillRaceClassInfoMapBounds(uint32 skill_id) const
+        {
+            return mSkillRaceClassInfoMap.equal_range(skill_id);
         }
 
         PetAura const* GetPetAura(uint32 spell_id, SpellEffectIndex eff)
@@ -1145,6 +1166,7 @@ class SpellMgr
         void LoadSpellThreats();
         void LoadSpellStackingRules();
         void LoadSkillLineAbilityMap();
+        void LoadSkillRaceClassInfoMap();
         void LoadSpellPetAuras();
         void LoadPetLevelupSpellMap();
         void LoadPetDefaultSpells();
@@ -1166,6 +1188,7 @@ class SpellMgr
         SpellProcItemEnchantMap mSpellProcItemEnchantMap;
         SpellBonusMap      mSpellBonusMap;
         SkillLineAbilityMap mSkillLineAbilityMap;
+        SkillRaceClassInfoMap mSkillRaceClassInfoMap;
         SpellPetAuraMap     mSpellPetAuraMap;
         SpellPetPassiveAuraMap     mSpellPetPassiveAuraMap;
         PetLevelupSpellMap  mPetLevelupSpellMap;

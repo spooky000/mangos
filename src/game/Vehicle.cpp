@@ -169,12 +169,15 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
         passenger->SendMessageToSet(&data, true);
     }
 
+    if (m_pBase->GetEntry() == 28669) 
+        passenger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+
     if (seat->second.seatInfo->m_flags & SEAT_FLAG_UNATTACKABLE || seat->second.seatInfo->m_flags & SEAT_FLAG_CAN_CONTROL)
     {
-        // some exceptions where passengets should be targetable, seems that flag is wrong
+        // some exceptions where passengers should be targetable, seems that flag is wrong
         switch (m_pBase->GetEntry())
         {
-            //case 33118:                  // Ignis slag pot
+            case 33118:                  // Ignis slag pot
             case 32934:                  // Kologarn Right Arm
                 break;
             default:
@@ -196,7 +199,7 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
 
         passenger->SetCharm(m_pBase);
 
-        if(m_pBase->HasAuraType(SPELL_AURA_FLY) || m_pBase->HasAuraType(SPELL_AURA_MOD_FLIGHT_SPEED) || ((Creature*)m_pBase)->CanFly())
+        if (m_pBase->HasAuraType(SPELL_AURA_FLY) || m_pBase->HasAuraType(SPELL_AURA_MOD_FLIGHT_SPEED) || ((Creature*)m_pBase)->CanFly())
         {
             WorldPacket data;
             data.Initialize(SMSG_MOVE_SET_CAN_FLY, 12);
@@ -208,7 +211,7 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
         if (passenger->GetTypeId() == TYPEID_PLAYER)
         {
             m_pBase->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PLAYER_CONTROLLED);
-            if(m_pBase->GetMap() && !m_pBase->GetMap()->IsBattleGround())
+            if (m_pBase->GetMap() && !m_pBase->GetMap()->IsBattleGround())
                 m_pBase->setFaction(passenger->getFaction());
 
             if (CharmInfo* charmInfo = m_pBase->InitCharmInfo(m_pBase))
@@ -297,6 +300,9 @@ void VehicleKit::RemovePassenger(Unit *passenger)
         if(!(((Creature*)m_pBase)->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_KEEP_AI))
             ((Creature*)m_pBase)->AIM_Initialize();
     }
+
+    if (m_pBase->GetEntry() == 28669) 
+        passenger->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 
     if (passenger->GetTypeId() == TYPEID_PLAYER)
     {

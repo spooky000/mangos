@@ -62,7 +62,7 @@ enum ChatCommandSearchResult
     CHAT_COMMAND_UNKNOWN_SUBCOMMAND,                        // command found but some level subcommand not find in subcommand list
 };
 
-class ChatHandler
+class MANGOS_DLL_SPEC ChatHandler
 {
     public:
         explicit ChatHandler(WorldSession* session);
@@ -582,6 +582,7 @@ class ChatHandler
         bool HandleBankCommand(char* args);
         bool HandleChangeWeatherCommand(char* args);
         bool HandleKickPlayerCommand(char* args);
+        bool HandleMailBoxCommand(char* args);
 
         bool HandleTicketCommand(char* args);
         bool HandleDelTicketCommand(char* args);
