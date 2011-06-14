@@ -493,7 +493,7 @@ bool ChatHandler::HandleCharacterWhisperCommand(char* args)
     data << (uint32)LANG_UNIVERSAL;
     data << (uint64)1;              // from guid - reserved dummy
     data << (uint32)LANG_UNIVERSAL;
-    data << (uint64)player->GetGUID();
+    data << ObjectGuid(player->GetObjectGuid());
     data << (uint32)(strlen(msgStr)+1);
     data << msgStr;
     data << (uint8)4;
