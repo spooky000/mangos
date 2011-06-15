@@ -822,6 +822,9 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
                             }
                         }
                     }
+                    //Vortex
+                    if(spellproto->Id == 56266)
+                        return false;
                     break;
                 case SPELL_AURA_PROC_TRIGGER_SPELL:
                 {
@@ -950,6 +953,11 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
                     }
                     break;
                 }
+                case SPELL_AURA_CONTROL_VEHICLE:
+                    //Vortex
+                    if(spellproto->Id == 56266)
+                        return false;
+                    break;
                 default:
                     break;
             }

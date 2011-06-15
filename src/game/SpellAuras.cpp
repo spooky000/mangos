@@ -10992,12 +10992,13 @@ bool Aura::IsEffectStacking()
             break;*/
         // these effects never stack
         case SPELL_AURA_MOD_MELEE_HASTE:
-        //case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:
+        case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:
         case SPELL_AURA_MOD_PARTY_MAX_HEALTH:                           // Commanding Shout / Blood Pact
         case SPELL_AURA_MOD_HEALING_PCT:                                // Mortal Strike / Wound Poison / Aimed Shot / Furious Attacks
-        case SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK:                    // Wrath of Air Totem / Mind-Numbing Poison and many more
         case SPELL_AURA_MOD_STAT:                                       // various stat buffs
             return (spellProto->SpellFamilyName == SPELLFAMILY_GENERIC);
+        case SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK:                    // Wrath of Air Totem / Mind-Numbing Poison and many more
+            return (spellProto->CalculateSimpleValue(m_effIndex) > 0);
         case SPELL_AURA_MOD_DAMAGE_PERCENT_DONE:                        // Ferocious Inspiration / Sanctified Retribution
         case SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE:      // Heart of the Crusader / Totem of Wrath
             if (spellProto->SpellFamilyName == SPELLFAMILY_PALADIN &&
@@ -11005,7 +11006,6 @@ bool Aura::IsEffectStacking()
                 return false;
             break;
         case SPELL_AURA_MOD_RESISTANCE_PCT:                                         // Sunder Armor / Sting
-        case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:
         case SPELL_AURA_HASTE_SPELLS:                                               // Mind-Numbing Poison
         case SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN:                                   // Ebon Plague (spell not implemented) / Earth and Moon
             if (spellProto->SpellFamilyName == SPELLFAMILY_WARRIOR &&               // Sunder Armor
