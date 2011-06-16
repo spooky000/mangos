@@ -2079,10 +2079,8 @@ Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position, f
                 }
 
                 if (target_list.size())
-                {
                     if (pTarget = *(target_list.begin()+rand()%target_list.size()))
                         return pTarget;
-                }
             }
 
             i = threatlist.begin();
@@ -2099,8 +2097,28 @@ Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position, f
             advance(r, position);
             return GetMap()->GetUnit((*r)->getUnitGuid());
         }
+        case ATTACKING_TARGET_RANDOM_PLAYER:
+        {
+            Unit* pTarget = NULL;
+            std::vector<Player *> target_list;
+
+            for (i; i != threatlist.end(); ++i)
+            {
+                pTarget = GetMap()->GetUnit((*i)->getUnitGuid());
+
+                if (pTarget && pTarget->GetTypeId() == TYPEID_PLAYER)
+                    target_list.push_back((Player*)pTarget);
+
+                pTarget = NULL;
+            }
+
+            if (target_list.size())
+            {
+                if (pTarget = *(target_list.begin()+rand()%target_list.size()))
+                    return pTarget;
+            }
+        }
         // TODO: implement these
-        //case ATTACKING_TARGET_RANDOM_PLAYER:
         //case ATTACKING_TARGET_TOPAGGRO_PLAYER:
         //case ATTACKING_TARGET_BOTTOMAGGRO_PLAYER:
     }
