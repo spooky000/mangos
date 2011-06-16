@@ -2046,7 +2046,7 @@ void Creature::SetInCombatWithZone()
     }
 }
 
-Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position) const
+Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position, float minRange) const
 {
     if (!CanHaveThreatList())
         return NULL;
@@ -2063,6 +2063,28 @@ Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position) c
     {
         case ATTACKING_TARGET_RANDOM:
         {
+            if(minRange > 0)
+            {
+                Unit* pTarget = NULL;
+                std::vector<Unit *> target_list;
+
+                for (i; i != threatlist.end(); ++i)
+                {
+                    pTarget = GetMap()->GetUnit((*i)->getUnitGuid());
+
+                    if (pTarget && !pTarget->IsWithinDist(this, minRange, false))
+                        target_list.push_back(pTarget);
+
+                    pTarget = NULL;
+                }
+
+                if (target_list.size())
+                {
+                    if (pTarget = *(target_list.begin()+rand()%target_list.size()))
+                        return pTarget;
+                }
+            }
+
             advance(i, position + (rand() % (threatlist.size() - position)));
             return GetMap()->GetUnit((*i)->getUnitGuid());
         }
