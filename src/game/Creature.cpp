@@ -2085,6 +2085,7 @@ Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position, f
                 }
             }
 
+            i = threatlist.begin();
             advance(i, position + (rand() % (threatlist.size() - position)));
             return GetMap()->GetUnit((*i)->getUnitGuid());
         }
