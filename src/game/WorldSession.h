@@ -50,6 +50,7 @@ class CharacterHandler;
 class GMTicket;
 class MovementInfo;
 class WorldSession;
+class Quest;
 
 struct OpcodeHandler;
 
@@ -357,6 +358,11 @@ class MANGOS_DLL_SPEC WorldSession
         uint32 GetLatency() const { return m_latency; }
         void SetLatency(uint32 latency) { m_latency = latency; }
         uint32 getDialogStatus(Player *pPlayer, Object* questgiver, uint32 defstatus);
+
+        // LFG
+        // TRUE values set by client sending CMSG_LFG_SET_AUTOJOIN and CMSG_LFM_CLEAR_AUTOFILL before player login
+        bool LookingForGroup_auto_join;
+        bool LookingForGroup_auto_add;
 
     public:                                                 // opcodes handlers
 
@@ -742,6 +748,7 @@ class MANGOS_DLL_SPEC WorldSession
         void HandleResetInstancesOpcode(WorldPacket& recv_data);
         void HandleHearthandResurrect(WorldPacket & recv_data);
         void HandleInstanceLockResponse(WorldPacket& recv_data);
+        void HandleSetSavedInstanceExtend(WorldPacket& recv_data);
 
         // Arena Team
         void HandleInspectArenaTeamsOpcode(WorldPacket& recv_data);
