@@ -1527,7 +1527,7 @@ void WorldObject::UpdateAllowedPositionZ(float x, float y, float &z) const
                     : ((ground_z = GetTerrain()->GetHeight(x, y, z, true)));
                 if (max_z > INVALID_HEIGHT)
                 {
-                    if (z > max_z)
+                    if (max_z != ground_z && z > max_z)
                         z = max_z;
                     else if (z < ground_z)
                         z = ground_z;
