@@ -54,6 +54,7 @@ class PlayerSocial;
 class DungeonPersistentState;
 class Spell;
 class Item;
+struct AreaTrigger;
 
 typedef std::deque<Mail*> PlayerMails;
 
@@ -880,10 +881,11 @@ struct InstancePlayerBind
 {
     DungeonPersistentState *state;
     bool perm;
+    bool extend;
     /* permanent PlayerInstanceBinds are created in Raid/Heroic instances for players
        that aren't already permanently bound when they are inside when a boss is killed
        or when they enter an instance that the group leader is permanently bound to. */
-    InstancePlayerBind() : state(NULL), perm(false) {}
+    InstancePlayerBind() : state(NULL), perm(false), extend(false) {}
 };
 
 class MANGOS_DLL_SPEC PlayerTaxi
@@ -2121,7 +2123,7 @@ class MANGOS_DLL_SPEC Player : public Unit
             return false;
         }
         WorldLocation const& GetBattleGroundEntryPoint() const { return m_bgData.joinPos; }
-        void SetBattleGroundEntryPoint();
+        void SetBattleGroundEntryPoint(bool forLFG = false);
 
         void SetBGTeam(Team team) { m_bgData.bgTeam = team; m_bgData.m_needSave = true; }
         Team GetBGTeam() const { return m_bgData.bgTeam ? m_bgData.bgTeam : GetTeam(); }
@@ -2276,15 +2278,19 @@ class MANGOS_DLL_SPEC Player : public Unit
         BoundInstancesMap& GetBoundInstances(Difficulty difficulty) { return m_boundInstances[difficulty]; }
         void UnbindInstance(uint32 mapid, Difficulty difficulty, bool unload = false);
         void UnbindInstance(BoundInstancesMap::iterator &itr, Difficulty difficulty, bool unload = false);
-        InstancePlayerBind* BindToInstance(DungeonPersistentState *save, bool permanent, bool load = false);
         void BindToInstance();
         void SetPendingBind(DungeonPersistentState* save, uint32 bindTimer) { _pendingBind = save; _pendingBindTimer = bindTimer; }
         bool HasPendingBind() const { return _pendingBind != NULL; }
+        InstancePlayerBind* BindToInstance(DungeonPersistentState *save, bool permanent, bool load = false, bool extend = false);
         void SendRaidInfo();
         void SendSavedInstances();
         static void ConvertInstancesToGroup(Player *player, Group *group = NULL, ObjectGuid player_guid = ObjectGuid());
         DungeonPersistentState* GetBoundInstanceSaveForSelfOrGroup(uint32 mapid);
 
+        AreaLockStatus GetAreaLockStatus(uint32 mapId, Difficulty difficulty);
+        AreaLockStatus GetAreaTriggerLockStatus(AreaTrigger const* at, Difficulty difficulty);
+        bool CanEnterToArea(uint32 mapId, Difficulty difficulty) { return GetAreaLockStatus(mapId, difficulty) == AREA_LOCKSTATUS_OK; };
+        bool CanUseAreaTrigger(AreaTrigger const* at, Difficulty difficulty) { return GetAreaTriggerLockStatus(at, difficulty) == AREA_LOCKSTATUS_OK; };
 
         // LFG
         LFGPlayerState* GetLFGState() { return m_LFGState;};

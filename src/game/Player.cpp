@@ -15811,8 +15811,8 @@ bool Player::LoadFromDB(ObjectGuid guid, SqlQueryHolder *holder )
             m_bgData.bgTypeID = currentBg->GetTypeID();     // bg data not marked as modified
 
             //join player to battleground group
-            currentBg->EventPlayerLoggedIn(this, GetObjectGuid());
-            currentBg->AddOrSetPlayerToCorrectBgGroup(this, GetObjectGuid(), m_bgData.bgTeam);
+            currentBg->EventPlayerLoggedIn(this);
+            currentBg->AddOrSetPlayerToCorrectBgGroup(this, m_bgData.bgTeam);
 
             SetInviteForBattleGroundQueueType(bgQueueTypeId,currentBg->GetInstanceID());
         }
@@ -23523,6 +23523,78 @@ float Player::GetAverageItemLevel()
 
     return ((float)sum) / count;
 }
+
+AreaLockStatus Player::GetAreaTriggerLockStatus(AreaTrigger const* at, Difficulty difficulty)
+{
+
+    if (!at)
+        return AREA_LOCKSTATUS_UNKNOWN_ERROR;
+
+    MapEntry const* mapEntry = sMapStore.LookupEntry(at->target_mapId);
+    if (!mapEntry)
+        return AREA_LOCKSTATUS_UNKNOWN_ERROR;
+
+    MapDifficultyEntry const* mapDiff = GetMapDifficultyData(at->target_mapId,difficulty);
+    if (mapEntry->IsDungeon() && !mapDiff)
+        return AREA_LOCKSTATUS_MISSING_DIFFICULTY;
+
+    if (isGameMaster())
+        return AREA_LOCKSTATUS_OK;
+
+    if (GetSession()->Expansion() < mapEntry->Expansion())
+        return AREA_LOCKSTATUS_INSUFFICIENT_EXPANSION;
+
+    if (getLevel() < at->requiredLevel && !sWorld.getConfig(CONFIG_BOOL_INSTANCE_IGNORE_LEVEL))
+        return AREA_LOCKSTATUS_TOO_LOW_LEVEL;
+
+    // must have one or the other, report the first one that's missing
+    if (at->requiredItem)
+    {
+        if (!HasItemCount(at->requiredItem, 1) &&
+            (!at->requiredItem2 || !HasItemCount(at->requiredItem2, 1)))
+            return AREA_LOCKSTATUS_MISSING_ITEM;
+    }
+    else if(at->requiredItem2 && !HasItemCount(at->requiredItem2, 1))
+        return AREA_LOCKSTATUS_MISSING_ITEM;
+
+    bool isRegularTargetMap = GetDifficulty(mapEntry->IsRaid()) == REGULAR_DIFFICULTY;
+
+    if (!isRegularTargetMap)
+    {
+        if (at->heroicKey)
+        {
+            if(!HasItemCount(at->heroicKey, 1) &&
+                (!at->heroicKey2 || !HasItemCount(at->heroicKey2, 1)))
+                return AREA_LOCKSTATUS_MISSING_ITEM;
+        }
+        else if(at->heroicKey2 && !HasItemCount(at->heroicKey2, 1))
+            return AREA_LOCKSTATUS_MISSING_ITEM;
+    }
+
+    if (GetTeam() == ALLIANCE)
+    {
+        if ((!isRegularTargetMap &&
+            (at->requiredQuestHeroicA && !GetQuestRewardStatus(at->requiredQuestHeroicA))) ||
+            (isRegularTargetMap &&
+            (at->requiredQuestA && !GetQuestRewardStatus(at->requiredQuestA))))
+            return AREA_LOCKSTATUS_QUEST_NOT_COMPLETED;
+    }
+    else if (GetTeam() == HORDE)
+    {
+        if ((!isRegularTargetMap &&
+            (at->requiredQuestHeroicH && !GetQuestRewardStatus(at->requiredQuestHeroicH))) ||
+            (isRegularTargetMap &&
+            (at->requiredQuestH && !GetQuestRewardStatus(at->requiredQuestH))))
+            return AREA_LOCKSTATUS_QUEST_NOT_COMPLETED;
+    }
+
+    return AREA_LOCKSTATUS_OK;
+};
+
+AreaLockStatus Player::GetAreaLockStatus(uint32 mapId, Difficulty difficulty) 
+{
+    return GetAreaTriggerLockStatus(sObjectMgr.GetMapEntranceTrigger(mapId), difficulty);
+};
 
 uint32 Player::GetEquipGearScore(bool withBags, bool withBank)
 {
