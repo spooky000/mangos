@@ -3689,6 +3689,8 @@ void ObjectMgr::LoadGroups()
             uint32 mapId = fields[1].GetUInt32();
             Difficulty diff = (Difficulty)fields[4].GetUInt8();
             uint32 groupId = fields[7].GetUInt32();
+            uint64 resetTime = fields[5].GetUInt64();
+            uint32 encountersMask = fields[8].GetUInt32();
 
             if (!group || group->GetId() != groupId)
             {
@@ -3714,8 +3716,41 @@ void ObjectMgr::LoadGroups()
                 diff = REGULAR_DIFFICULTY;                  // default for both difficaly types
             }
 
-            DungeonPersistentState *state = (DungeonPersistentState*)sMapPersistentStateMgr.AddPersistentState(mapEntry, fields[2].GetUInt32(), Difficulty(diff), (time_t)fields[5].GetUInt64(), (fields[6].GetUInt32() == 0), true);
-            group->BindToInstance(state, fields[3].GetBool(), true);
+            if (resetTime > (time(NULL) + INSTANCE_MAX_RESET_OFFSET))
+            {
+                MapDifficultyEntry const* mapDiff = GetMapDifficultyData(mapId,diff);
+                resetTime = DungeonResetScheduler::CalculateNextResetTime(mapDiff, time(NULL));
+                sLog.outErrorDb("ObjectMgr::Wrong reset time in group_instance corrected to: %d", resetTime);
+            }
+
+            if (resetTime < (time(NULL)))
+            {
+                DEBUG_LOG("ObjectMgr::Loading extended instance for player: %d", leaderGuidLow);
+                bool isExtended = false;
+                QueryResult* result1 = CharacterDatabase.PQuery("SELECT COUNT(guid) FROM character_instance WHERE instance = '%u' AND extend = 1 ", fields[1].GetUInt32());
+                if (result1)
+                {
+                    Field *fields1=result->Fetch();
+                    isExtended = fields1[0].GetBool();
+                    delete result1;
+                }
+                if (isExtended)
+                {
+                    MapDifficultyEntry const* mapDiff = GetMapDifficultyData(mapId,diff);
+                    resetTime = DungeonResetScheduler::CalculateNextResetTime(mapDiff, time(NULL));
+                    DungeonPersistentState* state = (DungeonPersistentState*)sMapPersistentStateMgr.AddPersistentState(mapEntry, fields[2].GetUInt32(), Difficulty(diff), (time_t)resetTime, (fields[6].GetUInt32() == 0), true, true, encountersMask);
+                    state->SetExtended(isExtended);
+                    group->BindToInstance(state, true && isExtended, true);
+                }
+                else
+                    sLog.outErrorDb("ObjectMgr::Loaded instance %d with expired resetTime %u, but his not extended.", fields[2].GetUInt32(), resetTime);
+            }
+            else
+            {
+                DungeonPersistentState *state = (DungeonPersistentState*)sMapPersistentStateMgr.AddPersistentState(mapEntry, fields[2].GetUInt32(), Difficulty(diff), (time_t)resetTime, (fields[6].GetUInt32() == 0), true, true, encountersMask);
+                group->BindToInstance(state, fields[3].GetBool(), true);
+            }
+
         }while( result->NextRow() );
         delete result;
     }

@@ -1366,11 +1366,11 @@ bool DungeonMap::Add(Player *player)
                 }
                 // if the group/leader is permanently bound to the instance
                 // players also become permanently bound when they enter
-                if (groupBind->perm)
+                if (groupBind->perm && IsDungeon())
                 {
                     WorldPacket data(SMSG_PENDING_RAID_LOCK, 9);
                     data << uint32(60000);
-                    data << uint32(0); // Completed Encounter Mask (Feanor: TODO)
+                    data << groupBind->state->GetCompletedEncountersMask();
                     data << uint8(0);
                     player->GetSession()->SendPacket(&data);
                     player->SetPendingBind(GetPersistanceState(), 60000);

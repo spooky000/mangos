@@ -1606,19 +1606,44 @@ void WorldSession::HandleHearthandResurrect(WorldPacket & /*recv_data*/)
 
 void WorldSession::HandleInstanceLockResponse(WorldPacket& recvPacket)
 {
+    DEBUG_LOG("WORLD: CMSG_INSTANCE_LOCK_WARNING_RESPONSE");
     uint8 accept;
     recvPacket >> accept;
 
-    if (!_player->HasPendingBind())
+    if (!GetPlayer()->HasPendingBind())
     {
         sLog.outDetail("InstanceLockResponse: Player %s (guid %u) tried to bind himself/teleport to graveyard without a pending bind!", _player->GetName(), _player->GetGUIDLow());
         return;
     }
 
     if (accept)
-        _player->BindToInstance();
+        GetPlayer()->BindToInstance();
     else
-        _player->RepopAtGraveyard();
+        GetPlayer()->RepopAtGraveyard();
 
-    _player->SetPendingBind(NULL, 0);
+    GetPlayer()->SetPendingBind(NULL, 0);
+}
+
+void WorldSession::HandleSetSavedInstanceExtend(WorldPacket& recv_data)
+{
+    DEBUG_LOG("WORLD: CMSG_SET_SAVED_INSTANCE_EXTEND");
+
+    uint32 map_id;
+    uint32 difficulty;
+    uint8  _extend;
+
+    recv_data >> map_id;
+    recv_data >> difficulty;
+    recv_data >> _extend;
+
+    DEBUG_LOG("SetSavedInstanceExtend: Player %s (guid %u) tried to extend (code %d) instance map %d difficulty %d ", GetPlayer()->GetName(), GetPlayer()->GetGUIDLow(), _extend, map_id, difficulty);
+
+    if (InstancePlayerBind* bind = GetPlayer()->GetBoundInstance(map_id, Difficulty(difficulty)))
+    {
+        GetPlayer()->BindToInstance(bind->state, bind->perm, false, bool(_extend));
+    }
+    else
+    {
+        sLog.outError("SetSavedInstanceExtend: Player tryed to extend instance, but not bound to.");
+    }
 }
