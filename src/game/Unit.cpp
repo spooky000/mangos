@@ -7652,6 +7652,12 @@ bool Unit::IsSpellCrit(Unit *pVictim, SpellEntry const *spellProto, SpellSchoolM
                                 if (pVictim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE) > -100)
                                     return true;
                         }
+                        // Searing Totem
+                        else if (spellProto->IsFitToFamilyMask(UI64LIT(0x40000000)))
+                        {
+                            if(Unit * owner = GetOwner())
+                                crit_chance = owner->GetFloatValue( PLAYER_SPELL_CRIT_PERCENTAGE1 + GetFirstSchoolInMask(schoolMask));
+                        }
                         break;
                 }
             }
