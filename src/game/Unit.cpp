@@ -7659,7 +7659,8 @@ bool Unit::IsSpellCrit(Unit *pVictim, SpellEntry const *spellProto, SpellSchoolM
                         else if (spellProto->IsFitToFamilyMask(UI64LIT(0x40000000)))
                         {
                             if(Unit * owner = GetOwner())
-                                crit_chance = owner->GetFloatValue( PLAYER_SPELL_CRIT_PERCENTAGE1 + GetFirstSchoolInMask(schoolMask));
+                                if(owner->GetTypeId() == TYPEID_PLAYER)
+                                    crit_chance = owner->GetFloatValue( PLAYER_SPELL_CRIT_PERCENTAGE1 + GetFirstSchoolInMask(schoolMask));
                         }
                         break;
                 }
