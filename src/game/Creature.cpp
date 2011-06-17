@@ -2107,7 +2107,12 @@ Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position, f
                 pTarget = GetMap()->GetUnit((*i)->getUnitGuid());
 
                 if (pTarget && pTarget->GetTypeId() == TYPEID_PLAYER)
+                {
+                    if(minRange > 0 && pTarget->IsWithinDist(this, minRange, false))
+                        continue;
+
                     target_list.push_back((Player*)pTarget);
+                }
 
                 pTarget = NULL;
             }
