@@ -188,14 +188,16 @@ bool ArenaTeam::AddMember(ObjectGuid playerGuid)
     newmember.wins_season       = 0;
     newmember.wins_week         = 0;
 
+    uint32 rating_value = (sWorld.getConfig(CONFIG_UINT32_ARENA_SEASON_ID) >= 6) ? 0 : 1500;
+
     if (GetType() == ARENA_TYPE_2v2)
     {
         QueryResult *result = CharacterDatabase.PQuery("SELECT rating2 FROM arena_hidden_rating WHERE guid='%u'", playerGuid.GetCounter());
 
         if (!result)
         {
-            CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", playerGuid.GetCounter(), 1500, 1500, 1500);
-            newmember.matchmaker_rating = 1500;
+            CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", playerGuid.GetCounter(), rating_value, rating_value, rating_value);
+            newmember.matchmaker_rating = rating_value;
         }
         else
         {
@@ -209,8 +211,8 @@ bool ArenaTeam::AddMember(ObjectGuid playerGuid)
 
         if (!result)
         {
-            CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", playerGuid.GetCounter(), 1500, 1500, 1500);
-            newmember.matchmaker_rating = 1500;
+            CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", playerGuid.GetCounter(), rating_value, rating_value, rating_value);
+            newmember.matchmaker_rating = rating_value;
         }
         else
         {
@@ -224,8 +226,8 @@ bool ArenaTeam::AddMember(ObjectGuid playerGuid)
 
         if (!result)
         {
-            CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", playerGuid.GetCounter(), 1500, 1500, 1500);
-            newmember.matchmaker_rating = 1500;
+            CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", playerGuid.GetCounter(), rating_value, rating_value, rating_value);
+            newmember.matchmaker_rating = rating_value;
         }
         else
         {
@@ -740,8 +742,8 @@ int32 ArenaTeam::WonAgainst(uint32 againstRating)
     // called when the team has won
     // 'chance' calculation - to beat the opponent
     float chance = GetChanceAgainst(m_stats.rating, againstRating);
-    float K = (m_stats.rating < 1000) ? 48.0f : 24.0f;
-    // calculate the rating modification (ELO system with k=24 or k=48 if rating<1000)
+    float K = (m_stats.rating < 1000) ? 48.0f : 32.0f;
+    // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
     int32 mod = (int32)floor(K* (1.0f - chance));
     // modify the team stats accordingly
     FinishGame(mod);
@@ -757,8 +759,8 @@ int32 ArenaTeam::LostAgainst(uint32 againstRating)
     // called when the team has lost
     //'chance' calculation - to loose to the opponent
     float chance = GetChanceAgainst(m_stats.rating, againstRating);
-    float K = (m_stats.rating < 1000) ? 48.0f : 24.0f;
-    // calculate the rating modification (ELO system with k=24 or k=48 if rating<1000)
+    float K = (m_stats.rating < 1000) ? 48.0f : 32.0f;
+    // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
     int32 mod = (int32)ceil(K * (0.0f - chance));
     // modify the team stats accordingly
 
@@ -777,16 +779,16 @@ void ArenaTeam::MemberLost(Player * plr, uint32 againstRating)
         {
             // update personal rating
             float chance = GetChanceAgainst(itr->personal_rating, againstRating);
-            float K = (itr->personal_rating < 1000) ? 48.0f : 24.0f;
-            // calculate the rating modification (ELO system with k=24 or k=48 if rating<1000)
+            float K = (itr->personal_rating < 1000) ? 48.0f : 32.0f;
+            // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
             int32 mod = (int32)ceil(K * (0.0f - chance));
 
             itr->ModifyPersonalRating(plr, mod, GetSlot());
 
             // update matchmaker rating
             chance = GetChanceAgainst(itr->matchmaker_rating, againstRating);
-            K = (itr->matchmaker_rating < 1000) ? 48.0f : 24.0f;
-            // calculate the rating modification (ELO system with k=24 or k=48 if rating<1000)
+            K = (itr->matchmaker_rating < 1000) ? 48.0f : 32.0f;
+            // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
             mod = (int32)ceil(K * (0.0f - chance));
             itr->ModifyMatchmakerRating(plr,mod,GetType());
 
@@ -810,8 +812,8 @@ void ArenaTeam::OfflineMemberLost(ObjectGuid guid, uint32 againstRating)
         {
             // update personal rating
             float chance = GetChanceAgainst(itr->personal_rating, againstRating);
-            float K = (itr->personal_rating < 1000) ? 48.0f : 24.0f;
-            // calculate the rating modification (ELO system with k=24 or k=48 if rating<1000)
+            float K = (itr->personal_rating < 1000) ? 48.0f : 32.0f;
+            // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
             int32 mod = (int32)ceil(K * (0.0f - chance));
             if (int32(itr->personal_rating) + mod < 0)
                 itr->personal_rating = 0;
@@ -820,7 +822,7 @@ void ArenaTeam::OfflineMemberLost(ObjectGuid guid, uint32 againstRating)
 
             // update matchmaker rating
             chance = GetChanceAgainst(itr->matchmaker_rating, againstRating);
-            K = (itr->matchmaker_rating < 1000) ? 48.0f : 24.0f;
+            K = (itr->matchmaker_rating < 1000) ? 48.0f : 32.0f;
             mod = (int32)ceil(K * (0.0f - chance));
             if (int32(itr->matchmaker_rating) + mod < 0)
                 itr->matchmaker_rating = 0;
@@ -851,16 +853,16 @@ void ArenaTeam::MemberWon(Player * plr, uint32 againstRating)
         {
             // update personal rating
             float chance = GetChanceAgainst(itr->personal_rating, againstRating);
-            float K = (itr->personal_rating < 1000) ? 48.0f : 24.0f;
-            // calculate the rating modification (ELO system with k=24 or k=48 if rating<1000)
+            float K = (itr->personal_rating < 1000) ? 48.0f : 32.0f;
+            // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
             int32 mod = (int32)floor(K* (1.0f - chance));
             itr->ModifyPersonalRating(plr, mod, GetSlot());
 
             // update matchmaker rating
             chance = GetChanceAgainst(itr->matchmaker_rating, againstRating);
-            K = (itr->matchmaker_rating < 1000) ? 48.0f : 24.0f;
+            K = (itr->matchmaker_rating < 1000) ? 48.0f : 32.0f;
             mod = (int32)ceil(K * (1.0f - chance));
-            // calculate the rating modification (ELO system with k=24 or k=48 if rating<1000)
+            // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
             itr->ModifyMatchmakerRating(plr, mod, GetType());
 
             // update personal stats
