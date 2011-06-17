@@ -189,7 +189,13 @@ ObjectMgr::~ObjectMgr()
 
 Group* ObjectMgr::GetGroupById(uint32 id) const
 {
-    GroupMap::const_iterator itr = mGroupMap.find(id);
+    ObjectGuid guid(HIGHGUID_GROUP,id);
+    return GetGroup(guid);
+}
+
+Group* ObjectMgr::GetGroup(ObjectGuid guid) const
+{
+    GroupMap::const_iterator itr = mGroupMap.find(guid);
     if (itr != mGroupMap.end())
         return itr->second;
 
@@ -3553,8 +3559,8 @@ void ObjectMgr::LoadGroups()
 {
     // -- loading groups --
     uint32 count = 0;
-    //                                                    0         1              2           3           4              5      6      7      8      9      10     11     12     13         14          15              16          17
-    QueryResult *result = CharacterDatabase.Query("SELECT mainTank, mainAssistant, lootMethod, looterGuid, lootThreshold, icon1, icon2, icon3, icon4, icon5, icon6, icon7, icon8, groupType, difficulty, raiddifficulty, leaderGuid, groupId FROM groups");
+    //                                                    0           1           2              3      4      5      6      7      8      9      10     11         12          13              14          15
+    QueryResult *result = CharacterDatabase.Query("SELECT lootMethod, looterGuid, lootThreshold, icon1, icon2, icon3, icon4, icon5, icon6, icon7, icon8, groupType, difficulty, raiddifficulty, leaderGuid, groupId FROM groups");
 
     if (!result)
     {
@@ -3591,8 +3597,8 @@ void ObjectMgr::LoadGroups()
 
     // -- loading members --
     count = 0;
-    //                                       0           1          2         3
-    result = CharacterDatabase.Query("SELECT memberGuid, assistant, subgroup, groupId FROM group_member ORDER BY groupId");
+    //                                       0           1            2         3        4
+    result = CharacterDatabase.Query("SELECT memberGuid, memberFlags, subgroup, groupId, roles FROM group_member ORDER BY groupId");
     if (!result)
     {
         BarGoLink bar2(1);
@@ -3611,9 +3617,10 @@ void ObjectMgr::LoadGroups()
 
             uint32 memberGuidlow = fields[0].GetUInt32();
             ObjectGuid memberGuid = ObjectGuid(HIGHGUID_PLAYER, memberGuidlow);
-            bool   assistent     = fields[1].GetBool();
+            uint8  flags         = fields[1].GetUInt8();
             uint8  subgroup      = fields[2].GetUInt8();
             uint32 groupId       = fields[3].GetUInt32();
+            uint8  roles         = fields[4].GetUInt8();
             if (!group || group->GetId() != groupId)
             {
                 group = GetGroupById(groupId);
@@ -3626,7 +3633,7 @@ void ObjectMgr::LoadGroups()
                 }
             }
 
-            if (!group->LoadMemberFromDB(memberGuidlow, subgroup, assistent))
+            if (!group->LoadMemberFromDB(memberGuidlow, subgroup, GroupFlagMask(flags), roles))
             {
                 sLog.outErrorDb("Incorrect entry in group_member table : member %s cannot be added to group (Id: %u)!",
                     memberGuid.GetString().c_str(), groupId);
@@ -3657,8 +3664,8 @@ void ObjectMgr::LoadGroups()
         "SELECT group_instance.leaderGuid, map, instance, permanent, instance.difficulty, resettime, "
         // 6
         "(SELECT COUNT(*) FROM character_instance WHERE guid = group_instance.leaderGuid AND instance = group_instance.instance AND permanent = 1 LIMIT 1), "
-        // 7
-        " groups.groupId "
+        // 7              8
+        " groups.groupId, instance.encountersMask "
         "FROM group_instance LEFT JOIN instance ON instance = id LEFT JOIN groups ON groups.leaderGUID = group_instance.leaderGUID ORDER BY leaderGuid"
     );
 
@@ -8949,12 +8956,12 @@ bool ObjectMgr::IsVendorItemValid(bool isTemplate, char const* tableName, uint32
 
 void ObjectMgr::AddGroup( Group* group )
 {
-    mGroupMap[group->GetId()] = group ;
+    mGroupMap[group->GetObjectGuid()] = group ;
 }
 
 void ObjectMgr::RemoveGroup( Group* group )
 {
-    mGroupMap.erase(group->GetId());
+    mGroupMap.erase(group->GetObjectGuid());
 }
 
 void ObjectMgr::AddArenaTeam( ArenaTeam* arenaTeam )
@@ -9164,4 +9171,76 @@ GameObjectDataPair const* FindGOData::GetResult() const
         return i_spawnedData;
 
     return i_anyData;
+}
+
+void ObjectMgr::LoadInstanceEncounters()
+{
+    QueryResult* result = WorldDatabase.Query("SELECT entry, creditType, creditEntry, lastEncounterDungeon FROM instance_encounters");
+
+    uint32 count = 0;
+    if (result)
+    {
+
+        std::map<uint32, DungeonEncounterEntry const*> dungeonLastBosses;
+        do
+        {
+            Field* fields = result->Fetch();
+            uint32 entry = fields[0].GetUInt32();
+            DungeonEncounterEntry const* dungeonEncounter = sDungeonEncounterStore.LookupEntry(entry);
+            if (!dungeonEncounter)
+            {
+                sLog.outErrorDb("Table `instance_encounters` has an invalid encounter id %u, skipped!", entry);
+                continue;
+            }
+
+            uint8 creditType = fields[1].GetUInt8();
+            uint32 creditEntry = fields[2].GetUInt32();
+
+            switch (creditType)
+            {
+                case ENCOUNTER_CREDIT_KILL_CREATURE:
+                    {
+                        CreatureInfo const* cInfo = sCreatureStorage.LookupEntry<CreatureInfo>(creditEntry);
+                        if (!cInfo)
+                        {
+                            sLog.outErrorDb("Table `instance_encounters` has an invalid creature (entry %u) linked to the encounter %u (%s), skipped!", creditEntry, entry, dungeonEncounter->encounterName[0]);
+                            continue;
+                        }
+                    }
+                    break;
+                case ENCOUNTER_CREDIT_CAST_SPELL:
+                    if (!sSpellStore.LookupEntry(creditEntry))
+                    {
+                        sLog.outErrorDb("Table `instance_encounters` has an invalid spell (entry %u) linked to the encounter %u (%s), skipped!", creditEntry, entry, dungeonEncounter->encounterName[0]);
+                        continue;
+                    }
+                    break;
+                default:
+                    sLog.outErrorDb("Table `instance_encounters` has an invalid credit type (%u) for encounter %u (%s), skipped!", creditType, entry, dungeonEncounter->encounterName[0]);
+                    continue;
+            }
+
+            uint32 lastEncounterDungeon = fields[3].GetUInt32();
+
+            std::map<uint32, DungeonEncounterEntry const*>::const_iterator itr = dungeonLastBosses.find(lastEncounterDungeon);
+
+            if (lastEncounterDungeon)
+            {
+                if (itr != dungeonLastBosses.end())
+                {
+                    sLog.outErrorDb("Table `instance_encounters` specified encounter %u (%s) as last encounter but %u (%s) is already marked as one, skipped!", entry, dungeonEncounter->encounterName[0], itr->second->Id, itr->second->encounterName[0]);
+                    continue;
+                }
+
+                dungeonLastBosses[lastEncounterDungeon] = dungeonEncounter;
+            }
+
+            DungeonEncounterList& encounters = mDungeonEncounters[MAKE_PAIR32(dungeonEncounter->mapId, dungeonEncounter->Difficulty)];
+            encounters.push_back(new DungeonEncounter(dungeonEncounter, EncounterCreditType(creditType), creditEntry, lastEncounterDungeon));
+            ++count;
+        } while (result->NextRow());
+    }
+
+    sLog.outString(">> Loaded %u instance encounters", count);
+    sLog.outString();
 }
