@@ -689,7 +689,10 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
 {
     // remove affects from victim (including from 0 damage and DoTs)
     if(pVictim != this)
-        pVictim->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+    {
+        if(damagetype != DOT || damage)
+            pVictim->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+    }
 
     // Divine Storm heal hack
     if (spellProto && spellProto->Id == 53385)
@@ -699,7 +702,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
     }
 
     // remove affects from attacker at any non-DoT damage (including 0 damage)
-    if( damagetype != DOT)
+    if (damagetype != DOT)
     {
         RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
         RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
@@ -712,12 +715,12 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
     }
 
     // Blessed Life talent of Paladin
-    if( pVictim->GetTypeId() == TYPEID_PLAYER )
+    if (pVictim->GetTypeId() == TYPEID_PLAYER)
     {
         Unit::AuraList const& BlessedLife = pVictim->GetAurasByType(SPELL_AURA_PROC_TRIGGER_SPELL);
         for(Unit::AuraList::const_iterator i = BlessedLife.begin(); i != BlessedLife.end(); ++i)
             if((*i)->GetSpellProto()->SpellFamilyName == SPELLFAMILY_PALADIN && (*i)->GetSpellProto()->SpellIconID == 2137)
-                if( urand(0,100) < (*i)->GetSpellProto()->procChance )
+                if (urand(0,100) < (*i)->GetSpellProto()->procChance)
                     damage *= 0.5;
     }
 
