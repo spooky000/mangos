@@ -1409,8 +1409,8 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
             // not break stealth by cast targeting
             if (!(m_spellInfo->AttributesEx & SPELL_ATTR_EX_NOT_BREAK_STEALTH) || (m_spellInfo->SpellFamilyName == SPELLFAMILY_ROGUE && m_spellInfo->SpellFamilyFlags == SPELLFAMILYFLAG_ROGUE_SAP))
             {
-                // dirty hacks! Earthbind Totem, Mass Dispel, Sap, Killing Spree, Hand of Salvation, Starfall, Mirror Image spell. maybe the attribute flag is wrong
-                if (m_spellInfo->Id != 3600 && m_spellInfo->Id != 32375 && m_spellInfo->Id != 32592 && m_spellInfo->Id != 72734 &&
+                // dirty hacks! Earthbind Totem, Stoneclaw Totem, Mass Dispel, Sap, Killing Spree, Hand of Salvation, Starfall, Mirror Image spell. maybe the attribute flag is wrong
+                if (m_spellInfo->Id != 3600 && m_spellInfo->Id != 5729 && m_spellInfo->Id != 32375 && m_spellInfo->Id != 32592 && m_spellInfo->Id != 72734 &&
                     m_spellInfo->Id != 51690 && m_spellInfo->Id != 53055 && m_spellInfo->Id != 58838 && m_spellInfo->Id != 53198)
                 {
                     unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
