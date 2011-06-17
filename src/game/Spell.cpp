@@ -3317,15 +3317,10 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
             }
             break;
         }
-        case TARGET_UNK_92:
+        case TARGET_UNIT_CREATOR:
         {
-            if (Unit *unitTarget = m_targets.getUnitTarget())
-                targetUnitMap.push_back(unitTarget);
-            else
-            {
-                if (Unit *creator = m_caster->GetMap()->GetUnit(m_caster->GetCreatorGuid()))
-                    targetUnitMap.push_back(creator);
-            }
+            if(Unit* target = m_caster->GetCreator())
+                targetUnitMap.push_back(target);
             break;
         }
         default:
