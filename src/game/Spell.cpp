@@ -7843,7 +7843,7 @@ void Spell::FillRaidOrPartyTargets(UnitList &targetUnitMap, Unit* member, Unit* 
                     targetUnitMap.push_back(Target);
 
                 if (withPets)
-                    if (Pet* pet = Target->GetPet())
+                    if (Target->GetPet())
                     {
                         GroupPetList m_groupPets = Target->GetPets();
                         if (!m_groupPets.empty())
