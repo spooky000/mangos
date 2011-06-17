@@ -8038,7 +8038,7 @@ void Spell::DoSummonSnakes(SpellEffectIndex eff_idx)
         if (!pSummon->IsPositionValid())
         {
             sLog.outError("EffectSummonSnakes failed to summon snakes for Unit %s (GUID: %u) bacause of invalid position (x = %f, y = %f, z = %f map = %u)"
-                ,m_caster->GetName(), m_caster->GetObjectGuid().GetCounter(), position_x, position_y, position_z, m_caster->GetMap());
+                ,m_caster->GetName(), m_caster->GetObjectGuid().GetCounter(), position_x, position_y, position_z, m_caster->GetMapId());
             delete pSummon;
             continue;
         }
