@@ -823,11 +823,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\game\MailHandler.cpp"
+				RelativePath="..\..\src\game\Mail.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\game\Mail.h"
+				RelativePath="..\..\src\game\MailHandler.cpp"
 				>
 			</File>
 			<File
@@ -1316,6 +1316,22 @@
 			</File>
 			<File
 				RelativePath="..\..\src\game\ItemPrototype.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\LFG.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\LFG.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\LFGMgr.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\LFGMgr.h"
 				>
 			</File>
 			<File

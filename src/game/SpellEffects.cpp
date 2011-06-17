@@ -4151,6 +4151,17 @@ void Spell::EffectTriggerSpell(SpellEffectIndex effIndex)
             unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_ROOT);
             unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_DECREASE_SPEED);
             unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_STALKED);
+
+            // if this spell is given to NPC it must handle rest by it's own AI
+            if (unitTarget->GetTypeId() != TYPEID_PLAYER)
+                return;
+
+            uint32 spellId = 1784;
+            // reset cooldown on it if needed
+            if (((Player*)unitTarget)->HasSpellCooldown(spellId))
+                ((Player*)unitTarget)->RemoveSpellCooldown(spellId);
+
+            m_caster->CastSpell(unitTarget, spellId, true);
             return;
         }
         // just skip
@@ -6760,6 +6771,10 @@ void Spell::EffectTaunt(SpellEffectIndex /*eff_idx*/)
             return;
         }
     }
+
+    // if target immune to taunt don't change threat
+    if (unitTarget->GetDiminishing(DIMINISHING_TAUNT) == DIMINISHING_LEVEL_IMMUNE)
+        return;
 
     // Also use this effect to set the taunter's threat to the taunted creature's highest value
     if (unitTarget->CanHaveThreatList() && unitTarget->getThreatManager().getCurrentVictim())

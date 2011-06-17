@@ -492,6 +492,13 @@ struct AchievementCriteriaEntry
             uint32  killCount;                              // 4
         } honorable_kill;
 
+        // ACHIEVEMENT_CRITERIA_TYPE_USE_LFD_TO_GROUP_WITH_PLAYERS    = 119
+        struct
+        {
+            uint32  unused;                                 // 3
+            uint32  dungeonsComplete;                       // 4
+        } use_lfg;
+
         struct
         {
             uint32  value;                                  // 3        m_asset_id
@@ -808,6 +815,18 @@ struct CurrencyTypesEntry
     uint32    ItemId;                                       // 1        m_itemID used as real index
     //uint32    Category;                                   // 2        m_categoryID may be category
     uint32    BitIndex;                                     // 3        m_bitIndex bit index in PLAYER_FIELD_KNOWN_CURRENCIES (1 << (index-1))
+};
+
+struct DungeonEncounterEntry
+{
+    uint32 Id;                                              // 0        unique id
+    uint32 mapId;                                           // 1        map id
+    uint32 Difficulty;                                      // 2        instance mode
+    uint32 encounterData;                                   // 3        time to reach?
+    uint32 encounterIndex;                                  // 4        encounter index for creating completed mask
+    char*  encounterName[16];                               // 5-20     encounter name
+    //uint32 nameFlags;                                     // 21       language flags
+    //uint32 unk1;                                          // 22
 };
 
 struct DurabilityCostsEntry
@@ -1151,6 +1170,44 @@ struct ItemSetEntry
     uint32    required_skill_value;                         // 52       m_requiredSkillRank
 };
 
+struct LFGDungeonEntry
+{
+    uint32  ID;                                             // 0     m_ID
+    //char*   name[16];                                     // 1-17  m_name_lang
+    uint32  minlevel;                                       // 18    m_minLevel
+    uint32  maxlevel;                                       // 19    m_maxLevel
+    uint32  reclevel;                                       // 20    m_target_level
+    uint32  recminlevel;                                    // 21    m_target_level_min
+    uint32  recmaxlevel;                                    // 22    m_target_level_max
+    uint32  map;                                            // 23    m_mapID
+    uint32  difficulty;                                     // 24    m_difficulty
+    uint32  flags;                                          // 25    m_flags
+    uint32  type;                                           // 26    m_typeID
+    uint32  faction;                                        // 27    m_faction
+    //char*   unk3;                                         // 28    m_textureFilename
+    uint32  expansion;                                      // 29    m_expansionLevel
+    uint32  index;                                          // 30    m_order_index
+    uint32  grouptype;                                      // 31    m_group_id
+    //char*   desc[16];                                     // 32-47 m_description_lang
+    //uint32 unk5                                           // 48 language flags?
+    // Helpers
+    uint32 Entry() const { return ID + (type << 24); }
+};
+
+struct LFGDungeonExpansionEntry
+{
+    uint32  ID;                                             // 0    m_ID
+    uint32  dungeonID;                                      // 1    m_lfg_id
+    uint32  expansion;                                      // 2    m_expansion_level
+    uint32  randomEntry;                                    // 3    m_random_id, inside of which is used this record
+    uint32  minlevelHard;                                   // 4    m_hard_level_min
+    uint32  maxlevelHard;                                   // 5    m_hard_level_max
+    uint32  minlevel;                                       // 6    m_target_level_min
+    uint32  maxlevel;                                       // 7    m_target_level_max
+    // Helpers
+    bool IsRandom() const { return randomEntry == 0; }
+};
+
 /*struct LfgDungeonsEntry
 {
     m_ID
@@ -1217,7 +1274,7 @@ struct MapEntry
     uint32  MapID;                                          // 0        m_ID
     //char*       internalname;                             // 1        m_Directory
     uint32  map_type;                                       // 2        m_InstanceType
-    //uint32 mapFlags;                                      // 3        m_Flags (0x100 - CAN_CHANGE_PLAYER_DIFFICULTY)
+    uint32 mapFlags;                                        // 3        m_Flags (0x100 - CAN_CHANGE_PLAYER_DIFFICULTY)
     //uint32 isPvP;                                         // 4        m_PVP 0 or 1 for battlegrounds (not arenas)
     char*   name[16];                                       // 5-20     m_MapName_lang
                                                             // 21 string flags
@@ -1267,8 +1324,8 @@ struct MapDifficultyEntry
     //uint32      Id;                                       // 0        m_ID
     uint32      MapId;                                      // 1        m_mapID
     uint32      Difficulty;                                 // 2        m_difficulty (for arenas: arena slot)
-    //char*       areaTriggerText[16];                      // 3-18     m_message_lang (text showed when transfer to map failed)
-    //uint32      textFlags;                                // 19 
+    char*       areaTriggerText[16];                        // 3-18     m_message_lang (text showed when transfer to map failed)
+    uint32      mapDifficultyFlags;                         // 19
     uint32      resetTime;                                  // 20       m_raidDuration in secs, 0 if no fixed reset time
     uint32      maxPlayers;                                 // 21       m_maxPlayers some heroic versions have 0 when expected same amount as in normal version
     //char*       difficultyString;                         // 22       m_difficultystring

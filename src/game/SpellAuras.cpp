@@ -5013,23 +5013,7 @@ void Aura::HandleModStealth(bool apply, bool Real)
     }
     else
     {
-        if (!Real)
-            return;
-
-        // Vanish (triggered, normal stealth need apply before remove advanced stealth)
-        if (target->GetTypeId() == TYPEID_PLAYER && m_removeMode == AURA_REMOVE_BY_EXPIRE &&
-            GetSpellProto()->IsFitToFamily(SPELLFAMILY_ROGUE, UI64LIT(0x000000000800)))
-        {
-            uint32 spellId = 1784;                          // Stealth
-            // reset cooldown on it if needed
-            if (((Player*)target)->HasSpellCooldown(spellId))
-                ((Player*)target)->RemoveSpellCooldown(spellId);
-
-            target->CastSpell(target, spellId, true);
-        }
-
-        // only at real aura remove of _last_ SPELL_AURA_MOD_STEALTH
-        if (!target->HasAuraType(SPELL_AURA_MOD_STEALTH))
+        if (Real && !target->HasAuraType(SPELL_AURA_MOD_STEALTH))
         {
             // if no GM invisibility
             if (target->GetVisibility()!=VISIBILITY_OFF)
@@ -9465,6 +9449,7 @@ m_permanent(false), m_isRemovedOnShapeLost(true), m_deleted(false), m_in_use(0)
         case 34027:                                         // Kill Command
         case 55166:                                         // Tidal Force
         case 58914:                                         // Kill Command (pet part)
+        case 62519:                                         // Attuned to Nature (Freya)
         case 64455:                                         // Feral Essence
         case 71564:                                         // Deadly Precision
             m_stackAmount = m_spellProto->StackAmount;

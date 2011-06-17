@@ -1272,7 +1272,7 @@ enum Targets
     TARGET_SELF2                       = 87,
     TARGET_DIRECTLY_FORWARD            = 89,
     TARGET_NONCOMBAT_PET               = 90,
-    TARGET_UNK_92                      = 92,                // from spell 61969. TARGET_CREATOR would fit...
+    TARGET_UNIT_CREATOR                = 92,
     TARGET_OWNED_VEHICLE               = 94,
     TARGET_UNIT_DRIVER                 = 95,
     TARGET_UNIT_PASSENGER_0            = 96,
@@ -2657,6 +2657,7 @@ enum DiminishingGroup
     // Warrior Specific
     DIMINISHING_CHARGE,
     // Other
+    DIMINISHING_TAUNT,
     // Don't Diminish, but limit duration to 10s
     DIMINISHING_LIMITONLY
 };
@@ -2995,6 +2996,29 @@ enum TradeStatus
     TRADE_STATUS_ONLY_CONJURED  = 22,                       // You can only trade conjured items... (cross realm BG related).
     TRADE_STATUS_NOT_ELIGIBLE   = 23                        // Related to trading soulbound loot items
 };
+
+enum EncounterCreditType
+{
+    ENCOUNTER_CREDIT_KILL_CREATURE  = 0,
+    ENCOUNTER_CREDIT_CAST_SPELL     = 1,
+};
+
+enum AreaLockStatus
+{
+    AREA_LOCKSTATUS_OK                        = 0,
+    AREA_LOCKSTATUS_UNKNOWN_ERROR             = 1,
+    AREA_LOCKSTATUS_INSUFFICIENT_EXPANSION    = 2,
+    AREA_LOCKSTATUS_TOO_LOW_LEVEL             = 3,
+    AREA_LOCKSTATUS_TOO_HIGH_LEVEL            = 4,
+    AREA_LOCKSTATUS_RAID_LOCKED               = 5,
+    AREA_LOCKSTATUS_QUEST_NOT_COMPLETED       = 6,
+    AREA_LOCKSTATUS_MISSING_ITEM              = 7,
+    AREA_LOCKSTATUS_MISSING_DIFFICULTY        = 8,
+    AREA_LOCKSTATUS_ZONE_IN_COMBAT            = 9,
+    AREA_LOCKSTATUS_INSTANCE_IS_FULL          = 10,
+    AREA_LOCKSTATUS_NOT_ALLOWED               = 11,
+};
+
 
 // we need to stick to 1 version or half of the stuff will work for someone
 // others will not and opposite

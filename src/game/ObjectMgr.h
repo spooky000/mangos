@@ -82,8 +82,12 @@ struct AreaTrigger
     uint32 requiredItem2;
     uint32 heroicKey;
     uint32 heroicKey2;
-    uint32 requiredQuest;
-    uint32 requiredQuestHeroic;
+    uint32 requiredQuestA;
+    uint32 requiredQuestHeroicA;
+    uint32 requiredQuestH;
+    uint32 requiredQuestHeroicH;
+    uint32 minGS;
+    uint32 maxGS;
     std::string requiredFailedText;
     uint32 target_mapId;
     float  target_X;
@@ -262,6 +266,20 @@ struct AntiCheatConfig
     std::string description;
 
 };
+
+struct DungeonEncounter
+{
+    DungeonEncounter(DungeonEncounterEntry const* _dbcEntry, EncounterCreditType _creditType, uint32 _creditEntry, uint32 _lastEncounterDungeon)
+        : dbcEntry(_dbcEntry), creditType(_creditType), creditEntry(_creditEntry), lastEncounterDungeon(_lastEncounterDungeon) { }
+
+    DungeonEncounterEntry const* dbcEntry;
+    EncounterCreditType creditType;
+    uint32 creditEntry;
+    uint32 lastEncounterDungeon;
+};
+
+typedef std::list<DungeonEncounter const*> DungeonEncounterList;
+typedef UNORDERED_MAP<uint32,DungeonEncounterList> DungeonEncounterMap;
 
 struct MailLevelReward
 {
@@ -523,7 +541,7 @@ class ObjectMgr
 
         typedef UNORDERED_MAP<uint32, Item*> ItemMap;
 
-        typedef UNORDERED_MAP<uint32, Group*> GroupMap;
+        typedef UNORDERED_MAP<ObjectGuid, Group*> GroupMap;
 
         typedef UNORDERED_MAP<uint32, ArenaTeam*> ArenaTeamMap;
 
@@ -549,6 +567,7 @@ class ObjectMgr
 
         void PackGroupIds();
         Group* GetGroupById(uint32 id) const;
+        Group* GetGroup(ObjectGuid guid) const;
         void AddGroup(Group* group);
         void RemoveGroup(Group* group);
 
@@ -711,6 +730,15 @@ class ObjectMgr
             return NULL;
         }
 
+        DungeonEncounterList const* GetDungeonEncounterList(uint32 mapId, Difficulty difficulty)
+        {
+            UNORDERED_MAP<uint32, DungeonEncounterList>::const_iterator itr = mDungeonEncounters.find(MAKE_PAIR32(mapId, difficulty));
+            if (itr != mDungeonEncounters.end())
+                return &itr->second;
+            return NULL;
+        }
+
+
         void LoadArenaTeams();
         void LoadGroups();
         void LoadQuests();
@@ -746,6 +774,7 @@ class ObjectMgr
         void LoadPageTextLocales();
         void LoadGossipMenuItemsLocales();
         void LoadPointOfInterestLocales();
+        void LoadInstanceEncounters();
         void LoadInstanceTemplate();
         void LoadWorldTemplate();
         void LoadMailLevelRewards();
@@ -1272,6 +1301,7 @@ class ObjectMgr
         MangosStringLocaleMap mMangosStringLocaleMap;
         GossipMenuItemsLocaleMap mGossipMenuItemsLocaleMap;
         PointOfInterestLocaleMap mPointOfInterestLocaleMap;
+        DungeonEncounterMap mDungeonEncounters;
 
         // Storage for Conditions. First element (index 0) is reserved for zero-condition (nothing required)
         typedef std::vector<PlayerCondition> ConditionStore;

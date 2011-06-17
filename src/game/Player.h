@@ -38,6 +38,7 @@
 #include "BattleGround.h"
 #include "DBCStores.h"
 #include "SharedDefines.h"
+#include "LFG.h"
 
 #include<string>
 #include<vector>
@@ -53,6 +54,7 @@ class PlayerSocial;
 class DungeonPersistentState;
 class Spell;
 class Item;
+struct AreaTrigger;
 
 typedef std::deque<Mail*> PlayerMails;
 
@@ -393,14 +395,6 @@ struct EnchantDuration
 
 typedef std::list<EnchantDuration> EnchantDurationList;
 typedef std::list<Item*> ItemDurationList;
-
-enum LfgRoles
-{
-    LEADER  = 0x01,
-    TANK    = 0x02,
-    HEALER  = 0x04,
-    DAMAGE  = 0x08
-};
 
 enum RaidGroupError
 {
@@ -887,10 +881,11 @@ struct InstancePlayerBind
 {
     DungeonPersistentState *state;
     bool perm;
+    bool extend;
     /* permanent PlayerInstanceBinds are created in Raid/Heroic instances for players
        that aren't already permanently bound when they are inside when a boss is killed
        or when they enter an instance that the group leader is permanently bound to. */
-    InstancePlayerBind() : state(NULL), perm(false) {}
+    InstancePlayerBind() : state(NULL), perm(false), extend(false) {}
 };
 
 class MANGOS_DLL_SPEC PlayerTaxi
@@ -950,7 +945,7 @@ std::ostringstream& operator<< (std::ostringstream& ss, PlayerTaxi const& taxi);
 struct BGData
 {
     BGData() : bgInstanceID(0), bgTypeID(BATTLEGROUND_TYPE_NONE), bgAfkReportedCount(0), bgAfkReportedTimer(0),
-        bgTeam(TEAM_NONE), mountSpell(0), m_needSave(false) { ClearTaxiPath(); }
+        bgTeam(TEAM_NONE), mountSpell(0), m_needSave(false), forLFG(false) { ClearTaxiPath(); }
 
     uint32 bgInstanceID;                                    ///< This variable is set to bg->m_InstanceID, saved
                                                             ///  when player is teleported to BG - (it is battleground's GUID)
@@ -969,6 +964,8 @@ struct BGData
     WorldLocation joinPos;                                  ///< From where player entered BG, saved
 
     bool m_needSave;                                        ///< true, if saved to DB fields modified after prev. save (marked as "saved" above)
+
+    bool forLFG;                                            // true, if data used for LFG entry point set ( fields modified after prev. save (instanceID = 0!)
 
     void ClearTaxiPath()     { taxiPath[0] = taxiPath[1] = 0; }
     bool HasTaxiPath() const { return taxiPath[0] && taxiPath[1]; }
@@ -1897,6 +1894,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         void CleanupChannels();
         void UpdateLocalChannels( uint32 newZone );
         void LeaveLFGChannel();
+        void JoinLFGChannel();
 
         void UpdateDefense();
         void UpdateWeaponSkill (WeaponAttackType attType);
@@ -2125,7 +2123,7 @@ class MANGOS_DLL_SPEC Player : public Unit
             return false;
         }
         WorldLocation const& GetBattleGroundEntryPoint() const { return m_bgData.joinPos; }
-        void SetBattleGroundEntryPoint();
+        void SetBattleGroundEntryPoint(bool forLFG = false);
 
         void SetBGTeam(Team team) { m_bgData.bgTeam = team; m_bgData.m_needSave = true; }
         Team GetBGTeam() const { return m_bgData.bgTeam ? m_bgData.bgTeam : GetTeam(); }
@@ -2280,14 +2278,27 @@ class MANGOS_DLL_SPEC Player : public Unit
         BoundInstancesMap& GetBoundInstances(Difficulty difficulty) { return m_boundInstances[difficulty]; }
         void UnbindInstance(uint32 mapid, Difficulty difficulty, bool unload = false);
         void UnbindInstance(BoundInstancesMap::iterator &itr, Difficulty difficulty, bool unload = false);
-        InstancePlayerBind* BindToInstance(DungeonPersistentState *save, bool permanent, bool load = false);
         void BindToInstance();
         void SetPendingBind(DungeonPersistentState* save, uint32 bindTimer) { _pendingBind = save; _pendingBindTimer = bindTimer; }
         bool HasPendingBind() const { return _pendingBind != NULL; }
+        InstancePlayerBind* BindToInstance(DungeonPersistentState *save, bool permanent, bool load = false, bool extend = false);
         void SendRaidInfo();
         void SendSavedInstances();
         static void ConvertInstancesToGroup(Player *player, Group *group = NULL, ObjectGuid player_guid = ObjectGuid());
         DungeonPersistentState* GetBoundInstanceSaveForSelfOrGroup(uint32 mapid);
+
+        AreaLockStatus GetAreaLockStatus(uint32 mapId, Difficulty difficulty);
+        AreaLockStatus GetAreaTriggerLockStatus(AreaTrigger const* at, Difficulty difficulty);
+        bool CanEnterToArea(uint32 mapId, Difficulty difficulty) { return GetAreaLockStatus(mapId, difficulty) == AREA_LOCKSTATUS_OK; };
+        bool CanUseAreaTrigger(AreaTrigger const* at, Difficulty difficulty) { return GetAreaTriggerLockStatus(at, difficulty) == AREA_LOCKSTATUS_OK; };
+
+        // LFG
+        LFGPlayerState* GetLFGState() { return m_LFGState;};
+        uint32 GetEquipGearScore(bool withBags = true, bool withBank = false);
+        void   ResetEquipGearScore() { m_cachedGS = 0;};
+        typedef std::vector<uint32/*item level*/> GearScoreMap;
+        uint8 GetTalentsCount(uint8 tab);
+        void  ResetTalentsCount() { m_cachedTC[0] = 0; m_cachedTC[1] = 0; m_cachedTC[2] = 0;};
 
         /*********************************************************/
         /***                   GROUP SYSTEM                    ***/
@@ -2676,6 +2687,13 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         DungeonPersistentState* _pendingBind;
         uint32 _pendingBindTimer;
+
+        uint32 m_cachedGS;
+        uint8  m_cachedTC[3];
+
+        // LFG
+        LFGPlayerState* m_LFGState;
+        void _fillGearScoreData(Item* item, GearScoreMap* gearScore);
 };
 
 void AddItemsSetItem(Player*player,Item *item);

@@ -450,7 +450,7 @@ void Pet::SavePetToDB(PetSaveMode mode)
         savePet.addString(ss);
 
         savePet.addUInt64(uint64(time(NULL)));
-        savePet.addUInt32(GetUInt32Value(UNIT_CREATED_BY_SPELL));
+        savePet.addUInt32(GetCreateSpellID());
         savePet.addUInt32(uint32(getPetType()));
 
         savePet.Execute();

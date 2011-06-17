@@ -156,41 +156,30 @@ void MapManager::LoadTransportNPCs()
 
     uint32 count = 0;
 
-    struct TransportNPC
-    {
-        uint32 entry;
-        uint32 transportEntry;
-        float pos[4];
-        uint32 animation;
-    };
-
-    std::list<TransportNPC> npcList;
-
     do
     {
-        TransportNPC npc;
-
         Field *fields = result->Fetch();
-        npc.entry = fields[0].GetUInt32();
-        npc.transportEntry = fields[1].GetUInt32();
-        for(int i =0; i < 4; ++i)
-            npc.pos[i] = fields[2+i].GetFloat();
+        uint32 entry = fields[0].GetUInt32();
+        uint32 transportEntry = fields[1].GetUInt32();
+        float tX = fields[2].GetFloat();
+        float tY = fields[3].GetFloat();
+        float tZ = fields[4].GetFloat();
+        float tO = fields[5].GetFloat();
+        uint32 anim = fields[6].GetUInt32();
 
-        npc.animation = fields[6].GetUInt32();
-
-        npcList.push_back(npc);
-
+        for (MapManager::TransportSet::iterator itr = m_Transports.begin(); itr != m_Transports.end(); ++itr)
+        {
+            if ((*itr)->GetEntry() == transportEntry)
+            {
+                if(!(*itr)->AddNPCPassenger(entry, tX, tY, tZ, tO, anim))
+                    sLog.outError("Cannot add %i passenger to %i transport", transportEntry, (*itr)->GetEntry());
+                break;
+            }
+        }
         ++count;
     }
     while (result->NextRow());
 
-    for(MapManager::TransportSet::const_iterator transport = m_Transports.begin(); transport != m_Transports.end(); ++transport)
-    {
-        for(std::list<TransportNPC>::const_iterator npcIter = npcList.begin(); npcIter != npcList.end(); ++npcIter)
-            if((*transport)->GetEntry() == (*npcIter).transportEntry)
-                if(!(*transport)->AddNPCPassenger((*npcIter).entry, (*npcIter).pos[0], (*npcIter).pos[1], (*npcIter).pos[2], (*npcIter).pos[3], (*npcIter).animation))
-                    sLog.outError("Cannot add %i passenger to %i transport", (*npcIter).transportEntry, (*transport)->GetEntry());
-    }
 
     sLog.outString(">> Loaded %u transport npcs", count);
     sLog.outString();
