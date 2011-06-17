@@ -76,7 +76,7 @@ void WorldSession::HandleGroupInviteOpcode( WorldPacket & recv_data )
     }
 
     // can't group with
-    if(!GetPlayer()->isGameMaster() && !sWorld.getConfig(CONFIG_BOOL_ALLOW_TWO_SIDE_INTERACTION_GROUP) && GetPlayer()->GetTeam() != player->GetTeam())
+    if(!sWorld.getConfig(CONFIG_BOOL_ALLOW_TWO_SIDE_INTERACTION_GROUP) && GetPlayer()->GetTeam() != player->GetTeam())
     {
         SendPartyResult(PARTY_OP_INVITE, membername, ERR_PLAYER_WRONG_FACTION);
         return;
@@ -255,8 +255,10 @@ void WorldSession::HandleGroupDeclineOpcode( WorldPacket & /*recv_data*/ )
 void WorldSession::HandleGroupUninviteGuidOpcode(WorldPacket & recv_data)
 {
     ObjectGuid guid;
+    std::string reason;
+
     recv_data >> guid;
-    recv_data.read_skip<std::string>();                     // reason
+    recv_data >> reason;                     // reason
 
     // can't uninvite yourself
     if (guid == GetPlayer()->GetObjectGuid())
@@ -265,20 +267,20 @@ void WorldSession::HandleGroupUninviteGuidOpcode(WorldPacket & recv_data)
         return;
     }
 
-    PartyResult res = GetPlayer()->CanUninviteFromGroup();
-    if (res != ERR_PARTY_RESULT_OK)
-    {
-        SendPartyResult(PARTY_OP_LEAVE, "", res);
-        return;
-    }
-
     Group* grp = GetPlayer()->GetGroup();
     if(!grp)
         return;
 
-    if (grp->IsLeader(guid))
+    if (grp->IsMember(guid) && grp->isLFGGroup())
     {
-        SendPartyResult(PARTY_OP_LEAVE, "", ERR_NOT_LEADER);
+        sLFGMgr.InitBoot(GetPlayer(), guid, reason);
+        return;
+    }
+
+    PartyResult res = GetPlayer()->CanUninviteFromGroup();
+    if (res != ERR_PARTY_RESULT_OK)
+    {
+        SendPartyResult(PARTY_OP_LEAVE, "", res);
         return;
     }
 
@@ -313,6 +315,18 @@ void WorldSession::HandleGroupUninviteOpcode(WorldPacket & recv_data)
         return;
     }
 
+    Group* grp = GetPlayer()->GetGroup();
+    if (!grp)
+        return;
+
+    ObjectGuid guid = grp->GetMemberGuid(membername);
+
+    if (grp->IsMember(guid) && grp->isLFGGroup())
+    {
+        sLFGMgr.InitBoot(GetPlayer(), guid, "");
+        return;
+    }
+
     PartyResult res = GetPlayer()->CanUninviteFromGroup();
     if (res != ERR_PARTY_RESULT_OK)
     {
@@ -320,11 +334,7 @@ void WorldSession::HandleGroupUninviteOpcode(WorldPacket & recv_data)
         return;
     }
 
-    Group* grp = GetPlayer()->GetGroup();
-    if (!grp)
-        return;
-
-    if (ObjectGuid guid = grp->GetMemberGuid(membername))
+    if (!guid.IsEmpty())
     {
         Player::RemoveFromGroup(grp, guid);
         return;
@@ -356,6 +366,7 @@ void WorldSession::HandleGroupSetLeaderOpcode( WorldPacket & recv_data )
     /********************/
 
     // everything is fine, do it
+    GetPlayer()->GetLFGState()->RemoveRole(ROLE_LEADER);
     group->ChangeLeader(guid);
 }
 
@@ -572,12 +583,15 @@ void WorldSession::HandleGroupChangeSubGroupOpcode( WorldPacket & recv_data )
 void WorldSession::HandleGroupAssistantLeaderOpcode( WorldPacket & recv_data )
 {
     ObjectGuid guid;
-    uint8 flag;
+    uint8 apply;
     recv_data >> guid;
-    recv_data >> flag;
+    recv_data >> apply;
+
+    DEBUG_LOG("CMSG_GROUP_ASSISTANT_LEADER: guid %u, apply %u",guid.GetCounter(),apply);
 
     Group *group = GetPlayer()->GetGroup();
-    if (!group)
+
+    if (!group || !group->isRaidGroup())                    // Only raid groups may have assistant
         return;
 
     /** error handling **/
@@ -586,7 +600,8 @@ void WorldSession::HandleGroupAssistantLeaderOpcode( WorldPacket & recv_data )
     /********************/
 
     // everything is fine, do it
-    group->SetAssistant(guid, (flag==0?false:true));
+    group->SetGroupUniqueFlag(guid, GROUP_ASSIGN_ASSISTANT, apply);
+
 }
 
 void WorldSession::HandlePartyAssignmentOpcode( WorldPacket & recv_data )
@@ -597,34 +612,19 @@ void WorldSession::HandlePartyAssignmentOpcode( WorldPacket & recv_data )
     recv_data >> role >> apply;                             // role 0 = Main Tank, 1 = Main Assistant
     recv_data >> guid;
 
-    DEBUG_LOG("MSG_PARTY_ASSIGNMENT");
+    DEBUG_LOG("MSG_PARTY_ASSIGNMENT: guid %u, role %u, apply %u",guid.GetCounter(),role,apply);
 
     Group *group = GetPlayer()->GetGroup();
-    if (!group)
+
+    if (!group || !group->isRaidGroup())                    // Only raid groups may have mainassistant/maintank
         return;
 
     /** error handling **/
-    if (!group->IsLeader(GetPlayer()->GetObjectGuid()))
+    if (!group->IsLeader(GetPlayer()->GetObjectGuid()) && !group->IsAssistant(GetPlayer()->GetObjectGuid()))
         return;
     /********************/
 
-    // everything is fine, do it
-    if (apply)
-    {
-        switch(role)
-        {
-            case 0: group->SetMainTank(guid); break;
-            case 1: group->SetMainAssistant(guid); break;
-            default: break;
-        }
-    }
-    else
-    {
-        if (group->GetMainTankGuid() == guid)
-            group->SetMainTank(ObjectGuid());
-        if (group->GetMainAssistantGuid() == guid)
-            group->SetMainAssistant(ObjectGuid());
-    }
+    group->SetGroupUniqueFlag(guid, GroupFlagsAssignment(role), apply);
 }
 
 void WorldSession::HandleRaidReadyCheckOpcode( WorldPacket & recv_data )
@@ -671,7 +671,7 @@ void WorldSession::HandleRaidReadyCheckFinishedOpcode( WorldPacket & /*recv_data
     //if(!group)
     //    return;
 
-    //if(!group->IsLeader(GetPlayer()->GetGUID()) && !group->IsAssistant(GetPlayer()->GetGUID()))
+    //if(!group->IsLeader(GetPlayer()->GetObjectGuid()) && !group->IsAssistant(GetPlayer()->GetObjectGuid()))
     //    return;
 
     // Is any reaction need?
@@ -860,9 +860,11 @@ void WorldSession::HandleRequestPartyMemberStatsOpcode( WorldPacket &recv_data )
     if(pet)
         mask1 = 0x7FFFFFFF;                                 // for hunters and other classes with pets
 
+    uint16 online_status = GetPlayer()->IsReferAFriendLinked(player) ?  (MEMBER_STATUS_ONLINE | MEMBER_STATUS_RAF) : MEMBER_STATUS_ONLINE;
+
     Powers powerType = player->getPowerType();
     data << uint32(mask1);                                  // group update mask
-    data << uint16(MEMBER_STATUS_ONLINE);                   // member's online status
+    data << uint16(online_status);                          // member's online status
     data << uint32(player->GetHealth());                    // GROUP_UPDATE_FLAG_CUR_HP
     data << uint32(player->GetMaxHealth());                 // GROUP_UPDATE_FLAG_MAX_HP
     data << uint8(powerType);                               // GROUP_UPDATE_FLAG_POWER_TYPE
