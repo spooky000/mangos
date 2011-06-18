@@ -1063,6 +1063,9 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
                         if (save->GetResetTime() < resettime)
                             save->SetResetTime(resettime);
                     }
+
+                    if (DungeonPersistentState* state = ((DungeonMap*)m)->GetPersistanceState())
+                        state->UpdateEncounterState(ENCOUNTER_CREDIT_KILL_CREATURE, ((Creature*)cVictim)->GetEntry(), creditedPlayer);
                 }
             }
         }

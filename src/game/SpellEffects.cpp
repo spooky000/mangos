@@ -3147,6 +3147,19 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(m_caster, 69956, true);
                     return;
                 }
+                default:                                   // DBC encounters main check
+                {
+                    if (unitTarget && unitTarget->GetTypeId() == TYPEID_PLAYER)
+                    {
+                        if (m_caster->GetMap()->IsDungeon())
+                        {
+                            Player* creditedPlayer = unitTarget->GetCharmerOrOwnerPlayerOrPlayerItself();
+                            DungeonMap* dungeon = (DungeonMap*)m_caster->GetMap();;
+                            if (DungeonPersistentState* state = dungeon->GetPersistanceState())
+                                state->UpdateEncounterState(ENCOUNTER_CREDIT_CAST_SPELL, m_spellInfo->Id, creditedPlayer);
+                        }
+                    }
+                }
             }
             break;
         }
