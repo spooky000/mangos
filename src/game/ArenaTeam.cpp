@@ -188,7 +188,12 @@ bool ArenaTeam::AddMember(ObjectGuid playerGuid)
     newmember.wins_season       = 0;
     newmember.wins_week         = 0;
 
-    uint32 rating_value = ((sWorld.getConfig(CONFIG_UINT32_ARENA_SEASON_ID) >= 6) ? 0 : 1500);
+    uint32 rating_value = 0;
+
+    if (sWorld.getConfig(CONFIG_UINT32_ARENA_SEASON_ID) >= 6)
+        rating_value = 0;
+    else
+        rating_value = 1500;
 
     if (GetType() == ARENA_TYPE_2v2)
     {
