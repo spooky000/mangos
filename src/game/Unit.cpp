@@ -4405,10 +4405,11 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
         return false;
     }
 
-    // Alterac Valley Marshals', Warmasters' buffs  and Defense Matrix should affect only mobs
+    // Alterac Valley Marshals', Warmasters' buffs, Runic Fortification and Defense Matrix should affect only mobs
     if (this->GetTypeId() != TYPEID_UNIT &&
         (holder->GetId() == 45828 || holder->GetId() == 45829 || holder->GetId() == 45831 || holder->GetId() == 45830 ||
-         holder->GetId() == 45826 || holder->GetId() == 45822 || holder->GetId() == 45823 || holder->GetId() == 45824 || holder->GetId() == 65070))
+         holder->GetId() == 45826 || holder->GetId() == 45822 || holder->GetId() == 45823 || holder->GetId() == 45824 || 
+         holder->GetId() == 65070 || holder->GetId() == 62942))
     {
         delete holder;
         return false;
