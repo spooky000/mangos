@@ -648,11 +648,6 @@ void Unit::RemoveSpellsCausingAura(AuraType auraType, SpellAuraHolder* except)
     }
 }
 
-bool Unit::HasAuraType(AuraType auraType) const
-{
-    return (!m_modAuras[auraType].empty());
-}
-
 void Unit::DealDamageMods(Unit *pVictim, uint32 &damage, uint32* absorb)
 {
     if (!pVictim->isAlive() || pVictim->IsTaxiFlying() || (pVictim->GetTypeId() == TYPEID_UNIT && ((Creature*)pVictim)->IsInEvadeMode()))
@@ -689,7 +684,10 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
 {
     // remove affects from victim (including from 0 damage and DoTs)
     if(pVictim != this)
-        pVictim->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+    {
+        if(damagetype != DOT || damage)
+            pVictim->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+    }
 
     // Divine Storm heal hack
     if (spellProto && spellProto->Id == 53385)
@@ -699,7 +697,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
     }
 
     // remove affects from attacker at any non-DoT damage (including 0 damage)
-    if( damagetype != DOT)
+    if (damagetype != DOT)
     {
         RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
         RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
@@ -712,12 +710,12 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
     }
 
     // Blessed Life talent of Paladin
-    if( pVictim->GetTypeId() == TYPEID_PLAYER )
+    if (pVictim->GetTypeId() == TYPEID_PLAYER)
     {
         Unit::AuraList const& BlessedLife = pVictim->GetAurasByType(SPELL_AURA_PROC_TRIGGER_SPELL);
         for(Unit::AuraList::const_iterator i = BlessedLife.begin(); i != BlessedLife.end(); ++i)
             if((*i)->GetSpellProto()->SpellFamilyName == SPELLFAMILY_PALADIN && (*i)->GetSpellProto()->SpellIconID == 2137)
-                if( urand(0,100) < (*i)->GetSpellProto()->procChance )
+                if (urand(0,100) < (*i)->GetSpellProto()->procChance)
                     damage *= 0.5;
     }
 
@@ -1060,6 +1058,9 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
                         if (save->GetResetTime() < resettime)
                             save->SetResetTime(resettime);
                     }
+
+                    if (DungeonPersistentState* state = ((DungeonMap*)m)->GetPersistanceState())
+                        state->UpdateEncounterState(ENCOUNTER_CREDIT_KILL_CREATURE, ((Creature*)cVictim)->GetEntry(), creditedPlayer);
                 }
             }
         }
@@ -2389,7 +2390,7 @@ void Unit::CalculateDamageAbsorbAndResist(Unit *pCaster, SpellSchoolMask schoolM
                     continue;
                 }
                 // Reflective Shield
-                if (spellProto->SpellFamilyFlags == 0x1 && canReflect)
+                if (spellProto->IsFitToFamilyMask(UI64LIT(0x0000000000000001)) && canReflect)
                 {
                     if (pCaster == this)
                         break;
@@ -4004,46 +4005,45 @@ bool Unit::IsNonMeleeSpellCasted(bool withDelayed, bool skipChanneled, bool skip
     // Maybe later some special spells will be excluded too.
 
     // generic spells are casted when they are not finished and not delayed
-    if ( m_currentSpells[CURRENT_GENERIC_SPELL] &&
+    if (m_currentSpells[CURRENT_GENERIC_SPELL] &&
         (m_currentSpells[CURRENT_GENERIC_SPELL]->getState() != SPELL_STATE_FINISHED) &&
-        (withDelayed || m_currentSpells[CURRENT_GENERIC_SPELL]->getState() != SPELL_STATE_DELAYED) )
+        (withDelayed || m_currentSpells[CURRENT_GENERIC_SPELL]->getState() != SPELL_STATE_DELAYED))
         {
             if (!(m_currentSpells[CURRENT_GENERIC_SPELL]->m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_NOT_RESET_AUTOSHOT))
                 return(true);
         }
 
-
     // channeled spells may be delayed, but they are still considered casted
-    else if ( !skipChanneled && m_currentSpells[CURRENT_CHANNELED_SPELL] &&
-        (m_currentSpells[CURRENT_CHANNELED_SPELL]->getState() != SPELL_STATE_FINISHED) )
-        return(true);
+    else if (!skipChanneled && m_currentSpells[CURRENT_CHANNELED_SPELL] &&
+        (m_currentSpells[CURRENT_CHANNELED_SPELL]->getState() != SPELL_STATE_FINISHED))
+        return true;
 
     // autorepeat spells may be finished or delayed, but they are still considered casted
-    else if ( !skipAutorepeat && m_currentSpells[CURRENT_AUTOREPEAT_SPELL] )
-        return(true);
+    else if (!skipAutorepeat && m_currentSpells[CURRENT_AUTOREPEAT_SPELL])
+        return true;
 
-    return(false);
+    return false;
 }
 
 void Unit::InterruptNonMeleeSpells(bool withDelayed, uint32 spell_id)
 {
     // generic spells are interrupted if they are not finished or delayed
-    if (m_currentSpells[CURRENT_GENERIC_SPELL] && (!spell_id || m_currentSpells[CURRENT_GENERIC_SPELL]->m_spellInfo->Id==spell_id))
+    if (m_currentSpells[CURRENT_GENERIC_SPELL] && (!spell_id || m_currentSpells[CURRENT_GENERIC_SPELL]->m_spellInfo->Id == spell_id))
         InterruptSpell(CURRENT_GENERIC_SPELL,withDelayed);
 
     // autorepeat spells are interrupted if they are not finished or delayed
-    if (m_currentSpells[CURRENT_AUTOREPEAT_SPELL] && (!spell_id || m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->m_spellInfo->Id==spell_id))
+    if (m_currentSpells[CURRENT_AUTOREPEAT_SPELL] && (!spell_id || m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->m_spellInfo->Id == spell_id))
         InterruptSpell(CURRENT_AUTOREPEAT_SPELL,withDelayed);
 
     // channeled spells are interrupted if they are not finished, even if they are delayed
-    if (m_currentSpells[CURRENT_CHANNELED_SPELL] && (!spell_id || m_currentSpells[CURRENT_CHANNELED_SPELL]->m_spellInfo->Id==spell_id))
+    if (m_currentSpells[CURRENT_CHANNELED_SPELL] && (!spell_id || m_currentSpells[CURRENT_CHANNELED_SPELL]->m_spellInfo->Id == spell_id))
         InterruptSpell(CURRENT_CHANNELED_SPELL,true);
 }
 
 Spell* Unit::FindCurrentSpellBySpellId(uint32 spell_id) const
 {
     for (uint32 i = 0; i < CURRENT_MAX_SPELL; ++i)
-        if(m_currentSpells[i] && m_currentSpells[i]->m_spellInfo->Id==spell_id)
+        if (m_currentSpells[i] && m_currentSpells[i]->m_spellInfo->Id == spell_id)
             return m_currentSpells[i];
     return NULL;
 }
@@ -4399,10 +4399,11 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
         return false;
     }
 
-    // Alterac Valley Marshals', Warmasters' buffs  and Defense Matrix should affect only mobs
+    // Alterac Valley Marshals', Warmasters' buffs, Runic Fortification, Berserk (Thorim) and Defense Matrix should affect only mobs
     if (this->GetTypeId() != TYPEID_UNIT &&
         (holder->GetId() == 45828 || holder->GetId() == 45829 || holder->GetId() == 45831 || holder->GetId() == 45830 ||
-         holder->GetId() == 45826 || holder->GetId() == 45822 || holder->GetId() == 45823 || holder->GetId() == 45824 || holder->GetId() == 65070))
+         holder->GetId() == 45826 || holder->GetId() == 45822 || holder->GetId() == 45823 || holder->GetId() == 45824 || 
+         holder->GetId() == 65070 || holder->GetId() == 62942 || holder->GetId() == 62560))
     {
         delete holder;
         return false;
@@ -4490,43 +4491,49 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
                 break;
             }
 
-             // Judgements and scrolls are always single 
-            if (GetSpellSpecific(holder->GetId()) == SPELL_JUDGEMENT ||
-                GetSpellSpecific(holder->GetId()) == SPELL_SCROLL)
-            {
-                RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
+            // Hacky fix for Malygos' Power Spark
+            if(foundHolder->GetId() == 55849)
                 break;
-            }
 
-            bool bStop = false;
+            bool bRemove = true;
 
-            for (int32 i = 0; i < MAX_EFFECT_INDEX && !bStop; ++i)
+            for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
             {
                 // no need to check non stacking auras that weren't/won't be applied on this target
                 if (!foundHolder->m_auras[i] || !holder->m_auras[i])
                     continue;
 
-                // m_auraname can be modified to SPELL_AURA_NONE for area auras, use original
+                 // m_auraname can be modified to SPELL_AURA_NONE for area auras, use original
                 AuraType aurNameReal = AuraType(aurSpellInfo->EffectApplyAuraName[i]);
 
-                // problem with stacking comes for negative auras, so let's check positive auras exceptions for speedup
-                if (foundHolder->IsPositive() && aurNameReal != SPELL_AURA_PERIODIC_HEAL)
+                switch(aurNameReal)
                 {
-                    // can be only single (this check done at _each_ aura add
-                    RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
-                    bStop = true;
-                    break;
+                    // DoT/HoT/etc
+                    case SPELL_AURA_DUMMY:                  // allow stack
+                    case SPELL_AURA_PERIODIC_DAMAGE:
+                    case SPELL_AURA_PERIODIC_DAMAGE_PERCENT:
+                    case SPELL_AURA_PERIODIC_LEECH:
+                    case SPELL_AURA_PERIODIC_HEAL:
+                    case SPELL_AURA_OBS_MOD_HEALTH:
+                    case SPELL_AURA_PERIODIC_MANA_LEECH:
+                    case SPELL_AURA_OBS_MOD_MANA:
+                    case SPELL_AURA_POWER_BURN_MANA:
+                        bRemove = false;
+                        break; 
+                    default:                                // not allow
+                        bRemove = true;
+                        break;
                 }
             }
 
-            if (bStop)
+            if (bRemove)
+            {
+                // can be only single (this check done at _each_ aura add
+                RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
                 break;
+            }
 
-            // Hacky fix for Malygos' Power Spark
-            if(foundHolder->GetId() == 55849)
-                break;
-
-            bool stop = false;
+            /*bool stop = false;
 
             for (int32 i = 0; i < MAX_EFFECT_INDEX && !stop; ++i)
             {
@@ -4540,7 +4547,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
                 // Priest's Mind Flay must stack from different casters
                 if (const SpellEntry* sp = foundHolder->GetSpellProto())
                 {
-                    if (sp && sp->SpellFamilyName == SPELLFAMILY_PRIEST && sp->SpellIconID == 548 && (sp->SpellFamilyFlags2 & UI64LIT(0x00000040)))
+                    if (sp && sp->SpellFamilyName == SPELLFAMILY_PRIEST && sp->SpellIconID == 548 && (sp->SpellFamilyFlags & UI64LIT(0x00000040)))
                         break;
                 }
 
@@ -4586,7 +4593,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
             }
 
             if(stop)
-                break;
+                break;*/
 
         }
     }
@@ -5520,6 +5527,24 @@ void Unit::_ApplyAllAuraMods()
     {
         (*i).second->ApplyAuraModifiers(true);
     }
+}
+
+bool Unit::HasAuraType(AuraType auraType) const
+{
+    return !GetAurasByType(auraType).empty();
+}
+
+bool Unit::HasAffectedAura(AuraType auraType, SpellEntry const* spellProto) const
+{
+    Unit::AuraList const& auras = GetAurasByType(auraType);
+
+    for (Unit::AuraList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
+    {
+        if ((*itr)->isAffectedOnSpell(spellProto))
+            return true;
+    }
+
+    return false;
 }
 
 Aura* Unit::GetAura(uint32 spellId, SpellEffectIndex effindex)
@@ -7652,6 +7677,13 @@ bool Unit::IsSpellCrit(Unit *pVictim, SpellEntry const *spellProto, SpellSchoolM
                                 if (pVictim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE) > -100)
                                     return true;
                         }
+                        // Searing Totem
+                        else if (spellProto->IsFitToFamilyMask(UI64LIT(0x40000000)))
+                        {
+                            if(Unit * owner = GetOwner())
+                                if(owner->GetTypeId() == TYPEID_PLAYER)
+                                    crit_chance = owner->GetFloatValue( PLAYER_SPELL_CRIT_PERCENTAGE1 + GetFirstSchoolInMask(schoolMask));
+                        }
                         break;
                 }
             }
@@ -7790,12 +7822,7 @@ uint32 Unit::SpellHealingBonusDone(Unit *pVictim, SpellEntry const *spellProto, 
 
     // No heal amount for this class spells
     if (spellProto->DmgClass == SPELL_DAMAGE_CLASS_NONE)
-    {
-        if(pVictim->GetDummyAura(SPELL_ARENA_DAMPENING) || pVictim->GetDummyAura(SPELL_BG_DAMPENING))
-            healamount = int32(healamount*0.9f);
-
         return healamount < 0 ? 0 : healamount;
-    }
 
     // Healing Done
     // Done total percent damage auras
@@ -7948,10 +7975,6 @@ uint32 Unit::SpellHealingBonusTaken(Unit *pCaster, SpellEntry const *spellProto,
 
     // use float as more appropriate for negative values and percent applying
     float heal = (healamount + TakenTotal * int32(stack)) * TakenTotalMod;
-
-    // 10% healing reduction in arenas/BG
-    if(GetDummyAura(SPELL_ARENA_DAMPENING) || GetDummyAura(SPELL_BG_DAMPENING))
-        heal *= 0.9f;
 
     return heal < 0 ? 0 : uint32(heal);
 }
@@ -11163,9 +11186,9 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
             {
                 if (spellProcEvent)
                 {
-                    if (spellProcEvent->spellFamilyMask[i] || spellProcEvent->spellFamilyMask2[i])
+                    if (spellProcEvent->spellFamilyMask[i])
                     {
-                        if (!procSpell->IsFitToFamilyMask(spellProcEvent->spellFamilyMask[i], spellProcEvent->spellFamilyMask2[i]))
+                        if (!procSpell->IsFitToFamilyMask(spellProcEvent->spellFamilyMask[i]))
                             continue;
                     }
                     // don't check dbc FamilyFlags if schoolMask exists
@@ -12519,8 +12542,14 @@ ObjectGuid const& Unit::GetCreatorGuid() const
 {
     switch(GetObjectGuid().GetHigh())
     {
-        case HIGHGUID_UNIT:
         case HIGHGUID_VEHICLE:
+            {
+                if (!(GetVehicleKit()->GetVehicleInfo()->m_flags & (VEHICLE_FLAG_NOT_DISMISS | VEHICLE_FLAG_ACCESSORY)))
+                    if (GetOwner())
+                        return GetOwner()->GetObjectGuid();
+            }
+        // No break here!
+        case HIGHGUID_UNIT:
             if (((Creature*)this)->IsTemporarySummon())
             {
                 return ((TemporarySummon*)this)->GetSummonerGuid();

@@ -62,6 +62,7 @@
 #include "GMTicketMgr.h"
 #include "Util.h"
 #include "CharacterDatabaseCleaner.h"
+#include "LFGMgr.h"
 
 INSTANTIATE_SINGLETON_1( World );
 
@@ -243,12 +244,12 @@ World::AddSession_ (WorldSession* s)
     }
 
     WorldPacket packet(SMSG_AUTH_RESPONSE, 1 + 4 + 1 + 4 + 1);
-    packet << uint8 (AUTH_OK);
-    packet << uint32 (0);                                   // BillingTimeRemaining
-    packet << uint8 (0);                                    // BillingPlanFlags
-    packet << uint32 (0);                                   // BillingTimeRested
-    packet << uint8 (s->Expansion());                       // 0 - normal, 1 - TBC, must be set in database manually for each account
-    s->SendPacket (&packet);
+    packet << uint8(AUTH_OK);
+    packet << uint32(0);                                    // BillingTimeRemaining
+    packet << uint8(0);                                     // BillingPlanFlags
+    packet << uint32(0);                                    // BillingTimeRested
+    packet << uint8(s->Expansion());                        // 0 - normal, 1 - TBC, 2 - WotLK. Must be set in database manually for each account.
+    s->SendPacket(&packet);
 
     s->SendAddonsInfo();
 
@@ -582,6 +583,13 @@ void World::LoadConfigSettings(bool reload)
     setConfigMinMax(CONFIG_UINT32_START_PLAYER_LEVEL, "StartPlayerLevel", 1, 1, getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL));
     setConfigMinMax(CONFIG_UINT32_START_HEROIC_PLAYER_LEVEL, "StartHeroicPlayerLevel", 55, 1, getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL));
 
+
+    setConfig(CONFIG_BOOL_LFG_ENABLE, "LFG.Enable",false);
+    setConfig(CONFIG_BOOL_LFR_ENABLE, "LFR.Enable",false);
+    setConfig(CONFIG_BOOL_LFG_DEBUG_ENABLE, "LFG.Debug",false);
+    setConfig(CONFIG_BOOL_LFR_EXTEND, "LFR.Extend",false);
+    setConfigMinMax(CONFIG_UINT32_LFG_MAXKICKS, "LFG.MaxKicks", 5, 1, 10);
+
     setConfigMinMax(CONFIG_UINT32_START_PLAYER_MONEY, "StartPlayerMoney", 0, 0, MAX_MONEY_AMOUNT);
 
     setConfigPos(CONFIG_UINT32_MAX_HONOR_POINTS, "MaxHonorPoints", 75000);
@@ -604,7 +612,12 @@ void World::LoadConfigSettings(bool reload)
     setConfig(CONFIG_UINT32_INSTANCE_RESET_TIME_HOUR, "Instance.ResetTimeHour", 4);
     setConfig(CONFIG_UINT32_INSTANCE_UNLOAD_DELAY,    "Instance.UnloadDelay", 30 * MINUTE * IN_MILLISECONDS);
 
-    setConfig(CONFIG_UINT32_MAX_PRIMARY_TRADE_SKILL, "MaxPrimaryTradeSkill", 2);
+    setConfigMinMax(CONFIG_UINT32_MAX_PRIMARY_TRADE_SKILL, "MaxPrimaryTradeSkill", 2, 0, 10);
+
+    setConfigMinMax(CONFIG_UINT32_TRADE_SKILL_GMIGNORE_MAX_PRIMARY_COUNT, "TradeSkill.GMIgnore.MaxPrimarySkillsCount", SEC_CONSOLE, SEC_PLAYER, SEC_CONSOLE);
+    setConfigMinMax(CONFIG_UINT32_TRADE_SKILL_GMIGNORE_LEVEL, "TradeSkill.GMIgnore.Level", SEC_CONSOLE, SEC_PLAYER, SEC_CONSOLE);
+    setConfigMinMax(CONFIG_UINT32_TRADE_SKILL_GMIGNORE_SKILL, "TradeSkill.GMIgnore.Skill", SEC_CONSOLE, SEC_PLAYER, SEC_CONSOLE);
+
     setConfigMinMax(CONFIG_UINT32_MIN_PETITION_SIGNS, "MinPetitionSigns", 9, 0, 9);
 
     setConfig(CONFIG_UINT32_GM_LOGIN_STATE,    "GM.LoginState",    2);
@@ -775,6 +788,8 @@ void World::LoadConfigSettings(bool reload)
     setConfig(CONFIG_UINT32_TIMERBAR_FIRE_MAX,        "TimerBar.Fire.Max", 1);
 
     setConfig(CONFIG_BOOL_PET_UNSUMMON_AT_MOUNT,      "PetUnsummonAtMount", true);
+
+    setConfig(CONFIG_BOOL_RAID_FLAGS_UNIQUE,      "RaidFlags.Unique", false);
 
     m_relocation_ai_notify_delay = sConfig.GetIntDefault("Visibility.AIRelocationNotifyDelay", 1000u);
     m_relocation_lower_limit_sq  = pow(sConfig.GetFloatDefault("Visibility.RelocationLowerLimit",10), 2);
@@ -1012,11 +1027,14 @@ void World::SetInitialWorldSettings()
     sLog.outString( "Loading Item Random Enchantments Table..." );
     LoadRandomEnchantmentsTable();
 
-    sLog.outString( "Loading Items..." );                   // must be after LoadRandomEnchantmentsTable and LoadPageTexts
+    sLog.outString("Loading Items...");                     // must be after LoadRandomEnchantmentsTable and LoadPageTexts
     sObjectMgr.LoadItemPrototypes();
 
-    sLog.outString( "Loading Item converts..." );           // must be after LoadItemPrototypes
+    sLog.outString("Loading Item converts...");             // must be after LoadItemPrototypes
     sObjectMgr.LoadItemConverts();
+
+    sLog.outString("Loading Item expire converts...");      // must be after LoadItemPrototypes
+    sObjectMgr.LoadItemExpireConverts();
 
     sLog.outString( "Loading Creature Model Based Info Data..." );
     sObjectMgr.LoadCreatureModelInfo();
@@ -1032,6 +1050,9 @@ void World::SetInitialWorldSettings()
 
     sLog.outString( "Loading SpellsScriptTarget...");
     sSpellMgr.LoadSpellScriptTarget();                      // must be after LoadCreatureTemplates and LoadGameobjectInfo
+
+    sLog.outString("Loading Instance encounters data...");  // must be after creature templates
+    sObjectMgr.LoadInstanceEncounters();
 
     sLog.outString( "Loading ItemRequiredTarget...");
     sObjectMgr.LoadItemRequiredTarget();
@@ -1065,6 +1086,9 @@ void World::SetInitialWorldSettings()
 
     sLog.outString("Loading Vehicle Accessories...");
     sObjectMgr.LoadVehicleAccessories();
+
+    sLog.outString( "Loading Creature Respawn Data..." );   // must be after PackInstances()
+    sMapPersistentStateMgr.LoadCreatureRespawnTimes();
 
     sLog.outString( "Loading Gameobject Data..." );
     sObjectMgr.LoadGameobjects();
@@ -1229,6 +1253,9 @@ void World::SetInitialWorldSettings()
     sObjectMgr.LoadPointOfInterestLocales();                // must be after POI loading
     sLog.outString( ">>> Localization strings loaded" );
     sLog.outString();
+
+    sLog.outString("Loading LFG rewards...");               // After load all static data
+    sLFGMgr.LoadRewards();
 
     ///- Load dynamic data tables from the database
     sLog.outString( "Loading Auctions..." );
@@ -1524,6 +1551,9 @@ void World::Update(uint32 diff)
         m_timers[WUPDATE_DELETECHARS].Reset();
         Player::DeleteOldCharacters();
     }
+
+    // Check if any group can be created by dungeon finder
+    sLFGMgr.Update(diff);
 
     // execute callbacks from sql queries that were queued recently
     UpdateResultQueue();

@@ -492,6 +492,13 @@ struct AchievementCriteriaEntry
             uint32  killCount;                              // 4
         } honorable_kill;
 
+        // ACHIEVEMENT_CRITERIA_TYPE_USE_LFD_TO_GROUP_WITH_PLAYERS    = 119
+        struct
+        {
+            uint32  unused;                                 // 3
+            uint32  dungeonsComplete;                       // 4
+        } use_lfg;
+
         struct
         {
             uint32  value;                                  // 3        m_asset_id
@@ -808,6 +815,18 @@ struct CurrencyTypesEntry
     uint32    ItemId;                                       // 1        m_itemID used as real index
     //uint32    Category;                                   // 2        m_categoryID may be category
     uint32    BitIndex;                                     // 3        m_bitIndex bit index in PLAYER_FIELD_KNOWN_CURRENCIES (1 << (index-1))
+};
+
+struct DungeonEncounterEntry
+{
+    uint32 Id;                                              // 0        unique id
+    uint32 mapId;                                           // 1        map id
+    uint32 Difficulty;                                      // 2        instance mode
+    uint32 encounterData;                                   // 3        time to reach?
+    uint32 encounterIndex;                                  // 4        encounter index for creating completed mask
+    char*  encounterName[16];                               // 5-20     encounter name
+    //uint32 nameFlags;                                     // 21       language flags
+    //uint32 unk1;                                          // 22
 };
 
 struct DurabilityCostsEntry
@@ -1151,6 +1170,44 @@ struct ItemSetEntry
     uint32    required_skill_value;                         // 52       m_requiredSkillRank
 };
 
+struct LFGDungeonEntry
+{
+    uint32  ID;                                             // 0     m_ID
+    //char*   name[16];                                     // 1-17  m_name_lang
+    uint32  minlevel;                                       // 18    m_minLevel
+    uint32  maxlevel;                                       // 19    m_maxLevel
+    uint32  reclevel;                                       // 20    m_target_level
+    uint32  recminlevel;                                    // 21    m_target_level_min
+    uint32  recmaxlevel;                                    // 22    m_target_level_max
+    uint32  map;                                            // 23    m_mapID
+    uint32  difficulty;                                     // 24    m_difficulty
+    uint32  flags;                                          // 25    m_flags
+    uint32  type;                                           // 26    m_typeID
+    uint32  faction;                                        // 27    m_faction
+    //char*   unk3;                                         // 28    m_textureFilename
+    uint32  expansion;                                      // 29    m_expansionLevel
+    uint32  index;                                          // 30    m_order_index
+    uint32  grouptype;                                      // 31    m_group_id
+    //char*   desc[16];                                     // 32-47 m_description_lang
+    //uint32 unk5                                           // 48 language flags?
+    // Helpers
+    uint32 Entry() const { return ID + (type << 24); }
+};
+
+struct LFGDungeonExpansionEntry
+{
+    uint32  ID;                                             // 0    m_ID
+    uint32  dungeonID;                                      // 1    m_lfg_id
+    uint32  expansion;                                      // 2    m_expansion_level
+    uint32  randomEntry;                                    // 3    m_random_id, inside of which is used this record
+    uint32  minlevelHard;                                   // 4    m_hard_level_min
+    uint32  maxlevelHard;                                   // 5    m_hard_level_max
+    uint32  minlevel;                                       // 6    m_target_level_min
+    uint32  maxlevel;                                       // 7    m_target_level_max
+    // Helpers
+    bool IsRandom() const { return randomEntry == 0; }
+};
+
 /*struct LfgDungeonsEntry
 {
     m_ID
@@ -1217,7 +1274,7 @@ struct MapEntry
     uint32  MapID;                                          // 0        m_ID
     //char*       internalname;                             // 1        m_Directory
     uint32  map_type;                                       // 2        m_InstanceType
-    //uint32 mapFlags;                                      // 3        m_Flags (0x100 - CAN_CHANGE_PLAYER_DIFFICULTY)
+    uint32 mapFlags;                                        // 3        m_Flags (0x100 - CAN_CHANGE_PLAYER_DIFFICULTY)
     //uint32 isPvP;                                         // 4        m_PVP 0 or 1 for battlegrounds (not arenas)
     char*   name[16];                                       // 5-20     m_MapName_lang
                                                             // 21 string flags
@@ -1267,8 +1324,8 @@ struct MapDifficultyEntry
     //uint32      Id;                                       // 0        m_ID
     uint32      MapId;                                      // 1        m_mapID
     uint32      Difficulty;                                 // 2        m_difficulty (for arenas: arena slot)
-    //char*       areaTriggerText[16];                      // 3-18     m_message_lang (text showed when transfer to map failed)
-    //uint32      textFlags;                                // 19 
+    char*       areaTriggerText[16];                        // 3-18     m_message_lang (text showed when transfer to map failed)
+    uint32      mapDifficultyFlags;                         // 19
     uint32      resetTime;                                  // 20       m_raidDuration in secs, 0 if no fixed reset time
     uint32      maxPlayers;                                 // 21       m_maxPlayers some heroic versions have 0 when expected same amount as in normal version
     //char*       difficultyString;                         // 22       m_difficultystring
@@ -1513,6 +1570,42 @@ struct SoundEntriesEntry
                                                             // 29       m_soundEntriesAdvancedID
 };
 
+
+struct ClassFamilyMask
+{
+    uint64 Flags;
+    uint32 Flags2;
+
+    ClassFamilyMask() : Flags(0), Flags2(0) {}
+    explicit ClassFamilyMask(uint64 familyFlags, uint32 familyFlags2 = 0) : Flags(familyFlags), Flags2(familyFlags2) {}
+
+    bool Empty() const { return Flags == 0 && Flags2 == 0; }
+    bool operator! () const { return Empty(); }
+    operator void const* () const { return Empty() ? NULL : this; }// for allow normal use in if(mask)
+
+    bool IsFitToFamilyMask(uint64 familyFlags, uint32 familyFlags2 = 0) const
+    {
+        return (Flags & familyFlags) || (Flags2 & familyFlags2);
+    }
+
+    bool IsFitToFamilyMask(ClassFamilyMask const& mask) const
+    {
+        return (Flags & mask.Flags) || (Flags2 & mask.Flags2);
+    }
+
+    uint64 operator& (uint64 mask) const                     // possible will removed at finish convertion code use IsFitToFamilyMask
+    {
+        return Flags & mask;
+    }
+
+    ClassFamilyMask& operator|= (ClassFamilyMask const& mask)
+    {
+        Flags |= mask.Flags;
+        Flags2 |= mask.Flags2;
+        return *this;
+    }
+};
+
 #define MAX_SPELL_REAGENTS 8
 #define MAX_SPELL_TOTEMS 2
 #define MAX_SPELL_TOTEM_CATEGORIES 2
@@ -1592,9 +1685,7 @@ struct SpellEntry
     int32     EffectMiscValueB[MAX_EFFECT_INDEX];           // 113-115  m_effectMiscValueB
     uint32    EffectTriggerSpell[MAX_EFFECT_INDEX];         // 116-118  m_effectTriggerSpell
     float     EffectPointsPerComboPoint[MAX_EFFECT_INDEX];  // 119-121  m_effectPointsPerCombo
-    uint32    EffectSpellClassMaskA[3];                     // 122-124  m_effectSpellClassMaskA, effect 0
-    uint32    EffectSpellClassMaskB[3];                     // 125-127  m_effectSpellClassMaskB, effect 1
-    uint32    EffectSpellClassMaskC[3];                     // 128-130  m_effectSpellClassMaskC, effect 2
+    ClassFamilyMask EffectSpellClassMask[MAX_EFFECT_INDEX]; // 122-130  m_effectSpellClassMaskA/B/C, effect 0/1/2
     uint32    SpellVisual[2];                               // 131-132  m_spellVisualID
     uint32    SpellIconID;                                  // 133      m_spellIconID
     uint32    activeIconID;                                 // 134      m_activeIconID
@@ -1612,8 +1703,7 @@ struct SpellEntry
     uint32    StartRecoveryTime;                            // 206      m_startRecoveryTime
     uint32    MaxTargetLevel;                               // 207      m_maxTargetLevel
     uint32    SpellFamilyName;                              // 208      m_spellClassSet
-    uint64    SpellFamilyFlags;                             // 209-210  m_spellClassMask NOTE: size is 12 bytes!!!
-    uint32    SpellFamilyFlags2;                            // 211      addition to m_spellClassMask
+    ClassFamilyMask SpellFamilyFlags;                       // 209-211  m_spellClassMask NOTE: size is 12 bytes!!!
     uint32    MaxAffectedTargets;                           // 212      m_maxTargets
     uint32    DmgClass;                                     // 213      m_defenseType
     uint32    PreventionType;                               // 214      m_preventionType
@@ -1634,19 +1724,29 @@ struct SpellEntry
 
     // helpers
     int32 CalculateSimpleValue(SpellEffectIndex eff) const { return EffectBasePoints[eff] + int32(1); }
-    uint32 const* GetEffectSpellClassMask(SpellEffectIndex effect) const
+    ClassFamilyMask const& GetEffectSpellClassMask(SpellEffectIndex effect) const
     {
-        return EffectSpellClassMaskA + effect * 3;
+        return EffectSpellClassMask[effect];
     }
 
     bool IsFitToFamilyMask(uint64 familyFlags, uint32 familyFlags2 = 0) const
     {
-        return (SpellFamilyFlags & familyFlags) || (SpellFamilyFlags2 & familyFlags2);
+        return SpellFamilyFlags.IsFitToFamilyMask(familyFlags, familyFlags2);
     }
 
     bool IsFitToFamily(SpellFamily family, uint64 familyFlags, uint32 familyFlags2 = 0) const
     {
         return SpellFamily(SpellFamilyName) == family && IsFitToFamilyMask(familyFlags, familyFlags2);
+    }
+
+    bool IsFitToFamilyMask(ClassFamilyMask const& mask) const
+    {
+        return SpellFamilyFlags.IsFitToFamilyMask(mask);
+    }
+
+    bool IsFitToFamily(SpellFamily family, ClassFamilyMask const& mask) const
+    {
+        return SpellFamily(SpellFamilyName) == family && IsFitToFamilyMask(mask);
     }
 
     private:

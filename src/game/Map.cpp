@@ -824,20 +824,20 @@ void Map::UnloadAll(bool pForce)
     }
 }
 
-MapDifficulty const* Map::GetMapDifficulty() const
+MapDifficultyEntry const* Map::GetMapDifficulty() const
 {
     return GetMapDifficultyData(GetId(),GetDifficulty());
 }
 
 uint32 Map::GetMaxPlayers() const
 {
-    if(MapDifficulty const* mapDiff = GetMapDifficulty())
+    if(MapDifficultyEntry const* mapDiff = GetMapDifficulty())
     {
         if(mapDiff->maxPlayers || IsRegularDifficulty())    // Normal case (expect that regular difficulty always have correct maxplayers)
             return mapDiff->maxPlayers;
         else                                                // DBC have 0 maxplayers for heroic instances with expansion < 2
         {                                                   // The heroic entry exists, so we don't have to check anything, simply return normal max players
-            MapDifficulty const* normalDiff = GetMapDifficultyData(i_id, REGULAR_DIFFICULTY);
+            MapDifficultyEntry const* normalDiff = GetMapDifficultyData(i_id, REGULAR_DIFFICULTY);
             return normalDiff ? normalDiff->maxPlayers : 0;
         }
     }
@@ -1366,11 +1366,11 @@ bool DungeonMap::Add(Player *player)
                 }
                 // if the group/leader is permanently bound to the instance
                 // players also become permanently bound when they enter
-                if (groupBind->perm)
+                if (groupBind->perm && IsDungeon())
                 {
                     WorldPacket data(SMSG_PENDING_RAID_LOCK, 9);
                     data << uint32(60000);
-                    data << uint32(0); // Completed Encounter Mask (Feanor: TODO)
+                    data << groupBind->state->GetCompletedEncountersMask();
                     data << uint8(0);
                     player->GetSession()->SendPacket(&data);
                     player->SetPendingBind(GetPersistanceState(), 60000);
@@ -1465,7 +1465,7 @@ bool DungeonMap::Reset(InstanceResetMethod method)
     return m_mapRefManager.isEmpty();
 }
 
-void DungeonMap::PermBindAllPlayers(Player *player)
+void DungeonMap::PermBindAllPlayers(Player *player, bool permanent)
 {
     Group *group = player->GetGroup();
     // group members outside the instance group don't get bound
@@ -1477,7 +1477,7 @@ void DungeonMap::PermBindAllPlayers(Player *player)
         InstancePlayerBind *bind = plr->GetBoundInstance(GetId(), GetDifficulty());
         if (!bind || !bind->perm)
         {
-            plr->BindToInstance(GetPersistanceState(), true);
+            plr->BindToInstance(GetPersistanceState(), permanent);
             WorldPacket data(SMSG_INSTANCE_SAVE_CREATED, 4);
             data << uint32(0);
             plr->GetSession()->SendPacket(&data);
@@ -1485,7 +1485,7 @@ void DungeonMap::PermBindAllPlayers(Player *player)
 
         // if the leader is not in the instance the group will not get a perm bind
         if (group && group->GetLeaderGuid() == plr->GetObjectGuid())
-            group->BindToInstance(GetPersistanceState(), true);
+            group->BindToInstance(GetPersistanceState(), permanent);
     }
 }
 

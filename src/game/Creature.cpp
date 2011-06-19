@@ -2046,7 +2046,7 @@ void Creature::SetInCombatWithZone()
     }
 }
 
-Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position) const
+Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position, float minRange) const
 {
     if (!CanHaveThreatList())
         return NULL;
@@ -2063,6 +2063,27 @@ Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position) c
     {
         case ATTACKING_TARGET_RANDOM:
         {
+            if(minRange > 0)
+            {
+                Unit* pTarget = NULL;
+                std::vector<Unit *> target_list;
+
+                for (i; i != threatlist.end(); ++i)
+                {
+                    pTarget = GetMap()->GetUnit((*i)->getUnitGuid());
+
+                    if (pTarget && !pTarget->IsWithinDist(this, minRange, false))
+                        target_list.push_back(pTarget);
+
+                    pTarget = NULL;
+                }
+
+                if (target_list.size())
+                    if (pTarget = *(target_list.begin()+rand()%target_list.size()))
+                        return pTarget;
+            }
+
+            i = threatlist.begin();
             advance(i, position + (rand() % (threatlist.size() - position)));
             return GetMap()->GetUnit((*i)->getUnitGuid());
         }
@@ -2076,8 +2097,33 @@ Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position) c
             advance(r, position);
             return GetMap()->GetUnit((*r)->getUnitGuid());
         }
+        case ATTACKING_TARGET_RANDOM_PLAYER:
+        {
+            Unit* pTarget = NULL;
+            std::vector<Player *> target_list;
+
+            for (i; i != threatlist.end(); ++i)
+            {
+                pTarget = GetMap()->GetUnit((*i)->getUnitGuid());
+
+                if (pTarget && pTarget->GetTypeId() == TYPEID_PLAYER)
+                {
+                    if(minRange > 0 && pTarget->IsWithinDist(this, minRange, false))
+                        continue;
+
+                    target_list.push_back((Player*)pTarget);
+                }
+
+                pTarget = NULL;
+            }
+
+            if (target_list.size())
+            {
+                if (pTarget = *(target_list.begin()+rand()%target_list.size()))
+                    return pTarget;
+            }
+        }
         // TODO: implement these
-        //case ATTACKING_TARGET_RANDOM_PLAYER:
         //case ATTACKING_TARGET_TOPAGGRO_PLAYER:
         //case ATTACKING_TARGET_BOTTOMAGGRO_PLAYER:
     }

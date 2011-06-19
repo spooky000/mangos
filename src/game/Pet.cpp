@@ -450,7 +450,7 @@ void Pet::SavePetToDB(PetSaveMode mode)
         savePet.addString(ss);
 
         savePet.addUInt64(uint64(time(NULL)));
-        savePet.addUInt32(GetUInt32Value(UNIT_CREATED_BY_SPELL));
+        savePet.addUInt32(GetCreateSpellID());
         savePet.addUInt32(uint32(getPetType()));
 
         savePet.Execute();
@@ -1321,13 +1321,7 @@ void Pet::_LoadAuras(uint32 timediff)
             }
 
             // prevent wrong values of remaincharges
-            uint32 procCharges = spellproto->procCharges;
-            if (procCharges)
-            {
-                if (remaincharges <= 0 || remaincharges > procCharges)
-                    remaincharges = procCharges;
-            }
-            else
+            if (spellproto->procCharges == 0)
                 remaincharges = 0;
 
             if (!spellproto->StackAmount)

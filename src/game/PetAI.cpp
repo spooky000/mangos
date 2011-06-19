@@ -101,7 +101,7 @@ bool PetAI::_needToStop() const
     if(m_creature->isCharmed() && m_creature->getVictim() == m_creature->GetCharmer())
         return true;
 
-    if (!m_creature->getVictim()->isVisibleForOrDetect(m_creature,m_creature,true))
+    if (!m_creature->getVictim()->isVisibleForOrDetect(m_creature, m_creature, false))
         return true;
 
     return !m_creature->getVictim()->isTargetableForAttack();
@@ -144,6 +144,8 @@ void PetAI::UpdateAI(const uint32 diff)
     // i_pet.getVictim() can't be used for check in case stop fighting, i_pet.getVictim() clear at Unit death etc.
     if (m_creature->getVictim())
     {
+        bool meleeReach = m_creature->CanReachWithMeleeAttack(m_creature->getVictim());
+
         if (_needToStop())
         {
             DEBUG_FILTER_LOG(LOG_FILTER_AI_AND_MOVEGENSS, "PetAI (guid = %u) is stopping attack.", m_creature->GetGUIDLow());
@@ -156,10 +158,7 @@ void PetAI::UpdateAI(const uint32 diff)
             _stopAttack();
             return;
         }
-
-        bool meleeReach = m_creature->CanReachWithMeleeAttack(m_creature->getVictim());
-
-        if (m_creature->IsStopped() || meleeReach)
+        else if (m_creature->IsStopped() || meleeReach)
         {
             // required to be stopped cases
             if (m_creature->IsStopped() && m_creature->IsNonMeleeSpellCasted(false))

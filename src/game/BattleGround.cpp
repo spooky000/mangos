@@ -791,8 +791,8 @@ void BattleGround::EndBattleGround(Team winner)
         loser_arena_team = sObjectMgr.GetArenaTeamById(GetArenaTeamIdForTeam(GetOtherTeam(winner)));
         if (winner_arena_team && loser_arena_team)
         {
-            loser_rating = loser_arena_team->GetStats().rating;
-            winner_rating = winner_arena_team->GetStats().rating;
+            loser_rating = loser_arena_team->GetAverageMMR(GetBgRaid(GetOtherTeam(winner)));
+            winner_rating = winner_arena_team->GetAverageMMR(GetBgRaid(winner));
             int32 winner_change = winner_arena_team->WonAgainst(loser_rating);
             int32 loser_change = loser_arena_team->LostAgainst(winner_rating);
 
@@ -1137,10 +1137,19 @@ void BattleGround::RemovePlayerAtLeave(ObjectGuid guid, bool Transport, bool Sen
     if (plr && plr->HasAuraType(SPELL_AURA_SPIRIT_OF_REDEMPTION))
         plr->RemoveSpellsCausingAura(SPELL_AURA_MOD_SHAPESHIFT);
 
-    if(plr && !plr->isAlive())                              // resurrect on exit
+    if (plr)
     {
-        plr->ResurrectPlayer(1.0f);
-        plr->SpawnCorpseBones();
+        // should remove spirit of redemption
+        if (plr->HasAuraType(SPELL_AURA_SPIRIT_OF_REDEMPTION))
+            plr->RemoveSpellsCausingAura(SPELL_AURA_MOD_SHAPESHIFT);
+
+        plr->RemoveAurasDueToSpell(isArena() ? SPELL_ARENA_DAMPENING : SPELL_BATTLEGROUND_DAMPENING);
+
+        if (!plr->isAlive())                                // resurrect on exit
+        {
+            plr->ResurrectPlayer(1.0f);
+            plr->SpawnCorpseBones();
+        }
     }
 
     RemovePlayer(plr, guid);                                // BG subclass specific code
@@ -1333,14 +1342,14 @@ void BattleGround::AddPlayer(Player *plr)
 
         plr->CastSpell(plr, SPELL_ARENA_DAMPENING, true);
 
+        plr->CastSpell(plr, SPELL_ARENA_PREPARATION, true);
+
         if(GetStatus() == STATUS_WAIT_JOIN)                 // not started yet
         {
             WorldPacket status;
             BattleGroundQueueTypeId bgQueueTypeId = BattleGroundMgr::BGQueueTypeId(m_TypeID, GetArenaType());
             uint32 queueSlot = plr->GetBattleGroundQueueIndex(bgQueueTypeId);
             sBattleGroundMgr.BuildBattleGroundStatusPacket(&status, this, queueSlot,GetStatus(),0, GetStartTime(), GetArenaType(),isArena()? 0 : 1);
-
-            plr->CastSpell(plr, SPELL_ARENA_PREPARATION, true);
 
             plr->SetHealth(plr->GetMaxHealth());
             plr->SetPower(POWER_MANA, plr->GetMaxPower(POWER_MANA));
@@ -1352,10 +1361,10 @@ void BattleGround::AddPlayer(Player *plr)
     }
     else
     {
-        plr->CastSpell(plr, SPELL_BG_DAMPENING, true);
-
         if(GetStatus() == STATUS_WAIT_JOIN)                 // not started yet
             plr->CastSpell(plr, SPELL_PREPARATION, true);   // reduces all mana cost of spells.
+
+        plr->CastSpell(plr, SPELL_BATTLEGROUND_DAMPENING, true);
     }
 
     plr->GetAchievementMgr().ResetAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HEALING_DONE, ACHIEVEMENT_CRITERIA_CONDITION_MAP, GetMapId());

@@ -868,7 +868,7 @@ void Spell::prepareDataForTriggerSystem()
                 break;
             case SPELLFAMILY_HUNTER:
                 // Hunter Rapid Killing/Explosive Trap Effect/Immolation Trap Effect/Frost Trap Aura/Snake Trap Effect/Explosive Shot
-                if ((m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0100000000000000))) || m_spellInfo->SpellFamilyFlags2 & 0x200)
+                if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0100200000000214), 0x00000200))
                     m_canTrigger = true;
                 break;
             case SPELLFAMILY_PALADIN:
@@ -936,7 +936,7 @@ void Spell::prepareDataForTriggerSystem()
 
     // Hunter traps spells: Immolation Trap Effect, Frost Trap (triggering spell!!),
     // Freezing Trap Effect(+ Freezing Arrow Effect), Explosive Trap Effect, Snake Trap Effect
-    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER && (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000200000002008) || m_spellInfo->SpellFamilyFlags2 & 0x00064000))
+    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER && (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0000200000002008), 0x00064000)))
         m_procAttacker |= PROC_FLAG_ON_TRAP_ACTIVATION;
 }
 
@@ -1407,15 +1407,13 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
             }
 
             // not break stealth by cast targeting
-            if (!(m_spellInfo->AttributesEx & SPELL_ATTR_EX_NOT_BREAK_STEALTH) || (m_spellInfo->SpellFamilyName == SPELLFAMILY_ROGUE && m_spellInfo->SpellFamilyFlags == SPELLFAMILYFLAG_ROGUE_SAP))
-            {
-                // dirty hacks! Earthbind Totem, Mass Dispel, Sap, Killing Spree, Hand of Salvation, Starfall, Mirror Image spell. maybe the attribute flag is wrong
-                if (m_spellInfo->Id != 3600 && m_spellInfo->Id != 32375 && m_spellInfo->Id != 32592 && m_spellInfo->Id != 72734 &&
-                    m_spellInfo->Id != 51690 && m_spellInfo->Id != 53055 && m_spellInfo->Id != 58838 && m_spellInfo->Id != 53198)
-                {
-                    unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
-                }
-            }
+            if (!(m_spellInfo->AttributesEx & (SPELL_ATTR_EX_NOT_BREAK_STEALTH | SPELL_ATTR_EX_NO_THREAT)) &&
+                !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_UNK28))
+                unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+
+            // Sap should remove victim's stealth
+            if (m_spellInfo->Mechanic == MECHANIC_SAPPED)
+                unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
 
             // can cause back attack (if detected), stealth removed at Spell::cast if spell break it
             if (!(m_spellInfo->AttributesEx3 & SPELL_ATTR_EX3_NO_INITIAL_AGGRO) && !IsPositiveSpell(m_spellInfo->Id) &&
@@ -1900,6 +1898,14 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
         {
             if (m_spellInfo->Id == 38194)                   // Blink
                 unMaxTargets = 1;
+            break;
+        }
+        case SPELLFAMILY_WARRIOR:
+        {
+            // Sunder Armor
+            if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0000000000004000), 0x00000000))
+                if (m_caster->HasAura(58387))               // Glyph of Sunder Armor
+                    EffectChainTarget = 2;
             break;
         }
         case SPELLFAMILY_DRUID:
@@ -3045,7 +3051,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 }
 
                 float _target_x, _target_y, _target_z;
-                pTarget->GetClosePoint(_target_x, _target_y, _target_z, pTarget->GetObjectBoundingRadius(), dist, angle);
+                pTarget->GetClosePoint(_target_x, _target_y, _target_z, pTarget->GetObjectBoundingRadius(), dist, angle, m_caster);
                 if(pTarget->IsWithinLOS(_target_x, _target_y, _target_z))
                 {
                     targetUnitMap.push_back(m_caster);
@@ -3149,7 +3155,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
         {
             // add here custom effects that need default target.
             // FOR EVERY TARGET TYPE THERE IS A DIFFERENT FILL!!
-            if (m_spellInfo->SpellFamilyFlags2 & UI64LIT (0x00000020) && m_spellInfo->SpellIconID == 3217)
+            if (m_spellInfo->IsFitToFamilyMask(0x0, 0x00000020) && m_spellInfo->SpellIconID == 3217)
             {
                 targetUnitMap.push_back(m_caster);
                 break;
@@ -3317,15 +3323,10 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
             }
             break;
         }
-        case TARGET_UNK_92:
+        case TARGET_UNIT_CREATOR:
         {
-            if (Unit *unitTarget = m_targets.getUnitTarget())
-                targetUnitMap.push_back(unitTarget);
-            else
-            {
-                if (Unit *creator = m_caster->GetMap()->GetUnit(m_caster->GetCreatorGuid()))
-                    targetUnitMap.push_back(creator);
-            }
+            if(Unit* target = m_caster->GetCreator())
+                targetUnitMap.push_back(target);
             break;
         }
         default:
@@ -5223,19 +5224,10 @@ SpellCastResult Spell::CheckCast(bool strict)
     }
     // only check at first call, Stealth auras are already removed at second call
     // for now, ignore triggered spells
-    if( strict && !m_IsTriggeredSpell)
+    if (strict && !m_IsTriggeredSpell)
     {
-        bool checkForm = true;
         // Ignore form req aura
-        Unit::AuraList const& ignore = m_caster->GetAurasByType(SPELL_AURA_MOD_IGNORE_SHAPESHIFT);
-        for(Unit::AuraList::const_iterator i = ignore.begin(); i != ignore.end(); ++i)
-        {
-            if (!(*i)->isAffectedOnSpell(m_spellInfo))
-                continue;
-            checkForm = false;
-            break;
-        }
-        if (checkForm)
+        if (!m_caster->HasAffectedAura(SPELL_AURA_MOD_IGNORE_SHAPESHIFT, m_spellInfo))
         {
             // Cannot be used in this stance/form
             SpellCastResult shapeError = GetErrorAtShapeshiftedCast(m_spellInfo, m_caster->GetShapeshiftForm());
@@ -5501,8 +5493,8 @@ SpellCastResult Spell::CheckCast(bool strict)
             // Exclusion for Pounce:  Facing Limitation was removed in 2.0.1, but it still uses the same, old Ex-Flags
             // Exclusion for Mutilate:Facing Limitation was removed in 2.0.1 and 3.0.3, but they still use the same, old Ex-Flags
             // Exclusion for Throw: Facing limitation was added in 3.2.x, but that shouldn't be
-            if ((m_spellInfo->SpellFamilyName != SPELLFAMILY_DRUID || (m_spellInfo->SpellFamilyFlags != UI64LIT(0x0000000000020000))) &&
-                (m_spellInfo->SpellFamilyName != SPELLFAMILY_ROGUE || (m_spellInfo->SpellFamilyFlags != UI64LIT(0x0020000000000000))) &&
+            if (!m_spellInfo->IsFitToFamily(SPELLFAMILY_DRUID, UI64LIT(0x0000000000020000)) &&
+                !m_spellInfo->IsFitToFamily(SPELLFAMILY_ROGUE, UI64LIT(0x0020000000000000)) &&
                 m_spellInfo->Id != 2764)
             {
                 SendInterrupted(2);
@@ -7467,6 +7459,10 @@ bool Spell::CheckTargetCreatureType(Unit* target) const
     if(m_spellInfo->Id == 2641 || m_spellInfo->Id == 23356)
         spellCreatureTargetMask =  0;
 
+    // skip creature type check for Grounding Totem
+    if (target->GetUInt32Value(UNIT_CREATED_BY_SPELL) == 8177)
+        return true;
+
     if (spellCreatureTargetMask)
     {
         uint32 TargetCreatureType = target->GetCreatureTypeMask();
@@ -7491,19 +7487,19 @@ CurrentSpellTypes Spell::GetCurrentContainer()
 bool Spell::CheckTarget( Unit* target, SpellEffectIndex eff )
 {
     // Check targets for creature type mask and remove not appropriate (skip explicit self target case, maybe need other explicit targets)
-    if(m_spellInfo->EffectImplicitTargetA[eff] != TARGET_SELF )
+    if (m_spellInfo->EffectImplicitTargetA[eff] != TARGET_SELF )
     {
         if (!CheckTargetCreatureType(target))
             return false;
     }
 
     // Bloodlust / Heroism - Sated & Exhaustion debuffs
-    if(m_spellInfo->SpellFamilyName==SPELLFAMILY_SHAMAN && m_spellInfo->SpellFamilyFlags == UI64LIT(0x4000000000)
+    if ((m_spellInfo->Id == 2825 || m_spellInfo->Id == 32182)
         && (target->HasAura(57724) || target->HasAura(57723)) )
         return false;
 
     // Check Aura spell req (need for AoE spells)
-    if(m_spellInfo->targetAuraSpell && !target->HasAura(m_spellInfo->targetAuraSpell))
+    if (m_spellInfo->targetAuraSpell && !target->HasAura(m_spellInfo->targetAuraSpell))
         return false;
     if (m_spellInfo->excludeTargetAuraSpell && target->HasAura(m_spellInfo->excludeTargetAuraSpell))
         return false;
@@ -7839,7 +7835,7 @@ void Spell::FillRaidOrPartyTargets(UnitList &targetUnitMap, Unit* member, Unit* 
                     targetUnitMap.push_back(Target);
 
                 if (withPets)
-                    if (Pet* pet = Target->GetPet())
+                    if (Target->GetPet())
                     {
                         GroupPetList m_groupPets = Target->GetPets();
                         if (!m_groupPets.empty())
@@ -8034,7 +8030,7 @@ void Spell::DoSummonSnakes(SpellEffectIndex eff_idx)
         if (!pSummon->IsPositionValid())
         {
             sLog.outError("EffectSummonSnakes failed to summon snakes for Unit %s (GUID: %u) bacause of invalid position (x = %f, y = %f, z = %f map = %u)"
-                ,m_caster->GetName(), m_caster->GetObjectGuid().GetCounter(), position_x, position_y, position_z, m_caster->GetMap());
+                ,m_caster->GetName(), m_caster->GetObjectGuid().GetCounter(), position_x, position_y, position_z, m_caster->GetMapId());
             delete pSummon;
             continue;
         }

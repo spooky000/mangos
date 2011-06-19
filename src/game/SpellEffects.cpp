@@ -1321,6 +1321,11 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(m_caster, spell_id, true, NULL);
                     return;
                 }
+                case 17770:                                 // Wolfshead Helm Energy
+                {
+                    m_caster->CastSpell(m_caster, 29940, true, NULL);
+                    return;
+                }
                 case 17950:                                 // Shadow Portal
                 {
                     if (!unitTarget)
@@ -3147,6 +3152,19 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(m_caster, 69956, true);
                     return;
                 }
+                default:                                   // DBC encounters main check
+                {
+                    if (unitTarget && unitTarget->GetTypeId() == TYPEID_PLAYER)
+                    {
+                        if (m_caster->GetMap()->IsDungeon())
+                        {
+                            Player* creditedPlayer = unitTarget->GetCharmerOrOwnerPlayerOrPlayerItself();
+                            DungeonMap* dungeon = (DungeonMap*)m_caster->GetMap();;
+                            if (DungeonPersistentState* state = dungeon->GetPersistanceState())
+                                state->UpdateEncounterState(ENCOUNTER_CREDIT_CAST_SPELL, m_spellInfo->Id, creditedPlayer);
+                        }
+                    }
+                }
             }
             break;
         }
@@ -4151,6 +4169,17 @@ void Spell::EffectTriggerSpell(SpellEffectIndex effIndex)
             unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_ROOT);
             unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_DECREASE_SPEED);
             unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_STALKED);
+
+            // if this spell is given to NPC it must handle rest by it's own AI
+            if (unitTarget->GetTypeId() != TYPEID_PLAYER)
+                return;
+
+            uint32 spellId = 1784;
+            // reset cooldown on it if needed
+            if (((Player*)unitTarget)->HasSpellCooldown(spellId))
+                ((Player*)unitTarget)->RemoveSpellCooldown(spellId);
+
+            m_caster->CastSpell(unitTarget, spellId, true);
             return;
         }
         // just skip
@@ -5346,73 +5375,12 @@ void Spell::EffectSummonChangeItem(SpellEffectIndex eff_idx)
     if (!newitemid)
         return;
 
-    uint16 pos = m_CastItem->GetPos();
+    Item* oldItem = m_CastItem;
 
-    Item *pNewItem = Item::CreateItem( newitemid, 1, player);
-    if (!pNewItem)
-        return;
+    // prevent crash at access and unexpected charges counting with item update queue corrupt
+    ClearCastItem();
 
-    for(uint8 j= PERM_ENCHANTMENT_SLOT; j<=TEMP_ENCHANTMENT_SLOT; ++j)
-    {
-        if (m_CastItem->GetEnchantmentId(EnchantmentSlot(j)))
-            pNewItem->SetEnchantment(EnchantmentSlot(j), m_CastItem->GetEnchantmentId(EnchantmentSlot(j)), m_CastItem->GetEnchantmentDuration(EnchantmentSlot(j)), m_CastItem->GetEnchantmentCharges(EnchantmentSlot(j)));
-    }
-
-    if (m_CastItem->GetUInt32Value(ITEM_FIELD_DURABILITY) < m_CastItem->GetUInt32Value(ITEM_FIELD_MAXDURABILITY))
-    {
-        double loosePercent = 1 - m_CastItem->GetUInt32Value(ITEM_FIELD_DURABILITY) / double(m_CastItem->GetUInt32Value(ITEM_FIELD_MAXDURABILITY));
-        player->DurabilityLoss(pNewItem, loosePercent);
-    }
-
-    if (player->IsInventoryPos(pos))
-    {
-        ItemPosCountVec dest;
-        uint8 msg = player->CanStoreItem( m_CastItem->GetBagSlot(), m_CastItem->GetSlot(), dest, pNewItem, true );
-        if (msg == EQUIP_ERR_OK)
-        {
-            player->DestroyItem(m_CastItem->GetBagSlot(), m_CastItem->GetSlot(), true);
-
-            // prevent crash at access and unexpected charges counting with item update queue corrupt
-            ClearCastItem();
-
-            player->StoreItem( dest, pNewItem, true);
-            return;
-        }
-    }
-    else if (player->IsBankPos (pos))
-    {
-        ItemPosCountVec dest;
-        uint8 msg = player->CanBankItem( m_CastItem->GetBagSlot(), m_CastItem->GetSlot(), dest, pNewItem, true );
-        if (msg == EQUIP_ERR_OK)
-        {
-            player->DestroyItem(m_CastItem->GetBagSlot(), m_CastItem->GetSlot(), true);
-
-            // prevent crash at access and unexpected charges counting with item update queue corrupt
-            ClearCastItem();
-
-            player->BankItem( dest, pNewItem, true);
-            return;
-        }
-    }
-    else if (player->IsEquipmentPos (pos))
-    {
-        uint16 dest;
-        uint8 msg = player->CanEquipItem( m_CastItem->GetSlot(), dest, pNewItem, true );
-        if (msg == EQUIP_ERR_OK)
-        {
-            player->DestroyItem(m_CastItem->GetBagSlot(), m_CastItem->GetSlot(), true);
-
-            // prevent crash at access and unexpected charges counting with item update queue corrupt
-            ClearCastItem();
-
-            player->EquipItem( dest, pNewItem, true);
-            player->AutoUnequipOffhandIfNeed();
-            return;
-        }
-    }
-
-    // fail
-    delete pNewItem;
+    player->ConvertItem(oldItem, newitemid);
 }
 
 void Spell::EffectProficiency(SpellEffectIndex /*eff_idx*/)
@@ -6761,6 +6729,10 @@ void Spell::EffectTaunt(SpellEffectIndex /*eff_idx*/)
         }
     }
 
+    // if target immune to taunt don't change threat
+    if (unitTarget->GetDiminishing(DIMINISHING_TAUNT) == DIMINISHING_LEVEL_IMMUNE)
+        return;
+
     // Also use this effect to set the taunter's threat to the taunted creature's highest value
     if (unitTarget->CanHaveThreatList() && unitTarget->getThreatManager().getCurrentVictim())
         unitTarget->getThreatManager().addThreat(m_caster,unitTarget->getThreatManager().getCurrentVictim()->getThreat());
@@ -7080,7 +7052,7 @@ void Spell::EffectWeaponDmg(SpellEffectIndex eff_idx)
             m_caster->AddComboPoints(unitTarget, 1);
     }
     // Mangle (Cat): CP
-    else if (m_spellInfo->SpellFamilyName==SPELLFAMILY_DRUID && (m_spellInfo->SpellFamilyFlags==UI64LIT(0x0000040000000000)))
+    else if (m_spellInfo->IsFitToFamily(SPELLFAMILY_DRUID, UI64LIT(0x0000040000000000)))
     {
         if(m_caster->GetTypeId()==TYPEID_PLAYER)
             m_caster->AddComboPoints(unitTarget, 1);
@@ -8980,8 +8952,8 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                             continue;
 
                         // Search only Serpent Sting, Viper Sting, Scorpid Sting auras
-                        uint64 familyFlag = holder->GetSpellProto()->SpellFamilyFlags;
-                        if (!(familyFlag & UI64LIT(0x000000800000C000)))
+                        ClassFamilyMask const& familyFlag = holder->GetSpellProto()->SpellFamilyFlags;
+                        if (!familyFlag.IsFitToFamilyMask(UI64LIT(0x000000800000C000)))
                             continue;
 
                         // Refresh aura duration
@@ -8993,7 +8965,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                             continue;
 
                         // Serpent Sting - Instantly deals 40% of the damage done by your Serpent Sting.
-                        if ((familyFlag & UI64LIT(0x0000000000004000)))
+                        if (familyFlag.IsFitToFamilyMask(UI64LIT(0x0000000000004000)))
                         {
                             // m_amount already include RAP bonus
                             basePoint = aura->GetModifier()->m_amount * aura->GetAuraMaxTicks() * 40 / 100;
@@ -9001,7 +8973,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         }
 
                         // Viper Sting - Instantly restores mana to you equal to 60% of the total amount drained by your Viper Sting.
-                        if ((familyFlag & UI64LIT(0x0000008000000000)))
+                        if (familyFlag.IsFitToFamilyMask(UI64LIT(0x0000008000000000)))
                         {
                             uint32 target_max_mana = unitTarget->GetMaxPower(POWER_MANA);
                             if (!target_max_mana)
@@ -9024,7 +8996,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         }
 
                         // Scorpid Sting - Attempts to Disarm the target for 10 sec. This effect cannot occur more than once per 1 minute.
-                        if (familyFlag & UI64LIT(0x0000000000008000))
+                        if (familyFlag.IsFitToFamilyMask(UI64LIT(0x0000000000008000)))
                             spellId = 53359;                // Chimera Shot - Scorpid
                         // ?? nothing say in spell desc (possibly need addition check)
                         //if ((familyFlag & UI64LIT(0x0000010000000000)) || // dot
@@ -9289,11 +9261,10 @@ void Spell::EffectSanctuary(SpellEffectIndex /*eff_idx*/)
 
     unitTarget->CombatStop();
     unitTarget->getHostileRefManager().deleteReferences();  // stop all fighting
+
     // Vanish allows to remove all threat and cast regular stealth so other spells can be used
-    if(m_spellInfo->SpellFamilyName == SPELLFAMILY_ROGUE && (m_spellInfo->SpellFamilyFlags & SPELLFAMILYFLAG_ROGUE_VANISH))
-    {
+    if (m_spellInfo->IsFitToFamily(SPELLFAMILY_ROGUE, UI64LIT(0x0000000000000800)))
         ((Player *)m_caster)->RemoveSpellsCausingAura(SPELL_AURA_MOD_ROOT);
-    }
 }
 
 void Spell::EffectAddComboPoints(SpellEffectIndex /*eff_idx*/)
