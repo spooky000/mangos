@@ -98,7 +98,7 @@ enum BattleGroundSpells
     SPELL_RECENTLY_DROPPED_FLAG     = 42792,                // Recently Dropped Flag
     SPELL_AURA_PLAYER_INACTIVE      = 43681,                // Inactive
     SPELL_ARENA_DAMPENING           = 74410,                // Arena - Dampening
-    SPELL_BG_DAMPENING              = 74411                 // Battleground - Dampening
+    SPELL_BATTLEGROUND_DAMPENING    = 74411,                // Battleground - Dampening
 };
 
 enum BattleGroundTimeIntervals
