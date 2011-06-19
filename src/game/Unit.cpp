@@ -4491,43 +4491,62 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
                 break;
             }
 
-             // Judgements and scrolls are always single 
-            if (GetSpellSpecific(holder->GetId()) == SPELL_JUDGEMENT ||
-                GetSpellSpecific(holder->GetId()) == SPELL_SCROLL)
-            {
-                RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
-                break;
-            }
+            bool bRemove = true;
 
-            bool bStop = false;
-
-            for (int32 i = 0; i < MAX_EFFECT_INDEX && !bStop; ++i)
+            for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
             {
                 // no need to check non stacking auras that weren't/won't be applied on this target
                 if (!foundHolder->m_auras[i] || !holder->m_auras[i])
                     continue;
 
-                // m_auraname can be modified to SPELL_AURA_NONE for area auras, use original
+                 // m_auraname can be modified to SPELL_AURA_NONE for area auras, use original
                 AuraType aurNameReal = AuraType(aurSpellInfo->EffectApplyAuraName[i]);
 
-                // problem with stacking comes for negative auras, so let's check positive auras exceptions for speedup
-                if (foundHolder->IsPositive() && aurNameReal != SPELL_AURA_PERIODIC_HEAL)
+                switch(aurNameReal)
                 {
-                    // can be only single (this check done at _each_ aura add
-                    RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
-                    bStop = true;
-                    break;
+                    // DoT/HoT/etc
+                    case SPELL_AURA_DUMMY:                  // allow stack
+                    case SPELL_AURA_PERIODIC_DAMAGE:
+                    case SPELL_AURA_PERIODIC_DAMAGE_PERCENT:
+                    case SPELL_AURA_PERIODIC_LEECH:
+                    case SPELL_AURA_PERIODIC_HEAL:
+                    case SPELL_AURA_OBS_MOD_HEALTH:
+                    case SPELL_AURA_PERIODIC_MANA_LEECH:
+                    case SPELL_AURA_OBS_MOD_MANA:
+                    case SPELL_AURA_POWER_BURN_MANA:
+                    case SPELL_AURA_MOD_DAMAGE_FROM_CASTER: // required for Serpent Sting (blizz hackfix?)
+                    case SPELL_AURA_MOD_MELEE_HASTE:        // for Icy Touch
+                    case SPELL_AURA_MOD_RANGED_HASTE:       // for Icy Touch
+                    case SPELL_AURA_MOD_DAMAGE_TAKEN:       // for Hemorrhage
+                    case SPELL_AURA_MOD_DECREASE_SPEED:     // for Mind Flay
+                        bRemove = false;
+                        break; 
+                    case SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE: // Deadly Poison exception
+                        if (aurSpellInfo->Dispel != DISPEL_POISON)             // TODO: stacking rules for all poisons
+                        {
+                            bRemove = true;
+                        }
+                        break;
+                    case SPELL_AURA_PERIODIC_ENERGIZE:      // all or self or clear non-stackable
+                    default:                                // not allow
+                        // can be only single (this check done at _each_ aura add
+                        bRemove = true;
+                        break;
                 }
             }
 
-            if (bStop)
+            if (bRemove)
+            {
+                // can be only single (this check done at _each_ aura add
+                RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
                 break;
+            }
 
             // Hacky fix for Malygos' Power Spark
             if(foundHolder->GetId() == 55849)
                 break;
 
-            bool stop = false;
+            /*bool stop = false;
 
             for (int32 i = 0; i < MAX_EFFECT_INDEX && !stop; ++i)
             {
@@ -4587,7 +4606,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
             }
 
             if(stop)
-                break;
+                break;*/
 
         }
     }
