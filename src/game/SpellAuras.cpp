@@ -8792,6 +8792,15 @@ void Aura::PeriodicDummyTick()
                         caster->CastSpell(target, (spell->Id == 62717) ? 65722 : 65723, true, 0, this, GetCasterGuid(), GetSpellProto());
                     return;
                 }
+                /* Feanor: CHECK LATER
+                case 62566:                                 // Healthy Spore Summon Periodic
+                {
+                    target->CastSpell(target, 62582, true);
+                    target->CastSpell(target, 62591, true);
+                    target->CastSpell(target, 62592, true);
+                    target->CastSpell(target, 62593, true);
+                    return;
+                }*/
             // Exist more after, need add later
                 default:
                     break;

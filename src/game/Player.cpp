@@ -14236,15 +14236,21 @@ void Player::RewardQuest(Quest const *pQuest, uint32 reward, Object* questGiver,
     QuestStatusData& q_status = mQuestStatus[quest_id];
 
     // Not give XP in case already completed once repeatable quest
-    uint32 XP = q_status.m_rewarded ? 0 : uint32(pQuest->XPValue(this)*sWorld.getConfig(CONFIG_FLOAT_RATE_XP_QUEST));
+    uint32 xp = 0;
 
-    if (getLevel() < sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
-        GiveXP(XP , NULL);
-    else
+    // Not give XP (and money replacement) in case already completed once repeatable quest (not daily/weekly cases)
+    if (!q_status.m_rewarded || pQuest->IsDailyOrWeekly())
     {
-        uint32 money = uint32(pQuest->GetRewMoneyMaxLevel() * sWorld.getConfig(CONFIG_FLOAT_RATE_DROP_MONEY));
-        ModifyMoney( money );
-        GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_MONEY_FROM_QUEST_REWARD, money);
+        xp = uint32(pQuest->XPValue(this)*sWorld.getConfig(CONFIG_FLOAT_RATE_XP_QUEST));
+
+        if (getLevel() < sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
+            GiveXP(xp , NULL);
+        else
+        {
+            uint32 money = uint32(pQuest->GetRewMoneyMaxLevel() * sWorld.getConfig(CONFIG_FLOAT_RATE_DROP_MONEY));
+            ModifyMoney(money);
+            GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_MONEY_FROM_QUEST_REWARD, money);
+        }
     }
 
     // Give player extra money if GetRewOrReqMoney > 0 and get ReqMoney if negative
@@ -14299,7 +14305,7 @@ void Player::RewardQuest(Quest const *pQuest, uint32 reward, Object* questGiver,
         q_status.uState = QUEST_CHANGED;
 
     if (announce)
-        SendQuestReward(pQuest, XP, questGiver);
+        SendQuestReward(pQuest, xp, questGiver);
 
     bool handled = false;
     if (questGiver)
