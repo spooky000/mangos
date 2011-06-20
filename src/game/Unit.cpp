@@ -4504,7 +4504,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
                 if (!foundHolder->m_auras[i] || !holder->m_auras[i])
                     continue;
 
-                 // m_auraname can be modified to SPELL_AURA_NONE for area auras, use original
+                // m_auraname can be modified to SPELL_AURA_NONE for area auras, use original
                 AuraType aurNameReal = AuraType(aurSpellInfo->EffectApplyAuraName[i]);
 
                 switch(aurNameReal)
@@ -4521,9 +4521,6 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
                     case SPELL_AURA_POWER_BURN_MANA:
                         bRemove = false;
                         break; 
-                    default:                                // not allow
-                        bRemove = true;
-                        break;
                 }
             }
 
