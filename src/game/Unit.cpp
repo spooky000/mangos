@@ -4498,7 +4498,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
 
             bool bRemove = true;
 
-            for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+            for (int32 i = 0; i < MAX_EFFECT_INDEX && bRemove; ++i)
             {
                 // no need to check non stacking auras that weren't/won't be applied on this target
                 if (!foundHolder->m_auras[i] || !holder->m_auras[i])
