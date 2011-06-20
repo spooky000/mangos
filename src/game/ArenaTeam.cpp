@@ -343,50 +343,21 @@ bool ArenaTeam::LoadMembersFromDB(QueryResult *arenaTeamMembersResult)
         newmember.name            = fields[7].GetCppString();
         newmember.Class           = fields[8].GetUInt8();
 
-        if (GetType() == ARENA_TYPE_2v2)
+        QueryResult *result = CharacterDatabase.PQuery("SELECT rating2, rating3, rating5 FROM arena_hidden_rating WHERE guid='%u'", fields[1].GetUInt32());
+        if(result)
         {
-            QueryResult *result = CharacterDatabase.PQuery("SELECT rating2 FROM arena_hidden_rating WHERE guid='%u'", fields[1].GetUInt32());
-
-            if (!result)
+            switch(GetType())
             {
-                CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", fields[1].GetUInt32(), 1500, 1500, 1500);
-                newmember.matchmaker_rating = 1500;
+                case ARENA_TYPE_2v2: newmember.matchmaker_rating = (*result)[0].GetUInt32();
+                case ARENA_TYPE_3v3: newmember.matchmaker_rating = (*result)[1].GetUInt32();
+                case ARENA_TYPE_5v5: newmember.matchmaker_rating = (*result)[2].GetUInt32();
             }
-            else
-            {
-                newmember.matchmaker_rating = (*result)[0].GetUInt32();
-                delete result;
-            }
+            delete result;
         }
-        if (GetType() == ARENA_TYPE_3v3)
+        else // MMR not found
         {
-            QueryResult *result = CharacterDatabase.PQuery("SELECT rating3 FROM arena_hidden_rating WHERE guid='%u'", fields[1].GetUInt32());
-
-            if (!result)
-            {
-                CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", fields[1].GetUInt32(), 1500, 1500, 1500);
-                newmember.matchmaker_rating = 1500;
-            }
-            else
-            {
-                newmember.matchmaker_rating = (*result)[0].GetUInt32();
-                  delete result;
-            }
-        }
-        if (GetType() == ARENA_TYPE_5v5)
-        {
-            QueryResult *result = CharacterDatabase.PQuery("SELECT rating5 FROM arena_hidden_rating WHERE guid='%u'", fields[1].GetUInt32());
-
-            if (!result)
-            {
-                CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", fields[1].GetUInt32(), 1500, 1500, 1500);
-                newmember.matchmaker_rating = 1500;
-            }
-            else
-            {
-                newmember.matchmaker_rating = (*result)[0].GetUInt32();
-                  delete result;
-            }
+            newmember.matchmaker_rating = newmember.personal_rating;
+            CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", fields[1].GetUInt32(), newmember.matchmaker_rating, newmember.matchmaker_rating, newmember.matchmaker_rating);
         }
 
         //check if member exists in characters table
