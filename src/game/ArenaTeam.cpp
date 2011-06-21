@@ -195,50 +195,21 @@ bool ArenaTeam::AddMember(ObjectGuid playerGuid)
     else
         rating_value = 1500;
 
-    if (GetType() == ARENA_TYPE_2v2)
+    QueryResult *result = CharacterDatabase.PQuery("SELECT rating2, rating3, rating5 FROM arena_hidden_rating WHERE guid='%u'", playerGuid.GetCounter());
+    if(!result)
     {
-        QueryResult *result = CharacterDatabase.PQuery("SELECT rating2 FROM arena_hidden_rating WHERE guid='%u'", playerGuid.GetCounter());
-
-        if (!result)
-        {
-            CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", playerGuid.GetCounter(), rating_value, rating_value, rating_value);
-            newmember.matchmaker_rating = rating_value;
-        }
-        else
-        {
-            newmember.matchmaker_rating = (*result)[0].GetUInt32();
-            delete result;
-        }
+        CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", playerGuid.GetCounter(), rating_value, rating_value, rating_value);
+        newmember.matchmaker_rating = rating_value;
     }
-    if (GetType() == ARENA_TYPE_3v3)
+    else
     {
-        QueryResult *result = CharacterDatabase.PQuery("SELECT rating3 FROM arena_hidden_rating WHERE guid='%u'", playerGuid.GetCounter());
-
-        if (!result)
+        switch(GetType())
         {
-            CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", playerGuid.GetCounter(), rating_value, rating_value, rating_value);
-            newmember.matchmaker_rating = rating_value;
+            case ARENA_TYPE_2v2: newmember.matchmaker_rating = (*result)[0].GetUInt32(); break;
+            case ARENA_TYPE_3v3: newmember.matchmaker_rating = (*result)[1].GetUInt32(); break;
+            case ARENA_TYPE_5v5: newmember.matchmaker_rating = (*result)[2].GetUInt32(); break;
         }
-        else
-        {
-            newmember.matchmaker_rating = (*result)[0].GetUInt32();
-            delete result;
-        }
-    }
-    if (GetType() == ARENA_TYPE_5v5)
-    {
-        QueryResult *result = CharacterDatabase.PQuery("SELECT rating5 FROM arena_hidden_rating WHERE guid='%u'", playerGuid.GetCounter());
-
-        if (!result)
-        {
-            CharacterDatabase.PExecute("INSERT INTO arena_hidden_rating (guid, rating2, rating3, rating5) VALUES""('%u', '%u', '%u', '%u')", playerGuid.GetCounter(), rating_value, rating_value, rating_value);
-            newmember.matchmaker_rating = rating_value;
-        }
-        else
-        {
-            newmember.matchmaker_rating = (*result)[0].GetUInt32();
-            delete result;
-        }
+        delete result;
     }
 
     int32 conf_value = sWorld.getConfig(CONFIG_INT32_ARENA_STARTPERSONALRATING);
