@@ -1272,6 +1272,7 @@ enum Targets
     TARGET_SELF2                       = 87,
     TARGET_DIRECTLY_FORWARD            = 89,
     TARGET_NONCOMBAT_PET               = 90,
+    TARGET_91                          = 91,
     TARGET_UNIT_CREATOR                = 92,
     TARGET_OWNED_VEHICLE               = 94,
     TARGET_UNIT_DRIVER                 = 95,

@@ -897,25 +897,16 @@ void Aura::ApplyModifier(bool apply, bool Real)
 
 bool Aura::isAffectedOnSpell(SpellEntry const *spell) const
 {
-    // Check family name
-    if (spell->SpellFamilyName != GetSpellProto()->SpellFamilyName)
-        return false;
-    // Check EffectClassMask
-    uint32 const *ptr = getAuraSpellClassMask();
-    if (((uint64*)ptr)[0] & spell->SpellFamilyFlags)
-        return true;
-    if (ptr[2] & spell->SpellFamilyFlags2)
-        return true;
-    return false;
+    return spell->IsFitToFamily(SpellFamily(GetSpellProto()->SpellFamilyName), GetAuraSpellClassMask());
 }
 
 bool Aura::CanProcFrom(SpellEntry const *spell, uint32 EventProcEx, uint32 procEx, bool active, bool useClassMask) const
 {
     // Check EffectClassMask
-    uint32 const *ptr = getAuraSpellClassMask();
+    ClassFamilyMask const& mask  = GetAuraSpellClassMask();
 
     // if no class mask defined, or spell_proc_event has SpellFamilyName=0 - allow proc
-    if (!useClassMask || (!((uint64*)ptr)[0] && !ptr[2]))
+    if (!useClassMask || !mask)
     {
         if (!(EventProcEx & PROC_EX_EX_TRIGGER_ALWAYS))
         {
@@ -941,14 +932,8 @@ bool Aura::CanProcFrom(SpellEntry const *spell, uint32 EventProcEx, uint32 procE
     {
         // SpellFamilyName check is performed in SpellMgr::IsSpellProcEventCanTriggeredBy and it is done once for whole holder
         // note: SpellFamilyName is not checked if no spell_proc_event is defined
-
-        if (((uint64*)ptr)[0] & spell->SpellFamilyFlags)
-            return true;
-
-        if (ptr[2] & spell->SpellFamilyFlags2)
-            return true;
+        return mask.IsFitToFamilyMask(spell->SpellFamilyFlags);
     }
-    return false;
 }
 
 void Aura::ReapplyAffectedPassiveAuras( Unit* target, bool owner_mode )
@@ -1055,10 +1040,6 @@ void Aura::HandleAddModifier(bool apply, bool Real)
 
     if (apply)
     {
-        uint64 modMask0 = 0;
-        uint64 modMask1 = 0;
-        uint64 modMask2 = 0;
-
         SpellEntry const* spellProto = GetSpellProto();
 
         // Add custom charges for some mod aura
@@ -1077,37 +1058,6 @@ void Aura::HandleAddModifier(bool apply, bool Real)
             case 64823:                                     // Elune's Wrath (Balance druid t8 set
                 GetHolder()->SetAuraCharges(1);
                 break;
-            // Everlasting Affliction rank 1 - 5
-            case 47201:
-            case 47202:
-            case 47203:
-            case 47204:
-            case 47205:
-            {
-                modMask0 = UI64LIT(0x2);        //Corruption
-                modMask1 = UI64LIT(0x100);      //Unstable Affliction
-                break;
-            }
-            case 20224:    // Seals of the Pure (Rank 1)
-            case 20225:    // Seals of the Pure (Rank 2)
-            case 20330:    // Seals of the Pure (Rank 3)
-            case 20331:    // Seals of the Pure (Rank 4)
-            case 20332:    // Seals of the Pure (Rank 5)
-            {
-                if( m_effIndex == 0 )
-                {
-                    uint32 const* ptr = getAuraSpellClassMask();
-                    modMask0 = uint64(ptr[0]);
-                    modMask1 = uint64(ptr[1])| UI64LIT(0x20000000); // Seal of Righteoussness proc
-                    modMask2 = ptr[2];
-                }
-                break;
-            }
-            case 37212: // Improved Flametongue Weapon, overwrite wrong data, maybe time re-add table
-            {
-                m_spellmod->mask = UI64LIT(0x0000000000200000); // Flametongue Weapon (Passive)
-                m_spellmod->mask2 = 0x00000000;
-            }
         }
 
         m_spellmod = new SpellModifier(
@@ -1119,10 +1069,17 @@ void Aura::HandleAddModifier(bool apply, bool Real)
             // all this spell expected expire not at use but at spell proc event check
             GetSpellProto()->StackAmount > 1 ? 0 : GetHolder()->GetAuraCharges());
 
-        if( modMask0 | modMask1 | modMask2 )
+        // Everlasting Affliction, overwrite wrong data, if will need more better restore support of spell_affect table
+        if (spellProto->SpellFamilyName == SPELLFAMILY_WARLOCK && spellProto->SpellIconID == 3169)
         {
-            m_spellmod->mask = modMask0 | modMask1<<32;
-            m_spellmod->mask2= modMask2;
+            // Corruption and Unstable Affliction
+            m_spellmod->mask = ClassFamilyMask(UI64LIT(0x0000010000000002));
+        }
+        // Improved Flametongue Weapon, overwrite wrong data, maybe time re-add table
+        else if (spellProto->Id == 37212)
+        {
+            // Flametongue Weapon (Passive)
+            m_spellmod->mask = ClassFamilyMask(UI64LIT(0x0000000000200000));
         }
     }
 
@@ -5902,12 +5859,23 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
         }
         case SPELLFAMILY_ROGUE:
         {
-            if(!apply)
+            switch(spell->Id)
             {
-                switch(spell->Id)
+                // Master of Subtlety
+                case 31666:
                 {
-                    // Master of Subtlety
-                    case 31666: target->RemoveAurasDueToSpell(31665); break;
+                    if (apply)
+                    {
+                        // for make duration visible
+                        if (SpellAuraHolder* holder = target->GetSpellAuraHolder(31665))
+                        {
+                            holder->SetAuraMaxDuration(GetHolder()->GetAuraDuration());
+                            holder->RefreshHolder();
+                        }
+                    }
+                    else
+                        target->RemoveAurasDueToSpell(31665);
+                    break;
                 }
             }
             break;
@@ -7186,19 +7154,13 @@ void Aura::HandleNoReagentUseAura(bool /*Apply*/, bool Real)
     if(target->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    uint32 mask[3] = {0, 0, 0};
+    ClassFamilyMask mask;
     Unit::AuraList const& noReagent = target->GetAurasByType(SPELL_AURA_NO_REAGENT_USE);
-        for(Unit::AuraList::const_iterator i = noReagent.begin(); i !=  noReagent.end(); ++i)
-        {
-            uint32 const *ptr = (*i)->getAuraSpellClassMask();
-            mask[0] |= ptr[0];
-            mask[1] |= ptr[1];
-            mask[2] |= ptr[2];
-        }
+    for(Unit::AuraList::const_iterator i = noReagent.begin(); i !=  noReagent.end(); ++i)
+        mask |= (*i)->GetAuraSpellClassMask();
 
-    target->SetUInt32Value(PLAYER_NO_REAGENT_COST_1+0, mask[0]);
-    target->SetUInt32Value(PLAYER_NO_REAGENT_COST_1+1, mask[1]);
-    target->SetUInt32Value(PLAYER_NO_REAGENT_COST_1+2, mask[2]);
+    target->SetUInt64Value(PLAYER_NO_REAGENT_COST_1+0, mask.Flags);
+    target->SetUInt32Value(PLAYER_NO_REAGENT_COST_1+2, mask.Flags2);
 }
 
 /*********************************************************/
@@ -8830,6 +8792,15 @@ void Aura::PeriodicDummyTick()
                         caster->CastSpell(target, (spell->Id == 62717) ? 65722 : 65723, true, 0, this, GetCasterGuid(), GetSpellProto());
                     return;
                 }
+                /* Feanor: CHECK LATER
+                case 62566:                                 // Healthy Spore Summon Periodic
+                {
+                    target->CastSpell(target, 62582, true);
+                    target->CastSpell(target, 62591, true);
+                    target->CastSpell(target, 62592, true);
+                    target->CastSpell(target, 62593, true);
+                    return;
+                }*/
             // Exist more after, need add later
                 default:
                     break;
@@ -9110,13 +9081,26 @@ void Aura::HandleManaShield(bool apply, bool Real)
 
 void Aura::HandleArenaPreparation(bool apply, bool Real)
 {
-    if(!Real)
+    if (!Real)
         return;
 
-    if(apply)
-        GetTarget()->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREPARATION);
+    Unit* target = GetTarget();
+
+    target->ApplyModFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREPARATION, apply);
+
+    if (apply)
+    {
+        // max regen powers at start preparation
+        target->SetHealth(target->GetMaxHealth());
+        target->SetPower(POWER_MANA, target->GetMaxPower(POWER_MANA));
+        target->SetPower(POWER_ENERGY, target->GetMaxPower(POWER_ENERGY));
+    }
     else
-        GetTarget()->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREPARATION);
+    {
+        // reset originally 0 powers at start/leave
+        target->SetPower(POWER_RAGE, 0);
+        target->SetPower(POWER_RUNIC_POWER, 0);
+    }
 }
 
 /**
@@ -9322,17 +9306,6 @@ void Aura::HandleAuraSafeFall( bool Apply, bool Real )
 
 bool Aura::IsCritFromAbilityAura(Unit* caster, uint32& damage)
 {
-    // Special exception for Rupture spell (no affecting spell and it can crit from 3.3.3)
-    if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_ROGUE &&
-        GetSpellProto()->SpellFamilyFlags & UI64LIT(0x000000000000100000))
-    {
-        if (!caster->IsSpellCrit(GetTarget(), GetSpellProto(), GetSpellSchoolMask(GetSpellProto())))
-            return false;
-
-        damage = caster->SpellCriticalDamageBonus(GetSpellProto(), damage, GetTarget());
-        return true;
-    }
-
     Unit::AuraList const& auras = caster->GetAurasByType(SPELL_AURA_ABILITY_PERIODIC_CRIT);
     for(Unit::AuraList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
     {
@@ -9344,6 +9317,17 @@ bool Aura::IsCritFromAbilityAura(Unit* caster, uint32& damage)
         damage = caster->SpellCriticalDamageBonus(GetSpellProto(), damage, GetTarget());
         return true;
     }
+
+    // Special exception for Rupture spell, damage can crit after patch 3.3.3
+    if (GetSpellProto()->IsFitToFamily(SPELLFAMILY_ROGUE, UI64LIT(0x100000)))
+    {
+        if(caster->IsSpellCrit(GetTarget(), GetSpellProto(), GetSpellSchoolMask(GetSpellProto())))
+        {
+            damage = caster->SpellCriticalDamageBonus(GetSpellProto(), damage, GetTarget());
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -9660,8 +9644,7 @@ void SpellAuraHolder::_RemoveSpellAuraHolder()
         }
 
         uint32 removeState = 0;
-        uint64 removeFamilyFlag = m_spellProto->SpellFamilyFlags;
-        uint32 removeFamilyFlag2 = m_spellProto->SpellFamilyFlags2;
+        ClassFamilyMask removeFamilyFlag = m_spellProto->SpellFamilyFlags;
         switch(m_spellProto->SpellFamilyName)
         {
             case SPELLFAMILY_PALADIN:
@@ -9672,8 +9655,7 @@ void SpellAuraHolder::_RemoveSpellAuraHolder()
                 // Conflagrate aura state on Immolate and Shadowflame,
                 if (m_spellProto->IsFitToFamilyMask(UI64LIT(0x0000000000000004), 0x00000002))
                 {
-                    removeFamilyFlag = UI64LIT(0x0000000000000004);
-                    removeFamilyFlag2 = 0x00000002;
+                    removeFamilyFlag = ClassFamilyMask(UI64LIT(0x0000000000000004), 0x00000002);
                     removeState = AURA_STATE_CONFLAGRATE;
                 }
                 break;
@@ -9682,7 +9664,7 @@ void SpellAuraHolder::_RemoveSpellAuraHolder()
                     removeState = AURA_STATE_FAERIE_FIRE;   // Faerie Fire (druid versions)
                 else if (m_spellProto->IsFitToFamilyMask(UI64LIT(0x0000000000000050)))
                 {
-                    removeFamilyFlag = 0x50;
+                    removeFamilyFlag = ClassFamilyMask(UI64LIT(0x00000000000050));
                     removeState = AURA_STATE_SWIFTMEND;     // Swiftmend aura state
                 }
                 break;
@@ -9707,7 +9689,7 @@ void SpellAuraHolder::_RemoveSpellAuraHolder()
             for (Unit::SpellAuraHolderMap::const_iterator i = holders.begin(); i != holders.end(); ++i)
             {
                 SpellEntry const *auraSpellInfo = (*i).second->GetSpellProto();
-                if (auraSpellInfo->IsFitToFamily(SpellFamily(m_spellProto->SpellFamilyName), removeFamilyFlag, removeFamilyFlag2))
+                if (auraSpellInfo->IsFitToFamily(SpellFamily(m_spellProto->SpellFamilyName), removeFamilyFlag))
                 {
                     found = true;
                     break;
@@ -9932,6 +9914,28 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
         {
             switch(GetId())
             {
+                case 29865:                                 // Deathbloom (10 man)
+                {
+                    if (!apply && m_removeMode == AURA_REMOVE_BY_EXPIRE)
+                    {
+                        cast_at_remove = true;
+                        spellId1 = 55594;
+                    }
+                    else
+                        return;
+                    break;
+                }
+                case 55053:                                 // Deathbloom (25 man)
+                {
+                    if (!apply && m_removeMode == AURA_REMOVE_BY_EXPIRE)
+                    {
+                        cast_at_remove = true;
+                        spellId1 = 55601;
+                    }
+                    else
+                        return;
+                    break;
+                }
                 case 50720:                                 // Vigilance (warrior spell but not have warrior family)
                 {
                     spellId1 = 68066;                       // Damage Reduction
@@ -9977,18 +9981,6 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                         return;
                     break;
                 }
-                case 29865:                                 // Deathbloom of Loatheb
-                case 55053:
-                {
-                    if (!apply)
-                    {
-                        cast_at_remove = true;
-                        // normal | heroic
-                        spellId1 = ((GetId() == 29865) ? 55594 : 55601 );
-                    }
-                    else return;
-                    break;
-                }
                 default:
                     return;
             }
@@ -10019,7 +10011,7 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                     return;
                 break;
             }
-            else if (m_spellProto->SpellFamilyFlags & 0x1LL && m_spellProto->SpellFamilyFlags2 & 0x8)
+            else if (m_spellProto->IsFitToFamilyMask(0x1LL, 0x8))
             {
                 // Glyph of Fireball
                 if (Unit * caster = GetCaster())
@@ -10494,7 +10486,7 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
         case SPELLFAMILY_DEATHKNIGHT:
         {
             // Frost Fever and Blood Plague
-            if(GetSpellProto()->SpellFamilyFlags2 & 0x2)
+            if(GetSpellProto()->IsFitToFamilyMask(0x0, 0x2))
             {
                 // Can't proc on self
                 if (GetCasterGuid() == m_target->GetObjectGuid())
