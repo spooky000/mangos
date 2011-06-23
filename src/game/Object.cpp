@@ -1807,7 +1807,12 @@ GameObject* WorldObject::SummonGameObject(uint32 id, float x, float y, float z, 
 {
     GameObject* pGameObj = new GameObject;
 
-    if(!pGameObj->Create(GetMap()->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT), id, GetMap(),
+    Map *map = GetMap();
+
+    if (!map)
+        return NULL;
+
+    if(!pGameObj->Create(map->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT), id, GetMap(),
     GetPhaseMask(), x, y, z, ang, 0.0f, 0.0f, 0.0f, 0.0f, 100, GO_STATE_READY))
     {
         delete pGameObj;
@@ -1817,7 +1822,9 @@ GameObject* WorldObject::SummonGameObject(uint32 id, float x, float y, float z, 
     if(despwtime)
         pGameObj->Delete(despwtime);
 
-    GetMap()->Add(pGameObj);
+    pGameObj->SetRespawnDelay(despwtime / IN_MILLISECONDS);
+
+    map->Add(pGameObj);
 
     return pGameObj;
 }
