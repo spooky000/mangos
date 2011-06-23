@@ -363,7 +363,7 @@ class MANGOS_DLL_SPEC Object
         Object ( );
 
         void _InitValues();
-        void _Create(uint32 guidlow, uint32 entry, HighGuid guidhigh);
+        void _Create(uint32 guidlow, uint32 entry, HighGuid guidhigh) { _Create(ObjectGuid(guidhigh, entry, guidlow)); }
         void _Create(ObjectGuid guid);
 
         virtual void _SetUpdateBits(UpdateMask *updateMask, Player *target) const;

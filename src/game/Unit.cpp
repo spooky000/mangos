@@ -309,20 +309,21 @@ Unit::~Unit()
 
 void Unit::Update( uint32 update_diff, uint32 p_time )
 {
+    if(!IsInWorld())
+        return;
+
+    /*if(p_time > m_AurasCheck)
+    {
+    m_AurasCheck = 2000;
+    _UpdateAura();
+    }else
+    m_AurasCheck -= p_time;*/
+
     // WARNING! Order of execution here is important, do not change.
     // Spells must be processed with event system BEFORE they go to _UpdateSpells.
     // Or else we may have some SPELL_STATE_FINISHED spells stalled in pointers, that is bad.
-    if(!IsInWorld())
-        return;
-
-    sWorld.m_spellUpdateLock.acquire();
     m_Events.Update( update_diff );
-
-    if(!IsInWorld())
-        return;
-
     _UpdateSpells( update_diff );
-    sWorld.m_spellUpdateLock.release();
 
     CleanupDeletedAuras();
 
@@ -4497,13 +4498,13 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
 
             bool bRemove = true;
 
-            for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+            for (int32 i = 0; i < MAX_EFFECT_INDEX && bRemove; ++i)
             {
                 // no need to check non stacking auras that weren't/won't be applied on this target
                 if (!foundHolder->m_auras[i] || !holder->m_auras[i])
                     continue;
 
-                 // m_auraname can be modified to SPELL_AURA_NONE for area auras, use original
+                // m_auraname can be modified to SPELL_AURA_NONE for area auras, use original
                 AuraType aurNameReal = AuraType(aurSpellInfo->EffectApplyAuraName[i]);
 
                 switch(aurNameReal)
@@ -4520,9 +4521,6 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
                     case SPELL_AURA_POWER_BURN_MANA:
                         bRemove = false;
                         break; 
-                    default:                                // not allow
-                        bRemove = true;
-                        break;
                 }
             }
 
@@ -7510,14 +7508,12 @@ int32 Unit::SpellBaseDamageBonusTaken(SpellSchoolMask schoolMask)
 
 bool Unit::IsSpellCrit(Unit *pVictim, SpellEntry const *spellProto, SpellSchoolMask schoolMask, WeaponAttackType attackType)
 {
-    // not critting spell
-    if((spellProto->AttributesEx2 & SPELL_ATTR_EX2_CANT_CRIT))
+    // mobs can't crit with spells at all
+    if (GetObjectGuid().IsCreature())
         return false;
 
-    // Creatures cant crit with spells
-    if (GetTypeId() == TYPEID_UNIT && (((Creature*)this)->GetSubtype() == CREATURE_SUBTYPE_GENERIC // If its normal creature
-        || (((Creature*)this)->GetSubtype() == CREATURE_SUBTYPE_TEMPORARY_SUMMON && ((Creature*)this)->GetOwnerGuid().IsEmpty()))  // or temporary summon without owner, hope this is correct
-        && spellProto->DmgClass == SPELL_DAMAGE_CLASS_MAGIC) // Also affect only magic
+    // not critting spell
+    if((spellProto->AttributesEx2 & SPELL_ATTR_EX2_CANT_CRIT))
         return false;
 
     float crit_chance = 0.0f;
@@ -11199,7 +11195,10 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
                     continue;
             }
 
+            triggeredByAura->SetInUse(true);
             SpellAuraProcResult procResult = (*this.*AuraProcHandler[auraModifier->m_auraname])(pTarget, damage, triggeredByAura, procSpell, procFlag, procExtra, cooldown);
+            triggeredByAura->SetInUse(false);
+
             switch (procResult)
             {
                 case SPELL_AURA_PROC_CANT_TRIGGER:

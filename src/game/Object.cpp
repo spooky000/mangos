@@ -92,15 +92,6 @@ void Object::_InitValues()
     m_objectUpdated = false;
 }
 
-void Object::_Create(uint32 guidlow, uint32 entry, HighGuid guidhigh)
-{
-    if(!m_uint32Values)
-        _InitValues();
-
-    ObjectGuid guid = ObjectGuid(guidhigh, entry, guidlow);
-    _Create(guid);
-}
-
 void Object::_Create(ObjectGuid guid)
 {
     if(!m_uint32Values)
@@ -1073,8 +1064,8 @@ void Object::MarkForClientUpdate()
 }
 
 WorldObject::WorldObject()
-    : m_isActiveObject(false), m_currMap(NULL), m_mapId(0), m_InstanceId(0), m_phaseMask(PHASEMASK_NORMAL),
-    m_groupLootTimer(0), m_groupLootId(0), m_lootGroupRecipientId(0), m_name("")
+    : m_groupLootTimer(0), m_groupLootId(0), m_lootGroupRecipientId(0),
+    m_isActiveObject(false), m_currMap(NULL), m_mapId(0), m_InstanceId(0), m_phaseMask(PHASEMASK_NORMAL)
 {
 }
 
