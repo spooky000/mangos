@@ -347,9 +347,9 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
             if (Player * pOwner = unitTarget->GetCharmerOrOwnerPlayerOrPlayerItself())
             {
                 // Night of the Dead avoidance
-                Aura * pAura = pOwner->GetAura(55620); // Rank 1
+                Aura * pAura = pOwner->GetAura(55620, EFFECT_INDEX_0); // Rank 1
                 if (!pAura)
-                    pAura = pOwner->GetAura(55623); // Rank 2
+                    pAura = pOwner->GetAura(55623, EFFECT_INDEX_0); // Rank 2
                 if (pAura)
                     damage -= damage * pAura->GetSpellProto()->CalculateSimpleValue(EFFECT_INDEX_2)/100;
             }

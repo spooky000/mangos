@@ -471,6 +471,7 @@ void Spell::FillTargetMap()
 
         UnitList tmpUnitMap;
 
+        if (!FillCustomTargetMap(SpellEffectIndex(i),tmpUnitMap)) // Custom target filling first
         // TargetA/TargetB dependent from each other, we not switch to full support this dependences
         // but need it support in some know cases
         switch(m_spellInfo->EffectImplicitTargetA[i])
@@ -516,7 +517,9 @@ void Spell::FillTargetMap()
                         break;
                     // dest point setup required
                     case TARGET_AREAEFFECT_INSTANT:
+                    case TARGET_AREAEFFECT_CUSTOM:
                     case TARGET_ALL_ENEMY_IN_AREA:
+                    case TARGET_ALL_ENEMY_IN_AREA_INSTANT:
                     case TARGET_ALL_ENEMY_IN_AREA_CHANNELED:
                     case TARGET_ALL_FRIENDLY_UNITS_IN_AREA:
                     case TARGET_AREAEFFECT_GO_AROUND_DEST:
@@ -547,9 +550,6 @@ void Spell::FillTargetMap()
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetA[i], tmpUnitMap);
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetB[i], tmpUnitMap);
                         break;
-                    case TARGET_AREAEFFECT_CUSTOM:
-                    case TARGET_ALL_ENEMY_IN_AREA_INSTANT:
-                        if (FillCustomTargetMap(SpellEffectIndex(i),tmpUnitMap)) break;
                     default:
                         SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetB[i], tmpUnitMap);
                         break;
@@ -633,7 +633,6 @@ void Spell::FillTargetMap()
                 }
                 break;
             case TARGET_AREAEFFECT_CUSTOM:
-                if (FillCustomTargetMap(SpellEffectIndex(i),tmpUnitMap)) break;
             default:
                 switch(m_spellInfo->EffectImplicitTargetB[i])
                 {
