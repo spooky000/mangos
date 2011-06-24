@@ -687,6 +687,10 @@ void LoadDBCStores(const std::string& dataPath)
     sfix26->EffectRadiusIndex[EFFECT_INDEX_0] = 41;
     sfix26->EffectRadiusIndex[EFFECT_INDEX_1] = 41;
 
+    // Charge Orb
+    SpellEntry *sfix27 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(62016));
+    sfix27->EffectRadiusIndex[EFFECT_INDEX_0] = 9;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);
