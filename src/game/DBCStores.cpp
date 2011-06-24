@@ -682,6 +682,11 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix25 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(62661));
     sfix25->InterruptFlags |= SPELL_INTERRUPT_FLAG_INTERRUPT;
 
+    // Tympanic Tantrum
+    SpellEntry *sfix26 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(62775));
+    sfix26->EffectRadiusIndex[EFFECT_INDEX_0] = 41;
+    sfix26->EffectRadiusIndex[EFFECT_INDEX_1] = 41;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);

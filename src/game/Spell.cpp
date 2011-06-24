@@ -1409,7 +1409,11 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
             // not break stealth by cast targeting
             if (!(m_spellInfo->AttributesEx & (SPELL_ATTR_EX_NOT_BREAK_STEALTH | SPELL_ATTR_EX_NO_THREAT)) &&
                 !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_UNK28))
-                unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+            {
+                // Hacky Mass Dispel exception
+                if(m_spellInfo->Id != 32375 && m_spellInfo->Id != 32592 && m_spellInfo->Id != 39897)
+                    unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+            }
 
             // Sap should remove victim's stealth
             if (m_spellInfo->Mechanic == MECHANIC_SAPPED)
@@ -1421,7 +1425,11 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
             {
                 // use speedup check to avoid re-remove after above lines
                 if (m_spellInfo->AttributesEx & SPELL_ATTR_EX_NOT_BREAK_STEALTH)
-                    unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+                {
+                    // Hacky Mass Dispel exception
+                    if(m_spellInfo->Id != 32375 && m_spellInfo->Id != 32592 && m_spellInfo->Id != 39897)
+                        unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+                }
 
                 // caster can be detected but have stealth aura
                 m_caster->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
@@ -1902,8 +1910,8 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
         }
         case SPELLFAMILY_WARRIOR:
         {
-            // Sunder Armor
-            if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0000000000004000), 0x00000000))
+            // Sunder Armor (main spell)
+            if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0000000000004000), 0x00000000) && m_spellInfo->SpellVisual[0] == 406)
                 if (m_caster->HasAura(58387))               // Glyph of Sunder Armor
                     EffectChainTarget = 2;
             break;
@@ -7581,6 +7589,14 @@ bool Spell::CheckTarget( Unit* target, SpellEffectIndex eff )
                         !target->IsWithinLOSInMap(caster))
                         return false;
             break;
+    }
+
+    switch (m_spellInfo->Id)
+    {
+        case 37433:                                         // Spout (The Lurker Below), only players affected if its not in water
+            if (target->GetTypeId() != TYPEID_PLAYER || target->IsInWater())
+                return false;
+        default: break;
     }
 
     return true;
