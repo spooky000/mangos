@@ -2562,9 +2562,9 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 {
                     FillAreaTargets(targetUnitMap, radius, PUSH_TARGET_CENTER, SPELL_TARGETS_FRIENDLY, pTarget);
                     targetUnitMap.remove(pTarget); // the target of aura triggering this spell
-                    for (std::list<Unit*>::iterator itr = targetUnitMap.begin(); itr != targetUnitMap.end(); itr++)
+                    /*for (std::list<Unit*>::iterator itr = targetUnitMap.begin(); itr != targetUnitMap.end(); itr++)
                         if((*itr) && (*itr)->GetTypeId() != TYPEID_PLAYER)
-                            targetUnitMap.remove((*itr));
+                            targetUnitMap.remove((*itr));*/
 
                     return;
                 }
