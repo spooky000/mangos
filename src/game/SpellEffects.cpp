@@ -4037,26 +4037,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 // consume diseases
                 unitTarget->RemoveAurasWithDispelType(DISPEL_DISEASE, m_caster->GetObjectGuid());
             }
-            else if (m_spellInfo->Id == 61999) // Raise Ally
-            {
-                if(m_caster->GetTypeId() != TYPEID_PLAYER)
-                    return;
-
-                Player * plr = (Player*)m_caster;
-
-                if(Group * pGroup = plr->GetGroup())
-                {
-                    for(GroupReference *itr = pGroup->GetFirstMember(); itr != NULL; itr = itr->next())
-                    {
-                        Player* Target = itr->getSource();
-                        if(Target && !Target->isAlive() && Target->IsWithinDistInMap(plr, 100))
-                        {
-                            Target->CastSpell(Target, 46619, true);
-                            break;
-                        }
-                    }
-                }
-            }
             break;
         }
     }
@@ -8436,10 +8416,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                 case 58591:                                    // Stoneclaw Totem X
                 {
                     if (!unitTarget)    // Stoneclaw Totem owner
-                    {
                         return;
-                    }
-
                     // Absorb shield for totems
                     for(int itr = 0; itr < MAX_TOTEM_SLOT; ++itr)
                         if (Totem* totem = unitTarget->GetTotem(TotemSlot(itr)))
@@ -9260,10 +9237,10 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     m_caster->GetClosePoint(x, y, z, m_caster->GetObjectBoundingRadius(), PET_FOLLOW_DIST);
 
-                    if (unitTarget != m_caster)
+                    if ( unitTarget != (Unit*)m_caster )
                     {
                         m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
-                        // unitTarget->RemoveFromWorld(); // TODO: corpse removal limitations (not a boss, don't freeze a player, etc.)
+                        unitTarget->RemoveFromWorld();
                     }
                     else if (m_caster->HasAura(60200))
                     {
@@ -9281,8 +9258,28 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         CancelGlobalCooldown();
                         return;
                     }
-                    ((Player*)m_caster)->RemoveSpellCooldown(triggered_spell_id,true);
                     finish(true);
+                    ((Player*)m_caster)->RemoveSpellCooldown(m_spellInfo->CalculateSimpleValue(EFFECT_INDEX_2),true);
+                    ((Player*)m_caster)->RemoveSpellCooldown(m_spellInfo->CalculateSimpleValue(EFFECT_INDEX_1),true);
+                    CancelGlobalCooldown();
+                    return;
+                }
+                // Raise ally
+                case 61999:
+                {
+                    if (m_caster->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER || unitTarget->isAlive())
+                    {
+                        SendCastResult(SPELL_FAILED_TARGET_NOT_DEAD);
+                        finish(true);
+                        CancelGlobalCooldown();
+                        return;
+                    }
+
+                    // hack remove death
+                    unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(EFFECT_INDEX_0), true);
                     CancelGlobalCooldown();
                     return;
                 }
