@@ -1404,7 +1404,7 @@ void Player::Update( uint32 update_diff, uint32 p_time )
     }
 
     // make dead players really dead
-    if (!isAlive() && !HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST) && getDeathState() != GHOULED )
+    if (!isAlive() && !HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST) && getDeathState() != GHOULED)
         SetHealth(0);
 
     if (m_deathState == JUST_DIED)

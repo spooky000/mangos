@@ -10827,6 +10827,12 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                     if (petGuid.IsVehicle())
                         return;
 
+                    if (GetEntry() == 30230) // Raise Ally dismiss should call JustDied in script
+                    {
+                        DealDamage(this, GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+                        break;
+                    }
+
                     if(((Creature*)this)->IsPet())
                     {
                         Pet* p = (Pet*)this;
