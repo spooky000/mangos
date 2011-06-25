@@ -1704,6 +1704,8 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 64234:                                 // Gravity Bomb (25 man)
                 case 63018:                                 // Searing Light (10 man)
                 case 65121:                                 // Searing Light (25 man)
+                case 63713:                                 // Dominate Mind (Yogg-Saron)
+                case 63830:                                 // Malady of the Mind (Yogg-Saron)
                 case 71340:                                 // Pact of darkfallen (hack for script work)
                 case 63387:                                 // Rapid Burst
                 case 64531:                                 // Rapid Burst
@@ -1716,6 +1718,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 68509:                                 // Penetrating Cold (10 man heroic)
                 case 69278:                                 // Gas spore - 10
                 case 63476:                                 // Icicle (Hodir 10man)
+                case 63802:                                 // Brain Link (Yogg-Saron)
                     unMaxTargets = 2;
                     break;
                 case 28796:                                 // Poison Bolt Volley
