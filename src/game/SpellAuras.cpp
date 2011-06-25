@@ -4955,7 +4955,6 @@ void Aura::HandleModStealth(bool apply, bool Real)
                     }
                 }
 
-                Unit::AuraList const& mModifierAuras = target->GetAurasByType(SPELL_AURA_ADD_FLAT_MODIFIER);
                 for(Unit::AuraList::const_iterator i = mDummyAuras.begin();i != mDummyAuras.end(); ++i)
                 {
                     // Camouflage hack
@@ -10511,7 +10510,6 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                 }
                 if (aurEff)
                 {
-                    uint32 spellId = 0;
                     switch (aurEff->GetId())
                     {
                         // Ebon Plague
@@ -10525,7 +10523,6 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                         default:
                             sLog.outError("Unknown rank of Crypt Fever/Ebon Plague %d", aurEff->GetId());
                     }
-               //     caster->CastSpell(m_target, spellId, true, 0, GetPartAura(0));
                 }
             }
             // second part of spell apply
@@ -11127,7 +11124,6 @@ void Aura::HandleAuraModReflectSpells(bool Apply, bool Real)
     if (!Real)
         return;
 
-    Unit* target = GetTarget();
     Unit* caster = GetCaster();
 
     if (Apply)

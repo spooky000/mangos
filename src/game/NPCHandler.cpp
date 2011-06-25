@@ -362,7 +362,6 @@ void WorldSession::HandleGossipSelectOptionOpcode( WorldPacket & recv_data )
     {
         uint32 gossipOptionId = _player->PlayerTalkClass->GetGossipMenu().GetItem(gossipListId).m_gOptionId;
         uint32 textId = 110001;
-        bool isSentToMain = false;
         _player->PlayerTalkClass->ClearMenus();
         sLog.outDetail("WORLD: HandleGossipSelectOptionOpcode - Sent from player (GC News handler) menuId %i gossip list %i and id is %i ", menuId, gossipListId, gossipOptionId);
         //we loop through list..

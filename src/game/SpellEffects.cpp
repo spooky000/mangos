@@ -380,7 +380,7 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                                             ++count;
                             if (count)
                             {
-                                uint32 spellId;
+                                uint32 spellId = 0;
                                 switch (m_spellInfo->Id)
                                 {
                                     case 28062: spellId = 29659; break;
@@ -2993,7 +2993,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 {
                     if (unitTarget->isDead() && unitTarget->GetTypeId() != TYPEID_PLAYER)
                     {
-                        uint32 spellToCast;
+                        uint32 spellToCast = 0;
                         switch(unitTarget->GetEntry())
                         {
                             case 25793: spellToCast = 46034; break;
@@ -5592,8 +5592,6 @@ void Spell::DoSummonGroupPets(SpellEffectIndex eff_idx)
         return;
     }
 
-    uint32 level = m_caster->getLevel();
-
     if (pet_entry == 37994)    // Mage: Water Elemental from Glyph
         m_duration = 86400000; // 24 hours
 
@@ -5639,7 +5637,6 @@ void Spell::DoSummonGroupPets(SpellEffectIndex eff_idx)
                     pet->SetDuration(m_duration);
                     pet->SetCreateSpellID(originalSpellID);
                     pet->SetPetCounter(amount-1);
-                    bool _summoned = false;
 
                     if (pet->LoadPetFromDB((Player*)m_caster,pet_entry, petnumber[i]))
                     {
@@ -9882,7 +9879,6 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         if (map->GetHeight(cx, cy, cz, false) < map->GetHeight(cx, cy, cz, true))
             useVmap = true;
 
-        const int itr = int(dis/0.5f);
         const float _dx = 0.5f * cos(angle);
         const float _dy = 0.5f * sin(angle);
         dx = cx;
