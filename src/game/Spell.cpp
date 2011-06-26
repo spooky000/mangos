@@ -3484,7 +3484,7 @@ void Spell::cast(bool skipCheck)
         if(const SpellEntry* spellInfo = sSpellStore.LookupEntry(m_spellInfo->Id))
             const_cast<SpellEntry*>(spellInfo)->AuraInterruptFlags = 0;
 
-    // different triggred (for caster) and precast (casted before apply effect to target) cases
+    // different triggered (for caster and main target after main cast) and pre-cast (casted before apply effect to each target) cases
     switch(m_spellInfo->SpellFamilyName)
     {
         case SPELLFAMILY_GENERIC:
@@ -3535,6 +3535,12 @@ void Spell::cast(bool skipCheck)
             {
                 if (m_caster->HasAura(58375))               // Glyph of Blocking
                     AddTriggeredSpell(58374);               // Glyph of Blocking
+            }
+            // Bloodrage
+            if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000000000000100))
+            {
+                if (m_caster->HasAura(70844))               // Item - Warrior T10 Protection 4P Bonus
+                    AddTriggeredSpell(70845);               // Stoicism
             }
             // Bloodsurge (triggered), Sudden Death (triggered)
             else if (m_spellInfo->Id == 46916 || m_spellInfo->Id == 52437)
@@ -3611,8 +3617,14 @@ void Spell::cast(bool skipCheck)
         }
         case SPELLFAMILY_PALADIN:
         {
+            // Divine Illumination
+            if (m_spellInfo->Id == 31842)
+            {
+                if (m_caster->HasAura(70755))               // Item - Paladin T10 Holy 2P Bonus
+                    AddPrecastSpell(71166);                 // Divine Illumination
+            }
             // Hand of Reckoning
-            if (m_spellInfo->Id == 62124)
+            else if (m_spellInfo->Id == 62124)
             {
                 if (m_targets.getUnitTarget() && m_targets.getUnitTarget()->getVictim() != m_caster)
                     AddPrecastSpell(67485);                 // Hand of Rekoning (no typos in name ;) )

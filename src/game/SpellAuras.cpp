@@ -5928,6 +5928,11 @@ void Aura::HandlePeriodicHeal(bool apply, bool /*Real*/)
             m_modifier.m_amount += (GetStackAmount() == 2) ? m_modifier.m_amount : (m_modifier.m_amount / 2);
         else
             m_modifier.m_amount = caster->SpellHealingBonusDone(target, GetSpellProto(), m_modifier.m_amount, DOT, GetStackAmount());
+
+        // Rejuvenation
+        if (GetSpellProto()->IsFitToFamily(SPELLFAMILY_DRUID, UI64LIT(0x0000000000000010)))
+            if (caster->HasAura(64760))                     // Item - Druid T8 Restoration 4P Bonus
+                caster->CastCustomSpell(target, 64801, &m_modifier.m_amount, NULL, NULL, true, NULL);
     }
 }
 
@@ -7631,6 +7636,11 @@ void Aura::HandleSchoolAbsorb(bool apply, bool Real)
             float DoneActualBenefit = 0.0f;
             switch(spellProto->SpellFamilyName)
             {
+                case SPELLFAMILY_GENERIC:
+                    // Stoicism
+                    if (spellProto->Id == 70845)
+                        DoneActualBenefit = caster->GetMaxHealth() * 0.20f;
+                    break;
                 case SPELLFAMILY_PRIEST:
                     // Power Word: Shield
                     if (spellProto->SpellFamilyFlags & UI64LIT(0x0000000000000001))
@@ -9568,19 +9578,22 @@ void SpellAuraHolder::_AddSpellAuraHolder()
 
 void SpellAuraHolder::_RemoveSpellAuraHolder()
 {
- // Remove all triggered by aura spells vs unlimited duration
+    // Remove all triggered by aura spells vs unlimited duration
     // except same aura replace case
     if(m_removeMode!=AURA_REMOVE_BY_STACK)
         CleanupTriggeredSpells();
 
     Unit* caster = GetCaster();
 
-    if(caster && IsPersistent())
-    {
-        DynamicObject *dynObj = caster->GetDynObject(GetId());
-        if (dynObj)
+    if (caster && IsPersistent())
+        if (DynamicObject *dynObj = caster->GetDynObject(GetId()))
             dynObj->RemoveAffected(m_target);
-    }
+
+    // remove at-store spell cast items (for all remove modes?)
+    if (caster && caster->GetTypeId() == TYPEID_PLAYER && m_removeMode != AURA_REMOVE_BY_DEFAULT && m_removeMode != AURA_REMOVE_BY_DELETE)
+        if (ObjectGuid castItemGuid = GetCastItemGuid())
+            if (Item* castItem = ((Player*)m_target)->GetItemByGuid(castItemGuid))
+                ((Player*)caster)->DestroyItemWithOnStoreSpell(castItem);
 
     //passive auras do not get put in slots - said who? ;)
     // Note: but totem can be not accessible for aura target in time remove (to far for find in grid)
@@ -10041,8 +10054,8 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                 case 48108:                                 // Hot Streak (triggered)
                 case 57761:                                 // Fireball! (Brain Freeze triggered)
                 {
-                    // consumed aura
-                    if (!apply && m_removeMode != AURA_REMOVE_BY_EXPIRE)
+                    // consumed aura (at proc charges 0)
+                    if (!apply && m_removeMode == AURA_REMOVE_BY_DEFAULT)
                     {
                         Unit* caster = GetCaster();
                         // Item - Mage T10 2P Bonus
