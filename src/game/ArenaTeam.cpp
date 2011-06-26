@@ -720,6 +720,9 @@ void ArenaTeam::MemberLost(Player * plr, uint32 againstRating)
             mod = (int32)ceil(K * (0.0f - chance));
             itr->ModifyMatchmakerRating(plr,mod,GetType());
 
+            if (BattleGround * bg = plr->GetBattleGround())
+                bg->SetArenaTeamMMRChangeForTeam(plr->GetTeam(), mod);
+
             // update personal played stats
             itr->games_week += 1;
             itr->games_season += 1;
@@ -792,6 +795,9 @@ void ArenaTeam::MemberWon(Player * plr, uint32 againstRating)
             mod = (int32)ceil(K * (1.0f - chance));
             // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
             itr->ModifyMatchmakerRating(plr, mod, GetType());
+
+            if (BattleGround * bg = plr->GetBattleGround())
+                bg->SetArenaTeamMMRChangeForTeam(plr->GetTeam(), mod);
 
             // update personal stats
             itr->games_week += 1;
