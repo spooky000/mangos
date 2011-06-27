@@ -1711,6 +1711,9 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 64531:                                 // Rapid Burst
                 case 62042:                                 // Stormhammer
                 case 64218:                                 // Overcharge
+                case 65301:                                 // Psychosis 
+                case 63795:                                 // Psychosis
+                case 64465:                                 // Shadow Beacon
                     unMaxTargets = 1;
                     break;
                 case 28542:                                 // Life Drain
