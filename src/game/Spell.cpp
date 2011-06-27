@@ -634,6 +634,7 @@ void Spell::FillTargetMap()
                 }
                 break;
             case TARGET_AREAEFFECT_CUSTOM:
+            case TARGET_DUELVSPLAYER:
             default:
                 switch(m_spellInfo->EffectImplicitTargetB[i])
                 {
