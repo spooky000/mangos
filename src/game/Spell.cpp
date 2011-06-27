@@ -8033,7 +8033,11 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
         case 47496: // Ghoul's explode
         case 50444:
         {
-            FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            if(i == EFFECT_INDEX_0)
+                FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            else if(i == EFFECT_INDEX_1)
+                targetUnitMap.push_back((Unit*)m_caster);
+
             break;
         }
         case 48018:

@@ -478,17 +478,6 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                             damage = int32(unitTarget->GetMaxHealth() * 0.3f);
                         break;
                     }
-                    // Explode
-                    case 47496:
-                    {
-                        // Special Effect only for caster (ghoul in this case)
-                        if (unitTarget->GetEntry() == 26125 && (unitTarget->GetObjectGuid() == m_caster->GetObjectGuid()))
-                        {
-                            // After explode the ghoul must be killed
-                            unitTarget->DealDamage(unitTarget, unitTarget->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
-                        }
-                        break;
-                    }
                     // Gargoyle Strike
                     case 51963:
                     {
@@ -3895,28 +3884,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
         }
         case SPELLFAMILY_DEATHKNIGHT:
         {
-            // Corpse Explosion
-            if(m_spellInfo->SpellIconID == 1737)
-            {
-                // Living ghoul as a target
-                if (unitTarget->isAlive() && unitTarget->GetObjectGuid().IsPet() && unitTarget->GetEntry() == 26125)
-                {
-                    int32 bp = int32(unitTarget->GetMaxHealth()/4.0f);
-                    unitTarget->CastCustomSpell(unitTarget,47496,&bp,NULL,NULL,true);
-                    unitTarget->CastSpell(unitTarget, 53730, true, NULL, NULL, m_caster->GetObjectGuid());
-                    unitTarget->CastSpell(unitTarget,43999,true);
-                    if (unitTarget->getDeathState() == CORPSE)
-                        unitTarget->RemoveFromWorld();
-                }
-                else if (!unitTarget->isAlive())
-                {
-                    m_caster->CastSpell(unitTarget, 50444, true, NULL, NULL, m_caster->GetObjectGuid());
-                    m_caster->CastSpell(unitTarget, 53730, true, NULL, NULL, m_caster->GetObjectGuid());
-                    if (unitTarget->getDeathState() == CORPSE)
-                        unitTarget->RemoveFromWorld();
-                }
-                return;
-            }
             // Death Coil
             if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x002000))
             {
