@@ -7776,7 +7776,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     return;
                 }
-                /*case 45713:                                 // Naked Caravan Guard - Master Transform
+                case 45713:                                 // Naked Caravan Guard - Master Transform
                 {
                     if (m_caster->GetTypeId() != TYPEID_UNIT)
                         return;
@@ -7830,7 +7830,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     m_caster->SetDisplayId(display_id);
                     return;
-                }*/
+                }
                 case 45958:                                 // Signal Alliance
                 {
                     // "escort" aura not present, so let nothing happen
@@ -8567,22 +8567,6 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     else
                         ((TemporarySummon*)m_caster)->UnSummon();
 
-                    return;
-                }
-                case 45713:
-                {
-                    uint32 transformTo = m_caster->GetDisplayId();
-                    switch(m_caster->GetDisplayId())
-                    {
-                        case 23124 : transformTo = 23253; break;
-                        case 23125 : transformTo = 23254; break;
-                        case 23126 : transformTo = 23255; break;
-                        case 23246 : transformTo = 23245; break;
-                        case 23247 : transformTo = 23250; break;
-                        case 23248 : transformTo = 23251; break;
-                        case 23249 : transformTo = 23252; break;
-                    }
-                    m_caster->SetDisplayId(transformTo);
                     return;
                 }
                 case 45923:                                // Q: Foolish Endeavors
