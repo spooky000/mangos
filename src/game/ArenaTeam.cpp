@@ -25,36 +25,17 @@
 
 void ArenaTeamMember::ModifyMatchmakerRating(Player* plr, int32 mod, ArenaType type)
 {
+    if (int32(matchmaker_rating) + mod < 0)
+            matchmaker_rating =  0;
+        else
+            matchmaker_rating += mod;
+
     if (type == ARENA_TYPE_2v2)
-    {
-        if (int32(matchmaker_rating) + mod <  0)
-            matchmaker_rating =  0;
-        else
-        {
-            matchmaker_rating += mod;
-            CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating2 = '%u' WHERE guid = '%u'", matchmaker_rating, plr->GetObjectGuid().GetCounter());
-        }
-    }
-    if (type == ARENA_TYPE_3v3)
-    {
-        if (int32(matchmaker_rating) + mod <  0)
-            matchmaker_rating =  0;
-        else
-        {
-            matchmaker_rating += mod;
-            CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating3 = '%u' WHERE guid = '%u'", matchmaker_rating, plr->GetObjectGuid().GetCounter());
-        }
-    }
-    if (type == ARENA_TYPE_5v5)
-    {
-        if (int32(matchmaker_rating) + mod <  0)
-            matchmaker_rating = 0;
-        else
-        {
-            matchmaker_rating += mod;
-            CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating5 = '%u' WHERE guid = '%u'", matchmaker_rating, plr->GetObjectGuid().GetCounter());
-        }
-    }
+        CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating2 = '%u' WHERE guid = '%u'", matchmaker_rating, plr->GetObjectGuid().GetCounter());
+    else if (type == ARENA_TYPE_3v3)
+        CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating3 = '%u' WHERE guid = '%u'", matchmaker_rating, plr->GetObjectGuid().GetCounter());
+    else if (type == ARENA_TYPE_5v5)
+        CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating5 = '%u' WHERE guid = '%u'", matchmaker_rating, plr->GetObjectGuid().GetCounter());
 }
 
 void ArenaTeamMember::ModifyPersonalRating(Player* plr, int32 mod, uint32 slot)
@@ -319,9 +300,9 @@ bool ArenaTeam::LoadMembersFromDB(QueryResult *arenaTeamMembersResult)
         {
             switch(GetType())
             {
-                case ARENA_TYPE_2v2: newmember.matchmaker_rating = (*result)[0].GetUInt32();
-                case ARENA_TYPE_3v3: newmember.matchmaker_rating = (*result)[1].GetUInt32();
-                case ARENA_TYPE_5v5: newmember.matchmaker_rating = (*result)[2].GetUInt32();
+                case ARENA_TYPE_2v2: newmember.matchmaker_rating = (*result)[0].GetUInt32(); break;
+                case ARENA_TYPE_3v3: newmember.matchmaker_rating = (*result)[1].GetUInt32(); break;
+                case ARENA_TYPE_5v5: newmember.matchmaker_rating = (*result)[2].GetUInt32(); break;
             }
             delete result;
         }
@@ -739,6 +720,9 @@ void ArenaTeam::MemberLost(Player * plr, uint32 againstRating)
             mod = (int32)ceil(K * (0.0f - chance));
             itr->ModifyMatchmakerRating(plr,mod,GetType());
 
+            if (BattleGround * bg = plr->GetBattleGround())
+                bg->SetArenaTeamMMRChangeForTeam(plr->GetTeam(), mod);
+
             // update personal played stats
             itr->games_week += 1;
             itr->games_season += 1;
@@ -778,9 +762,9 @@ void ArenaTeam::OfflineMemberLost(ObjectGuid guid, uint32 againstRating)
 
             if(GetType() == ARENA_TYPE_2v2)
                 CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating2 = '%u' WHERE guid = '%u'", itr->matchmaker_rating, guid.GetCounter());
-            if(GetType() == ARENA_TYPE_3v3)
+            else if(GetType() == ARENA_TYPE_3v3)
                 CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating3 = '%u' WHERE guid = '%u'", itr->matchmaker_rating, guid.GetCounter());
-            if(GetType() == ARENA_TYPE_5v5)
+            else if(GetType() == ARENA_TYPE_5v5)
                 CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating5 = '%u' WHERE guid = '%u'", itr->matchmaker_rating, guid.GetCounter());
 
             // update personal played stats
@@ -811,6 +795,9 @@ void ArenaTeam::MemberWon(Player * plr, uint32 againstRating)
             mod = (int32)ceil(K * (1.0f - chance));
             // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
             itr->ModifyMatchmakerRating(plr, mod, GetType());
+
+            if (BattleGround * bg = plr->GetBattleGround())
+                bg->SetArenaTeamMMRChangeForTeam(plr->GetTeam(), mod);
 
             // update personal stats
             itr->games_week += 1;

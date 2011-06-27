@@ -181,8 +181,6 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
     if (getPetType() == MINI_PET)
         SetPetFollowAngle(M_PI_F*1.25f);
 
-    Map *map = owner->GetMap();
-
     CreatureCreatePos pos(owner, owner->GetOrientation(), PET_FOLLOW_DIST, GetPetFollowAngle());
 
     uint32 guid = pos.GetMap()->GenerateLocalLowGuid(HIGHGUID_PET);
@@ -297,15 +295,11 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
     CalculateScalingData(true);
     ApplyAllScalingBonuses(true);
 
-    if (getPetType() == SUMMON_PET && !current)             //all (?) summon pets come with full health when called, but not when they are current
+    if (isControlled())
+    //all (?) summon pets come with full health when called, note by virusav
     {
         SetHealth(GetMaxHealth());
-        SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
-    }
-    else
-    {
-        SetHealth(savedhealth > GetMaxHealth() ? GetMaxHealth() : savedhealth);
-        SetPower(POWER_MANA, savedmana > GetMaxPower(POWER_MANA) ? GetMaxPower(POWER_MANA) : savedmana);
+        SetPower(getPowerType(), GetMaxPower(getPowerType()));
     }
 
     UpdateWalkMode(owner);
@@ -1744,8 +1738,6 @@ bool Pet::resetTalents()
         return false;
     }
 
-    uint32 cost = 0;
-
     for (unsigned int i = 0; i < sTalentStore.GetNumRows(); ++i)
     {
         TalentEntry const *talentInfo = sTalentStore.LookupEntry(i);
@@ -2156,8 +2148,6 @@ void Pet::ApplyStatScalingBonus(Stats stat, bool apply)
     // Don't apply scaling bonuses if no owner or owner is not player
     if (!owner || owner->GetTypeId() != TYPEID_PLAYER || m_removed)
         return;
-
-    UnitMods unitMod = UnitMods(stat);
 
     int32 newStat = owner->GetTotalStatValue(stat);
 

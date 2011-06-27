@@ -2861,13 +2861,6 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                 }
                 return;
             }
-            case 46619: // Raise Ally dummy 
-            {
-                if(GetCaster()->GetTypeId() == TYPEID_PLAYER)  
-                    if(((Player*)GetCaster())->GetCharm() && ((Player*)GetCaster())->GetCharm()->GetEntry() == 30230)
-                        ((Pet*)((Player*)GetCaster())->GetCharm())->Unsummon(PET_SAVE_AS_DELETED);
-                return;
-            }
             case 68839:                                     // Corrupt Soul
             {
                 // Knockdown Stun
@@ -4955,7 +4948,6 @@ void Aura::HandleModStealth(bool apply, bool Real)
                     }
                 }
 
-                Unit::AuraList const& mModifierAuras = target->GetAurasByType(SPELL_AURA_ADD_FLAT_MODIFIER);
                 for(Unit::AuraList::const_iterator i = mDummyAuras.begin();i != mDummyAuras.end(); ++i)
                 {
                     // Camouflage hack
@@ -9434,6 +9426,7 @@ m_permanent(false), m_isRemovedOnShapeLost(true), m_deleted(false), m_in_use(0)
         case 55166:                                         // Tidal Force
         case 58914:                                         // Kill Command (pet part)
         case 62519:                                         // Attuned to Nature (Freya)
+        case 63050:                                         // Sanity (Yogg-Saron)
         case 64455:                                         // Feral Essence
         case 71564:                                         // Deadly Precision
             m_stackAmount = m_spellProto->StackAmount;
@@ -10510,7 +10503,6 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                 }
                 if (aurEff)
                 {
-                    uint32 spellId = 0;
                     switch (aurEff->GetId())
                     {
                         // Ebon Plague
@@ -10524,7 +10516,6 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                         default:
                             sLog.outError("Unknown rank of Crypt Fever/Ebon Plague %d", aurEff->GetId());
                     }
-               //     caster->CastSpell(m_target, spellId, true, 0, GetPartAura(0));
                 }
             }
             // second part of spell apply
@@ -11126,7 +11117,6 @@ void Aura::HandleAuraModReflectSpells(bool Apply, bool Real)
     if (!Real)
         return;
 
-    Unit* target = GetTarget();
     Unit* caster = GetCaster();
 
     if (Apply)

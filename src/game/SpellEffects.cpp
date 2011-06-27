@@ -340,8 +340,20 @@ void Spell::EffectEnvironmentalDMG(SpellEffectIndex eff_idx)
 
 void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
 {
-    if( unitTarget && unitTarget->isAlive())
+    if (unitTarget && unitTarget->isAlive())
     {
+        if (unitTarget->GetEntry() == 26125 && m_caster->GetObjectGuid().IsCreature() && IsAreaOfEffectSpell(m_spellInfo)) // Ghoul
+        {
+            if (Player * pOwner = unitTarget->GetCharmerOrOwnerPlayerOrPlayerItself())
+            {
+                // Night of the Dead avoidance
+                Aura * pAura = pOwner->GetAura(55620, EFFECT_INDEX_0); // Rank 1
+                if (!pAura)
+                    pAura = pOwner->GetAura(55623, EFFECT_INDEX_0); // Rank 2
+                if (pAura)
+                    damage -= damage * pAura->GetSpellProto()->CalculateSimpleValue(EFFECT_INDEX_2)/100;
+            }
+        }
         switch(m_spellInfo->SpellFamilyName)
         {
             case SPELLFAMILY_GENERIC:
@@ -368,7 +380,7 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                                             ++count;
                             if (count)
                             {
-                                uint32 spellId;
+                                uint32 spellId = 0;
                                 switch (m_spellInfo->Id)
                                 {
                                     case 28062: spellId = 29659; break;
@@ -2981,7 +2993,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 {
                     if (unitTarget->isDead() && unitTarget->GetTypeId() != TYPEID_PLAYER)
                     {
-                        uint32 spellToCast;
+                        uint32 spellToCast = 0;
                         switch(unitTarget->GetEntry())
                         {
                             case 25793: spellToCast = 46034; break;
@@ -3887,13 +3899,23 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
             if(m_spellInfo->SpellIconID == 1737)
             {
                 // Living ghoul as a target
-                if (unitTarget->GetEntry() == 26125 && unitTarget->isAlive())
+                if (unitTarget->isAlive() && unitTarget->GetObjectGuid().IsPet() && unitTarget->GetEntry() == 26125)
                 {
-                    int32 bp = unitTarget->GetMaxHealth()*0.25f;
+                    int32 bp = int32(unitTarget->GetMaxHealth()/4.0f);
                     unitTarget->CastCustomSpell(unitTarget,47496,&bp,NULL,NULL,true);
+                    unitTarget->CastSpell(unitTarget, 53730, true, NULL, NULL, m_caster->GetObjectGuid());
+                    unitTarget->CastSpell(unitTarget,43999,true);
+                    if (unitTarget->getDeathState() == CORPSE)
+                        unitTarget->RemoveFromWorld();
                 }
-                else
-                    return;
+                else if (!unitTarget->isAlive())
+                {
+                    m_caster->CastSpell(unitTarget, 50444, true, NULL, NULL, m_caster->GetObjectGuid());
+                    m_caster->CastSpell(unitTarget, 53730, true, NULL, NULL, m_caster->GetObjectGuid());
+                    if (unitTarget->getDeathState() == CORPSE)
+                        unitTarget->RemoveFromWorld();
+                }
+                return;
             }
             // Death Coil
             if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x002000))
@@ -4014,26 +4036,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                 // consume diseases
                 unitTarget->RemoveAurasWithDispelType(DISPEL_DISEASE, m_caster->GetObjectGuid());
-            }
-            else if (m_spellInfo->Id == 61999) // Raise Ally
-            {
-                if(m_caster->GetTypeId() != TYPEID_PLAYER)
-                    return;
-
-                Player * plr = (Player*)m_caster;
-
-                if(Group * pGroup = plr->GetGroup())
-                {
-                    for(GroupReference *itr = pGroup->GetFirstMember(); itr != NULL; itr = itr->next())
-                    {
-                        Player* Target = itr->getSource();
-                        if(Target && !Target->isAlive() && Target->IsWithinDistInMap(plr, 100))
-                        {
-                            Target->CastSpell(Target, 46619, true);
-                            break;
-                        }
-                    }
-                }
             }
             break;
         }
@@ -5570,8 +5572,6 @@ void Spell::DoSummonGroupPets(SpellEffectIndex eff_idx)
         return;
     }
 
-    uint32 level = m_caster->getLevel();
-
     if (pet_entry == 37994)    // Mage: Water Elemental from Glyph
         m_duration = 86400000; // 24 hours
 
@@ -5617,7 +5617,6 @@ void Spell::DoSummonGroupPets(SpellEffectIndex eff_idx)
                     pet->SetDuration(m_duration);
                     pet->SetCreateSpellID(originalSpellID);
                     pet->SetPetCounter(amount-1);
-                    bool _summoned = false;
 
                     if (pet->LoadPetFromDB((Player*)m_caster,pet_entry, petnumber[i]))
                     {
@@ -7777,7 +7776,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     return;
                 }
-                /*case 45713:                                 // Naked Caravan Guard - Master Transform
+                case 45713:                                 // Naked Caravan Guard - Master Transform
                 {
                     if (m_caster->GetTypeId() != TYPEID_UNIT)
                         return;
@@ -7831,7 +7830,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     m_caster->SetDisplayId(display_id);
                     return;
-                }*/
+                }
                 case 45958:                                 // Signal Alliance
                 {
                     // "escort" aura not present, so let nothing happen
@@ -8417,10 +8416,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                 case 58591:                                    // Stoneclaw Totem X
                 {
                     if (!unitTarget)    // Stoneclaw Totem owner
-                    {
                         return;
-                    }
-
                     // Absorb shield for totems
                     for(int itr = 0; itr < MAX_TOTEM_SLOT; ++itr)
                         if (Totem* totem = unitTarget->GetTotem(TotemSlot(itr)))
@@ -8571,22 +8567,6 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     else
                         ((TemporarySummon*)m_caster)->UnSummon();
 
-                    return;
-                }
-                case 45713:
-                {
-                    uint32 transformTo = m_caster->GetDisplayId();
-                    switch(m_caster->GetDisplayId())
-                    {
-                        case 23124 : transformTo = 23253; break;
-                        case 23125 : transformTo = 23254; break;
-                        case 23126 : transformTo = 23255; break;
-                        case 23246 : transformTo = 23245; break;
-                        case 23247 : transformTo = 23250; break;
-                        case 23248 : transformTo = 23251; break;
-                        case 23249 : transformTo = 23252; break;
-                    }
-                    m_caster->SetDisplayId(transformTo);
                     return;
                 }
                 case 45923:                                // Q: Foolish Endeavors
@@ -9241,10 +9221,10 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     m_caster->GetClosePoint(x, y, z, m_caster->GetObjectBoundingRadius(), PET_FOLLOW_DIST);
 
-                    if (unitTarget != m_caster)
+                    if ( unitTarget != (Unit*)m_caster )
                     {
                         m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
-                        // unitTarget->RemoveFromWorld(); // TODO: corpse removal limitations (not a boss, don't freeze a player, etc.)
+                        unitTarget->RemoveFromWorld();
                     }
                     else if (m_caster->HasAura(60200))
                     {
@@ -9262,8 +9242,28 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         CancelGlobalCooldown();
                         return;
                     }
-                    ((Player*)m_caster)->RemoveSpellCooldown(triggered_spell_id,true);
                     finish(true);
+                    ((Player*)m_caster)->RemoveSpellCooldown(m_spellInfo->CalculateSimpleValue(EFFECT_INDEX_2),true);
+                    ((Player*)m_caster)->RemoveSpellCooldown(m_spellInfo->CalculateSimpleValue(EFFECT_INDEX_1),true);
+                    CancelGlobalCooldown();
+                    return;
+                }
+                // Raise ally
+                case 61999:
+                {
+                    if (m_caster->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER || unitTarget->isAlive())
+                    {
+                        SendCastResult(SPELL_FAILED_TARGET_NOT_DEAD);
+                        finish(true);
+                        CancelGlobalCooldown();
+                        return;
+                    }
+
+                    // hack remove death
+                    unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(EFFECT_INDEX_0), true);
                     CancelGlobalCooldown();
                     return;
                 }
@@ -9860,7 +9860,6 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         if (map->GetHeight(cx, cy, cz, false) < map->GetHeight(cx, cy, cz, true))
             useVmap = true;
 
-        const int itr = int(dis/0.5f);
         const float _dx = 0.5f * cos(angle);
         const float _dy = 0.5f * sin(angle);
         dx = cx;

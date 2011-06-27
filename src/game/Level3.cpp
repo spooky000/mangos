@@ -5072,7 +5072,6 @@ bool ChatHandler::HandleNewsGossipCommand(char* args)
     if (!player)
         return false;
 
-    int news_id = 0;
     char* cId = strtok(NULL, " ");
     uint32 entry;
 

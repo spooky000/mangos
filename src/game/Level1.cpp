@@ -652,24 +652,30 @@ bool ChatHandler::HandleModifyHPCommand(char* args)
         return false;
     }
 
-    Player *chr = getSelectedPlayer();
-    if (chr == NULL)
+    Unit *target = getSelectedUnit();
+    if (!target)
     {
-        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
         SetSentErrorMessage(true);
         return false;
     }
 
-    // check online security
-    if (HasLowerSecurity(chr))
-        return false;
+    if (target->GetTypeId() == TYPEID_PLAYER)
+    {
+        Player* plr = (Player*)target;
 
-    PSendSysMessage(LANG_YOU_CHANGE_HP, GetNameLink(chr).c_str(), hp, hpm);
-    if (needReportToTarget(chr))
-        ChatHandler(chr).PSendSysMessage(LANG_YOURS_HP_CHANGED, GetNameLink().c_str(), hp, hpm);
+        // check online security
+        if (HasLowerSecurity(plr))
+            return false;
 
-    chr->SetMaxHealth( hpm );
-    chr->SetHealth( hp );
+        PSendSysMessage(LANG_YOU_CHANGE_HP, GetNameLink(plr).c_str(), hp, hpm);
+
+        if (needReportToTarget(plr))
+            ChatHandler(plr).PSendSysMessage(LANG_YOURS_HP_CHANGED, GetNameLink().c_str(), hp, hpm);
+    }
+
+    target->SetMaxHealth(hpm);
+    target->SetHealth(hp);
 
     return true;
 }
@@ -690,24 +696,30 @@ bool ChatHandler::HandleModifyManaCommand(char* args)
         return false;
     }
 
-    Player *chr = getSelectedPlayer();
-    if (chr == NULL)
+    Unit *target = getSelectedUnit();
+    if (!target)
     {
-        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
         SetSentErrorMessage(true);
         return false;
     }
 
-    // check online security
-    if (HasLowerSecurity(chr))
-        return false;
+    if (target->GetTypeId() == TYPEID_PLAYER)
+    {
+        Player* plr = (Player*)target;
 
-    PSendSysMessage(LANG_YOU_CHANGE_MANA, GetNameLink(chr).c_str(), mana, manam);
-    if (needReportToTarget(chr))
-        ChatHandler(chr).PSendSysMessage(LANG_YOURS_MANA_CHANGED, GetNameLink().c_str(), mana, manam);
+        // check online security
+        if (HasLowerSecurity(plr))
+            return false;
 
-    chr->SetMaxPower(POWER_MANA,manam );
-    chr->SetPower(POWER_MANA, mana );
+        PSendSysMessage(LANG_YOU_CHANGE_MANA, GetNameLink(plr).c_str(), mana, manam);
+
+        if (needReportToTarget(plr))
+            ChatHandler(plr).PSendSysMessage(LANG_YOURS_MANA_CHANGED, GetNameLink().c_str(), mana, manam);
+    }
+
+    target->SetMaxPower(POWER_MANA,manam);
+    target->SetPower(POWER_MANA, mana);
 
     return true;
 }
@@ -728,26 +740,32 @@ bool ChatHandler::HandleModifyEnergyCommand(char* args)
         return false;
     }
 
-    Player *chr = getSelectedPlayer();
-    if (!chr)
+    Unit *target = getSelectedUnit();
+    if (!target)
     {
-        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
         SetSentErrorMessage(true);
         return false;
     }
 
-    // check online security
-    if (HasLowerSecurity(chr))
-        return false;
+    if (target->GetTypeId() == TYPEID_PLAYER)
+    {
+        Player* plr = (Player*)target;
 
-    PSendSysMessage(LANG_YOU_CHANGE_ENERGY, GetNameLink(chr).c_str(), energy/10, energym/10);
-    if (needReportToTarget(chr))
-        ChatHandler(chr).PSendSysMessage(LANG_YOURS_ENERGY_CHANGED, GetNameLink().c_str(), energy/10, energym/10);
+        // check online security
+        if (HasLowerSecurity(plr))
+            return false;
 
-    chr->SetMaxPower(POWER_ENERGY,energym );
-    chr->SetPower(POWER_ENERGY, energy );
+        PSendSysMessage(LANG_YOU_CHANGE_ENERGY, GetNameLink(plr).c_str(), energy, energym);
 
-    DETAIL_LOG(GetMangosString(LANG_CURRENT_ENERGY),chr->GetMaxPower(POWER_ENERGY));
+        if (needReportToTarget(plr))
+            ChatHandler(plr).PSendSysMessage(LANG_YOURS_ENERGY_CHANGED, GetNameLink().c_str(), energy, energym);
+    }
+
+    target->SetMaxPower(POWER_ENERGY, energym);
+    target->SetPower(POWER_ENERGY, energy);
+
+    DETAIL_LOG(GetMangosString(LANG_CURRENT_ENERGY), target->GetMaxPower(POWER_ENERGY));
 
     return true;
 }

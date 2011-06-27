@@ -1404,7 +1404,7 @@ void Player::Update( uint32 update_diff, uint32 p_time )
     }
 
     // make dead players really dead
-    if (!isAlive() && !HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST) && getDeathState() != GHOULED )
+    if (!isAlive() && !HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST) && getDeathState() != GHOULED)
         SetHealth(0);
 
     if (m_deathState == JUST_DIED)
@@ -9344,6 +9344,9 @@ Item* Player::GetItemByLimitedCategory(uint32 limitedCategory) const
 
 Item* Player::GetItemByGuid(ObjectGuid guid) const
 {
+    if (guid.IsEmpty())
+        return NULL;
+
     for(int i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; ++i)
         if (Item *pItem = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
             if (pItem->GetObjectGuid() == guid)
@@ -13506,8 +13509,6 @@ void Player::OnGossipSelect(WorldObject* pSource, uint32 gossipListId, uint32 me
                 }
                 else
                 {
-                    ModifyMoney(-10000000);
-
                     // Cast spells that teach dual spec
                     // Both are also ImplicitTarget self and must be cast by player
                     this->CastSpell(this,63624,true); // This will also learn 63680 in its dummy effect
