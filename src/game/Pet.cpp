@@ -2929,6 +2929,14 @@ bool Pet::Summon()
 
     if (owner->GetTypeId() == TYPEID_PLAYER)
     {
+        if (getPetType() == SUMMON_PET)
+        {
+            // generate new name for summon pet
+            std::string new_name = sObjectMgr.GeneratePetName(GetEntry());
+            if (!new_name.empty())
+                SetName(new_name);
+        }
+
         CastPetPassiveAuras(true);
         ApplyAllScalingBonuses(true);
     }
