@@ -3062,6 +3062,9 @@ void Pet::CastPetPassiveAuras(bool current)
 
         uint32 auraID = petAura.GetAura(creature_id);
 
+        if (GetEntry() == 26125 && auraID == 34956 && getPetType() == GUARDIAN_PET)
+            continue;
+
         if (!current && HasAura(auraID))
             RemoveAurasDueToSpell(auraID);
         else if (current && !HasAura(auraID))
