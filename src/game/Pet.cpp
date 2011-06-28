@@ -3062,7 +3062,7 @@ void Pet::CastPetPassiveAuras(bool current)
 
         uint32 auraID = petAura.GetAura(creature_id);
 
-        if (GetEntry() == 26125 && auraID == 34956 && getPetType() == GUARDIAN_PET)
+        if (GetEntry() == 26125 && (auraID == 34956 || auraID == 34903 || auraID == 34904) && getPetType() == GUARDIAN_PET)
             continue;
 
         if (!current && HasAura(auraID))
