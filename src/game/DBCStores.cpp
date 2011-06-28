@@ -699,6 +699,10 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix29 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49562));
     sfix29->EffectSpellClassMask[EFFECT_INDEX_0] = ClassFamilyMask(sfix29->EffectSpellClassMask[EFFECT_INDEX_0].Flags, 0x50);
 
+    // Glyph of Scourge Strike
+    SpellEntry *sfix30 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(58642));
+    sfix30->EffectTriggerSpell[EFFECT_INDEX_0] = 69961;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);
