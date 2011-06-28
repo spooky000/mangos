@@ -2149,6 +2149,8 @@ void Pet::ApplyStatScalingBonus(Stats stat, bool apply)
     if (!owner || owner->GetTypeId() != TYPEID_PLAYER || m_removed)
         return;
 
+    UnitMods unitMod = UnitMods(stat);
+
     int32 newStat = owner->GetTotalStatValue(stat);
 
     if (m_baseBonusData->statScale[stat] == newStat && !apply)
