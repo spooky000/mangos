@@ -3631,7 +3631,11 @@ void Spell::cast(bool skipCheck)
             {
                 // only for self cast
                 if (m_caster == m_targets.getUnitTarget())
+                {
                     AddPrecastSpell(25771);                     // Forbearance
+                    AddPrecastSpell(61987);                     // Avenging Wrath Marker
+                }
+
             }
             // Avenging Wrath
             else if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000200000000000))
@@ -5270,6 +5274,10 @@ SpellCastResult Spell::CheckCast(bool strict)
             // Focus Magic (main spell)
             if (m_spellInfo->Id == 54646)
                 return SPELL_FAILED_BAD_TARGETS;
+
+            // Avenging Wrath
+            if(m_spellInfo->Id == 31884 && target->HasAura(61987))
+                return SPELL_FAILED_CASTER_AURASTATE;
 
             // Lay on Hands (self cast)
             if (m_spellInfo->SpellFamilyName == SPELLFAMILY_PALADIN &&
