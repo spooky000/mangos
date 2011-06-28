@@ -6835,6 +6835,9 @@ void Aura::HandleModCombatSpeedPct(bool apply, bool /*Real*/)
 
         target->m_modAttackSpeedPct[NONSTACKING_MOD_ALL] = amount;
     }
+
+    if (target->IsInWorld())
+        target->CallForAllControlledUnits(ApplyScalingBonusWithHelper(SCALING_TARGET_ATTACKSPEED, 0, false),CONTROLLED_PET|CONTROLLED_GUARDIANS);
 }
 
 void Aura::HandleModAttackSpeed(bool apply, bool /*Real*/)
