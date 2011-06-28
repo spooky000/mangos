@@ -6433,11 +6433,8 @@ SpellCastResult Spell::CheckCasterAuras() const
                 spellUsableWhileStunned = false;
         }
 
-        // hack to allow Thunderstorm be usable in Sap
-        bool isThunderstorm = (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN && m_spellInfo->SpellFamilyFlags & UI64LIT(0x00200000000000));
-
         // spell is usable while stunned, check if caster has only mechanic stun auras, another stun types must prevent cast spell
-        if (spellUsableWhileStunned || isThunderstorm)
+        if (spellUsableWhileStunned)
         {
             bool is_stun_mechanic = true;
             Unit::AuraList const& stunAuras = m_caster->GetAurasByType(SPELL_AURA_MOD_STUN);
@@ -6447,7 +6444,7 @@ SpellCastResult Spell::CheckCasterAuras() const
                     is_stun_mechanic = false;
                     break;
                 }
-            if (!is_stun_mechanic && !isThunderstorm)
+            if (!is_stun_mechanic)
                 prevented_reason = SPELL_FAILED_STUNNED;
         }
         else
