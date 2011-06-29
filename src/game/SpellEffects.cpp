@@ -1082,6 +1082,23 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
         {
             switch(m_spellInfo->Id)
             {
+                case 45819:                                 // Throw Torch
+                {
+                    std::list<Player*> playerList;
+                    {
+                        MaNGOS::AnyUnitInPointRangeCheck check(m_caster, m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, 3.0f); // 3 yards check
+                        MaNGOS::PlayerListSearcher<MaNGOS::AnyUnitInPointRangeCheck> search(playerList, check);
+                        Cell::VisitAllObjects(m_caster, search, 3.0f);
+                    }
+
+                    if (!playerList.empty())
+                        for(std::list<Player*>::const_iterator itr = playerList.begin(); itr != playerList.end(); ++itr)
+                        {
+                            (*itr)->CastSpell((*itr), 45280, true);
+                            m_caster->CastSpell((*itr), 45644, true);
+                        }
+                    return;
+                }
                 case 52596:                                 // Medallion of Mam'toth
                 {
                     if (!unitTarget || unitTarget->GetEntry() != 28851)
