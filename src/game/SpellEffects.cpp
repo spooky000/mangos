@@ -2793,17 +2793,11 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     Player * pPlr = static_cast<Player*>(GetCaster());
 
-                    // Iterate for all creatures around cast place
-                    CellPair pair(MaNGOS::ComputeCellPair(m_targets.m_destX, m_targets.m_destY));
-                    Cell cell(pair);
-                    cell.SetNoCreate();
-
                     std::list<Creature*> creatureList;
                     {
                         MaNGOS::AnyUnitInPointRangeCheck go_check(unitTarget, m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, 10); // 10 yards check
                         MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInPointRangeCheck> go_search(creatureList, go_check);
-                        TypeContainerVisitor<MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInPointRangeCheck>, GridTypeMapContainer> go_visit(go_search);
-                        unitTarget->GetMap()->Visit(cell, go_visit);
+                        Cell::VisitAllObjects(unitTarget, go_search, 3.0f);
                     }
 
                     if (!creatureList.empty())
@@ -3043,17 +3037,11 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     if (m_caster->GetTypeId() != TYPEID_PLAYER)
                         return;
 
-                    // Iterate for all creatures around cast place
-                    CellPair pair(MaNGOS::ComputeCellPair(m_targets.m_destX, m_targets.m_destY));
-                    Cell cell(pair);
-                    cell.SetNoCreate();
-
                     std::list<Creature*> creatureList;
                     {
                         MaNGOS::AnyUnitInPointRangeCheck go_check(m_caster, m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, 5); // 5 yards check
                         MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInPointRangeCheck> go_search(creatureList, go_check);
-                        TypeContainerVisitor<MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInPointRangeCheck>, GridTypeMapContainer> go_visit(go_search);
-                        unitTarget->GetMap()->Visit(cell, go_visit);
+                        Cell::VisitAllObjects(unitTarget, go_search, 5);
                     }
 
                     if (!creatureList.empty())
@@ -3091,17 +3079,11 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     if (m_caster->GetTypeId() != TYPEID_PLAYER)
                         return;
 
-                    // Iterate for all creatures around cast place
-                    CellPair pair(MaNGOS::ComputeCellPair(m_targets.m_destX, m_targets.m_destY));
-                    Cell cell(pair);
-                    cell.SetNoCreate();
-
                     std::list<Creature*> creatureList;
                     {
                         MaNGOS::AnyUnitInPointRangeCheck go_check(m_caster, m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, 10); // 10 yards check
                         MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInPointRangeCheck> go_search(creatureList, go_check);
-                        TypeContainerVisitor<MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInPointRangeCheck>, GridTypeMapContainer> go_visit(go_search);
-                        unitTarget->GetMap()->Visit(cell, go_visit);
+                        Cell::VisitAllObjects(unitTarget, go_search, 10);
                     }
 
                     if (!creatureList.empty())
@@ -8729,17 +8711,11 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!pOwner || pOwner->GetTypeId() != TYPEID_PLAYER)
                         return;
 
-                    // Iterate for all creatures around cast place
-                    CellPair pair(MaNGOS::ComputeCellPair(pCaster->GetPositionX(), pCaster->GetPositionY()));
-                    Cell cell(pair);
-                    cell.SetNoCreate();
-
                     std::list<Creature*> creatureList;
                     {
                         MaNGOS::AnyUnitInPointRangeCheck go_check(pCaster, pCaster->GetPositionX(), pCaster->GetPositionY(), pCaster->GetPositionZ(), 20);
                         MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInPointRangeCheck> go_search(creatureList, go_check);
-                        TypeContainerVisitor<MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInPointRangeCheck>, GridTypeMapContainer> go_visit(go_search);
-                        unitTarget->GetMap()->Visit(cell, go_visit);
+                        Cell::VisitAllObjects(pCaster, go_search, 20);
                     }
 
                     if (!creatureList.empty())
