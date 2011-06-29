@@ -6568,6 +6568,7 @@ void Spell::EffectTameCreature(SpellEffectIndex /*eff_idx*/)
 
 void Spell::EffectSummonPet(SpellEffectIndex eff_idx)
 {
+
     uint32 petentry = m_spellInfo->EffectMiscValue[eff_idx];
 
     Pet *OldSummon = m_caster->GetPet();
@@ -7112,7 +7113,7 @@ void Spell::EffectInterruptCast(SpellEffectIndex eff_idx)
             // check if we can interrupt spell
             if ((curSpellInfo->InterruptFlags & SPELL_INTERRUPT_FLAG_INTERRUPT) && curSpellInfo->PreventionType == SPELL_PREVENTION_TYPE_SILENCE )
             {
-                unitTarget->ProhibitSpellSchool(GetSpellSchoolMask(curSpellInfo), CalculateSpellDuration(m_spellInfo, m_caster));
+                unitTarget->ProhibitSpellSchool(GetSpellSchoolMask(curSpellInfo), unitTarget->CalculateAuraDuration(m_spellInfo, (1 << eff_idx), GetSpellDuration(m_spellInfo), m_caster));
                 unitTarget->InterruptSpell(CurrentSpellTypes(i),false);
             }
         }
@@ -9201,17 +9202,17 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     if ( unitTarget != (Unit*)m_caster )
                     {
-                        m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
+                        m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid());//, m_spellInfo);
                         unitTarget->RemoveFromWorld();
                     }
                     else if (m_caster->HasAura(60200))
                     {
-                        m_caster->CastSpell(x,y,z,triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
+                        m_caster->CastSpell(x,y,z,triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid());//, m_spellInfo);
                     }
                     else  if (((Player*)m_caster)->HasItemCount(37201,1))
                     {
                         ((Player*)m_caster)->DestroyItemCount(37201,1,true);
-                        m_caster->CastSpell(x,y,z,triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
+                        m_caster->CastSpell(x,y,z,triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid());//, m_spellInfo);
                     }
                     else
                     {
