@@ -10836,7 +10836,7 @@ void SpellAuraHolder::Update(uint32 diff)
             if(Player* modOwner = caster->GetSpellModOwner())
                 modOwner->ApplySpellMod(GetId(), SPELLMOD_RANGE, max_range, NULL);
 
-            if(!caster->IsWithinDistInMap(m_target, max_range))
+            if(!caster->IsWithinDistInMap(m_target, (max_range+3))) // + 3 becouse server-side position sometime doesnt fit client-side
             {
                 caster->InterruptSpell(CURRENT_CHANNELED_SPELL);
                 return;
