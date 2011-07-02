@@ -5928,9 +5928,9 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
                             continue;
 
                         if (target->GetDistance2d(itr->getSource()) > 20)
-                            target->CastSpell(itr->getSource(), 63803, true, 0, 0, caster->GetObjectGuid()); // damage spell
+                            target->CastSpell(itr->getSource(), 63803, true, 0, 0, target->GetObjectGuid()); // damage spell
                         else
-                            target->CastSpell(itr->getSource(), 63804, true, 0, 0, caster->GetObjectGuid()); // optic spell
+                            target->CastSpell(itr->getSource(), 63804, true, 0, 0, target->GetObjectGuid()); // optic spell
                         return;
                     }
                     break;
