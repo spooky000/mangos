@@ -5866,11 +5866,112 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
 
                     break;
                 }
-                case 63276:                                   // Mark of the Faceless (General Vezax - Ulduar)
+                case 63050:                                 // Sanity (Yogg Saron - Ulduar)
+                {
+                    // here is the special handling of Sanity
+                    Unit *caster = GetCaster();
+                    if (!caster)
+                    {
+                        target->RemoveAurasDueToSpell(63050);
+                        return;
+                    }
+                    if (!caster->isAlive())
+                    {
+                        target->RemoveAurasDueToSpell(63050);
+                        return;
+                    }
+
+                    uint32 stacks = GetHolder()->GetStackAmount();
+
+                    if ((stacks < 30) && !(target->HasAura(63752)))
+                        target->CastSpell(target, 63752, true);
+
+                    if ((stacks > 30) && (target->HasAura(63752)))
+                        target->RemoveAurasDueToSpell(63752);
+
+                    if (target->HasAura(64169))             // sanity well Aura
+                        GetHolder()->ModStackAmount(20);
+
+                    return;
+                }
+                case 63276:                                 // Mark of the Faceless (General Vezax - Ulduar)
                 {
                     Unit *caster = GetCaster();
                     if (caster && target)
                         caster->CastCustomSpell(target, 63278, 0, &(spell->EffectBasePoints[0]), 0, false, 0, 0, caster->GetObjectGuid() , spell);
+                    return;
+                }
+                case 63802:                                 // Brain Link (Ulduar - Yogg Saron)
+                {
+                    Unit* caster = GetCaster();
+
+                    if (!caster || !target)
+                        return;
+                    // only at Player because of perfermonce
+                    if (target->GetTypeId() != TYPEID_PLAYER)
+                        return;
+                    
+                    // only in instance because of perfermonce
+                    if (!(caster->GetMap()->IsDungeon()) || !(target->GetMap()->IsDungeon()))
+                        return;
+
+                    Map::PlayerList const &PlayerList = target->GetMap()->GetPlayers();
+                    if (PlayerList.isEmpty())
+                        return;
+                    // search for partner
+                    for (Map::PlayerList::const_iterator itr = PlayerList.begin(); itr != PlayerList.end(); ++itr)
+                    {
+                        if (!itr->getSource()->HasAura(63802))
+                            continue;
+                        // no self partnership xD
+                        if (itr->getSource()->GetObjectGuid() == target->GetObjectGuid())
+                            continue;
+
+                        if (target->GetDistance2d(itr->getSource()) > 20)
+                            target->CastSpell(itr->getSource(), 63803, true, 0, 0, caster->GetObjectGuid()); // damage spell
+                        else
+                            target->CastSpell(itr->getSource(), 63804, true, 0, 0, caster->GetObjectGuid()); // optic spell
+                        return;
+                    }
+                    break;
+                }
+                case 64161:                                 // Empowered (Ulduar - Yogg Saron)
+                {
+                    uint8 stacks = 0;
+                    float healthpct = target->GetHealthPercent();
+                    if (healthpct > 90.0f)
+                        stacks = 9;
+                    else if (healthpct > 80.0f)
+                        stacks = 8;
+                    else if (healthpct > 70.0f)
+                        stacks = 7;
+                    else if (healthpct > 60.0f)
+                        stacks = 6;
+                    else if (healthpct > 50.0f)
+                        stacks = 5;
+                    else if (healthpct > 40.0f)
+                        stacks = 4;
+                    else if (healthpct > 30.0f)
+                        stacks = 3;
+                    else if (healthpct > 20.0f)
+                        stacks = 2;
+                    else if (healthpct > 10.0f)
+                        stacks = 1;
+                    else
+                    {
+                        target->CastSpell(target, 64162, true); // ready for thorim Kill
+                        target->RemoveAurasDueToSpell(65294);
+                        return;
+                    }
+                    
+                    if (SpellAuraHolder *holder = target->GetSpellAuraHolder(65294))
+                    {
+                        holder->SetStackAmount(stacks);
+                    }
+                    else
+                    {
+                        target->CastSpell(target, 65294, true);
+                    }
                     return;
                 }
             }
@@ -10008,6 +10109,21 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                 case 63277:                                 // Shadow Crash (General Vezax - Ulduar)
                 {
                     spellId1 = 65269;
+                    break;
+                }
+                case 63120:                                 // Insane
+                {
+                    spellId1 = 64464;
+                    break;
+                }
+                case 63830:                                 // Malady of the Mind
+                case 63881:
+                {
+                    if (!apply)
+                    {
+                        spellId1 = 63881;
+                        cast_at_remove = true;
+                    }
                     break;
                 }
                 case 71905:                                 // Soul Fragment
