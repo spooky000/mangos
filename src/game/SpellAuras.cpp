@@ -8784,6 +8784,26 @@ void Aura::PeriodicDummyTick()
                         caster->CastSpell(target, (spell->Id == 62717) ? 65722 : 65723, true, 0, this, GetCasterGuid(), GetSpellProto());
                     return;
                 }
+                case 63802:     // Brain Link (Yogg saron)
+                {
+                    if (Unit *caster = GetCaster())
+                    {
+                        Group *pGroup = ((Player*)target)->GetGroup();
+
+                        for(GroupReference *itr = pGroup->GetFirstMember(); itr != NULL; itr = itr->next())
+                        {
+                            Player* Target = itr->getSource();
+
+                            if (Target && Target != target && Target->HasAura(63802))
+                                if (target->IsWithinDist(Target, 20))
+                                {
+                                    target->CastSpell(Target,63804, true, NULL, NULL, target->GetObjectGuid(), NULL);
+                                    Target->CastSpell(target,63804, true, NULL, NULL, Target->GetObjectGuid(), NULL);
+                                }
+                                else target->CastSpell(Target,63803, true, NULL, NULL, target->GetObjectGuid(), NULL);
+                        }
+                    }
+                }
                 /* Feanor: CHECK LATER
                 case 62566:                                 // Healthy Spore Summon Periodic
                 {
