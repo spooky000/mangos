@@ -1711,6 +1711,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 64531:                                 // Rapid Burst
                 case 62042:                                 // Stormhammer
                 case 64218:                                 // Overcharge
+                case 62978:                                 // Summon Guardian (Ulduar - Yogg Saron)
                 case 65301:                                 // Psychosis 
                 case 63795:                                 // Psychosis
                 case 64465:                                 // Shadow Beacon
@@ -2501,6 +2502,10 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     break;
                 case 56153:                                 // Guardian Aura - Ahn'Kahet
                     FillAreaTargets(targetUnitMap, radius, PUSH_SELF_CENTER, SPELL_TARGETS_FRIENDLY);
+                    targetUnitMap.remove(m_caster);
+                    break;
+                case 63881:     // Malady of the Mind   Ulduar Yogg Saron
+                    FillAreaTargets(targetUnitMap, radius, PUSH_SELF_CENTER, SPELL_TARGETS_FRIENDLY, GetCastingObject());
                     targetUnitMap.remove(m_caster);
                     break;
                 case 64844:                                 // Divine Hymn
