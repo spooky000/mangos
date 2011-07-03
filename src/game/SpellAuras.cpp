@@ -7921,6 +7921,9 @@ void Aura::PeriodicTick()
     Unit *target = GetTarget();
     SpellEntry const* spellProto = GetSpellProto();
 
+    if (!target || !spellProto)
+        return;
+
     switch(m_modifier.m_auraname)
     {
         case SPELL_AURA_PERIODIC_DAMAGE:
@@ -9713,7 +9716,7 @@ void SpellAuraHolder::_AddSpellAuraHolder()
 
 void SpellAuraHolder::_RemoveSpellAuraHolder()
 {
- // Remove all triggered by aura spells vs unlimited duration
+    // Remove all triggered by aura spells vs unlimited duration
     // except same aura replace case
     if(m_removeMode!=AURA_REMOVE_BY_STACK)
         CleanupTriggeredSpells();
@@ -9725,10 +9728,10 @@ void SpellAuraHolder::_RemoveSpellAuraHolder()
             dynObj->RemoveAffected(m_target);
 
     // remove at-store spell cast items (for all remove modes?)
-        if (m_target->GetTypeId() == TYPEID_PLAYER && m_removeMode != AURA_REMOVE_BY_DEFAULT && m_removeMode != AURA_REMOVE_BY_DELETE)
-            if (ObjectGuid castItemGuid = GetCastItemGuid())
-                if (Item* castItem = ((Player*)m_target)->GetItemByGuid(castItemGuid))
-                    ((Player*)m_target)->DestroyItemWithOnStoreSpell(castItem);
+    if (m_target->GetTypeId() == TYPEID_PLAYER && m_removeMode != AURA_REMOVE_BY_DEFAULT && m_removeMode != AURA_REMOVE_BY_DELETE)
+        if (ObjectGuid castItemGuid = GetCastItemGuid())
+            if (Item* castItem = ((Player*)m_target)->GetItemByGuid(castItemGuid))
+                ((Player*)m_target)->DestroyItemWithOnStoreSpell(castItem);
 
     //passive auras do not get put in slots - said who? ;)
     // Note: but totem can be not accessible for aura target in time remove (to far for find in grid)
