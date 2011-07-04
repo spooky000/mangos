@@ -8681,6 +8681,10 @@ void Aura::PeriodicDummyTick()
                     if (target->GetTypeId() != TYPEID_PLAYER)
                         return;
 
+                    // If player has aura toasty fire he is protected fully from biting cold
+                    if (target->HasAura(62821))
+                        return;
+
                     // aura stack increase every 3 (data in m_miscvalue) seconds and decrease every 1s
                     SpellAuraHolder *holder = target->GetSpellAuraHolder(62039);
 
