@@ -1060,7 +1060,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     {
                         for(std::list<GameObject*>::iterator itr = gobList.begin(); itr != gobList.end(); ++itr)
                         {
-                            if( (*itr)->GetEntry() == 188673 )
+                            if ((*itr)->GetEntry() == 188673)
                             {
                                 (*itr)->SetLootState(GO_JUST_DEACTIVATED);
                                 ((Player*)m_caster)->KilledMonsterCredit(27331);
@@ -1082,6 +1082,32 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
         {
             switch(m_spellInfo->Id)
             {
+                case 44935:                                 // Q:Discovering Your Roots
+                {
+                    if (m_caster->GetTypeId() != TYPEID_UNIT)
+                        return;
+
+                    std::list<GameObject*> gobList;
+                    {
+                        MaNGOS::AnyGameObjectInPointRangeCheck go_check(m_caster, m_caster->GetPositionX(), m_caster->GetPositionY(), m_caster->GetPositionZ(), 5.0f); // 5 yards check
+                        MaNGOS::GameObjectListSearcher<MaNGOS::AnyGameObjectInPointRangeCheck> go_search(gobList, go_check);
+                        Cell::VisitAllObjects(m_caster, go_search, 5.0f);
+                    }
+
+                    if (!gobList.empty())
+                    {
+                        for(std::list<GameObject*>::iterator itr = gobList.begin(); itr != gobList.end(); ++itr)
+                        {
+                            if ((*itr)->GetEntry() == 187073)
+                            {
+                                if (!(m_caster->GetClosestGameObjectWithEntry(m_caster, 187072, 10.0f)))
+                                    (m_caster)->SummonGameObject(187072, (*itr)->GetPositionX(), (*itr)->GetPositionY(), (*itr)->GetPositionZ(), (*itr)->GetOrientation(), 30000);
+                                (*itr)->Delete();
+                            }
+                        }
+                    }
+                    return;
+                }
                 case 45819:                                 // Throw Torch
                 {
                     std::list<Player*> playerList;
