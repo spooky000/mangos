@@ -1082,6 +1082,14 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
         {
             switch(m_spellInfo->Id)
             {
+                case 56727:                                 // Q: Feeding Angrim
+                {
+                    if (unitTarget->GetTypeId() == TYPEID_UNIT && unitTarget->GetEntry() == 30422)
+                    {
+                        ((Creature*)unitTarget)->UpdateEntry(30423);
+                    }
+                    return;
+                }
                 case 44935:                                 // Q:Discovering Your Roots
                 {
                     if (m_caster->GetTypeId() != TYPEID_UNIT)
