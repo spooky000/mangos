@@ -3136,6 +3136,48 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     }
                     return;
                 }
+                case 63984:                                 // Hate to Zero (Ulduar - Yogg Saron), if the player teleport into the "brain"
+                {
+                    if (!unitTarget)
+                        return;
+                    Unit* caster = GetCaster();
+
+                    if (!caster)
+                        return;
+
+                    unitTarget->getHostileRefManager().deleteReferences(); // delete all aggro
+                    return;
+                }
+                case 64172:                                 // Titanic Storm (Ulduar - Yogg Saron)
+                {
+                    if (!unitTarget)
+                        return;
+                    if (unitTarget->HasAura(64162))
+                        unitTarget->DealDamage(unitTarget, unitTarget->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+                    return;
+                }
+                case 64555:                                 // Insane Periodic (Ulduar - Yogg Saron)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    Unit* caster = GetCaster();
+                    if (!caster)
+                        return;
+
+                    if (SpellAuraHolder* pHolder = unitTarget->GetSpellAuraHolder(63050))
+                    {
+                        if (pHolder->GetStackAmount() < 5)
+                        {
+                            unitTarget->MonsterYell("Ich bin tot", 0);
+                            //caster->DealDamage(unitTarget, unitTarget->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+                            // don't work
+                            //caster->CastSpell(unitTarget, m_spellInfo->EffectBasePoints[eff_idx], true); // spell should be 63120
+                            //caster->CastSpell(unitTarget, 63992, true);                                 // Teleport back to Main Room of Yogg Saron
+                        }
+                    }
+                    return;
+                }
                 case 64385:                                 // Spinning (from Unusual Compass)
                 {
                     m_caster->SetFacingTo(frand(0, M_PI_F*2), true);
@@ -8618,6 +8660,89 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(m_caster, 62708, true); // Control Vehicle aura
                     m_caster->CastSpell(unitTarget, (m_spellInfo->Id == 62707) ? 62717 : 63477, true); // DoT/Immunity
                     break;
+                }
+                case 63795:                                 // Psychosis nh (Ulduar - Yogg Saron)
+                case 65301:                                 // Psychosis h (Ulduar - Yogg Saron)
+                case 64164:                                 // Lunatic Gaze spell from Yogg Saron
+                case 64168:                                 // Lunatic Gaze spell from Laughing Skull
+                case 64059:                                 // Induce Madness
+                case 63830:                                 // Malady of the Mind
+                case 63881:
+                case 63803:                                 // Brain Link
+                {
+                    if (!unitTarget)
+                        return;
+                    if (SpellAuraHolder* holder =  unitTarget->GetSpellAuraHolder(63050))
+                    {
+                        int32 stacks = 0;
+                        switch (m_spellInfo->Id)
+                        {
+                            case 63795: stacks = -9;    break;      // Psychosis; remove!?, more script Effect basepoints 63988
+                            case 65301: stacks = -12;   break;      // Psychosis; remove!?, more script Effect basepoints 63988
+                            case 64164: stacks = -4;    break;      // Lunatic Gaze
+                            case 64168: 
+                            case 63803: stacks = -2;    break;      // Brain Link
+                            case 63830:                             // Induce Madness; 65201 (Crush) as basepoints !?
+                            case 63881: stacks = -3;    break;
+                            case 64059:                             // remove!?, more script Effect basepoints 63988
+                            {
+                                if (unitTarget->GetPositionZ() > 245.0f)
+                                    return;
+                                stacks = -100;  break;
+                            }
+                        }
+                        int32 stackAmount = holder->GetStackAmount() + stacks;
+                        if (stackAmount > 100)
+                            stackAmount = 100;
+                        else if (stackAmount <=0) // Last aura from stack removed
+                        {
+                            stackAmount = 0;
+                        }
+                        holder->SetStackAmount(stackAmount);
+                    }
+                    return;
+                }
+                case 63122:                                         // Clear Insane
+                {
+                    if (!unitTarget)
+                        return;
+                    unitTarget->RemoveAurasDueToSpell(63050);
+                    unitTarget->RemoveAurasDueToSpell(63120);
+                    return;
+                }
+                case 64123:                                 // Lunge (Ulduar - Yogg Saron)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    uint32 spellid = 0;
+                    unitTarget->GetMap()->IsRegularDifficulty() ? spellid = 64125 : spellid = 64126;
+                    unitTarget->CastSpell(unitTarget, spellid, true);
+                    break;
+                }
+                case 64466:                                 // Empowering Shadows (Ulduar - Yogg Saron)
+                {
+                    if (!unitTarget)    // ScriptTarget - Target: Yogg Saron
+                        return;
+                    // effect back to caster (Immortal Guardian)
+                    unitTarget->CastSpell(m_caster, 64467, true);
+                    break;
+                }
+                case 64467:                                 // Empowering Shadows (Ulduar - Yogg Saron)
+                {
+                    if (!unitTarget)
+                        return;
+                    uint32 spellid = 0;
+                    unitTarget->GetMap()->IsRegularDifficulty() ? spellid = 64468 : spellid = 64469;
+                    unitTarget->CastSpell(unitTarget, spellid, true);
+                    break;
+                }
+                case 65238:                                 // Shattered Illusion (Ulduar - Yogg Saron)
+                {
+                    if (!unitTarget)
+                        return;
+                    unitTarget->RemoveAurasDueToSpell(m_spellInfo->EffectBasePoints[eff_idx]);
+                    return;
                 }
                 /*  Feanor: CHECK LATER
                 case 62524:                                 // Attuned to Nature 2 Dose Reduction

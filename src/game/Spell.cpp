@@ -1703,8 +1703,8 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 64531:                                 // Rapid Burst
                 case 62042:                                 // Stormhammer
                 case 64218:                                 // Overcharge
-                case 65301:                                 // Psychosis 
-                case 63795:                                 // Psychosis
+                case 65301:                                 // Psychosis (Yogg-Saron)
+                case 63795:                                 // Psychosis (Yogg-Saron)
                 case 64465:                                 // Shadow Beacon
                     unMaxTargets = 1;
                     break;
@@ -2493,6 +2493,10 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     break;
                 case 56153:                                 // Guardian Aura - Ahn'Kahet
                     FillAreaTargets(targetUnitMap, radius, PUSH_SELF_CENTER, SPELL_TARGETS_FRIENDLY);
+                    targetUnitMap.remove(m_caster);
+                    break;
+                case 63881:                                 // Malady of the Mind   Ulduar Yogg Saron
+                    FillAreaTargets(targetUnitMap, radius, PUSH_SELF_CENTER, SPELL_TARGETS_FRIENDLY, GetCastingObject());
                     targetUnitMap.remove(m_caster);
                     break;
                 case 64844:                                 // Divine Hymn
@@ -5204,6 +5208,10 @@ SpellCastResult Spell::CheckCast(bool strict)
             if (!foundNeg)
                 return SPELL_FAILED_NOTHING_TO_DISPEL;
         }
+
+        // totem immunity for channeled spells(needs to be before spell cast)
+        if (IsChanneledSpell(m_spellInfo) && target->GetTypeId() == TYPEID_UNIT && ((Creature*)target)->IsTotem())
+            return SPELL_FAILED_IMMUNE;
 
         bool non_caster_target = target != m_caster && !IsSpellWithCasterSourceTargetsOnly(m_spellInfo);
 
@@ -8102,6 +8110,15 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
                 finish(false);
             }
             break;
+        }
+        case 49821: // Mind Sear
+        case 53022:
+        {
+            Unit* unitTarget = m_targets.getUnitTarget();
+            FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            if  (unitTarget)
+                targetUnitMap.remove(unitTarget);
+            return true;
         }
         case 58912: // Deathstorm
         {

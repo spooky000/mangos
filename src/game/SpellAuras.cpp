@@ -466,15 +466,11 @@ Unit *caster, Item* castItem) : Aura(spellproto, eff, currentBasePoints, holder,
     {
         case SPELL_EFFECT_APPLY_AREA_AURA_PARTY:
             m_areaAuraType = AREA_AURA_PARTY;
-            if (target->GetTypeId() == TYPEID_UNIT && ((Creature*)target)->IsTotem())
-                m_modifier.m_auraname = SPELL_AURA_NONE;
             break;
         case SPELL_EFFECT_APPLY_AREA_AURA_RAID:
             m_areaAuraType = AREA_AURA_RAID;
-            if (target->GetTypeId() == TYPEID_UNIT && ((Creature*)target)->IsTotem())
-                m_modifier.m_auraname = SPELL_AURA_NONE;
             // Light's Beacon not applied to caster itself (TODO: more generic check for another similar spell if any?)
-            else if (target == caster_ptr && spellproto->Id == 53651)
+            if (target == caster_ptr && spellproto->Id == 53651)
                 m_modifier.m_auraname = SPELL_AURA_NONE;
             break;
         case SPELL_EFFECT_APPLY_AREA_AURA_FRIEND:
@@ -498,6 +494,10 @@ Unit *caster, Item* castItem) : Aura(spellproto, eff, currentBasePoints, holder,
             MANGOS_ASSERT(false);
             break;
     }
+
+    // totems are immune to any kind of area auras
+    if (target->GetTypeId() == TYPEID_UNIT && ((Creature*)target)->IsTotem())
+        m_modifier.m_auraname = SPELL_AURA_NONE;
 }
 
 AreaAura::~AreaAura()
@@ -5866,11 +5866,112 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
 
                     break;
                 }
-                case 63276:                                   // Mark of the Faceless (General Vezax - Ulduar)
+                case 63050:                                 // Sanity (Yogg Saron - Ulduar)
+                {
+                    // here is the special handling of Sanity
+                    Unit *caster = GetCaster();
+                    if (!caster)
+                    {
+                        target->RemoveAurasDueToSpell(63050);
+                        return;
+                    }
+                    if (!caster->isAlive())
+                    {
+                        target->RemoveAurasDueToSpell(63050);
+                        return;
+                    }
+
+                    uint32 stacks = GetHolder()->GetStackAmount();
+
+                    if ((stacks < 30) && !(target->HasAura(63752)))
+                        target->CastSpell(target, 63752, true);
+
+                    if ((stacks > 30) && (target->HasAura(63752)))
+                        target->RemoveAurasDueToSpell(63752);
+
+                    if (target->HasAura(64169))             // sanity well Aura
+                        GetHolder()->ModStackAmount(20);
+
+                    return;
+                }
+                case 63276:                                 // Mark of the Faceless (General Vezax - Ulduar)
                 {
                     Unit *caster = GetCaster();
                     if (caster && target)
                         caster->CastCustomSpell(target, 63278, 0, &(spell->EffectBasePoints[0]), 0, false, 0, 0, caster->GetObjectGuid() , spell);
+                    return;
+                }
+                case 63802:                                 // Brain Link (Ulduar - Yogg Saron)
+                {
+                    Unit* caster = GetCaster();
+
+                    if (!caster || !target)
+                        return;
+                    // only at Player because of perfermonce
+                    if (target->GetTypeId() != TYPEID_PLAYER)
+                        return;
+                    
+                    // only in instance because of perfermonce
+                    if (!(caster->GetMap()->IsDungeon()) || !(target->GetMap()->IsDungeon()))
+                        return;
+
+                    Map::PlayerList const &PlayerList = target->GetMap()->GetPlayers();
+                    if (PlayerList.isEmpty())
+                        return;
+                    // search for partner
+                    for (Map::PlayerList::const_iterator itr = PlayerList.begin(); itr != PlayerList.end(); ++itr)
+                    {
+                        if (!itr->getSource()->HasAura(63802))
+                            continue;
+                        // no self partnership xD
+                        if (itr->getSource()->GetObjectGuid() == target->GetObjectGuid())
+                            continue;
+
+                        if (target->GetDistance2d(itr->getSource()) > 20)
+                            target->CastSpell(itr->getSource(), 63803, true, 0, 0, target->GetObjectGuid()); // damage spell
+                        else
+                            target->CastSpell(itr->getSource(), 63804, true, 0, 0, target->GetObjectGuid()); // optic spell
+                        return;
+                    }
+                    break;
+                }
+                case 64161:                                 // Empowered (Ulduar - Yogg Saron)
+                {
+                    uint8 stacks = 0;
+                    float healthpct = target->GetHealthPercent();
+                    if (healthpct > 90.0f)
+                        stacks = 9;
+                    else if (healthpct > 80.0f)
+                        stacks = 8;
+                    else if (healthpct > 70.0f)
+                        stacks = 7;
+                    else if (healthpct > 60.0f)
+                        stacks = 6;
+                    else if (healthpct > 50.0f)
+                        stacks = 5;
+                    else if (healthpct > 40.0f)
+                        stacks = 4;
+                    else if (healthpct > 30.0f)
+                        stacks = 3;
+                    else if (healthpct > 20.0f)
+                        stacks = 2;
+                    else if (healthpct > 10.0f)
+                        stacks = 1;
+                    else
+                    {
+                        target->CastSpell(target, 64162, true); // ready for thorim Kill
+                        target->RemoveAurasDueToSpell(65294);
+                        return;
+                    }
+                    
+                    if (SpellAuraHolder *holder = target->GetSpellAuraHolder(65294))
+                    {
+                        holder->SetStackAmount(stacks);
+                    }
+                    else
+                    {
+                        target->CastSpell(target, 65294, true);
+                    }
                     return;
                 }
             }
@@ -6367,7 +6468,15 @@ void Aura::HandleModTotalPercentStat(bool apply, bool /*Real*/)
     if ((m_modifier.m_miscvalue == STAT_STAMINA) && (maxHPValue > 0) && (GetSpellProto()->Attributes & 0x10))
     {
         // newHP = (curHP / maxHP) * newMaxHP = (newMaxHP * curHP) / maxHP -> which is better because no int -> double -> int conversion is needed
-        uint32 newHPValue = (target->GetMaxHealth() * curHPValue) / maxHPValue;
+        // Multiplication of large numbers cause uint32 overflow so using trick
+        // a*b/c = (a/c) * (b/c) * c + (a%c) * (b%c) / c + (a/c) * (b%c) + (a%c) * (b/c)
+        uint32 max_hp = target->GetMaxHealth();
+        // max_hp * curHPValue / maxHPValue
+        uint32 newHPValue =
+            (max_hp/maxHPValue) * (curHPValue/maxHPValue) * maxHPValue
+            + (max_hp%maxHPValue) * (curHPValue%maxHPValue) / maxHPValue
+            + (max_hp/maxHPValue) * (curHPValue%maxHPValue)
+            + (max_hp%maxHPValue) * (curHPValue/maxHPValue);
         target->SetHealth(newHPValue);
     }
 }
@@ -7820,6 +7929,9 @@ void Aura::PeriodicTick()
     Unit *target = GetTarget();
     SpellEntry const* spellProto = GetSpellProto();
 
+    if (!target || !spellProto)
+        return;
+
     switch(m_modifier.m_auraname)
     {
         case SPELL_AURA_PERIODIC_DAMAGE:
@@ -8725,6 +8837,10 @@ void Aura::PeriodicDummyTick()
                     if (target->GetTypeId() != TYPEID_PLAYER)
                         return;
 
+                    // If player has aura toasty fire he is protected fully from biting cold
+                    if (target->HasAura(62821))
+                        return;
+
                     // aura stack increase every 3 (data in m_miscvalue) seconds and decrease every 1s
                     SpellAuraHolder *holder = target->GetSpellAuraHolder(62039);
 
@@ -9612,7 +9728,7 @@ void SpellAuraHolder::_AddSpellAuraHolder()
 
 void SpellAuraHolder::_RemoveSpellAuraHolder()
 {
- // Remove all triggered by aura spells vs unlimited duration
+    // Remove all triggered by aura spells vs unlimited duration
     // except same aura replace case
     if(m_removeMode!=AURA_REMOVE_BY_STACK)
         CleanupTriggeredSpells();
@@ -9624,10 +9740,10 @@ void SpellAuraHolder::_RemoveSpellAuraHolder()
             dynObj->RemoveAffected(m_target);
 
     // remove at-store spell cast items (for all remove modes?)
-        if (m_target->GetTypeId() == TYPEID_PLAYER && m_removeMode != AURA_REMOVE_BY_DEFAULT && m_removeMode != AURA_REMOVE_BY_DELETE)
-            if (ObjectGuid castItemGuid = GetCastItemGuid())
-                if (Item* castItem = ((Player*)m_target)->GetItemByGuid(castItemGuid))
-                    ((Player*)m_target)->DestroyItemWithOnStoreSpell(castItem);
+    if (m_target->GetTypeId() == TYPEID_PLAYER && m_removeMode != AURA_REMOVE_BY_DEFAULT && m_removeMode != AURA_REMOVE_BY_DELETE)
+        if (ObjectGuid castItemGuid = GetCastItemGuid())
+            if (Item* castItem = ((Player*)m_target)->GetItemByGuid(castItemGuid))
+                ((Player*)m_target)->DestroyItemWithOnStoreSpell(castItem);
 
     //passive auras do not get put in slots - said who? ;)
     // Note: but totem can be not accessible for aura target in time remove (to far for find in grid)
@@ -10008,6 +10124,21 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                 case 63277:                                 // Shadow Crash (General Vezax - Ulduar)
                 {
                     spellId1 = 65269;
+                    break;
+                }
+                case 63120:                                 // Insane
+                {
+                    spellId1 = 64464;
+                    break;
+                }
+                case 63830:                                 // Malady of the Mind
+                case 63881:
+                {
+                    if (!apply)
+                    {
+                        spellId1 = 63881;
+                        cast_at_remove = true;
+                    }
                     break;
                 }
                 case 71905:                                 // Soul Fragment
