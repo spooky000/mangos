@@ -2095,6 +2095,33 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 else
                     unMaxTargets = 1;
             }
+            // Lunatic Gaze (Yogg saron and laughing skulls)
+            else if (m_spellInfo->Id == 64168 || m_spellInfo->Id == 64164)
+            {
+                if (WorldObject *caster = GetCastingObject())
+                {
+                    for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
+                    {
+                        next = itr;
+                        ++next;
+
+                        if (!(*itr)->HasInArc(M_PI_F, caster))
+                            targetUnitMap.erase(itr);
+                    }
+                }
+            }
+            // Frozen blows (Hodir)
+            else if(m_spellInfo->Id == 64545 || m_spellInfo->Id == 64544)
+            {
+                for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
+                {
+                    next = itr;
+                    ++next;
+
+                    if ((*itr)->GetTypeId() != TYPEID_PLAYER)
+                        targetUnitMap.erase(itr);
+                }
+            }
             // Solar Flare (Freya's elder)
             else if (m_spellInfo->Id == 62240 || m_spellInfo->Id == 62920)
             {
@@ -2113,7 +2140,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
 
                     if (!(*itr)->isVisibleForOrDetect(m_caster, m_caster, false, false, false))
                         targetUnitMap.erase(itr);
-                    }
+                }
             }
             else if (m_spellInfo->Id == 42005)                   // Bloodboil
             {
