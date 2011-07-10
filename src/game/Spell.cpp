@@ -2236,7 +2236,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
 
                 return;
             }
-            // Shattered Illusion not to hit brain of yogg saron
+            // Shattered Illusion should only hit 4 creatures listed below
             if (m_spellInfo->Id == 64173)
             {
                 for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
@@ -2244,7 +2244,10 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     next = itr;
                     ++next;
 
-                    if ((*itr)->GetEntry() == 33890)
+                    if ((*itr)->GetEntry() != 33288 &&  // Yogg
+                        (*itr)->GetEntry() != 33966 &&  // Crusher tentacle
+                        (*itr)->GetEntry() != 33983 &&  // Constricter tentacle
+                        (*itr)->GetEntry() != 33985)    // Corrupter tentacle
                         targetUnitMap.erase(itr);
                 }
             }
