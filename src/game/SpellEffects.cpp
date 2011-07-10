@@ -2707,6 +2707,20 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 54581, true, m_CastItem);
                     return;
                 }
+                case 54092:                                 // Monster Slayer's Kit 
+                { 
+                    uint32 spell_id = 0; 
+                    switch(urand(0,3)) 
+                    { 
+                        case 0: spell_id = 51853; break; 
+                        case 1: spell_id = 54063; break; 
+                        case 2: spell_id = 54071; break; 
+                        case 3: spell_id = 54086; break; 
+                        default: return;                        
+                    } 
+                    m_caster->CastSpell(unitTarget,spell_id,true,NULL); 
+                    return; 
+                }
                 case 54171:                                 // Divine Storm
                 {
                         // split between targets
