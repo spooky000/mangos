@@ -2236,6 +2236,18 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
 
                 return;
             }
+            // Shattered Illusion not to hit brain of yogg saron
+            if (m_spellInfo->Id == 64173)
+            {
+                for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
+                {
+                    next = itr;
+                    ++next;
+
+                    if ((*itr)->GetEntry() == 33890)
+                        targetUnitMap.erase(itr);
+                }
+            }
             // Supercharge (Iron Council: Ulduar)
             if (m_spellInfo->Id == 61920)
             {
