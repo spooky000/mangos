@@ -16337,6 +16337,11 @@ bool Player::LoadFromDB(ObjectGuid guid, SqlQueryHolder *holder )
 
     _LoadEquipmentSets(holder->GetResult(PLAYER_LOGIN_QUERY_LOADEQUIPMENTSETS));
 
+    if (!GetGroup() || !GetGroup()->isLFDGroup())
+    {
+        sLFGMgr.RemoveMemberFromLFDGroup(GetGroup(),GetObjectGuid());
+    }
+
     if(GetSession()->GetSecurity() == SEC_PLAYER)
     {
         uint32 prof_count = 0;
