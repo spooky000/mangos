@@ -200,18 +200,21 @@ bool Totem::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex 
         default:
             break;
     }
-    
-    if (!IsPositiveSpell(spellInfo))
+
+    // immune to any type of regeneration auras hp/mana etc.
+    if (IsPositiveSpell(spellInfo) && IsPeriodicRegenerateEffect(spellInfo, index))
+        return true;
+
+    switch(spellInfo->EffectApplyAuraName[index])
     {
-        // immune to all negative auras
-        if (IsAuraApplyEffect(spellInfo, index))
+        case SPELL_AURA_PERIODIC_DAMAGE:
+        case SPELL_AURA_PERIODIC_LEECH:
+        case SPELL_AURA_MOD_FEAR:
+        case SPELL_AURA_TRANSFORM:
+        case SPELL_AURA_MOD_TAUNT:
             return true;
-    }
-    else
-    {
-        // immune to any type of regeneration auras hp/mana etc.
-        if (IsPeriodicRegenerateEffect(spellInfo, index))
-            return true;
+        default:
+            break;
     }
 
     return Creature::IsImmuneToSpellEffect(spellInfo, index);
