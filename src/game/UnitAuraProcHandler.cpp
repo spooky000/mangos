@@ -2219,9 +2219,8 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 case 31876:
                 case 31877:
                 case 31878:
-                {
                     // triggered only at casted Judgement spells, not at additional Judgement effects
-                    if(!procSpell || !procSpell->SpellFamilyFlags.test<CF_PALADIN_JUDGEMENT_ACTIVATE>())
+                    if(!procSpell || procSpell->Category != 1210)
                         return SPELL_AURA_PROC_FAILED;
 
                     target = this;
@@ -2230,7 +2229,6 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     // Replenishment
                     CastSpell(this, 57669, true, NULL, triggeredByAura);
                     break;
-                }
                 // Paladin Tier 6 Trinket (Ashtongue Talisman of Zeal)
                 case 40470:
                 {
