@@ -709,6 +709,10 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix31 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(44935));
     sfix31->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
 
+    // Burninate (Seared Scourge quest)
+    SpellEntry *sfix32 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(47214));
+    sfix32->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_ALL_ENEMY_IN_AREA_INSTANT;
+
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {
         SkillLineAbilityEntry const *skillLine = sSkillLineAbilityStore.LookupEntry(j);
