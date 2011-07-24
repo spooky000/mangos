@@ -4510,10 +4510,108 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
             if(foundHolder->GetId() == 55849)
                 break;
 
-            // stacking of holders from different casters
-            // some holders stack, but their auras dont (i.e. only strongest aura effect works)
-            if (!sSpellMgr.IsStackableSpellAuraHolder(aurSpellInfo))
+            bool bRemove = true;
+
+            for (int32 i = 0; i < MAX_EFFECT_INDEX && bRemove; ++i)
+            {
+                // no need to check non stacking auras that weren't/won't be applied on this target
+                if (!foundHolder->m_auras[i] || !holder->m_auras[i])
+                    continue;
+
+                if (aurSpellInfo->AttributesEx3 & SPELL_ATTR_EX3_STACK_FOR_DIFF_CASTERS)
+                    bRemove = false;
+
+                // some more (custom) checks. e.g. Insect Swarm doesn't have the attribute
+                if (bRemove)
+                {
+                    // m_auraname can be modified to SPELL_AURA_NONE for area auras, use original
+                    AuraType aurNameReal = AuraType(aurSpellInfo->EffectApplyAuraName[i]);
+                    switch(aurNameReal)
+                    {
+                        // DoT/HoT/etc
+                        case SPELL_AURA_DUMMY:                  // allow stack
+                        case SPELL_AURA_PERIODIC_DAMAGE:
+                        case SPELL_AURA_PERIODIC_DAMAGE_PERCENT:
+                        case SPELL_AURA_PERIODIC_LEECH:
+                        case SPELL_AURA_PERIODIC_HEAL:
+                        case SPELL_AURA_OBS_MOD_HEALTH:
+                        case SPELL_AURA_PERIODIC_MANA_LEECH:
+                        case SPELL_AURA_OBS_MOD_MANA:
+                        case SPELL_AURA_POWER_BURN_MANA:
+                            bRemove = false;
+                            break;
+                    }
+                }
+            }
+
+            if (bRemove)
+            {
+                // can be only single (this check done at _each_ aura add
                 RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
+                break;
+            }
+
+            /*bool stop = false;
+
+            for (int32 i = 0; i < MAX_EFFECT_INDEX && !stop; ++i)
+            {
+                // no need to check non stacking auras that weren't/won't be applied on this target
+                if (!foundHolder->m_auras[i] || !holder->m_auras[i])
+                    continue;
+
+                // m_auraname can be modified to SPELL_AURA_NONE for area auras, use original
+                AuraType aurNameReal = AuraType(aurSpellInfo->EffectApplyAuraName[i]);
+
+                // Priest's Mind Flay must stack from different casters
+                if (const SpellEntry* sp = foundHolder->GetSpellProto())
+                {
+                    if (sp && sp->SpellFamilyName == SPELLFAMILY_PRIEST && sp->SpellIconID == 548 && (sp->SpellFamilyFlags & UI64LIT(0x00000040)))
+                        break;
+                }
+
+                // Warlock's Drain Soul must stack from different casters
+                if (const SpellEntry* sp = foundHolder->GetSpellProto())
+                {
+                    if (sp && sp->SpellFamilyName == SPELLFAMILY_WARLOCK && sp->SpellIconID == 113 && (sp->SpellFamilyFlags & UI64LIT(0x00004000)))
+                        break;
+                }
+
+                switch(aurNameReal)
+                {
+                    // DoT/HoT/etc
+                    case SPELL_AURA_DUMMY:                  // allow stack
+                    case SPELL_AURA_PERIODIC_DAMAGE:
+                    case SPELL_AURA_PERIODIC_DAMAGE_PERCENT:
+                    case SPELL_AURA_PERIODIC_LEECH:
+                    case SPELL_AURA_PERIODIC_HEAL:
+                    case SPELL_AURA_OBS_MOD_HEALTH:
+                    case SPELL_AURA_PERIODIC_MANA_LEECH:
+                    case SPELL_AURA_OBS_MOD_MANA:
+                    case SPELL_AURA_POWER_BURN_MANA:
+                    case SPELL_AURA_MOD_DAMAGE_FROM_CASTER: // required for Serpent Sting (blizz hackfix?)
+                    case SPELL_AURA_MOD_MELEE_HASTE:  // for Icy Touch
+                    case SPELL_AURA_MOD_RANGED_HASTE: // for Icy Touch
+                    case SPELL_AURA_MOD_DAMAGE_TAKEN: // for Hemorrhage
+                    case SPELL_AURA_MOD_DECREASE_SPEED: // for Mind Flay
+                        break; 
+                    case SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE: // Deadly Poison exception
+                        if (aurSpellInfo->Dispel != DISPEL_POISON)             // TODO: stacking rules for all poisons
+                        {
+                            RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
+                            stop = true;
+                        }
+                        break;
+                    case SPELL_AURA_PERIODIC_ENERGIZE:      // all or self or clear non-stackable
+                    default:                                // not allow
+                        // can be only single (this check done at _each_ aura add
+                        RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
+                        stop = true;
+                        break;
+                }
+            }
+
+            if(stop)
+                break;*/
 
         }
     }
@@ -4815,12 +4913,7 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolder *holder)
                 sLog.outError("SpellAuraHolder (Spell %u) is in process but attempt removed at SpellAuraHolder (Spell %u) adding, need add stack rule for Unit::RemoveNoStackAurasDueToAuraHolder", i->second->GetId(), holder->GetId());
                 continue;
             }
-
-            // different ranks spells with different casters should also stack
-            if (holder->GetCasterGuid() != i->second->GetCasterGuid() && sSpellMgr.IsStackableSpellAuraHolder(spellProto))
-                continue;
-
-            RemoveSpellAuraHolder(i->second, AURA_REMOVE_BY_STACK);
+            RemoveAurasDueToSpell(i_spellId);
 
             if( m_spellAuraHolders.empty() )
                 break;
