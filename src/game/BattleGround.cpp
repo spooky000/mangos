@@ -1300,6 +1300,10 @@ void BattleGround::AddPlayer(Player *plr)
     if (plr->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_AFK))
         plr->ToggleAFK();
 
+    // remove LFG-Buff from player
+    if (plr->HasAura(72221))
+        plr->RemoveAurasDueToSpell(72221);
+
     // score struct must be created in inherited class
 
     ObjectGuid guid = plr->GetObjectGuid();
