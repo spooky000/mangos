@@ -4510,10 +4510,46 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
             if(foundHolder->GetId() == 55849)
                 break;
 
-            // stacking of holders from different casters
-            // some holders stack, but their auras dont (i.e. only strongest aura effect works)
-            if (!sSpellMgr.IsStackableSpellAuraHolder(aurSpellInfo))
+            bool bRemove = true;
+
+            for (int32 i = 0; i < MAX_EFFECT_INDEX && bRemove; ++i)
+            {
+                // no need to check non stacking auras that weren't/won't be applied on this target
+                if (!foundHolder->m_auras[i] || !holder->m_auras[i])
+                    continue;
+
+                if (aurSpellInfo->AttributesEx3 & SPELL_ATTR_EX3_STACK_FOR_DIFF_CASTERS)
+                    bRemove = false;
+
+                // some more (custom) checks. e.g. Insect Swarm doesn't have the attribute
+                if (bRemove)
+                {
+                    // m_auraname can be modified to SPELL_AURA_NONE for area auras, use original
+                    AuraType aurNameReal = AuraType(aurSpellInfo->EffectApplyAuraName[i]);
+                    switch(aurNameReal)
+                    {
+                        // DoT/HoT/etc
+                        case SPELL_AURA_DUMMY:                  // allow stack
+                        case SPELL_AURA_PERIODIC_DAMAGE:
+                        case SPELL_AURA_PERIODIC_DAMAGE_PERCENT:
+                        case SPELL_AURA_PERIODIC_LEECH:
+                        case SPELL_AURA_PERIODIC_HEAL:
+                        case SPELL_AURA_OBS_MOD_HEALTH:
+                        case SPELL_AURA_PERIODIC_MANA_LEECH:
+                        case SPELL_AURA_OBS_MOD_MANA:
+                        case SPELL_AURA_POWER_BURN_MANA:
+                            bRemove = false;
+                            break;
+                    }
+                }
+            }
+
+            if (bRemove)
+            {
+                // can be only single (this check done at _each_ aura add
                 RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
+                break;
+            }
         }
     }
 
@@ -4817,9 +4853,9 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolder *holder)
 
             RemoveAurasDueToSpell(i_spellId);
 
-            // different ranks spells with different casters should also stack
+            /*// different ranks spells with different casters should also stack
             if (holder->GetCasterGuid() != i->second->GetCasterGuid() && sSpellMgr.IsStackableSpellAuraHolder(spellProto))
-                continue;
+                continue;*/
 
             if( m_spellAuraHolders.empty() )
                 break;
