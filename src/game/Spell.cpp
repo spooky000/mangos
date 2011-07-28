@@ -2241,6 +2241,8 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                         (*itr)->GetEntry() != 33985)    // Corrupter tentacle
                         targetUnitMap.erase(itr);
                 }
+
+                return;
             }
             // Supercharge (Iron Council: Ulduar)
             if (m_spellInfo->Id == 61920)
