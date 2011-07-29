@@ -4551,7 +4551,6 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
             // some holders stack, but their auras dont (i.e. only strongest aura effect works)
             if (!sSpellMgr.IsStackableSpellAuraHolder(aurSpellInfo))
                 RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
-                break;
             }
         }
     }
