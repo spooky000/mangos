@@ -4510,7 +4510,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
             if(foundHolder->GetId() == 55849)
                 break;
 
-            /*bool bRemove = true;
+            bool bRemove = true;
 
             for (int32 i = 0; i < MAX_EFFECT_INDEX && bRemove; ++i)
             {
@@ -4546,11 +4546,13 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
 
             if (bRemove)
             {
-                // can be only single (this check done at _each_ aura add*/
-            // stacking of holders from different casters
+                // can be only single (this check done at _each_ aura add
+            /*// stacking of holders from different casters
             // some holders stack, but their auras dont (i.e. only strongest aura effect works)
-            if (!sSpellMgr.IsStackableSpellAuraHolder(aurSpellInfo))
+            if (!sSpellMgr.IsStackableSpellAuraHolder(aurSpellInfo))*/
                 RemoveSpellAuraHolder(foundHolder,AURA_REMOVE_BY_STACK);
+                break;
+            }
         }
     }
 
