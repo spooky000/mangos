@@ -2227,6 +2227,18 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
 
                 return;
             }
+            // Thorim Titanic storm yogg encounter
+            if (m_spellInfo->Id == 64172)
+            {
+                for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
+                {
+                    next = itr;
+                    ++next;
+
+                    if ((*itr)->GetEntry() != 33988)  // Guardians only targeted
+                        targetUnitMap.erase(itr);
+                }
+            }
             // Shattered Illusion should only hit 4 creatures listed below
             if (m_spellInfo->Id == 64173)
             {
