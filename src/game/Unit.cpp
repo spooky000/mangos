@@ -4534,6 +4534,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
                         case SPELL_AURA_PERIODIC_DAMAGE_PERCENT:
                         case SPELL_AURA_PERIODIC_LEECH:
                         case SPELL_AURA_PERIODIC_HEAL:
+                        case SPELL_AURA_PERIODIC_TRIGGER_SPELL:
                         case SPELL_AURA_OBS_MOD_HEALTH:
                         case SPELL_AURA_PERIODIC_MANA_LEECH:
                         case SPELL_AURA_OBS_MOD_MANA:
