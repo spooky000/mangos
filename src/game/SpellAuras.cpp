@@ -8832,25 +8832,26 @@ void Aura::PeriodicDummyTick()
                 case 50824:                                 // Summon earthen dwarf
                     target->CastSpell(target, roll_chance_i(50) ? 50825 : 50826, true, NULL, this);
                     return;
-                case 62038:                                   // Biting Cold (Ulduar: Hodir)
+                case 62038:                                   // Bitting Cold (Ulduar: Hodir)
                 {
                     if (target->GetTypeId() != TYPEID_PLAYER)
                         return;
 
-                    // If player has aura toasty fire he is protected fully from biting cold
-                    if (target->HasAura(62821))
+                    Unit * caster = GetCaster();
+                    if (!caster)
                         return;
 
-                    // aura stack increase every 3 (data in m_miscvalue) seconds and decrease every 1s
-                    SpellAuraHolder *holder = target->GetSpellAuraHolder(62039);
-
-                    // dmg dealing every second
-                    target->CastSpell(target, 62188, true);
-
-                    // Reset reapply counter at move and decrease stack amount by 1
-                    if (((Player*)target)->isMoving())
+                    if (!target->HasAura(62821))     // Toasty Fire
                     {
-                        if (holder)
+                        // dmg dealing every second
+                        target->CastSpell(target, 62188, true, 0, 0, caster->GetObjectGuid());
+                    }
+
+                    // aura stack increase every 3 (data in m_miscvalue) seconds and decrease every 1s
+                    // Reset reapply counter at move and decrease stack amount by 1
+                    if (((Player*)target)->isMoving() || target->HasAura(62821))
+                    {
+                        if (SpellAuraHolder *holder = target->GetSpellAuraHolder(62039))
                         {
                             if (holder->ModStackAmount(-1))
                                 target->RemoveSpellAuraHolder(holder);
@@ -8858,7 +8859,6 @@ void Aura::PeriodicDummyTick()
                         m_modifier.m_miscvalue = 3;
                         return;
                     }
-
                     // We are standing at the moment, countdown
                     if (m_modifier.m_miscvalue > 0)
                     {
