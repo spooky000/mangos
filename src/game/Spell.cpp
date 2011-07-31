@@ -2256,25 +2256,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
 
                 return;
             }
-            // Supercharge (Iron Council: Ulduar)
-            if (m_spellInfo->Id == 61920)
-            {
-                std::list<Unit*> tempTargetUnitMap;
-                targetUnitMap.clear();
-                FillAreaTargets(tempTargetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_NOT_HOSTILE);
-
-                for (std::list<Unit*>::iterator itr = tempTargetUnitMap.begin(); itr != tempTargetUnitMap.end(); itr++)
-                {
-                    if ((*itr) &&
-                        ((*itr)->GetEntry() == 32867 || // Steelbreaker
-                        (*itr)->GetEntry() == 32927 ||  // Runemaster Molgeim
-                        (*itr)->GetEntry() == 32857)    // Stormcaller Brundir
-                        )
-                        targetUnitMap.push_back(*itr);
-                }
-
-                return;
-            }
 
             // exclude caster
             targetUnitMap.remove(m_caster);
