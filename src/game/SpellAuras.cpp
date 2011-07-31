@@ -2234,6 +2234,9 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         // Pet will be following owner, this makes him stop
                         target->addUnitState(UNIT_STAT_STUNNED);
                         return;
+                    case 54852:                             // Cosmetic - Stun (Permanent)
+                        target->addUnitState(UNIT_STAT_STUNNED);
+                        return;
                     case 61187:                                 // Twilight Shift
                         target->CastSpell(target, 61885, true);
                         if (target->HasAura(57620))
