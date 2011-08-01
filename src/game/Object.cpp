@@ -1081,9 +1081,6 @@ bool WorldObject::IsWithinDist2d(float x, float y, float dist2compare) const
 
 bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D) const
 {
-    if (!obj || IsDeleted() || obj->IsDeleted())
-        return false;
-
     float dx = GetPositionX() - obj->GetPositionX();
     float dy = GetPositionY() - obj->GetPositionY();
     float distsq = dx*dx + dy*dy;
@@ -1130,7 +1127,7 @@ bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool
 
 bool WorldObject::IsWithinLOSInMap(const WorldObject* obj) const
 {
-    if (!IsInMap(obj) || IsDeleted())
+    if (!IsInMap(obj)) 
         return false;
 
     float ox,oy,oz;
@@ -1193,9 +1190,6 @@ bool WorldObject::GetDistanceOrder(WorldObject const* obj1, WorldObject const* o
 
 bool WorldObject::IsInRange(WorldObject const* obj, float minRange, float maxRange, bool is3D /* = true */) const
 {
-    if (!obj || IsDeleted() || obj->IsDeleted())
-        return false;
-
     float dx = GetPositionX() - obj->GetPositionX();
     float dy = GetPositionY() - obj->GetPositionY();
     float distsq = dx*dx + dy*dy;
@@ -1221,9 +1215,6 @@ bool WorldObject::IsInRange(WorldObject const* obj, float minRange, float maxRan
 
 bool WorldObject::IsInRange2d(float x, float y, float minRange, float maxRange) const
 {
-    if (IsDeleted())
-        return false;
-
     float dx = GetPositionX() - x;
     float dy = GetPositionY() - y;
     float distsq = dx*dx + dy*dy;
@@ -1244,9 +1235,6 @@ bool WorldObject::IsInRange2d(float x, float y, float minRange, float maxRange) 
 
 bool WorldObject::IsInRange3d(float x, float y, float z, float minRange, float maxRange) const
 {
-    if (IsDeleted())
-        return false;
-
     float dx = GetPositionX() - x;
     float dy = GetPositionY() - y;
     float dz = GetPositionZ() - z;
@@ -1268,9 +1256,6 @@ bool WorldObject::IsInRange3d(float x, float y, float z, float minRange, float m
 
 bool WorldObject::IsInBetween(const WorldObject *obj1, const WorldObject *obj2, float size) const
 {
-    if (!obj1 || obj1->IsDeleted() || !obj2 || obj2->IsDeleted())
-        return false;
-
     if (GetPositionX() > std::max(obj1->GetPositionX(), obj2->GetPositionX())
         || GetPositionX() < std::min(obj1->GetPositionX(), obj2->GetPositionX())
         || GetPositionY() > std::max(obj1->GetPositionY(), obj2->GetPositionY())
@@ -1286,9 +1271,7 @@ bool WorldObject::IsInBetween(const WorldObject *obj1, const WorldObject *obj2, 
 
 float WorldObject::GetAngle(const WorldObject* obj) const
 {
-    if(!obj || obj->IsDeleted()) 
-        return 0.0f;
-
+    if(!obj) return 0;
     return GetAngle( obj->GetPositionX(), obj->GetPositionY() );
 }
 
@@ -1446,7 +1429,7 @@ void WorldObject::UpdateAllowedPositionZ(float x, float y, float &z) const
         default:
         {
             float ground_z = GetTerrain()->GetHeight(x, y, z, true);
-            if(ground_z > INVALID_HEIGHT)
+            if (ground_z > INVALID_HEIGHT)
                 z = ground_z;
             break;
         }
@@ -1541,7 +1524,7 @@ void WorldObject::MonsterYellToZone(int32 textId, uint32 language, Unit* target)
 
     Map::PlayerList const& pList = GetMap()->GetPlayers();
     for(Map::PlayerList::const_iterator itr = pList.begin(); itr != pList.end(); ++itr)
-        if(itr->getSource()->GetZoneId()==zoneid)
+        if (itr->getSource()->GetZoneId()==zoneid)
             say_do(itr->getSource());
 }
 
@@ -1620,11 +1603,11 @@ void WorldObject::SendObjectDeSpawnAnim(ObjectGuid guid)
     SendMessageToSet(&data, true);
 }
 
-void WorldObject::SendGameObjectCustomAnim(ObjectGuid guid)
+void WorldObject::SendGameObjectCustomAnim(ObjectGuid guid, uint32 animprogress)
 {
     WorldPacket data(SMSG_GAMEOBJECT_CUSTOM_ANIM, 8+4);
     data << ObjectGuid(guid);
-    data << uint32(0);                                      // not known what this is
+    data << uint32(animprogress);
     SendMessageToSet(&data, true);
 }
 
@@ -1670,7 +1653,7 @@ Creature* WorldObject::SummonCreature(uint32 id, float x, float y, float z, floa
 
     if (!pCreature->Create(GetMap()->GenerateLocalLowGuid(cinfo->GetHighGuid()), pos, cinfo, team))
     {
-        sWorld.AddObjectToRemoveList((WorldObject*)pCreature);
+        delete pCreature;
         return NULL;
     }
 
@@ -1684,7 +1667,7 @@ Creature* WorldObject::SummonCreature(uint32 id, float x, float y, float z, floa
 
     pCreature->Summon(spwtype, despwtime);
 
-    if(GetTypeId()==TYPEID_UNIT && ((Creature*)this)->AI())
+    if (GetTypeId()==TYPEID_UNIT && ((Creature*)this)->AI())
         ((Creature*)this)->AI()->JustSummoned(pCreature);
 
     // return the creature therewith the summoner has access to it
@@ -1915,7 +1898,7 @@ void WorldObject::SetPhaseMask(uint32 newPhaseMask, bool update)
 {
     m_phaseMask = newPhaseMask;
 
-    if(update && IsInWorld())
+    if (update && IsInWorld())
         UpdateVisibilityAndView();
 }
 
@@ -2046,7 +2029,7 @@ struct WorldObjectChangeAccumulator
         for(CameraMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
         {
             Player* owner = iter->getSource()->GetOwner();
-            if(owner != &i_object && owner->HaveAtClient(&i_object))
+            if (owner != &i_object && owner->HaveAtClient(&i_object))
                 i_object.BuildUpdateDataForPlayer(owner, i_updateDatas);
         }
     }
