@@ -32,7 +32,6 @@ struct Modifier
 
 class Unit;
 struct SpellEntry;
-struct SpellModifier;
 struct ProcTriggerSpell;
 
 // forward decl
@@ -123,12 +122,14 @@ class MANGOS_DLL_SPEC SpellAuraHolder
         uint8 GetAuraLevel() const { return m_auraLevel; }
         void SetAuraLevel(uint8 level) { m_auraLevel = level; }
         uint32 GetAuraCharges() const { return m_procCharges; }
-        void SetAuraCharges(uint32 charges)
+        void SetAuraCharges(uint32 charges, bool update = true)
         {
             if (m_procCharges == charges)
                 return;
             m_procCharges = charges;
-            SendAuraUpdate(false);
+
+            if (update)
+                SendAuraUpdate(false);
         }
         bool DropAuraCharge()                               // return true if last charge dropped
         {
@@ -453,7 +454,7 @@ class MANGOS_DLL_SPEC Aura
 
         ClassFamilyMask const& GetAuraSpellClassMask() const { return  m_spellAuraHolder->GetSpellProto()->GetEffectSpellClassMask(m_effIndex); }
         bool isAffectedOnSpell(SpellEntry const *spell) const;
-        bool CanProcFrom(SpellEntry const *spell, uint32 EventProcEx, uint32 procEx, bool active, bool useClassMask) const;
+        bool CanProcFrom(SpellEntry const *spell, uint32 procFlag, uint32 EventProcEx, uint32 procEx, bool active, bool useClassMask) const;
         bool IsEffectStacking();
 
         //SpellAuraHolder const* GetHolder() const { return m_spellHolder; }
@@ -477,7 +478,6 @@ class MANGOS_DLL_SPEC Aura
         void ReapplyAffectedPassiveAuras();
 
         Modifier m_modifier;
-        SpellModifier *m_spellmod;
 
         time_t m_applyTime;
 

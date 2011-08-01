@@ -108,10 +108,12 @@ class AuctionHouseObject
         }
 
         typedef std::map<uint32, AuctionEntry*> AuctionEntryMap;
+        typedef std::pair<AuctionEntryMap::const_iterator, AuctionEntryMap::const_iterator> AuctionEntryMapBounds;
 
         uint32 GetCount() { return AuctionsMap.size(); }
 
-        AuctionEntryMap *GetAuctions() { return &AuctionsMap; }
+        AuctionEntryMap const& GetAuctions() const { return AuctionsMap; }
+        AuctionEntryMapBounds GetAuctionsBounds() const {return AuctionEntryMapBounds(AuctionsMap.begin(), AuctionsMap.end()); }
 
         AuctionEntryMap::iterator GetAuctionsBegin() {return AuctionsMap.begin();}
         AuctionEntryMap::iterator GetAuctionsEnd() {return AuctionsMap.end();}
@@ -130,7 +132,7 @@ class AuctionHouseObject
 
         bool RemoveAuction(uint32 id)
         {
-            return AuctionsMap.erase(id) ? true : false;
+            return AuctionsMap.erase(id);
         }
 
         void Update();

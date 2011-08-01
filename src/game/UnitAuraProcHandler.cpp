@@ -4253,9 +4253,6 @@ SpellAuraProcResult Unit::HandleMendingAuraProc( Unit* /*pVictim*/, uint32 /*dam
     // jumps
     int32 jumps = triggeredByAura->GetHolder()->GetAuraCharges()-1;
 
-    // current aura expire
-    triggeredByAura->GetHolder()->SetAuraCharges(1);             // will removed at next charges decrease
-
     // next target selection
     if (jumps > 0 && GetTypeId()==TYPEID_PLAYER && caster_guid.IsPlayer())
     {
@@ -4267,27 +4264,36 @@ SpellAuraProcResult Unit::HandleMendingAuraProc( Unit* /*pVictim*/, uint32 /*dam
 
         if(Player* caster = ((Player*)triggeredByAura->GetCaster()))
         {
-            caster->ApplySpellMod(spellProto->Id, SPELLMOD_RADIUS, radius,NULL);
+            caster->ApplySpellMod(spellProto->Id, SPELLMOD_RADIUS, radius, NULL);
 
             if(Player* target = ((Player*)this)->GetNextRandomRaidMember(radius))
             {
-                // aura will applied from caster, but spell casted from current aura holder
-                SpellModifier *mod = new SpellModifier(SPELLMOD_CHARGES,SPELLMOD_FLAT,jumps-5,spellProto->Id,spellProto->SpellFamilyFlags);
+                SpellAuraHolder *holder = GetSpellAuraHolder(spellProto->Id, caster->GetObjectGuid());
+                SpellAuraHolder *new_holder = CreateSpellAuraHolder(spellProto, target, caster);
 
-                // remove before apply next (locked against deleted)
+                for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+                {
+                    Aura *aur = holder->GetAuraByEffectIndex(SpellEffectIndex(i));
+                    if (!aur)
+                        continue;
+
+                    int32 basePoints = aur->GetBasePoints();
+                    Aura * new_aur = CreateAura(spellProto, aur->GetEffIndex(), &basePoints, new_holder, target, caster);
+                    new_holder->AddAura(new_aur, new_aur->GetEffIndex());
+                }
+                new_holder->SetAuraCharges(jumps, false);
+
+                // lock aura holder (currently SPELL_AURA_PRAYER_OF_MENDING is single target spell, so will attempt removing from old target
+                // when applied to new one)
                 triggeredByAura->SetInUse(true);
-                RemoveAurasByCasterSpell(spellProto->Id,caster->GetObjectGuid());
-
-                caster->AddSpellMod(mod, true);
-                CastCustomSpell(target, spellProto->Id, &heal, NULL, NULL, true, NULL, triggeredByAura, caster->GetObjectGuid());
-                caster->AddSpellMod(mod, false);
+                target->AddSpellAuraHolder(new_holder);
                 triggeredByAura->SetInUse(false);
             }
         }
     }
 
     // heal
-    CastCustomSpell(this,33110,&heal,NULL,NULL,true,NULL,NULL,caster_guid);
+    CastCustomSpell(this,33110,&heal,NULL,NULL,true,NULL,NULL,caster_guid, spellProto);
     return SPELL_AURA_PROC_OK;
 }
 
@@ -4379,6 +4385,17 @@ SpellAuraProcResult Unit::HandleAddFlatModifierAuraProc(Unit* pVictim, uint32 /*
             CastCustomSpell(pVictim, 68055, &bp, NULL, NULL, true, NULL, triggeredByAura);
             break;
         }
+    }
+    else if (spellInfo->Id == 53695 || spellInfo->Id == 53696)   // Judgements of the Just
+    {
+        if (!procSpell)
+            return SPELL_AURA_PROC_FAILED;
+
+        if (GetSpellSpecific(procSpell->Id) != SPELL_JUDGEMENT)
+            return SPELL_AURA_PROC_FAILED;
+
+        int bp = triggeredByAura->GetModifier()->m_amount;
+        CastCustomSpell(pVictim, 68055, &bp, NULL, NULL, true, NULL, triggeredByAura);
     }
 
     return SPELL_AURA_PROC_OK;
