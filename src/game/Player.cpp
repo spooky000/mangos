@@ -19242,15 +19242,12 @@ void Player::HandleStealthedUnitsDetection()
                 // target aura duration for caster show only if target exist at caster client
                 // send data at target visibility change (adding to client)
                 if((*i)!=this && (*i)->isType(TYPEMASK_UNIT))
-                {
                     SendAurasForTarget(*i);
-                    (*i)->SendHeartBeat(false);
-                }
             }
         }
         else
         {
-            if(hasAtClient)
+            if (hasAtClient)
             {
                 (*i)->DestroyForPlayer(this);
                 m_clientGUIDs.erase((*i)->GetObjectGuid());

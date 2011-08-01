@@ -29,7 +29,8 @@
 #include "Util.h"
 
 Pet::Pet(PetType type) :
-Creature(CREATURE_SUBTYPE_PET), m_usedTalentCount(0),
+Creature(CREATURE_SUBTYPE_PET),
+m_usedTalentCount(0),
 m_removed(false), m_happinessTimer(7500), m_petType(type), m_duration(0),
 m_auraUpdateMask(0), m_loading(true),
 m_declinedname(NULL), m_petModeFlags(PET_MODE_DEFAULT),
@@ -76,17 +77,22 @@ void Pet::AddToWorld()
     Unit::AddToWorld();
 }
 
-void Pet::RemoveFromWorld()
+void Pet::RemoveFromWorld(bool remove)
 {
     ///- Remove the pet from the accessor
     if (((Creature*)this)->IsInWorld())
     {
         GetMap()->GetObjectsStore().erase<Pet>(GetObjectGuid(), (Pet*)NULL);
-        sObjectAccessor.RemoveObject(this);
     }
-
     ///- Don't call the function for Creature, normal mobs + totems go in a different storage
-    Unit::RemoveFromWorld();
+    if (sObjectAccessor.FindPet(GetObjectGuid()))
+        sObjectAccessor.RemoveObject(this);
+    Unit::RemoveFromWorld(remove);
+}
+
+void Pet::CleanupsBeforeDelete()
+{
+    RemoveFromWorld();
 }
 
 bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool current)
@@ -576,7 +582,7 @@ void Pet::Update(uint32 update_diff, uint32 diff)
                     return;
                 }
             }
-            else 
+            else
                 if (!IsWithinDistInMap(owner, GetMap()->GetVisibilityDistance()))
                 {
                     sLog.outError("Not controlled pet %d lost view from owner, removed. Owner = %d, distance = %d, pet GUID = ", GetObjectGuid().GetCounter(), owner->GetObjectGuid().GetCounter(), GetDistance2d(owner), owner->GetPetGuid().GetCounter());
@@ -765,6 +771,7 @@ void Pet::Unsummon(PetSaveMode mode, Unit* owner /*= NULL*/)
             SavePetToDB(mode);
     }
 
+    sObjectAccessor.RemoveObject(this);
     AddObjectToRemoveList();
     m_removed = true;
 }
@@ -1347,7 +1354,7 @@ void Pet::_LoadAuras(uint32 timediff)
             if (!holder->IsEmptyHolder())
                 AddSpellAuraHolder(holder);
             else
-                delete holder;
+                AddSpellAuraHolderToRemoveList(holder);
         }
         while( result->NextRow() );
 
@@ -2996,7 +3003,7 @@ bool Pet::Summon()
 
     SetHealth(GetMaxHealth());
     SetPower(getPowerType(), GetMaxPower(getPowerType()));
-    UpdateWalkMode(owner);
+
     AIM_Initialize();
 
     map->Add((Creature*)this);
@@ -3275,7 +3282,7 @@ void Pet::Regenerate(Powers power, uint32 diff)
 
     if (curValue < 0)
         curValue = 0;
-    else if (curValue > maxValue)
+    else if (curValue > int32(maxValue))
         curValue = maxValue;
 
     SetPower(power, curValue);
