@@ -80,7 +80,7 @@ void MovementInfo::Read(ByteBuffer &data)
     data >> pos.z;
     data >> pos.o;
 
-    if(HasMovementFlag(MOVEFLAG_ONTRANSPORT))
+    if (HasMovementFlag(MOVEFLAG_ONTRANSPORT))
     {
         data >> t_guid.ReadAsPacked();
         data >> t_pos.x;
@@ -90,7 +90,7 @@ void MovementInfo::Read(ByteBuffer &data)
         data >> t_time;
         data >> t_seat;
 
-        if(moveFlags2 & MOVEFLAG2_INTERP_MOVEMENT)
+        if (moveFlags2 & MOVEFLAG2_INTERP_MOVEMENT)
             data >> t_time2;
     }
 
@@ -101,7 +101,7 @@ void MovementInfo::Read(ByteBuffer &data)
 
     data >> fallTime;
 
-    if(HasMovementFlag(MOVEFLAG_FALLING))
+    if (HasMovementFlag(MOVEFLAG_FALLING))
     {
         data >> jump.velocity;
         data >> jump.sinAngle;
@@ -109,7 +109,7 @@ void MovementInfo::Read(ByteBuffer &data)
         data >> jump.xyspeed;
     }
 
-    if(HasMovementFlag(MOVEFLAG_SPLINE_ELEVATION))
+    if (HasMovementFlag(MOVEFLAG_SPLINE_ELEVATION))
     {
         data >> u_unk1;
     }
@@ -125,7 +125,7 @@ void MovementInfo::Write(ByteBuffer &data) const
     data << pos.z;
     data << pos.o;
 
-    if(HasMovementFlag(MOVEFLAG_ONTRANSPORT))
+    if (HasMovementFlag(MOVEFLAG_ONTRANSPORT))
     {
         data << t_guid.WriteAsPacked();
         data << t_pos.x;
@@ -135,7 +135,7 @@ void MovementInfo::Write(ByteBuffer &data) const
         data << t_time;
         data << t_seat;
 
-        if(moveFlags2 & MOVEFLAG2_INTERP_MOVEMENT)
+        if (moveFlags2 & MOVEFLAG2_INTERP_MOVEMENT)
             data << t_time2;
     }
 
@@ -146,7 +146,7 @@ void MovementInfo::Write(ByteBuffer &data) const
 
     data << fallTime;
 
-    if(HasMovementFlag(MOVEFLAG_FALLING))
+    if (HasMovementFlag(MOVEFLAG_FALLING))
     {
         data << jump.velocity;
         data << jump.sinAngle;
@@ -154,7 +154,7 @@ void MovementInfo::Write(ByteBuffer &data) const
         data << jump.xyspeed;
     }
 
-    if(HasMovementFlag(MOVEFLAG_SPLINE_ELEVATION))
+    if (HasMovementFlag(MOVEFLAG_SPLINE_ELEVATION))
     {
         data << u_unk1;
     }
@@ -244,7 +244,8 @@ Unit::Unit() :
         m_auraModifiersGroup[i][NONSTACKING_PCT] = 0.0f;
         m_auraModifiersGroup[i][NONSTACKING_PCT_MINOR] = 0.0f;
     }
-                                                            // implement 50% base damage from offhand
+
+    // implement 50% base damage from offhand
     m_auraModifiersGroup[UNIT_MOD_DAMAGE_OFFHAND][TOTAL_PCT] = 0.5f;
 
     for (int i = 0; i < MAX_ATTACK; ++i)
@@ -299,8 +300,14 @@ Unit::~Unit()
     }
 
     delete m_charmInfo;
-    CleanupDeletedAuras();
     delete movespline;
+
+    if (IsDeleted())
+    {
+        CleanupDeletedAuras();
+        RemoveAllDynObjects();
+        m_Events.KillAllEvents(true);
+    }
 
     // those should be already removed at "RemoveFromWorld()" call
     MANGOS_ASSERT(m_gameObj.size() == 0);
@@ -388,7 +395,7 @@ bool Unit::haveOffhandWeapon() const
     if (!CanUseEquippedWeapon(OFF_ATTACK))
         return false;
 
-    if(GetTypeId() == TYPEID_PLAYER)
+    if (GetTypeId() == TYPEID_PLAYER)
         return ((Player*)this)->GetWeaponForAttack(OFF_ATTACK,true,true);
     else
         return false;
@@ -585,7 +592,7 @@ void Unit::DealDamageMods(Unit *pVictim, uint32 &damage, uint32* absorb)
     //You still see it in the combat log though
     if (!IsAllowedDamageInArea(pVictim))
     {
-        if(absorb)
+        if (absorb)
             *absorb += damage;
         damage = 0;
     }
@@ -599,7 +606,7 @@ void Unit::DealDamageMods(Unit *pVictim, uint32 &damage, uint32* absorb)
     if( pVictim->GetTypeId()== TYPEID_UNIT && ((Creature *)pVictim)->AI() )
         ((Creature *)pVictim)->AI()->DamageTaken(this, damage);
 
-    if(absorb && originalDamage > damage)
+    if (absorb && originalDamage > damage)
         *absorb += (originalDamage - damage);
 }
 
@@ -625,10 +632,10 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
         RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
 
-        if(pVictim != this)
+        if (pVictim != this)
             RemoveSpellsCausingAura(SPELL_AURA_MOD_INVISIBILITY);
 
-        if(pVictim->GetTypeId() == TYPEID_PLAYER && !pVictim->IsStandState() && !pVictim->hasUnitState(UNIT_STAT_STUNNED))
+        if (pVictim->GetTypeId() == TYPEID_PLAYER && !pVictim->IsStandState() && !pVictim->hasUnitState(UNIT_STAT_STUNNED))
             pVictim->SetStandState(UNIT_STAND_STATE_STAND);
     }
 
@@ -650,7 +657,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         if (!cleanDamage->absorb)
         {
             // Rage from physical damage received .
-            if(cleanDamage->damage && (damageSchoolMask & SPELL_SCHOOL_MASK_NORMAL) && pVictim->GetTypeId() == TYPEID_PLAYER && (pVictim->getPowerType() == POWER_RAGE))
+            if (cleanDamage->damage && (damageSchoolMask & SPELL_SCHOOL_MASK_NORMAL) && pVictim->GetTypeId() == TYPEID_PLAYER && (pVictim->getPowerType() == POWER_RAGE))
                 ((Player*)pVictim)->RewardRage(cleanDamage->damage, 0, false);
 
             return 0;
@@ -705,12 +712,12 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         duel_hasEnded = true;
     }
     //Get in CombatState
-    if(pVictim != this && damagetype != DOT)
+    if (pVictim != this && damagetype != DOT)
     {
         SetInCombatWith(pVictim);
         pVictim->SetInCombatWith(this);
 
-        if(Player* attackedPlayer = pVictim->GetCharmerOrOwnerPlayerOrPlayerItself())
+        if (Player* attackedPlayer = pVictim->GetCharmerOrOwnerPlayerOrPlayerItself())
             SetContestedPvP(attackedPlayer);
     }
 
@@ -723,7 +730,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         {
             case BASE_ATTACK:
             {
-                if(cleanDamage->hitOutCome == MELEE_HIT_CRIT)
+                if (cleanDamage->hitOutCome == MELEE_HIT_CRIT)
                     weaponSpeedHitFactor = uint32(GetAttackTime(cleanDamage->attackType)/1000.0f * 7);
                 else
                     weaponSpeedHitFactor = uint32(GetAttackTime(cleanDamage->attackType)/1000.0f * 3.5f);
@@ -734,7 +741,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             }
             case OFF_ATTACK:
             {
-                if(cleanDamage->hitOutCome == MELEE_HIT_CRIT)
+                if (cleanDamage->hitOutCome == MELEE_HIT_CRIT)
                     weaponSpeedHitFactor = uint32(GetAttackTime(cleanDamage->attackType)/1000.0f * 3.5f);
                 else
                     weaponSpeedHitFactor = uint32(GetAttackTime(cleanDamage->attackType)/1000.0f * 1.75f);
@@ -807,7 +814,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         }
 
         // call kill spell proc event (before real die and combat stop to triggering auras removed at death/combat stop)
-        if(player_tap && player_tap != pVictim)
+        if (player_tap && player_tap != pVictim)
         {
             player_tap->ProcDamageAndSpell(pVictim, PROC_FLAG_KILL, PROC_FLAG_KILLED, PROC_EX_NONE, 0);
 
@@ -862,7 +869,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
 
         DEBUG_FILTER_LOG(LOG_FILTER_DAMAGE,"DealDamageHealth1");
 
-        if(spiritOfRedemtionTalentReady)
+        if (spiritOfRedemtionTalentReady)
         {
             // save value before aura remove
             uint32 ressSpellId = pVictim->GetUInt32Value(PLAYER_SELF_RES_SPELL);
@@ -898,7 +905,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         {
             if (GetTypeId() == TYPEID_UNIT)
                 ((Player*)pVictim)->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_KILLED_BY_CREATURE, GetEntry());
-            else if(GetTypeId() == TYPEID_PLAYER && pVictim != this)
+            else if (GetTypeId() == TYPEID_PLAYER && pVictim != this)
                 ((Player*)pVictim)->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_KILLED_BY_PLAYER, 1, ((Player*)this)->GetTeam());
         }
 
@@ -933,7 +940,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             // if vehicle and has passengers - remove his
             if (cVictim->GetObjectGuid().IsVehicle())
             {
-                if(cVictim->GetVehicleKit())
+                if (cVictim->GetVehicleKit())
                     cVictim->GetVehicleKit()->RemoveAllPassengers();
             }
 
@@ -945,11 +952,11 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             {
                 TemporarySummon* pSummon = (TemporarySummon*)cVictim;
                 if (pSummon->GetSummonerGuid().IsCreatureOrVehicle())
-                    if(Creature* pSummoner = cVictim->GetMap()->GetCreature(pSummon->GetSummonerGuid()))
-                        if (pSummoner->AI())
+                    if (Creature* pSummoner = cVictim->GetMap()->GetCreature(pSummon->GetSummonerGuid()))
+                        if (pSummoner->IsInWorld() && !pSummoner->IsDeleted() && pSummoner->AI())
                             pSummoner->AI()->SummonedCreatureJustDied(cVictim);
             }
-            else if (pOwner && pOwner->GetTypeId() == TYPEID_UNIT)
+            else if (pOwner && pOwner->IsInWorld() && !pOwner->IsDeleted() && pOwner->GetTypeId() == TYPEID_UNIT)
             {
                 if (((Creature*)pOwner)->AI())
                     ((Creature*)pOwner)->AI()->SummonedCreatureJustDied(cVictim);
@@ -959,17 +966,18 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
                 mapInstance->OnCreatureDeath(cVictim);
 
             // Dungeon specific stuff, only applies to players killing creatures
-            if(cVictim->GetInstanceId())
+            if (cVictim->GetInstanceId())
             {
                 Map *m = cVictim->GetMap();
-                Player *creditedPlayer = GetCharmerOrOwnerPlayerOrPlayerItself();
+                Player* creditedPlayer = GetCharmerOrOwnerPlayerOrPlayerItself();
                 // TODO: do instance binding anyway if the charmer/owner is offline
 
-                if(m->IsDungeon() && creditedPlayer)
+                if (m->IsDungeon() && creditedPlayer)
                 {
                     if (m->IsRaidOrHeroicDungeon())
                     {
-                        if(cVictim->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_INSTANCE_BIND)
+                        if (cVictim->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_INSTANCE_BIND)
+                        {
                             ((DungeonMap *)m)->PermBindAllPlayers(creditedPlayer);
                     }
                     else
@@ -989,7 +997,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         }
 
         // last damage from non duel opponent or opponent controlled creature
-        if(duel_hasEnded)
+        if (duel_hasEnded)
         {
             MANGOS_ASSERT(pVictim->GetTypeId()==TYPEID_PLAYER);
             Player *he = (Player*)pVictim;
@@ -1003,14 +1011,14 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         }
 
         // battleground things (do this at the end, so the death state flag will be properly set to handle in the bg->handlekill)
-        if(pVictim->GetTypeId() == TYPEID_PLAYER && ((Player*)pVictim)->InBattleGround())
+        if (pVictim->GetTypeId() == TYPEID_PLAYER && ((Player*)pVictim)->InBattleGround())
         {
             Player *killed = ((Player*)pVictim);
-            if(BattleGround *bg = killed->GetBattleGround())
-                if(player_tap)
+            if (BattleGround *bg = killed->GetBattleGround())
+                if (player_tap)
                     bg->HandleKillPlayer(killed, player_tap);
         }
-        else if(pVictim->GetTypeId() == TYPEID_UNIT)
+        else if (pVictim->GetTypeId() == TYPEID_UNIT)
         {
             if (player_tap)
                 if (BattleGround *bg = player_tap->GetBattleGround())
@@ -12196,6 +12204,14 @@ bool Unit::IsIgnoreUnitState(SpellEntry const *spell, IgnoreUnitState ignoreStat
 
 void Unit::CleanupDeletedAuras()
 {
+    if (m_deletedHolders.empty() && m_deletedAuras.empty())
+        return;
+
+    if (IsDeleted())
+        sLog.outError("Unit::CleanupDeletedAuras ERROR: %s guid %u has not cleaned auralist at remove (holders %u, auras %u)", GetObjectGuid().GetTypeName(),GetObjectGuid().GetCounter(),m_deletedHolders.size(), m_deletedAuras.size());
+
+    World::WorldWriteGuard Lock(sWorld.GetLock(WORLD_LOCK_AURAS));
+
     for (SpellAuraHolderList::const_iterator iter = m_deletedHolders.begin(); iter != m_deletedHolders.end(); ++iter)
         delete *iter;
     m_deletedHolders.clear();

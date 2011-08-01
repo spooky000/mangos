@@ -27,6 +27,7 @@
 #include "Timer.h"
 #include "Policies/Singleton.h"
 #include "SharedDefines.h"
+#include <ace/RW_Thread_Mutex.h>
 
 #include <map>
 #include <set>
@@ -36,6 +37,7 @@ class Object;
 class WorldPacket;
 class WorldSession;
 class Player;
+class WorldObject;
 class Weather;
 class SqlResultQueue;
 class QueryResult;
@@ -79,6 +81,13 @@ enum WorldTimers
     WUPDATE_DELETECHARS = 5,
     WUPDATE_AHBOT       = 6,
     WUPDATE_COUNT       = 7
+// World RW locking types for mtmaps
+enum WorldLockType
+{
+    WORLD_LOCK_AURAS,
+    WORLD_LOCK_OBJECTS,
+    WORLD_LOCK_THREAT,
+    WORLD_LOCK_MAX,
 };
 
 /// Configuration elements
@@ -607,6 +616,14 @@ class World
         char const* GetDBVersion() { return m_DBVersion.c_str(); }
         char const* GetCreatureEventAIVersion() { return m_CreatureEventAIVersion.c_str(); }
 
+        // World events locking
+        typedef ACE_RW_Thread_Mutex               WorldLock;
+        typedef ACE_Read_Guard<WorldLock>         WorldReadGuard;
+        typedef ACE_Write_Guard<WorldLock>        WorldWriteGuard;
+        WorldLock& GetLock(WorldLockType type)    { return i_worldLock[type]; }
+
+        void AddObjectToRemoveList(WorldObject *obj);
+        void RemoveAllObjectsInRemoveList();
         typedef UNORDERED_MAP<uint32, WorldSession*> SessionMap;
         SessionMap GetSessions() { return m_sessions; }
 
@@ -702,6 +719,10 @@ class World
         //used versions
         std::string m_DBVersion;
         std::string m_CreatureEventAIVersion;
+
+        WorldLock    i_worldLock[WORLD_LOCK_MAX];
+        std::set<WorldObject*> i_objectsToRemove;
+
 };
 
 extern uint32 realmID;

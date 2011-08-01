@@ -173,7 +173,7 @@ void PlayerTaxi::InitTaxiNodesForLevel(uint32 race, uint32 chrClass, uint32 leve
         case HORDE:    SetTaximaskNode(99);  break;
     }
     // level dependent taxi hubs
-    if(level>=68)
+    if (level>=68)
         SetTaximaskNode(213);                               //Shattered Sun Staging Area
 }
 
@@ -193,7 +193,7 @@ void PlayerTaxi::LoadTaxiMask(const char* data)
 
 void PlayerTaxi::AppendTaximaskTo( ByteBuffer& data, bool all )
 {
-    if(all)
+    if (all)
     {
         for (uint8 i=0; i<TaxiMaskSize; ++i)
             data << uint32(sTaxiNodesMask[i]);              // all existing nodes

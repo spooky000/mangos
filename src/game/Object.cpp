@@ -54,24 +54,25 @@ Object::Object( )
 
     m_inWorld           = false;
     m_objectUpdated     = false;
+    m_deleted           = false;
 }
 
 Object::~Object( )
 {
-    if(IsInWorld())
+    if (IsInWorld())
     {
         ///- Do NOT call RemoveFromWorld here, if the object is a player it will crash
         sLog.outError("Object::~Object (GUID: %u TypeId: %u) deleted but still in world!!", GetGUIDLow(), GetTypeId());
         MANGOS_ASSERT(false);
     }
 
-    if(m_objectUpdated)
+    if (m_objectUpdated)
     {
         sLog.outError("Object::~Object (GUID: %u TypeId: %u) deleted but still have updated status!!", GetGUIDLow(), GetTypeId());
         MANGOS_ASSERT(false);
     }
 
-    if(m_uint32Values)
+    if (m_uint32Values)
     {
         //DEBUG_LOG("Object desctr 1 check (%p)",(void*)this);
         delete [] m_uint32Values;
@@ -146,10 +147,10 @@ void Object::BuildCreateUpdateBlockForPlayer(UpdateData *data, Player *target) c
     uint16 updateFlags  = m_updateFlag;
 
     /** lower flag1 **/
-    if(target == this)                                      // building packet for yourself
+    if (target == this)                                      // building packet for yourself
         updateFlags |= UPDATEFLAG_SELF;
 
-    if(updateFlags & UPDATEFLAG_HAS_POSITION)
+    if (updateFlags & UPDATEFLAG_HAS_POSITION)
     {
         // UPDATETYPE_CREATE_OBJECT2 dynamic objects, corpses...
         if (isType(TYPEMASK_DYNAMICOBJECT) || isType(TYPEMASK_CORPSE) || isType(TYPEMASK_PLAYER))
@@ -178,7 +179,7 @@ void Object::BuildCreateUpdateBlockForPlayer(UpdateData *data, Player *target) c
             }
         }
 
-        if(isType(TYPEMASK_UNIT))
+        if (isType(TYPEMASK_UNIT))
         {
             if(((Unit*)this)->getVictim())
                 updateFlags |= UPDATEFLAG_HAS_ATTACKING_TARGET;
@@ -290,7 +291,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
     }
     else
     {
-        if(updateFlags & UPDATEFLAG_POSITION)
+        if (updateFlags & UPDATEFLAG_POSITION)
         {
             *data << uint8(0);                              // unk PGUID!
             *data << float(((WorldObject*)this)->GetPositionX());
@@ -301,7 +302,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
             *data << float(((WorldObject*)this)->GetPositionZ());
             *data << float(((WorldObject*)this)->GetOrientation());
 
-            if(GetTypeId() == TYPEID_CORPSE)
+            if (GetTypeId() == TYPEID_CORPSE)
                 *data << float(((WorldObject*)this)->GetOrientation());
             else
                 *data << float(0);
@@ -312,7 +313,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
             if (updateFlags & UPDATEFLAG_HAS_POSITION)
             {
                 // 0x02
-                if(updateFlags & UPDATEFLAG_TRANSPORT && ((GameObject*)this)->GetGoType() == GAMEOBJECT_TYPE_MO_TRANSPORT)
+                if (updateFlags & UPDATEFLAG_TRANSPORT && ((GameObject*)this)->GetGoType() == GAMEOBJECT_TYPE_MO_TRANSPORT)
                 {
                     *data << float(0);
                     *data << float(0);
@@ -331,7 +332,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
     }
 
     // 0x8
-    if(updateFlags & UPDATEFLAG_LOWGUID)
+    if (updateFlags & UPDATEFLAG_LOWGUID)
     {
         switch(GetTypeId())
         {
@@ -347,7 +348,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
                 *data << uint32(0x0000000B);                // unk, can be 0xB or 0xC
                 break;
             case TYPEID_PLAYER:
-                if(updateFlags & UPDATEFLAG_SELF)
+                if (updateFlags & UPDATEFLAG_SELF)
                     *data << uint32(0x0000002F);            // unk, can be 0x15 or 0x22
                 else
                     *data << uint32(0x00000008);            // unk, can be 0x7 or 0x8
@@ -359,7 +360,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
     }
 
     // 0x10
-    if(updateFlags & UPDATEFLAG_HIGHGUID)
+    if (updateFlags & UPDATEFLAG_HIGHGUID)
     {
         switch(GetTypeId())
         {
@@ -375,7 +376,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
                 *data << uint32(0x0000000B);                // unk, can be 0xB or 0xC
                 break;
             case TYPEID_PLAYER:
-                if(updateFlags & UPDATEFLAG_SELF)
+                if (updateFlags & UPDATEFLAG_SELF)
                     *data << uint32(0x0000002F);            // unk, can be 0x15 or 0x22
                 else
                     *data << uint32(0x00000008);            // unk, can be 0x7 or 0x8
@@ -387,7 +388,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
     }
 
     // 0x4
-    if(updateFlags & UPDATEFLAG_HAS_ATTACKING_TARGET)       // packed guid (current target guid)
+    if (updateFlags & UPDATEFLAG_HAS_ATTACKING_TARGET)       // packed guid (current target guid)
     {
         if (((Unit*)this)->getVictim())
             *data << ((Unit*)this)->getVictim()->GetPackGUID();
@@ -396,7 +397,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
     }
 
     // 0x2
-    if(updateFlags & UPDATEFLAG_TRANSPORT)
+    if (updateFlags & UPDATEFLAG_TRANSPORT)
     {
         *data << uint32(WorldTimer::getMSTime());                       // ms time
     }
@@ -409,7 +410,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
     }
 
     // 0x200
-    if(updateFlags & UPDATEFLAG_ROTATION)
+    if (updateFlags & UPDATEFLAG_ROTATION)
     {
         *data << int64(((GameObject*)this)->GetRotation());
     }
@@ -615,18 +616,18 @@ void Object::BuildValuesUpdate(uint8 updatetype, ByteBuffer * data, UpdateMask *
 
 void Object::ClearUpdateMask(bool remove)
 {
-    if(m_uint32Values)
+    if (m_uint32Values)
     {
         for( uint16 index = 0; index < m_valuesCount; ++index )
         {
-            if(m_uint32Values_mirror[index]!= m_uint32Values[index])
+            if (m_uint32Values_mirror[index]!= m_uint32Values[index])
                 m_uint32Values_mirror[index] = m_uint32Values[index];
         }
     }
 
-    if(m_objectUpdated)
+    if (m_objectUpdated)
     {
-        if(remove)
+        if (remove)
             RemoveFromClientUpdateList();
         m_objectUpdated = false;
     }
@@ -664,7 +665,7 @@ void Object::_SetCreateBits(UpdateMask *updateMask, Player* /*target*/) const
 {
     for( uint16 index = 0; index < m_valuesCount; ++index )
     {
-        if(GetUInt32Value(index) != 0)
+        if (GetUInt32Value(index) != 0)
             updateMask->SetBit(index);
     }
 }
@@ -673,7 +674,7 @@ void Object::SetInt32Value( uint16 index, int32 value )
 {
     MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
 
-    if(m_int32Values[ index ] != value)
+    if (m_int32Values[ index ] != value)
     {
         m_int32Values[ index ] = value;
         MarkForClientUpdate();
@@ -684,7 +685,7 @@ void Object::SetUInt32Value( uint16 index, uint32 value )
 {
     MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
 
-    if(m_uint32Values[ index ] != value)
+    if (m_uint32Values[ index ] != value)
     {
         m_uint32Values[ index ] = value;
         MarkForClientUpdate();
@@ -706,7 +707,7 @@ void Object::SetFloatValue( uint16 index, float value )
 {
     MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
 
-    if(m_floatValues[ index ] != value)
+    if (m_floatValues[ index ] != value)
     {
         m_floatValues[ index ] = value;
         MarkForClientUpdate();
@@ -717,13 +718,13 @@ void Object::SetByteValue( uint16 index, uint8 offset, uint8 value )
 {
     MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
 
-    if(offset > 4)
+    if (offset > 4)
     {
         sLog.outError("Object::SetByteValue: wrong offset %u", offset);
         return;
     }
 
-    if(uint8(m_uint32Values[ index ] >> (offset * 8)) != value)
+    if (uint8(m_uint32Values[ index ] >> (offset * 8)) != value)
     {
         m_uint32Values[ index ] &= ~uint32(uint32(0xFF) << (offset * 8));
         m_uint32Values[ index ] |= uint32(uint32(value) << (offset * 8));
@@ -735,13 +736,13 @@ void Object::SetUInt16Value( uint16 index, uint8 offset, uint16 value )
 {
     MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
 
-    if(offset > 2)
+    if (offset > 2)
     {
         sLog.outError("Object::SetUInt16Value: wrong offset %u", offset);
         return;
     }
 
-    if(uint16(m_uint32Values[ index ] >> (offset * 16)) != value)
+    if (uint16(m_uint32Values[ index ] >> (offset * 16)) != value)
     {
         m_uint32Values[ index ] &= ~uint32(uint32(0xFFFF) << (offset * 16));
         m_uint32Values[ index ] |= uint32(uint32(value) << (offset * 16));
@@ -751,7 +752,7 @@ void Object::SetUInt16Value( uint16 index, uint8 offset, uint16 value )
 
 void Object::SetStatFloatValue( uint16 index, float value)
 {
-    if(value < 0)
+    if (value < 0)
         value = 0.0f;
 
     SetFloatValue(index, value);
@@ -759,7 +760,7 @@ void Object::SetStatFloatValue( uint16 index, float value)
 
 void Object::SetStatInt32Value( uint16 index, int32 value)
 {
-    if(value < 0)
+    if (value < 0)
         value = 0;
 
     SetUInt32Value(index, uint32(value));
@@ -769,7 +770,7 @@ void Object::ApplyModUInt32Value(uint16 index, int32 val, bool apply)
 {
     int32 cur = GetUInt32Value(index);
     cur += (apply ? val : -val);
-    if(cur < 0)
+    if (cur < 0)
         cur = 0;
     SetUInt32Value(index, cur);
 }
@@ -792,7 +793,7 @@ void Object::ApplyModPositiveFloatValue(uint16 index, float  val, bool apply)
 {
     float cur = GetFloatValue(index);
     cur += (apply ? val : -val);
-    if(cur < 0)
+    if (cur < 0)
         cur = 0;
     SetFloatValue(index, cur);
 }
@@ -803,7 +804,7 @@ void Object::SetFlag( uint16 index, uint32 newFlag )
     uint32 oldval = m_uint32Values[ index ];
     uint32 newval = oldval | newFlag;
 
-    if(oldval != newval)
+    if (oldval != newval)
     {
         m_uint32Values[ index ] = newval;
         MarkForClientUpdate();
@@ -816,7 +817,7 @@ void Object::RemoveFlag( uint16 index, uint32 oldFlag )
     uint32 oldval = m_uint32Values[ index ];
     uint32 newval = oldval & ~oldFlag;
 
-    if(oldval != newval)
+    if (oldval != newval)
     {
         m_uint32Values[ index ] = newval;
         MarkForClientUpdate();
@@ -827,7 +828,7 @@ void Object::SetByteFlag( uint16 index, uint8 offset, uint8 newFlag )
 {
     MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
 
-    if(offset > 4)
+    if (offset > 4)
     {
         sLog.outError("Object::SetByteFlag: wrong offset %u", offset);
         return;
@@ -844,13 +845,13 @@ void Object::RemoveByteFlag( uint16 index, uint8 offset, uint8 oldFlag )
 {
     MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
 
-    if(offset > 4)
+    if (offset > 4)
     {
         sLog.outError("Object::RemoveByteFlag: wrong offset %u", offset);
         return;
     }
 
-    if(uint8(m_uint32Values[ index ] >> (offset * 8)) & oldFlag)
+    if (uint8(m_uint32Values[ index ] >> (offset * 8)) & oldFlag)
     {
         m_uint32Values[ index ] &= ~uint32(uint32(oldFlag) << (offset * 8));
         MarkForClientUpdate();
@@ -921,7 +922,7 @@ void Object::BuildUpdateData( UpdateDataMapType& /*update_players */)
 
 void Object::MarkForClientUpdate()
 {
-    if(m_inWorld)
+    if (m_inWorld)
     {
         if(!m_objectUpdated)
         {
@@ -955,7 +956,7 @@ void WorldObject::Relocate(float x, float y, float z, float orientation)
     m_position.z = z;
     m_position.o = orientation;
 
-    if(isType(TYPEMASK_UNIT))
+    if (isType(TYPEMASK_UNIT))
         ((Unit*)this)->m_movementInfo.ChangePosition(x, y, z, orientation);
 }
 
@@ -965,7 +966,7 @@ void WorldObject::Relocate(float x, float y, float z)
     m_position.y = y;
     m_position.z = z;
 
-    if(isType(TYPEMASK_UNIT))
+    if (isType(TYPEMASK_UNIT))
         ((Unit*)this)->m_movementInfo.ChangePosition(x, y, z, GetOrientation());
 }
 
@@ -973,7 +974,7 @@ void WorldObject::SetOrientation(float orientation)
 {
     m_position.o = orientation;
 
-    if(isType(TYPEMASK_UNIT))
+    if (isType(TYPEMASK_UNIT))
         ((Unit*)this)->m_movementInfo.ChangeOrientation(orientation);
 }
 
@@ -1080,10 +1081,13 @@ bool WorldObject::IsWithinDist2d(float x, float y, float dist2compare) const
 
 bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D) const
 {
+    if (!obj || IsDeleted() || obj->IsDeleted())
+        return false;
+
     float dx = GetPositionX() - obj->GetPositionX();
     float dy = GetPositionY() - obj->GetPositionY();
     float distsq = dx*dx + dy*dy;
-    if(is3D)
+    if (is3D)
     {
         float dz = GetPositionZ() - obj->GetPositionZ();
         distsq += dz*dz;
@@ -1126,7 +1130,9 @@ bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool
 
 bool WorldObject::IsWithinLOSInMap(const WorldObject* obj) const
 {
-    if (!IsInMap(obj)) return false;
+    if (!IsInMap(obj) || IsDeleted())
+        return false;
+
     float ox,oy,oz;
     obj->GetPosition(ox,oy,oz);
 
@@ -1167,7 +1173,7 @@ bool WorldObject::GetDistanceOrder(WorldObject const* obj1, WorldObject const* o
     float dx1 = GetPositionX() - obj1->GetPositionX();
     float dy1 = GetPositionY() - obj1->GetPositionY();
     float distsq1 = dx1*dx1 + dy1*dy1;
-    if(is3D)
+    if (is3D)
     {
         float dz1 = GetPositionZ() - obj1->GetPositionZ();
         distsq1 += dz1*dz1;
@@ -1176,7 +1182,7 @@ bool WorldObject::GetDistanceOrder(WorldObject const* obj1, WorldObject const* o
     float dx2 = GetPositionX() - obj2->GetPositionX();
     float dy2 = GetPositionY() - obj2->GetPositionY();
     float distsq2 = dx2*dx2 + dy2*dy2;
-    if(is3D)
+    if (is3D)
     {
         float dz2 = GetPositionZ() - obj2->GetPositionZ();
         distsq2 += dz2*dz2;
@@ -1187,10 +1193,13 @@ bool WorldObject::GetDistanceOrder(WorldObject const* obj1, WorldObject const* o
 
 bool WorldObject::IsInRange(WorldObject const* obj, float minRange, float maxRange, bool is3D /* = true */) const
 {
+    if (!obj || IsDeleted() || obj->IsDeleted())
+        return false;
+
     float dx = GetPositionX() - obj->GetPositionX();
     float dy = GetPositionY() - obj->GetPositionY();
     float distsq = dx*dx + dy*dy;
-    if(is3D)
+    if (is3D)
     {
         float dz = GetPositionZ() - obj->GetPositionZ();
         distsq += dz*dz;
@@ -1199,10 +1208,10 @@ bool WorldObject::IsInRange(WorldObject const* obj, float minRange, float maxRan
     float sizefactor = GetObjectBoundingRadius() + obj->GetObjectBoundingRadius();
 
     // check only for real range
-    if(minRange > 0.0f)
+    if (minRange > 0.0f)
     {
         float mindist = minRange + sizefactor;
-        if(distsq < mindist * mindist)
+        if (distsq < mindist * mindist)
             return false;
     }
 
@@ -1212,6 +1221,9 @@ bool WorldObject::IsInRange(WorldObject const* obj, float minRange, float maxRan
 
 bool WorldObject::IsInRange2d(float x, float y, float minRange, float maxRange) const
 {
+    if (IsDeleted())
+        return false;
+
     float dx = GetPositionX() - x;
     float dy = GetPositionY() - y;
     float distsq = dx*dx + dy*dy;
@@ -1219,10 +1231,10 @@ bool WorldObject::IsInRange2d(float x, float y, float minRange, float maxRange) 
     float sizefactor = GetObjectBoundingRadius();
 
     // check only for real range
-    if(minRange > 0.0f)
+    if (minRange > 0.0f)
     {
         float mindist = minRange + sizefactor;
-        if(distsq < mindist * mindist)
+        if (distsq < mindist * mindist)
             return false;
     }
 
@@ -1232,6 +1244,9 @@ bool WorldObject::IsInRange2d(float x, float y, float minRange, float maxRange) 
 
 bool WorldObject::IsInRange3d(float x, float y, float z, float minRange, float maxRange) const
 {
+    if (IsDeleted())
+        return false;
+
     float dx = GetPositionX() - x;
     float dy = GetPositionY() - y;
     float dz = GetPositionZ() - z;
@@ -1240,10 +1255,10 @@ bool WorldObject::IsInRange3d(float x, float y, float z, float minRange, float m
     float sizefactor = GetObjectBoundingRadius();
 
     // check only for real range
-    if(minRange > 0.0f)
+    if (minRange > 0.0f)
     {
         float mindist = minRange + sizefactor;
-        if(distsq < mindist * mindist)
+        if (distsq < mindist * mindist)
             return false;
     }
 
@@ -1253,13 +1268,16 @@ bool WorldObject::IsInRange3d(float x, float y, float z, float minRange, float m
 
 bool WorldObject::IsInBetween(const WorldObject *obj1, const WorldObject *obj2, float size) const
 {
-    if(GetPositionX() > std::max(obj1->GetPositionX(), obj2->GetPositionX())
+    if (!obj1 || obj1->IsDeleted() || !obj2 || obj2->IsDeleted())
+        return false;
+
+    if (GetPositionX() > std::max(obj1->GetPositionX(), obj2->GetPositionX())
         || GetPositionX() < std::min(obj1->GetPositionX(), obj2->GetPositionX())
         || GetPositionY() > std::max(obj1->GetPositionY(), obj2->GetPositionY())
         || GetPositionY() < std::min(obj1->GetPositionY(), obj2->GetPositionY()))
         return false;
 
-    if(!size)
+    if (!size)
         size = GetObjectBoundingRadius() / 2;
 
     float angle = obj1->GetAngle(this) - obj1->GetAngle(obj2);
@@ -1268,7 +1286,9 @@ bool WorldObject::IsInBetween(const WorldObject *obj1, const WorldObject *obj2, 
 
 float WorldObject::GetAngle(const WorldObject* obj) const
 {
-    if(!obj) return 0;
+    if(!obj || obj->IsDeleted()) 
+        return 0.0f;
+
     return GetAngle( obj->GetPositionX(), obj->GetPositionY() );
 }
 
@@ -1286,7 +1306,7 @@ float WorldObject::GetAngle( const float x, const float y ) const
 bool WorldObject::HasInArc(const float arcangle, const WorldObject* obj) const
 {
     // always have self in arc
-    if(obj == this)
+    if (obj == this)
         return true;
 
     float arc = arcangle;
@@ -1299,7 +1319,7 @@ bool WorldObject::HasInArc(const float arcangle, const WorldObject* obj) const
 
     // move angle to range -pi ... +pi
     angle = MapManager::NormalizeOrientation(angle);
-    if(angle > M_PI_F)
+    if (angle > M_PI_F)
         angle -= 2.0f*M_PI_F;
 
     float lborder =  -1 * (arc/2.0f);                       // in range -pi..0
@@ -1329,7 +1349,7 @@ bool WorldObject::isInBack(WorldObject const* target, float distance, float arc)
 
 void WorldObject::GetRandomPoint( float x, float y, float z, float distance, float &rand_x, float &rand_y, float &rand_z) const
 {
-    if(distance == 0)
+    if (distance == 0)
     {
         rand_x = x;
         rand_y = y;
@@ -1650,7 +1670,7 @@ Creature* WorldObject::SummonCreature(uint32 id, float x, float y, float z, floa
 
     if (!pCreature->Create(GetMap()->GenerateLocalLowGuid(cinfo->GetHighGuid()), pos, cinfo, team))
     {
-        delete pCreature;
+        sWorld.AddObjectToRemoveList((WorldObject*)pCreature);
         return NULL;
     }
 

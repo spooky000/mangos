@@ -100,7 +100,7 @@ void WaypointManager::Load()
         //   7        8        9        10       11       12     13     14           15      16
             "textid1, textid2, textid3, textid4, textid5, emote, spell, orientation, model1, model2 FROM creature_movement");
 
-        BarGoLink barRow(result->GetRowCount());
+        BarGoLink barRow((int)result->GetRowCount());
 
         // error after load, we check if creature guid corresponding to the path id has proper MovementType
         std::set<uint32> creatureNoMoveType;
