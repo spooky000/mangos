@@ -2404,8 +2404,8 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
                     break;
             }
-            // Mark of the Faceless         Mind Sear
-            if (m_spellInfo->Id == 63278 || m_spellInfo->Id == 49821)
+            // Mark of the Faceless         Mind Sear                   Starfall
+            if (m_spellInfo->Id == 63278 || m_spellInfo->Id == 49821 || m_spellInfo->Id == 50286)
             {
                 if(Unit* currentTarget = m_targets.getUnitTarget())
                     targetUnitMap.remove(currentTarget);
