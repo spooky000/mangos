@@ -392,7 +392,7 @@ void PoolGroup<Creature>::Spawn1Object(MapPersistentState& mapState, PoolObject*
                 //DEBUG_LOG("Spawning creature %u",obj->guid);
                 if (!pCreature->LoadFromDB(obj->guid, dataMap))
                 {
-                    sWorld.AddObjectToRemoveList((WorldObject*)pCreature);
+                    delete pCreature;
                     return;
                 }
                 else
@@ -436,7 +436,7 @@ void PoolGroup<GameObject>::Spawn1Object(MapPersistentState& mapState, PoolObjec
                 //DEBUG_LOG("Spawning gameobject %u", obj->guid);
                 if (!pGameobject->LoadFromDB(obj->guid, dataMap))
                 {
-                    sWorld.AddObjectToRemoveList((WorldObject*)pGameobject);
+                    delete pGameobject;
                     return;
                 }
                 else

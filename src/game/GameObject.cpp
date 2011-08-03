@@ -629,7 +629,7 @@ bool GameObject::LoadFromDB(uint32 guid, Map *map)
     }
     else
     {
-        if (data->spawntimesecs >= 0)
+        if(data->spawntimesecs >= 0)
         {
             m_spawnedByDefault = true;
             m_respawnDelayTime = data->spawntimesecs;
@@ -738,7 +738,7 @@ Unit* GameObject::GetOwner() const
 
 void GameObject::SaveRespawnTime()
 {
-    if (m_respawnTime > time(NULL) && m_spawnedByDefault)
+    if(m_respawnTime > time(NULL) && m_spawnedByDefault)
         GetMap()->GetPersistentState()->SaveGORespawnTime(GetGUIDLow(), m_respawnTime);
 }
 
@@ -753,7 +753,7 @@ bool GameObject::isVisibleForInState(Player const* u, WorldObject const* viewPoi
         return false;
 
     // Transport always visible at this step implementation
-    if (IsTransport() && IsInMap(u))
+    if(IsTransport() && IsInMap(u))
         return true;
 
     // quick check visibility false cases for non-GM-mode
@@ -764,15 +764,15 @@ bool GameObject::isVisibleForInState(Player const* u, WorldObject const* viewPoi
             return false;
 
         // special invisibility cases
-        if (GetGOInfo()->type == GAMEOBJECT_TYPE_TRAP && GetGOInfo()->trap.stealthed)
+        if(GetGOInfo()->type == GAMEOBJECT_TYPE_TRAP && GetGOInfo()->trap.stealthed)
         {
-            if (u->HasAura(2836) && u->isInFront(this, 15.0f))   // hack, maybe values are wrong
+            if(u->HasAura(2836) && u->isInFront(this, 15.0f))   // hack, maybe values are wrong
                 return true;
 
             if (GetOwner() && u->IsFriendlyTo(GetOwner()))
                 return true;
 
-            if (m_lootState == GO_READY)
+            if(m_lootState == GO_READY)
                 return false;
         }
     }
@@ -784,7 +784,7 @@ bool GameObject::isVisibleForInState(Player const* u, WorldObject const* viewPoi
 
 void GameObject::Respawn()
 {
-    if (m_spawnedByDefault && m_respawnTime > 0)
+    if(m_spawnedByDefault && m_respawnTime > 0)
     {
         m_respawnTime = time(NULL);
         GetMap()->GetPersistentState()->SaveGORespawnTime(GetGUIDLow(), 0);
@@ -882,7 +882,7 @@ void GameObject::SummonLinkedTrapIfAny()
     if (!linkedGO->Create(GetMap()->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT), linkedEntry, GetMap(),
          GetPhaseMask(), GetPositionX(), GetPositionY(), GetPositionZ(), GetOrientation(), 0.0f, 0.0f, 0.0f, 0.0f, GO_ANIMPROGRESS_DEFAULT, GO_STATE_READY))
     {
-        sWorld.AddObjectToRemoveList((WorldObject*)linkedGO);
+        delete linkedGO;
         return;
     }
 
@@ -958,7 +958,7 @@ void GameObject::ResetDoorOrButton()
 
 void GameObject::UseDoorOrButton(uint32 time_to_restore, bool alternative /* = false */)
 {
-    if (m_lootState != GO_READY)
+    if(m_lootState != GO_READY)
         return;
 
     if(!time_to_restore)
@@ -972,12 +972,12 @@ void GameObject::UseDoorOrButton(uint32 time_to_restore, bool alternative /* = f
 
 void GameObject::SwitchDoorOrButton(bool activate, bool alternative /* = false */)
 {
-    if (activate)
+    if(activate)
         SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_IN_USE);
     else
         RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_IN_USE);
 
-    if (GetGoState() == GO_STATE_READY)                      //if closed -> open
+    if(GetGoState() == GO_STATE_READY)                      //if closed -> open
         SetGoState(alternative ? GO_STATE_ACTIVE_ALTERNATIVE : GO_STATE_ACTIVE);
     else                                                    //if open -> close
         SetGoState(GO_STATE_READY);
