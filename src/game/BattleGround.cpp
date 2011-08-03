@@ -1070,11 +1070,13 @@ void BattleGround::SendRewardMarkByMail(Player *plr,uint32 mark, uint32 count)
         // save new item before send
         markItem->SaveToDB();                               // save for prevent lost at next mail load, if send fail then item will deleted
 
-        int loc_idx = plr->GetSession()->GetSessionDbLocaleIndex();
-
         // subject: item name
         std::string subject = markProto->Name1;
-        sObjectMgr.GetItemLocaleStrings(markProto->ItemId, loc_idx, &subject);
+        int loc_idx = plr->GetSession()->GetSessionDbLocaleIndex();
+        if (loc_idx >= 0 )
+            if (ItemLocale const *il = sObjectMgr.GetItemLocale(markProto->ItemId))
+                if (il->Name.size() > size_t(loc_idx) && !il->Name[loc_idx].empty())
+                    subject = il->Name[loc_idx];
 
         // text
         std::string textFormat = plr->GetSession()->GetMangosString(LANG_BG_MARK_BY_MAIL);

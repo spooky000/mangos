@@ -20,6 +20,8 @@
 #define MANGOS_RANDOMMOTIONGENERATOR_H
 
 #include "MovementGenerator.h"
+#include "DestinationHolder.h"
+#include "Traveller.h"
 
 template<class T>
 class MANGOS_DLL_SPEC RandomMovementGenerator
@@ -34,11 +36,17 @@ class MANGOS_DLL_SPEC RandomMovementGenerator
         void Interrupt(T &);
         void Reset(T &);
         bool Update(T &, const uint32 &);
+        void UpdateMapPosition(uint32 mapid, float &x ,float &y, float &z)
+        {
+            i_destinationHolder.GetLocationNow(mapid, x,y,z);
+        }
         MovementGeneratorType GetMovementGeneratorType() const { return RANDOM_MOTION_TYPE; }
 
         bool GetResetPosition(T&, float& x, float& y, float& z);
     private:
         ShortTimeTracker i_nextMoveTime;
+
+        DestinationHolder< Traveller<T> > i_destinationHolder;
         float set_wander_distance;
         uint32 i_nextMove;
 };

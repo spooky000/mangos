@@ -1999,7 +1999,6 @@ void Map::ScriptsProcess()
                 source->SetUInt32Value(step.script->setField.fieldId, step.script->setField.fieldValue);
                 break;
             case SCRIPT_COMMAND_MOVE_TO:
-            {
                 if (!source)
                 {
                     sLog.outError("SCRIPT_COMMAND_MOVE_TO (script id %u) call for NULL creature.", step.script->id);
@@ -2012,16 +2011,8 @@ void Map::ScriptsProcess()
                     break;
                 }
 
-                Unit * unit = (Unit*)source;
-                if (step.script->moveTo.travelTime != 0)
-                {
-                    float speed = unit->GetDistance(step.script->x, step.script->y, step.script->z) / ((float)step.script->moveTo.travelTime * 0.001f);
-                    unit->MonsterMoveWithSpeed(step.script->x, step.script->y, step.script->z, speed);
-                }
-                else
-                    unit->NearTeleportTo(step.script->x, step.script->y, step.script->z, unit->GetOrientation());
+                ((Unit*)source)->MonsterMoveWithSpeed(step.script->x, step.script->y, step.script->z, step.script->moveTo.travelTime);
                 break;
-            }
             case SCRIPT_COMMAND_FLAG_SET:
                 if (!source)
                 {
@@ -2980,7 +2971,10 @@ void Map::ScriptsProcess()
                     break;
                 }
 
-                pOwner->SetWalk(!step.script->run.run);
+                if (step.script->run.run)
+                    pOwner->RemoveSplineFlag(SPLINEFLAG_WALKMODE);
+                else
+                    pOwner->AddSplineFlag(SPLINEFLAG_WALKMODE);
 
                 break;
             }
@@ -3348,12 +3342,23 @@ class StaticMonsterChatBuilder
         }
         void operator()(WorldPacket& data, int32 loc_idx)
         {
-            char const* text = sObjectMgr.GetMangosString(i_textId, loc_idx);
+            char const* text = sObjectMgr.GetMangosString(i_textId,loc_idx);
 
-            char const* nameForLocale = i_cInfo->Name;
-            sObjectMgr.GetCreatureLocaleStrings(i_cInfo->Entry, loc_idx, &nameForLocale);
+            std::string nameForLocale = "";
+            if (loc_idx >= 0)
+            {
+                CreatureLocale const *cl = sObjectMgr.GetCreatureLocale(i_cInfo->Entry);
+                if (cl)
+                {
+                    if (cl->Name.size() > (size_t)loc_idx && !cl->Name[loc_idx].empty())
+                        nameForLocale = cl->Name[loc_idx];
+                }
+            }
 
-            WorldObject::BuildMonsterChat(&data, i_senderGuid, i_msgtype, text, i_language, nameForLocale, i_target ? i_target->GetObjectGuid() : ObjectGuid(), i_target ? i_target->GetNameForLocaleIdx(loc_idx) : "");
+            if (nameForLocale.empty())
+                nameForLocale = i_cInfo->Name;
+
+            WorldObject::BuildMonsterChat(&data, i_senderGuid, i_msgtype, text, i_language, nameForLocale.c_str(), i_target ? i_target->GetObjectGuid() : ObjectGuid(), i_target ? i_target->GetNameForLocaleIdx(loc_idx) : "");
         }
 
     private:
