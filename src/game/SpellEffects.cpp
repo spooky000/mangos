@@ -2784,7 +2784,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 case 58418:                                 // Portal to Orgrimmar
                 case 58420:                                 // Portal to Stormwind
                     return;                                 // implemented in EffectScript[0]
-                /*case 62324: // Throw Passenger
+                case 62324: // Throw Passenger
                 {
                     if (VehicleKit *vehicle = m_caster->GetVehicleKit())
                         if (Unit *passenger = vehicle->GetPassenger(damage - 1))
@@ -2827,7 +2827,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                             }
                         }
                     return;
-                }*/
+                }
                 case 49550:                                 // Call Out Injured Soldier
                 {
                     if (Player * pPlayer = m_caster->GetCharmerOrOwnerPlayerOrPlayerItself())
@@ -4404,27 +4404,27 @@ void Spell::EffectTriggerMissileSpell(SpellEffectIndex effect_idx)
 
 void Spell::EffectJump(SpellEffectIndex eff_idx)
 {
-    if (m_caster->IsTaxiFlying())
+    if(m_caster->IsTaxiFlying())
         return;
 
     // Init dest coordinates
     float x,y,z,o;
-    if (m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
+    if(m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
     {
         x = m_targets.m_destX;
         y = m_targets.m_destY;
         z = m_targets.m_destZ;
 
-        if (m_spellInfo->EffectImplicitTargetA[eff_idx] == TARGET_BEHIND_VICTIM)
+        if(m_spellInfo->EffectImplicitTargetA[eff_idx] == TARGET_BEHIND_VICTIM)
         {
             // explicit cast data from client or server-side cast
             // some spell at client send caster
             Unit* pTarget = NULL;
-            if (m_targets.getUnitTarget() && m_targets.getUnitTarget()!=m_caster)
+            if(m_targets.getUnitTarget() && m_targets.getUnitTarget()!=m_caster)
                 pTarget = m_targets.getUnitTarget();
-            else if (unitTarget->getVictim())
+            else if(unitTarget->getVictim())
                 pTarget = m_caster->getVictim();
-            else if (m_caster->GetTypeId() == TYPEID_PLAYER)
+            else if(m_caster->GetTypeId() == TYPEID_PLAYER)
                 pTarget = m_caster->GetMap()->GetUnit(((Player*)m_caster)->GetSelectionGuid());
 
             o = pTarget ? pTarget->GetOrientation() : m_caster->GetOrientation();
@@ -4432,12 +4432,12 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
         else
             o = m_caster->GetOrientation();
     }
-    else if (unitTarget)
+    else if(unitTarget)
     {
         unitTarget->GetContactPoint(m_caster,x,y,z,CONTACT_DISTANCE);
         o = m_caster->GetOrientation();
     }
-    else if (gameObjTarget)
+    else if(gameObjTarget)
     {
         gameObjTarget->GetContactPoint(m_caster,x,y,z,CONTACT_DISTANCE);
         o = m_caster->GetOrientation();
@@ -4448,14 +4448,14 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
         return;
     }
 
-    int32 speed_z = m_spellInfo->EffectMiscValue[eff_idx];
+    uint32 speed_z = m_spellInfo->EffectMiscValue[eff_idx];
     if (!speed_z)
-        speed_z = 5;
-    int32 speed_xy = m_spellInfo->EffectMiscValueB[eff_idx];
-    if (!speed_xy)
-        speed_xy = 150;
+        speed_z = 10;
+    uint32 time = m_spellInfo->EffectMiscValueB[eff_idx];
+    if (!time)
+        time = speed_z * 10;
 
-    m_caster->MonsterMoveJump(x, y, z, o, float(speed_xy) / 2, float(speed_z) / 10);
+    m_caster->MonsterJump(x, y, z, o, time, speed_z);
 }
 
 void Spell::EffectTeleportUnits(SpellEffectIndex eff_idx)
@@ -10525,29 +10525,41 @@ void Spell::EffectModifyThreatPercent(SpellEffectIndex /*eff_idx*/)
 
 void Spell::EffectTransmitted(SpellEffectIndex eff_idx)
 {
-    uint32 name_id = m_spellInfo->EffectMiscValue[eff_idx];
-
-    GameObjectInfo const* goinfo = ObjectMgr::GetGameObjectInfo(name_id);
-
-    if (!goinfo)
+    if (m_spellInfo->Id == 52410 || m_spellInfo->Id == 66268 || m_spellInfo->Id == 66674)
     {
-        sLog.outErrorDb("Gameobject (Entry: %u) not exist and not created at spell (ID: %u) cast",name_id, m_spellInfo->Id);
-        return;
-    }
+        if (!((Player*)m_caster)->InBattleGround())
+            return;
 
-    float fx, fy, fz;
-
-    if (m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
-    {
-        fx = m_targets.m_destX;
-        fy = m_targets.m_destY;
-        fz = m_targets.m_destZ;
-    }
-    //FIXME: this can be better check for most objects but still hack
-    else if (m_spellInfo->EffectRadiusIndex[eff_idx] && m_spellInfo->speed==0)
-    {
-        float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
-        m_caster->GetClosePoint(fx, fy, fz, DEFAULT_WORLD_OBJECT_SIZE, dis);
+        if (BattleGround *bg = ((Player*)m_caster)->GetBattleGround())
+        {
+            uint32 type = bg->GetTypeID(true);
+            if (type == BATTLEGROUND_SA)
+                if (bg->GetDefender() == ((Player*)m_caster)->GetTeam())
+                    return;
+            if (type == BATTLEGROUND_SA || type == BATTLEGROUND_IC)
+            {
+                uint32 team = 0;
+                if (m_caster->GetTypeId()==TYPEID_PLAYER)
+                {
+                    if (((Player*)m_caster)->GetTeam() == HORDE)
+                        team = BG_IC_TEAM[1];
+                    if (((Player*)m_caster)->GetTeam() == ALLIANCE)
+                        team = BG_IC_TEAM[0];
+                }
+                float fx, fy, fz;
+                m_caster->GetPosition(fx, fy, fz);
+                uint32 bombId = 0;
+                if (m_spellInfo->Id == 52410) { bombId = 50000;}
+                if (m_spellInfo->Id == 66268) { bombId = 50000;}
+                if (m_spellInfo->Id == 66674) { bombId = 50000;}
+                Creature* cBomb = m_caster->SummonCreature(bombId, fx, fy, fz, 0, TEMPSUMMON_DEAD_DESPAWN, 0);
+                if (!cBomb)
+                    return;
+                cBomb->setFaction(team);
+                cBomb->SetCharmerGuid(m_caster->GetObjectGuid());
+                bg->EventSpawnGOSA(((Player*)m_caster),cBomb,fx,fy,fz);
+            }
+        }
     }
     else
     {

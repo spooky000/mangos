@@ -184,7 +184,7 @@ void GlobalCooldownMgr::CancelGlobalCooldown(SpellEntry const* spellInfo)
 
 Unit::Unit() :
     i_motionMaster(this), m_ThreatManager(this), m_HostileRefManager(this),
-    m_charmInfo(NULL),
+    m_charmInfo(NULL)
     movespline(new Movement::MoveSpline())
 {
     m_objectType |= TYPEMASK_UNIT;
