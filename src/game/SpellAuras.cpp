@@ -2234,6 +2234,16 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         // Pet will be following owner, this makes him stop
                         target->addUnitState(UNIT_STAT_STUNNED);
                         return;
+                    case 54852:                             // Cosmetic - Stun (Permanent)
+                        target->addUnitState(UNIT_STAT_STUNNED);
+                        return;
+                    case 61187:                                 // Twilight Shift
+                        target->CastSpell(target, 61885, true);
+                        if (target->HasAura(57620))
+                            target->RemoveAurasDueToSpell(57620);
+                        if (target->HasAura(57874))
+                            target->RemoveAurasDueToSpell(57874);
+                        break;
                     case 54729:                             // Winged Steed of the Ebon Blade
                         Spell::SelectMountByAreaAndSkill(target, GetSpellProto(), 0, 0, 54726, 54727, 0);
                         return;
@@ -4971,7 +4981,7 @@ void Aura::HandleModStealth(bool apply, bool Real)
                 for(Unit::AuraList::const_iterator i = mDummyAuras.begin();i != mDummyAuras.end(); ++i)
                 {
                     // Master of Subtlety
-                    if ((*i)->GetSpellProto()->SpellIconID == 2114)
+                    if ((*i)->GetSpellProto()->SpellIconID == 2114 && GetSpellProto()->SpellFamilyName == SPELLFAMILY_ROGUE)
                     {
                         target->RemoveAurasDueToSpell(31666);
                         int32 bp = (*i)->GetModifier()->m_amount;
@@ -8832,25 +8842,26 @@ void Aura::PeriodicDummyTick()
                 case 50824:                                 // Summon earthen dwarf
                     target->CastSpell(target, roll_chance_i(50) ? 50825 : 50826, true, NULL, this);
                     return;
-                case 62038:                                   // Biting Cold (Ulduar: Hodir)
+                case 62038:                                   // Bitting Cold (Ulduar: Hodir)
                 {
                     if (target->GetTypeId() != TYPEID_PLAYER)
                         return;
 
-                    // If player has aura toasty fire he is protected fully from biting cold
-                    if (target->HasAura(62821))
+                    Unit * caster = GetCaster();
+                    if (!caster)
                         return;
 
-                    // aura stack increase every 3 (data in m_miscvalue) seconds and decrease every 1s
-                    SpellAuraHolder *holder = target->GetSpellAuraHolder(62039);
-
-                    // dmg dealing every second
-                    target->CastSpell(target, 62188, true);
-
-                    // Reset reapply counter at move and decrease stack amount by 1
-                    if (((Player*)target)->isMoving())
+                    if (!target->HasAura(62821))     // Toasty Fire
                     {
-                        if (holder)
+                        // dmg dealing every second
+                        target->CastSpell(target, 62188, true, 0, 0, caster->GetObjectGuid());
+                    }
+
+                    // aura stack increase every 3 (data in m_miscvalue) seconds and decrease every 1s
+                    // Reset reapply counter at move and decrease stack amount by 1
+                    if (((Player*)target)->isMoving() || target->HasAura(62821))
+                    {
+                        if (SpellAuraHolder *holder = target->GetSpellAuraHolder(62039))
                         {
                             if (holder->ModStackAmount(-1))
                                 target->RemoveSpellAuraHolder(holder);
@@ -8858,7 +8869,6 @@ void Aura::PeriodicDummyTick()
                         m_modifier.m_miscvalue = 3;
                         return;
                     }
-
                     // We are standing at the moment, countdown
                     if (m_modifier.m_miscvalue > 0)
                     {
@@ -9583,6 +9593,7 @@ m_permanent(false), m_isRemovedOnShapeLost(true), m_deleted(false), m_in_use(0)
         case 24662:                                         // Restless Strength
         case 26464:                                         // Mercurial Shield
         case 34027:                                         // Kill Command
+        case 53257:                                         // Cobra Strikes
         case 55166:                                         // Tidal Force
         case 58914:                                         // Kill Command (pet part)
         case 62519:                                         // Attuned to Nature (Freya)

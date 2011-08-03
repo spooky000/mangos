@@ -602,12 +602,6 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     triggered_spell_id = 25997;
                     break;
                 }
-                // Discerning Eye of the Beast
-                case 59915:
-                {
-                    triggered_spell_id = 59914;
-                    break;
-                }
                 // Sweeping Strikes (NPC spells may be)
                 case 18765:
                 case 35429:
@@ -961,13 +955,30 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     target = this;
                     break;
                 }
+                // Swift Hand of Justice
+                case 59906:
+                {
+                    triggered_spell_id = 59913;
+                    basepoints[0] = GetMaxHealth()/50;
+                    break;
+                }
+                // Discerning Eye of the Beast
+                case 59915:
+                {
+                    if (getPowerType() != POWER_MANA)
+                        return SPELL_AURA_PROC_FAILED;
+                    triggered_spell_id = 59914;
+                    break;
+                }
                 // Petrified Bark
                 case 62337:
                 case 62933:
                 {
-                    int32 bp0 = damage;
-                    pVictim->CastCustomSpell(pVictim, 62379, &bp0, NULL, NULL, true, NULL, NULL, GetObjectGuid());
-                    return SPELL_AURA_PROC_OK;
+                    triggered_spell_id = 62379;
+                    basepoints[0] = damage;
+                    // this == pVictim, why? :/ temp. workaround
+                    target = SelectRandomUnfriendlyTarget(getVictim());
+                    break;
                 }
                 // Shadowfiend Death (Gain mana if pet dies with Glyph of Shadowfiend)
                 case 57989:
@@ -3612,6 +3623,19 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 if (HasAura(67544))
                     return SPELL_AURA_PROC_FAILED;
             }
+            // Cobra strike
+            else if (auraSpellInfo->SpellIconID == 2936)
+            {
+                if (Pet* pet = GetPet())
+                {
+                    if (pet->isAlive())
+                    {
+                        pet->CastSpell(pet,trigger_spell_id,true);
+                        return SPELL_AURA_PROC_OK;
+                    }
+                }
+                return SPELL_AURA_PROC_FAILED;
+            }
             // Item - Hunter T9 4P Bonus
             else if (auraSpellInfo->Id == 67151)
             {
@@ -4306,6 +4330,17 @@ SpellAuraProcResult Unit::HandleAddFlatModifierAuraProc(Unit* pVictim, uint32 /*
 
     switch (spellInfo->Id)
     {
+        case 53257:                             // Cobra strike
+            // Remove only single aura from stack
+            if (triggeredByAura->GetStackAmount() < 1)
+                return SPELL_AURA_PROC_CANT_TRIGGER;
+            if (triggeredByAura->GetHolder()->ModStackAmount(-1))
+            {
+                triggeredByAura->SetInUse(true);
+                RemoveAurasByCasterSpell(triggeredByAura->GetSpellProto()->Id, triggeredByAura->GetCasterGuid());
+                triggeredByAura->SetInUse(false);
+            }
+            break;
         case 55166:                             // Tidal Force
         {
             // Remove only single aura from stack

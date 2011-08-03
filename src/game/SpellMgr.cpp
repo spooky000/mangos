@@ -702,6 +702,7 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
             return true;
         case 62470:                                         // Deafening Thunder
         case 63355:                                         // Crunch Armor
+        case 64002:                                         // Crunch Armor
         case 63138:                                         // Sara's Fervor
         case 63134:                                         // Sara's Blessing
             return false;

@@ -8082,7 +8082,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                 }
                 case 48917:                                 // Who Are They: Cast from Questgiver
                 {
-                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER || ((Player*)unitTarget)->IsFlying())
                         return;
 
                     // Male Shadowy Disguise / Female Shadowy Disguise
@@ -8143,6 +8143,15 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         }
                     }
 
+                    return;
+                }
+                case 50255:                                  // Skadi Poison Spear (N/H)
+                case 59331:
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
                     return;
                 }
                 case 50439:                                 // Script Cast Summon Image of Drakuru 05
