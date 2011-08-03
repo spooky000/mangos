@@ -217,7 +217,7 @@ void SpellCastTargets::read( ByteBuffer& data, Unit *caster )
 {
     data >> m_targetMask;
 
-    if (m_targetMask == TARGET_FLAG_SELF)
+    if(m_targetMask == TARGET_FLAG_SELF)
     {
         m_destX = caster->GetPositionX();
         m_destY = caster->GetPositionY();

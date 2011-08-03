@@ -82,10 +82,10 @@ void GameObject::AddToWorld()
     Object::AddToWorld();
 }
 
-void GameObject::RemoveFromWorld(bool remove)
+void GameObject::RemoveFromWorld()
 {
     ///- Remove the gameobject from the accessor
-    if (IsInWorld())
+    if(IsInWorld())
     {
         // Remove GO from owner
         if (ObjectGuid owner_guid = GetOwnerGuid())

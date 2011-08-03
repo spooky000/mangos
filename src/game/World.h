@@ -622,6 +622,9 @@ class World
         typedef ACE_Write_Guard<WorldLock>        WorldWriteGuard;
         WorldLock& GetLock(WorldLockType type)    { return i_worldLock[type]; }
 
+        void AddObjectToRemoveList(WorldObject *obj);
+        void RemoveAllObjectsInRemoveList();
+        typedef UNORDERED_MAP<uint32, WorldSession*> SessionMap;
         SessionMap GetSessions() { return m_sessions; }
 
     protected:
@@ -718,6 +721,7 @@ class World
         std::string m_CreatureEventAIVersion;
 
         WorldLock    i_worldLock[WORLD_LOCK_MAX];
+        std::set<WorldObject*> i_objectsToRemove;
 
 };
 

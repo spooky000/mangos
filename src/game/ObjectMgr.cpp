@@ -3788,14 +3788,14 @@ void ObjectMgr::LoadGroups()
                 diff = REGULAR_DIFFICULTY;                  // default for both difficaly types
             }
 
-            if (resetTime > uint64(time(NULL) + INSTANCE_MAX_RESET_OFFSET))
+            if (resetTime > (time(NULL) + INSTANCE_MAX_RESET_OFFSET))
             {
                 MapDifficultyEntry const* mapDiff = GetMapDifficultyData(mapId,diff);
                 resetTime = DungeonResetScheduler::CalculateNextResetTime(mapDiff, time(NULL));
                 sLog.outErrorDb("ObjectMgr::Wrong reset time in group_instance corrected to: %d", resetTime);
             }
 
-            if (resetTime < uint64(time(NULL)))
+            if (resetTime < (time(NULL)))
             {
                 DEBUG_LOG("ObjectMgr::Loading extended instance for player: %d", leaderGuidLow);
                 bool isExtended = false;

@@ -10311,9 +10311,9 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
         case SPELLFAMILY_WARLOCK:
         {
             // Fear (non stacking)
-            if (m_spellProto->SpellFamilyFlags.test<CF_WARLOCK_FEAR>())
+            if (m_spellProto->SpellFamilyFlags & UI64LIT(0x0000040000000000))
             {
-                if (!apply)
+                if(!apply)
                 {
                     Unit* caster = GetCaster();
                     if(!caster)
@@ -10342,11 +10342,11 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                     return;
             }
             // Shadowflame (DoT)
-            else if (m_spellProto->SpellFamilyFlags.test<CF_WARLOCK_SHADOWFLAME2>())
+            else if (m_spellProto->IsFitToFamilyMask(UI64LIT(0x0000000000000000), 0x00000002))
             {
                 // Glyph of Shadowflame
                 Unit* caster;
-                if (!apply)
+                if(!apply)
                     spellId1 = 63311;
                 else if(((caster = GetCaster())) && caster->HasAura(63310))
                     spellId1 = 63311;
@@ -10407,7 +10407,7 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                 // Abolish Disease (remove 1 more poison effect with Body and Soul)
                 case 552:
                 {
-                    if (apply)
+                    if(apply)
                     {
                         int chance =0;
                         Unit::AuraList const& dummyAuras = m_target->GetAurasByType(SPELL_AURA_DUMMY);
@@ -10423,7 +10423,7 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                             }
                         }
 
-                        if (roll_chance_i(chance))
+                        if(roll_chance_i(chance))
                             spellId1 = 64134;               // Body and Soul (periodic dispel effect)
                     }
                     else
@@ -10443,10 +10443,10 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
         case SPELLFAMILY_DRUID:
         {
             // Rejuvenation
-            if (GetSpellProto()->SpellFamilyFlags.test<CF_DRUID_REJUVENATION>())
+            if (GetSpellProto()->SpellFamilyFlags & UI64LIT(0x0000000000000010))
             {
                 Unit* caster = GetCaster();
-                if (!caster)
+                if(!caster)
                     return;
 
                 if (caster->HasAura(64760))                 // Item - Druid T8 Restoration 4P Bonus

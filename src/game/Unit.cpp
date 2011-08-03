@@ -300,8 +300,14 @@ Unit::~Unit()
     }
 
     delete m_charmInfo;
-
     delete movespline;
+
+    if (IsDeleted())
+    {
+        CleanupDeletedAuras();
+        RemoveAllDynObjects();
+        m_Events.KillAllEvents(true);
+    }
 
     // those should be already removed at "RemoveFromWorld()" call
     MANGOS_ASSERT(m_gameObj.size() == 0);
@@ -2495,7 +2501,7 @@ void Unit::CalculateDamageAbsorbAndResist(Unit *pCaster, SpellSchoolMask schoolM
 
         if (float manaMultiplier = (*i)->GetSpellProto()->EffectMultipleValue[(*i)->GetEffIndex()])
         {
-            if (Player *modOwner = GetSpellModOwner())
+            if(Player *modOwner = GetSpellModOwner())
                 modOwner->ApplySpellMod((*i)->GetId(), SPELLMOD_MULTIPLE_VALUE, manaMultiplier);
 
             int32 maxAbsorb = int32(GetPower(POWER_MANA) / manaMultiplier);
@@ -2508,7 +2514,7 @@ void Unit::CalculateDamageAbsorbAndResist(Unit *pCaster, SpellSchoolMask schoolM
 
         // Mana Shield (or Fire Ward or Frost Ward or Ice Barrier)
         // for Incanter's Absorption converting to spell power
-        if ((*i)->GetSpellProto()->IsFitToFamily<SPELLFAMILY_MAGE, CF_MAGE_MISC>())
+        if ((*i)->GetSpellProto()->IsFitToFamily(SPELLFAMILY_MAGE, UI64LIT(0x0000000000000000), 0x000008))
             incanterAbsorption += currentAbsorb;
 
         (*i)->GetModifier()->m_amount -= currentAbsorb;
@@ -2548,7 +2554,7 @@ void Unit::CalculateDamageAbsorbAndResist(Unit *pCaster, SpellSchoolMask schoolM
     }
 
     // only split damage if not damaging yourself
-    if (pCaster != this)
+    if(pCaster != this)
     {
         AuraList const& vSplitDamageFlat = GetAurasByType(SPELL_AURA_SPLIT_DAMAGE_FLAT);
         for(AuraList::const_iterator i = vSplitDamageFlat.begin(), next; i != vSplitDamageFlat.end() && RemainingDamage >= 0; i = next)
@@ -2739,13 +2745,13 @@ void Unit::CalculateHealAbsorb(const uint32 heal, uint32 *absorb)
 
 void Unit::AttackerStateUpdate (Unit *pVictim, WeaponAttackType attType, bool extra )
 {
-    if (hasUnitState(UNIT_STAT_CAN_NOT_REACT) || HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED) )
+    if(hasUnitState(UNIT_STAT_CAN_NOT_REACT) || HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED) )
         return;
 
     if (!pVictim->isAlive())
         return;
 
-    if (IsNonMeleeSpellCasted(false))
+    if(IsNonMeleeSpellCasted(false))
         return;
 
     uint32 hitInfo;
@@ -2769,7 +2775,7 @@ void Unit::AttackerStateUpdate (Unit *pVictim, WeaponAttackType attType, bool ex
             while(m_extraAttacks)
             {
                 AttackerStateUpdate(pVictim, BASE_ATTACK, true);
-                if (m_extraAttacks > 0)
+                if(m_extraAttacks > 0)
                     --m_extraAttacks;
             }
         }
@@ -2833,7 +2839,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(const Unit *pVictim, WeaponAttackT
 
 MeleeHitOutcome Unit::RollMeleeOutcomeAgainst (const Unit *pVictim, WeaponAttackType attType, int32 crit_chance, int32 miss_chance, int32 dodge_chance, int32 parry_chance, int32 block_chance) const
 {
-    if (pVictim->GetTypeId()==TYPEID_UNIT && ((Creature*)pVictim)->IsInEvadeMode())
+    if(pVictim->GetTypeId()==TYPEID_UNIT && ((Creature*)pVictim)->IsInEvadeMode())
         return MELEE_HIT_EVADE;
 
     int32 attackerMaxSkillValueForLevel = GetMaxSkillValueForLevel(pVictim);
@@ -2945,7 +2951,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst (const Unit *pVictim, WeaponAttack
     // check if attack comes from behind, nobody can parry or block if attacker is behind
     if (!from_behind)
     {
-        if (pVictim->GetTypeId()==TYPEID_PLAYER || !(((Creature*)pVictim)->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_NO_BLOCK) )
+        if(pVictim->GetTypeId()==TYPEID_PLAYER || !(((Creature*)pVictim)->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_NO_BLOCK) )
         {
             tmp = block_chance;
             if (   (tmp > 0)                                    // check if unit _can_ block
@@ -2981,7 +2987,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst (const Unit *pVictim, WeaponAttack
         tmp = tmp > tmpmax ? tmpmax : tmp;
         // tmp = mob's level * 5 - player's current defense skill
         tmp = attackerMaxSkillValueForLevel - tmp;
-        if (tmp >= 15)
+        if(tmp >= 15)
         {
             // add 2% chance per lacking skill point, min. is 15%
             tmp = tmp * 200 - 1500;
@@ -3019,6 +3025,7 @@ uint32 Unit::CalculateDamage (WeaponAttackType attType, bool normalized)
                 min_damage = GetFloatValue(UNIT_FIELD_MINOFFHANDDAMAGE);
                 max_damage = GetFloatValue(UNIT_FIELD_MAXOFFHANDDAMAGE);
                 break;
+                // Just for good manner
             default:
                 min_damage = 0.0f;
                 max_damage = 0.0f;
@@ -3031,7 +3038,7 @@ uint32 Unit::CalculateDamage (WeaponAttackType attType, bool normalized)
         std::swap(min_damage,max_damage);
     }
 
-    if (max_damage == 0.0f)
+    if(max_damage == 0.0f)
         max_damage = 5.0f;
 
     return urand((uint32)min_damage, (uint32)max_damage);
