@@ -7077,6 +7077,7 @@ void Player::DuelComplete(DuelCompleteType type)
     SetUInt32Value(PLAYER_DUEL_TEAM, 0);
     duel->opponent->SetGuidValue(PLAYER_DUEL_ARBITER, ObjectGuid());
     duel->opponent->SetUInt32Value(PLAYER_DUEL_TEAM, 0);
+    duel->opponent->RemoveArenaSpellCooldowns();
 
     delete duel->opponent->duel;
     duel->opponent->duel = NULL;
