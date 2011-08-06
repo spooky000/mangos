@@ -39,6 +39,7 @@
 #include "BattleGroundAB.h"
 #include "BattleGroundAV.h"
 #include "BattleGroundSA.h"
+#include "BattleGroundWS.h"
 #include "Map.h"
 #include "InstanceData.h"
 
@@ -1621,6 +1622,7 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
     
                         if (bg->GetTypeID(true) != BATTLEGROUND_WS)
                             continue;
+
                         switch(GetPlayer()->GetTeam())
                         {
                             case ALLIANCE:
