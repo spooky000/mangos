@@ -1706,6 +1706,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 65301:                                 // Psychosis (Yogg-Saron)
                 case 63795:                                 // Psychosis (Yogg-Saron)
                 case 64465:                                 // Shadow Beacon
+                case 62016:                                 // Thorim charge orb
                     unMaxTargets = 1;
                     break;
                 case 28542:                                 // Life Drain

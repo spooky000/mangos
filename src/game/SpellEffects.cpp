@@ -8082,7 +8082,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                 }
                 case 48917:                                 // Who Are They: Cast from Questgiver
                 {
-                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER || ((Player*)unitTarget)->IsFlying())
                         return;
 
                     // Male Shadowy Disguise / Female Shadowy Disguise
