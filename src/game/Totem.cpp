@@ -186,14 +186,25 @@ void Totem::SetTypeBySummonSpell(SpellEntry const * spellProto)
 
 bool Totem::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex index) const
 {
-    // TODO: possibly all negative auras immune?
     switch(spellInfo->Effect[index])
     {
         case SPELL_EFFECT_ATTACK_ME:
+        // immune to any type of regeneration effects hp/mana etc.
+        case SPELL_EFFECT_HEAL:
+        case SPELL_EFFECT_HEAL_MAX_HEALTH:
+        case SPELL_EFFECT_HEAL_MECHANICAL:
+        case SPELL_EFFECT_HEAL_PCT:
+        case SPELL_EFFECT_ENERGIZE:
+        case SPELL_EFFECT_ENERGIZE_PCT:
             return true;
         default:
             break;
     }
+
+    // immune to any type of regeneration auras hp/mana etc.
+    if (IsPositiveSpell(spellInfo) && IsPeriodicRegenerateEffect(spellInfo, index))
+        return true;
+
     switch(spellInfo->EffectApplyAuraName[index])
     {
         case SPELL_AURA_PERIODIC_DAMAGE:
@@ -205,5 +216,6 @@ bool Totem::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex 
         default:
             break;
     }
+
     return Creature::IsImmuneToSpellEffect(spellInfo, index);
 }

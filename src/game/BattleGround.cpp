@@ -253,8 +253,11 @@ BattleGround::BattleGround()
     m_ArenaTeamIds[BG_TEAM_ALLIANCE]   = 0;
     m_ArenaTeamIds[BG_TEAM_HORDE]      = 0;
 
-    m_ArenaTeamRatingChanges[BG_TEAM_ALLIANCE]   = 0;
-    m_ArenaTeamRatingChanges[BG_TEAM_HORDE]      = 0;
+    m_ArenaTeamRatingChanges[BG_TEAM_ALLIANCE]  = 0;
+    m_ArenaTeamRatingChanges[BG_TEAM_HORDE]     = 0;
+
+    m_ArenaTeamMMRChanges[BG_TEAM_ALLIANCE]     = 0;
+    m_ArenaTeamMMRChanges[BG_TEAM_HORDE]        = 0;
 
     m_BgRaids[BG_TEAM_ALLIANCE]         = NULL;
     m_BgRaids[BG_TEAM_HORDE]            = NULL;
@@ -827,6 +830,8 @@ void BattleGround::EndBattleGround(Team winner)
         {
             SetArenaTeamRatingChangeForTeam(ALLIANCE, 0);
             SetArenaTeamRatingChangeForTeam(HORDE, 0);
+            SetArenaTeamMMRChangeForTeam(ALLIANCE, 0);
+            SetArenaTeamMMRChangeForTeam(HORDE, 0);
         }
     }
 
@@ -881,7 +886,10 @@ void BattleGround::EndBattleGround(Team winner)
                 // update achievement BEFORE personal rating update
                 ArenaTeamMember* member = winner_arena_team->GetMember(plr->GetObjectGuid());
                 if (member)
+                {
                     plr->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_WIN_RATED_ARENA, member->personal_rating);
+                    plr->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_WIN_ARENA, 1);
+                }
 
                 winner_arena_team->MemberWon(plr,loser_rating);
 
@@ -1133,10 +1141,6 @@ void BattleGround::RemovePlayerAtLeave(ObjectGuid guid, bool Transport, bool Sen
 
     Player *plr = sObjectMgr.GetPlayer(guid);
 
-    // should remove spirit of redemption
-    if (plr && plr->HasAuraType(SPELL_AURA_SPIRIT_OF_REDEMPTION))
-        plr->RemoveSpellsCausingAura(SPELL_AURA_MOD_SHAPESHIFT);
-
     if (plr)
     {
         // should remove spirit of redemption
@@ -1298,6 +1302,10 @@ void BattleGround::AddPlayer(Player *plr)
     // remove afk from player
     if (plr->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_AFK))
         plr->ToggleAFK();
+
+    // remove LFG-Buff from player
+    if (plr->HasAura(72221))
+        plr->RemoveAurasDueToSpell(72221);
 
     // score struct must be created in inherited class
 

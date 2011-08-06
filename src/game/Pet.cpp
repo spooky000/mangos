@@ -181,8 +181,6 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
     if (getPetType() == MINI_PET)
         SetPetFollowAngle(M_PI_F*1.25f);
 
-    Map *map = owner->GetMap();
-
     CreatureCreatePos pos(owner, owner->GetOrientation(), PET_FOLLOW_DIST, GetPetFollowAngle());
 
     uint32 guid = pos.GetMap()->GenerateLocalLowGuid(HIGHGUID_PET);
@@ -297,15 +295,11 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
     CalculateScalingData(true);
     ApplyAllScalingBonuses(true);
 
-    if (getPetType() == SUMMON_PET && !current)             //all (?) summon pets come with full health when called, but not when they are current
+    if (isControlled())
+    //all (?) summon pets come with full health when called, note by virusav
     {
         SetHealth(GetMaxHealth());
-        SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
-    }
-    else
-    {
-        SetHealth(savedhealth > GetMaxHealth() ? GetMaxHealth() : savedhealth);
-        SetPower(POWER_MANA, savedmana > GetMaxPower(POWER_MANA) ? GetMaxPower(POWER_MANA) : savedmana);
+        SetPower(getPowerType(), GetMaxPower(getPowerType()));
     }
 
     UpdateWalkMode(owner);
@@ -1744,8 +1738,6 @@ bool Pet::resetTalents()
         return false;
     }
 
-    uint32 cost = 0;
-
     for (unsigned int i = 0; i < sTalentStore.GetNumRows(); ++i)
     {
         TalentEntry const *talentInfo = sTalentStore.LookupEntry(i);
@@ -2600,6 +2592,7 @@ void Pet::ApplyAllScalingBonuses(bool apply)
     ApplySpellHitScalingBonus(apply);
     ApplyExpertizeScalingBonus(apply);
     ApplyPowerregenScalingBonus(apply);
+    ApplyHasteScalingBonus(apply);
 }
 
 void Pet::ApplyHitScalingBonus(bool apply)
@@ -2759,7 +2752,6 @@ void Pet::ApplyExpertizeScalingBonus(bool apply)
             break;
         }
     }
-
 }
 
 void Pet::ApplyPowerregenScalingBonus(bool apply)
@@ -2816,6 +2808,60 @@ void Pet::ApplyPowerregenScalingBonus(bool apply)
 
     if(needRecalculateStat)
         UpdateManaRegen();
+}
+
+void Pet::ApplyHasteScalingBonus(bool apply)
+{
+    Unit* owner = GetOwner();
+
+    // Don't apply scaling bonuses if no owner or owner is not player
+    if (!owner || owner->GetTypeId() != TYPEID_PLAYER || m_removed)
+        return;
+
+    int32 m_AttackSpeed = owner->GetTotalAuraModifier(SPELL_AURA_HASTE_ALL);
+    m_AttackSpeed +=  ((Player*)owner)->GetRatingBonusValue(CR_HASTE_MELEE);
+
+    if (m_baseBonusData->attackspeedScale == m_AttackSpeed && !apply)
+        return;
+
+    m_baseBonusData->attackspeedScale = m_AttackSpeed;
+
+    int32 basePoints = int32(m_baseBonusData->attackspeedScale * (CalculateScalingData()->attackspeedScale / 100.0f));
+
+    bool needRecalculateStat = false;
+
+    if (basePoints == 0)
+        needRecalculateStat = true;
+
+    AuraList const& scalingAuras = GetAurasByType(SPELL_AURA_HASTE_ALL);
+
+    for(AuraList::const_iterator itr = scalingAuras.begin(); itr != scalingAuras.end(); ++itr)
+    {
+        Aura* _aura = (*itr);
+        if (!_aura || _aura->IsInUse())
+            continue;
+
+        SpellAuraHolder* holder = _aura->GetHolder();
+
+        if (!holder || holder->IsDeleted() || holder->IsEmptyHolder() || holder->GetCasterGuid() != GetObjectGuid())
+            continue;
+
+        SpellEntry const *spellproto = holder->GetSpellProto();
+
+        if (!spellproto)
+            continue;
+
+        SpellEffectIndex i = _aura->GetEffIndex();
+
+        if (spellproto->AttributesEx4 & SPELL_ATTR_EX4_PET_SCALING_AURA)
+        {
+            SetCanModifyStats(false);
+            if (ReapplyScalingAura(holder, spellproto, i, basePoints))
+                needRecalculateStat = true;
+            SetCanModifyStats(true);
+            break;
+        }
+    }
 }
 
 bool Pet::Summon()
@@ -2937,6 +2983,14 @@ bool Pet::Summon()
 
     if (owner->GetTypeId() == TYPEID_PLAYER)
     {
+        if (getPetType() == SUMMON_PET)
+        {
+            // generate new name for summon pet
+            std::string new_name = sObjectMgr.GeneratePetName(GetEntry());
+            if (!new_name.empty())
+                SetName(new_name);
+        }
+
         CastPetPassiveAuras(true);
         ApplyAllScalingBonuses(true);
     }
@@ -3061,6 +3115,9 @@ void Pet::CastPetPassiveAuras(bool current)
         PetAura const petAura = *itr;
 
         uint32 auraID = petAura.GetAura(creature_id);
+
+        if (GetEntry() == 26125 && (auraID == 34956 || auraID == 34903 || auraID == 34904) && getPetType() == GUARDIAN_PET)
+            continue;
 
         if (!current && HasAura(auraID))
             RemoveAurasDueToSpell(auraID);
@@ -3300,6 +3357,8 @@ void Pet::ApplyScalingBonus(ScalingAction* action)
         case SCALING_TARGET_POWERREGEN:
             ApplyPowerregenScalingBonus(action->apply);
             break;
+        case SCALING_TARGET_ATTACKSPEED:
+            ApplyHasteScalingBonus(action->apply);
         case SCALING_TARGET_MAX:
         default:
             break;

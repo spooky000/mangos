@@ -111,6 +111,7 @@ DBCStorage <HolidaysEntry>                sHolidaysStore(Holidaysfmt);
 
 DBCStorage <ItemEntry>                    sItemStore(Itemfmt);
 DBCStorage <ItemBagFamilyEntry>           sItemBagFamilyStore(ItemBagFamilyfmt);
+DBCStorage <ItemClassEntry>               sItemClassStore(ItemClassfmt);
 //DBCStorage <ItemCondExtCostsEntry> sItemCondExtCostsStore(ItemCondExtCostsEntryfmt);
 //DBCStorage <ItemDisplayInfoEntry> sItemDisplayInfoStore(ItemDisplayTemplateEntryfmt); -- not used currently
 DBCStorage <ItemExtendedCostEntry> sItemExtendedCostStore(ItemExtendedCostEntryfmt);
@@ -377,7 +378,7 @@ void LoadDBCStores(const std::string& dataPath)
         exit(1);
     }
 
-    const uint32 DBCFilesCount = 95;
+    const uint32 DBCFilesCount = 96;
 
     BarGoLink bar(DBCFilesCount);
 
@@ -481,6 +482,7 @@ void LoadDBCStores(const std::string& dataPath)
         if(LFGDungeonExpansionEntry const* entry = sLFGDungeonExpansionStore.LookupEntry(i))
             sLFGDungeonExpansionMap[MAKE_PAIR32(entry->dungeonID,entry->expansion)] = entry;
     }
+    LoadDBC(availableDbcLocales,bar,bad_dbc_files,sItemClassStore,           dbcPath,"ItemClass.dbc");
     //LoadDBC(availableDbcLocales,bar,bad_dbc_files,sItemDisplayInfoStore,     dbcPath,"ItemDisplayInfo.dbc");     -- not used currently
     //LoadDBC(availableDbcLocales,bar,bad_dbc_files,sItemCondExtCostsStore,    dbcPath,"ItemCondExtCosts.dbc");
     LoadDBC(availableDbcLocales,bar,bad_dbc_files,sItemExtendedCostStore,    dbcPath,"ItemExtendedCost.dbc");
@@ -686,6 +688,30 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix26 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(62775));
     sfix26->EffectRadiusIndex[EFFECT_INDEX_0] = 41;
     sfix26->EffectRadiusIndex[EFFECT_INDEX_1] = 41;
+
+    // Charge Orb
+    SpellEntry *sfix27 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(62016));
+    sfix27->EffectRadiusIndex[EFFECT_INDEX_0] = 9;
+
+    // Epidemic rank1
+    SpellEntry *sfix28 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49036));
+    sfix28->EffectSpellClassMask[EFFECT_INDEX_0] = ClassFamilyMask(sfix28->EffectSpellClassMask[EFFECT_INDEX_0].Flags, 0x50);
+
+    // Epidemic rank2
+    SpellEntry *sfix29 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49562));
+    sfix29->EffectSpellClassMask[EFFECT_INDEX_0] = ClassFamilyMask(sfix29->EffectSpellClassMask[EFFECT_INDEX_0].Flags, 0x50);
+
+    // Glyph of Scourge Strike
+    SpellEntry *sfix30 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(58642));
+    sfix30->EffectTriggerSpell[EFFECT_INDEX_0] = 69961;
+
+    // Expose Razorthorn Root
+    SpellEntry *sfix31 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(44935));
+    sfix31->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
+
+    // Burninate (Seared Scourge quest)
+    SpellEntry *sfix32 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(47214));
+    sfix32->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_ALL_ENEMY_IN_AREA_INSTANT;
 
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {

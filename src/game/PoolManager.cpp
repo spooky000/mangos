@@ -378,8 +378,6 @@ void PoolGroup<Creature>::Spawn1Object(MapPersistentState& mapState, PoolObject*
 {
     if (CreatureData const* data = sObjectMgr.GetCreatureData(obj->guid))
     {
-        MapEntry const* mapEntry = sMapStore.LookupEntry(data->mapid);
-
         // for non-instanceable maps pool spawn can be at different map from provided mapState
         if (MapPersistentState* dataMapState = mapState.GetMapId() == data->mapid ? &mapState : sMapPersistentStateMgr.GetPersistentState(data->mapid, 0))
         {
@@ -424,8 +422,6 @@ void PoolGroup<GameObject>::Spawn1Object(MapPersistentState& mapState, PoolObjec
 {
     if (GameObjectData const* data = sObjectMgr.GetGOData(obj->guid))
     {
-        MapEntry const* mapEntry = sMapStore.LookupEntry(data->mapid);
-
         // for non-instanceable maps pool spawn can be at different map from provided mapState
         if (MapPersistentState* dataMapState = mapState.GetMapId() == data->mapid ? &mapState : sMapPersistentStateMgr.GetPersistentState(data->mapid, 0))
         {

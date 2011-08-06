@@ -818,7 +818,7 @@ void CreatureEventAI::ProcessAction(CreatureEventAI_Action const& action, uint32
                 return;
             }
 
-            pInst->SetData64(action.set_inst_data64.field, target->GetObjectGuid());
+            pInst->SetData64(action.set_inst_data64.field, target->GetObjectGuid().GetRawValue());
             break;
         }
         case ACTION_T_UPDATE_TEMPLATE:
@@ -1163,6 +1163,7 @@ void CreatureEventAI::MoveInLineOfSight(Unit *who)
         if (!m_creature->CanFly() && m_creature->GetDistanceZ(who) > CREATURE_Z_ATTACK_RANGE)
             return;
 
+        // FEANOR: TODO: some creatures which are neutral start to attack as you right click on them even if not in combat-distance...
         float attackRadius = m_creature->GetAttackDistance(who);
         if (m_creature->IsWithinDistInMap(who, attackRadius) && m_creature->IsWithinLOSInMap(who))
         {

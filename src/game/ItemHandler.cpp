@@ -1535,7 +1535,6 @@ void WorldSession::HandleItemRefundRequest( WorldPacket& recv_data )
                     _player->ModifyArenaPoints(ex->reqarenapoints);
                     //_player->c( proto->BuyPrice ); TODO CHANGE MONEY
 
-                    uint32 count = 1;
                     // Remove Item from player
                     _player->DestroyItem( pItem->GetBagSlot(),pItem->GetSlot(), true);
                     // Remove Item from refundable map

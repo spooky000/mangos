@@ -2357,8 +2357,8 @@ bool LFGMgr::TryAddMembersToGroup(Group* group, LFGQueueSet* players)
 
         if (LFGProposal* pProposal = group->GetLFGState()->GetProposal())
         {
-            if (pProposal->IsDecliner(player->GetObjectGuid()))
-               return false;
+            //if (pProposal->IsDecliner(player->GetObjectGuid()))
+              // return false;
         }
 
         if (!CheckRoles(group, player))
@@ -2970,6 +2970,12 @@ void LFGMgr::RemoveMemberFromLFDGroup(Group* group, ObjectGuid guid)
         player->CastSpell(player,LFG_SPELL_DUNGEON_DESERTER,true);
 
     player->RemoveAurasDueToSpell(LFG_SPELL_LUCK_OF_THE_DRAW);
+
+    if (!group || !group->isLFDGroup())
+    {
+        player->GetLFGState()->Clear();
+        return;
+    }
 
     if (player->GetLFGState()->GetState() > LFG_STATE_QUEUED)
         Teleport(player, true);
