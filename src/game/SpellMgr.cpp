@@ -2153,6 +2153,13 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                         (spellInfo_2->Id == 57055 && spellInfo_1->Id == 56648))
                         return true;
 
+                    // Blessing of Forgotten Kings and (Greater) Blessing of Kings
+                    if (spellInfo_1->Id == 72586)
+                    {
+                        if (spellInfo_2->SpellFamilyFlags.test<CF_PALADIN_BLESSING_OF_KINGS>())
+                            return true;
+                    }
+
                     // Thunderfury
                     if ((spellInfo_1->Id == 21992 && spellInfo_2->Id == 27648) ||
                         (spellInfo_2->Id == 21992 && spellInfo_1->Id == 27648))
@@ -2638,9 +2645,9 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                     return false;
 
                 // Seal of Corruption/Vengeance DoT and Righteouss Fury
-                 if ((spellInfo_1->SpellIconID == 3025 && spellInfo_2->SpellIconID == 2292) ||
-                     (spellInfo_1->SpellIconID == 2292 && spellInfo_2->SpellIconID == 3025))
-                     return false;
+                if ((spellInfo_1->SpellIconID == 3025 && spellInfo_2->SpellIconID == 2292) ||
+                    (spellInfo_1->SpellIconID == 2292 && spellInfo_2->SpellIconID == 3025))
+                    return false;
 
                 // Divine Sacrifice and Divine Guardian
                 if (spellInfo_1->SpellIconID == 3837 && spellInfo_2->SpellIconID == 3837)
@@ -2650,6 +2657,13 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                 if ((spellInfo_1->SpellIconID == 2292 && spellInfo_2->SpellIconID == 3025) ||
                     (spellInfo_2->SpellIconID == 2292 && spellInfo_1->SpellIconID == 3025))
                     return false;
+            }
+
+            // Blessing of Forgotten Kings and (Greater) Blessing of Kings
+            if (spellInfo_1->SpellFamilyFlags.test<CF_PALADIN_BLESSING_OF_KINGS>())
+            {
+                if (spellInfo_2->Id == 72586)
+                    return true;
             }
 
             // Blessing of Sanctuary (multi-family check, some from 16 spell icon spells)
