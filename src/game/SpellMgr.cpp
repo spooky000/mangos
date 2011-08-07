@@ -705,6 +705,9 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
         case 64002:                                         // Crunch Armor
         case 63138:                                         // Sara's Fervor
         case 63134:                                         // Sara's Blessing
+        case 39288:                                         // Kargath's Executioner
+        case 39289:                                         // Kargath's Executioner
+        case 39290:                                         // Kargath's Executioner
             return false;
         default:
             break;
