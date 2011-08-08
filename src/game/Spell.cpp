@@ -5230,7 +5230,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                 return SPELL_FAILED_CASTER_AURASTATE;
         }
 
-        if(IsDispelSpell(m_spellInfo) && target->IsFriendlyTo(m_caster))
+        if(IsDispelSpell(m_spellInfo) && GetSpellDuration(m_spellInfo) && target->IsFriendlyTo(m_caster))
         {
             bool foundNeg = false;
             Unit::SpellAuraHolderMap const& auras = target->GetSpellAuraHolderMap();
