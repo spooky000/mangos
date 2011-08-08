@@ -751,6 +751,7 @@ void Pet::Unsummon(PetSaveMode mode, Unit* owner /*= NULL*/)
                 owner->RemoveGuardian(this);
                 break;
             default:
+                owner->RemovePetFromList(this);
                 if (owner->GetPetGuid() == GetObjectGuid())
                     owner->SetPet(NULL);
                 break;
