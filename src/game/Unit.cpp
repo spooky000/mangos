@@ -6551,7 +6551,7 @@ Pet* Unit::GetPet() const
 
 Pet* Unit::_GetPet(ObjectGuid guid) const
 {
-    return ObjectAccessor::FindPet(guid);
+    return GetMap() ? GetMap()->GetPet(guid) : NULL;
 }
 
 void Unit::RemoveMiniPet()
