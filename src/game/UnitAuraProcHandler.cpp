@@ -4354,13 +4354,6 @@ SpellAuraProcResult Unit::HandleAddFlatModifierAuraProc(Unit* pVictim, uint32 /*
                 return SPELL_AURA_PROC_CANT_TRIGGER;
             break;
         }
-        case 55166:                             // Tidal Force
-        {
-            // Remove only single aura from stack
-            if (triggeredByAura->GetStackAmount() > 1 && !triggeredByAura->GetHolder()->ModStackAmount(-1))
-                return SPELL_AURA_PROC_CANT_TRIGGER;
-            break;
-        }
         case 31656:                             // Empowered Fire
         case 31657:
         case 31658:
