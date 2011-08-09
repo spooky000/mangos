@@ -199,6 +199,7 @@ void GameObject::Update(uint32 update_diff, uint32 p_time)
                     // Arming Time for GAMEOBJECT_TYPE_TRAP (6)
                     Unit* owner = GetOwner();
                     if (owner && ((Player*)owner)->isInCombat())
+                        || GetEntry() == 190752) // SoTA Seaforium Charges
                         m_cooldownTime = time(NULL) + GetGOInfo()->trap.startDelay;
                     m_lootState = GO_READY;
                     break;
@@ -308,9 +309,14 @@ void GameObject::Update(uint32 update_diff, uint32 p_time)
                         }
                     }
 
+                    if (GetEntry() == 190752)
+                    {
+                        ok = owner;
+                    }
+
                     // Note: this hack with search required until GO casting not implemented
                     // search unfriendly creature
-                    if (owner && goInfo->trap.charges > 0)  // hunter trap
+                    else if (owner && goInfo->trap.charges > 0)  // hunter trap
                     {
                         MaNGOS::AnyUnfriendlyUnitInObjectRangeCheck u_check(this, owner, radius);
                         MaNGOS::UnitSearcher<MaNGOS::AnyUnfriendlyUnitInObjectRangeCheck> checker(ok, u_check);
