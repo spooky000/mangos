@@ -10847,6 +10847,9 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
             if (!targetGuid.IsEmpty())
                 unit_target = owner->GetMap()->GetUnit(targetGuid);
 
+            if (IsNonMeleeSpellCasted(false))
+                InterruptNonMeleeSpells(false);
+
             // do not cast unknown spells
             SpellEntry const *spellInfo = sSpellStore.LookupEntry(spellid );
             if(!spellInfo)
