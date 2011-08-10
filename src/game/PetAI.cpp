@@ -59,9 +59,10 @@ void PetAI::MoveInLineOfSight(Unit *u)
         float attackRadius = m_creature->GetAttackDistance(u);
         if(m_creature->IsWithinDistInMap(u, attackRadius) && m_creature->GetDistanceZ(u) <= CREATURE_Z_ATTACK_RANGE)
         {
-            if(m_creature->IsWithinLOSInMap(u))
+            if (!m_creature->hasUnitState(UNIT_STAT_CAN_NOT_REACT) && m_creature->IsWithinLOSInMap(u))
             {
                 AttackStart(u);
+                u->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
             }
         }
     }
