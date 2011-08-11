@@ -6286,11 +6286,12 @@ void Aura::HandleAuraModResistanceExclusive(bool apply, bool /*Real*/)
 
     for(int8 x = SPELL_SCHOOL_NORMAL; x < MAX_SPELL_SCHOOL;x++)
     {
-        if(m_modifier.m_miscvalue & int32(1<<x))
+        int32 oldMaxValue = 0;
+        if (m_modifier.m_miscvalue & int32(1<<x))
         {
-            float change = target->CheckAuraStackingAndApply(this, UnitMods(UNIT_MOD_RESISTANCE_START + x), TOTAL_VALUE, float(m_modifier.m_amount), apply);
+            float change = target->CheckAuraStackingAndApply(this, UnitMods(UNIT_MOD_RESISTANCE_START + x), TOTAL_VALUE, float(m_modifier.m_amount), apply, int32(1<<x));
             if (change != 0)
-                target->ApplyResistanceBuffModsMod(SpellSchools(x), m_modifier.m_amount > 0, float(m_modifier.m_amount), apply);
+                target->ApplyResistanceBuffModsMod(SpellSchools(x), m_modifier.m_amount > 0, change, true);
         }
     }
 }
@@ -6642,7 +6643,7 @@ void Aura::HandleAuraModIncreaseHealth(bool apply, bool Real)
     }
 
     // generic case
-    target->HandleStatModifier(UNIT_MOD_HEALTH, TOTAL_VALUE, float(m_modifier.m_amount), apply);
+    target->CheckAuraStackingAndApply(this, UNIT_MOD_HEALTH, TOTAL_VALUE, float(m_modifier.m_amount), apply);
 }
 
 void  Aura::HandleAuraModIncreaseMaxHealth(bool apply, bool /*Real*/)
@@ -6988,13 +6989,10 @@ void Aura::HandleModCombatSpeedPct(bool apply, bool /*Real*/)
         if(!apply)
             amount = target->GetMaxPositiveAuraModifier(GetModifier()->m_auraname, true);
 
-        if(amount)
-        {
-            target->ApplyCastTimePercentMod(amount, true);
-            target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
-            target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
-            target->ApplyAttackTimePercentMod(RANGED_ATTACK, amount, true);
-        }
+        target->ApplyCastTimePercentMod(amount, true);
+        target->ApplyAttackTimePercentMod(BASE_ATTACK, amount, true);
+        target->ApplyAttackTimePercentMod(OFF_ATTACK, amount, true);
+        target->ApplyAttackTimePercentMod(RANGED_ATTACK, amount, true);
 
         target->m_modAttackSpeedPct[NONSTACKING_MOD_ALL] = amount;
     }
@@ -7190,7 +7188,7 @@ void Aura::HandleModDamageDone(bool apply, bool Real)
     // This information for client side use only
     if(target->GetTypeId() == TYPEID_PLAYER)
     {
-        if(m_positive)
+        if(!m_positive)
             for(int i = SPELL_SCHOOL_HOLY; i < MAX_SPELL_SCHOOL; ++i)
             {
                 if((m_modifier.m_miscvalue & (1<<i)) != 0)
@@ -11140,24 +11138,6 @@ bool Aura::IsEffectStacking()
     // some hardcoded checks are needed (given attrEx6 not present)
     switch(GetModifier()->m_auraname)
     {
-        /*case SPELL_AURA_MOD_HIT_CHANCE:                                 // Insect Swarm / Scorpid Sting
-            if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_DEBUFF)
-                return false;
-            break;
-        case SPELL_AURA_MOD_HEALING_DONE:                               // Demonic Pact
-        case SPELL_AURA_MOD_DAMAGE_DONE:                                // Demonic Pact
-        case SPELL_AURA_HASTE_ALL:                                      // Imp. Moonkin Aur / Swift Retribution
-        case SPELL_AURA_MOD_MELEE_RANGED_HASTE:
-        case SPELL_AURA_MOD_ATTACK_POWER_PCT:                           // Abomination's Might / Unleashed Rage
-        case SPELL_AURA_MOD_RANGED_ATTACK_POWER_PCT:
-        case SPELL_AURA_MOD_ATTACK_POWER:                               // (Greater) Blessing of Might / Battle Shout
-        case SPELL_AURA_MOD_STAT:                                       // Horn of Winter / Arcane Intellect / Divine Spirit and (Greater) Blessing of Kings(later group check by miscvalue)
-        case SPELL_AURA_MOD_RANGED_ATTACK_POWER:
-        case SPELL_AURA_MOD_POWER_REGEN:                                // (Greater) Blessing of Wisdom
-        case SPELL_AURA_MOD_SPELL_CRIT_CHANCE:                          // Elemental Oath
-            if (spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_STACK_BUFF)
-                return false;
-            break;*/
         // these effects never stack
         case SPELL_AURA_MOD_MELEE_HASTE:
         case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:

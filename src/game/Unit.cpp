@@ -4142,8 +4142,8 @@ int32 Unit::GetTotalAuraModifier(AuraType auratype) const
 float Unit::GetTotalAuraMultiplier(AuraType auratype) const
 {
     float multiplier = 1.0f;
-    int32 nonStackingPos = 0;
-    int32 nonStackingNeg = 0;
+    float nonStackingPos = 0.0f;
+    float nonStackingNeg = 0.0f;
 
     AuraList const& mTotalAuraList = GetAurasByType(auratype);
     for(AuraList::const_iterator i = mTotalAuraList.begin();i != mTotalAuraList.end(); ++i)
@@ -4199,6 +4199,16 @@ int32 Unit::GetTotalAuraModifierByMiscMask(AuraType auratype, uint32 misc_mask) 
     for(AuraList::const_iterator i = mTotalAuraList.begin();i != mTotalAuraList.end(); ++i)
     {
         Modifier* mod = (*i)->GetModifier();
+
+        if (auratype == SPELL_AURA_MOD_DAMAGE_DONE)
+        {
+            if ((*i)->GetSpellProto()->EquippedItemClass != -1 ||               // -1 == any item class (not wand then)
+                (*i)->GetSpellProto()->EquippedItemInventoryTypeMask != 0)      //  0 == any inventory type (not wand then)
+            {
+                continue;
+            }
+        }
+
         if (mod->m_miscvalue & misc_mask)
         {
             if((*i)->IsStacking())
@@ -4221,8 +4231,8 @@ float Unit::GetTotalAuraMultiplierByMiscMask(AuraType auratype, uint32 misc_mask
         return 1.0f;
 
     float multiplier = 1.0f;
-    int32 nonStackingPos = 0;
-    int32 nonStackingNeg = 0;
+    float nonStackingPos = 0.0f;
+    float nonStackingNeg = 0.0f;
 
     AuraList const& mTotalAuraList = GetAurasByType(auratype);
     for(AuraList::const_iterator i = mTotalAuraList.begin();i != mTotalAuraList.end(); ++i)
@@ -6952,10 +6962,10 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
             (*i)->GetSpellProto()->EquippedItemInventoryTypeMask == 0 )
                                                             // 0 == any inventory type (not wand then)
         {
-             int32 fDoneTotalModTmp = 0;
+             float calculatedBonus = (*i)->GetModifier()->m_amount;
 
             // bonus stored in another auras basepoints
-            if ((*i)->GetModifier()->m_amount == 0)
+            if (calculatedBonus == 0)
             {
                 // Clearcasting - bonus from Elemental Oath
                 if ((*i)->GetSpellProto()->Id == 16246)
@@ -6965,23 +6975,21 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
                     {
                         if ((*itr)->GetSpellProto()->SpellIconID == 3053)
                         {
-                            fDoneTotalModTmp = (*itr)->GetSpellProto()->CalculateSimpleValue(EFFECT_INDEX_1);
+                            calculatedBonus = (*itr)->GetSpellProto()->CalculateSimpleValue(EFFECT_INDEX_1);
                             break;
                         }
                     }
                 }
             }
-            else
-                fDoneTotalModTmp = (*i)->GetModifier()->m_amount;
 
             if ((*i)->IsStacking())
-                DoneTotalMod *= (fDoneTotalModTmp + 100.0f) / 100.0f;
+                DoneTotalMod *= (calculatedBonus+100.0f)/100.0f;
             else
             {
-                if (fDoneTotalModTmp > nonStackingPos)
-                    nonStackingPos = fDoneTotalModTmp;
-                else if (fDoneTotalModTmp < nonStackingNeg)
-                    nonStackingNeg = fDoneTotalModTmp;
+                if(calculatedBonus > nonStackingPos)
+                    nonStackingPos = calculatedBonus;
+                else if(calculatedBonus < nonStackingNeg)
+                    nonStackingNeg = calculatedBonus;
             }
         }
     }
@@ -7416,17 +7424,7 @@ int32 Unit::SpellBaseDamageBonusDone(SpellSchoolMask schoolMask)
     int32 DoneAdvertisedBenefit = 0;
 
     // ..done
-    AuraList const& mDamageDone = GetAurasByType(SPELL_AURA_MOD_DAMAGE_DONE);
-    for(AuraList::const_iterator i = mDamageDone.begin();i != mDamageDone.end(); ++i)
-    {
-        if (!(*i)->GetHolder() || (*i)->GetHolder()->IsDeleted())
-            continue;
-
-        if (((*i)->GetModifier()->m_miscvalue & schoolMask) != 0 &&
-            (*i)->GetSpellProto()->EquippedItemClass == -1 &&                   // -1 == any item class (not wand then)
-            (*i)->GetSpellProto()->EquippedItemInventoryTypeMask == 0)          //  0 == any inventory type (not wand then)
-                DoneAdvertisedBenefit += (*i)->GetModifier()->m_amount;
-    }
+    DoneAdvertisedBenefit = GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_DAMAGE_DONE, schoolMask);
 
     if (GetTypeId() == TYPEID_PLAYER)
     {
@@ -7756,12 +7754,6 @@ uint32 Unit::SpellCriticalHealingBonus(SpellEntry const *spellProto, uint32 dama
             break;
     }
 
-    if(pVictim)
-    {
-        uint32 creatureTypeMask = pVictim->GetCreatureTypeMask();
-        crit_bonus = int32(crit_bonus * GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_CRIT_PERCENT_VERSUS, creatureTypeMask));
-    }
-
     if(crit_bonus > 0)
         damage += crit_bonus;
 
@@ -7897,15 +7889,7 @@ uint32 Unit::SpellHealingBonusTaken(Unit *pCaster, SpellEntry const *spellProto,
     float  TakenTotalMod = 1.0f;
 
     // Healing taken percent
-    float minval = float(GetMaxNegativeAuraModifier(SPELL_AURA_MOD_HEALING_PCT));
-    if (damagetype == DOT)
-    {
-        // overwrite max SPELL_AURA_MOD_HEALING_PCT if greater negative effect
-        float minDotVal = float(GetMaxNegativeAuraModifier(SPELL_AURA_MOD_PERIODIC_HEAL));
-        minval = (minDotVal < minval) ? minDotVal : minval;
-    }
-    if (minval)
-        TakenTotalMod *= (100.0f + minval) / 100.0f;
+    TakenTotalMod *= GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALING_PCT);
 
     float maxval = float(GetMaxPositiveAuraModifier(SPELL_AURA_MOD_HEALING_PCT));
     // no SPELL_AURA_MOD_PERIODIC_HEAL positive cases
@@ -7942,12 +7926,7 @@ uint32 Unit::SpellHealingBonusTaken(Unit *pCaster, SpellEntry const *spellProto,
 
 int32 Unit::SpellBaseHealingBonusDone(SpellSchoolMask schoolMask)
 {
-    int32 AdvertisedBenefit = 0;
-
-    AuraList const& mHealingDone = GetAurasByType(SPELL_AURA_MOD_HEALING_DONE);
-    for(AuraList::const_iterator i = mHealingDone.begin();i != mHealingDone.end(); ++i)
-        if(!(*i)->GetModifier()->m_miscvalue || ((*i)->GetModifier()->m_miscvalue & schoolMask) != 0)
-            AdvertisedBenefit += (*i)->GetModifier()->m_amount;
+    int32 AdvertisedBenefit = GetTotalAuraModifier(SPELL_AURA_MOD_HEALING_DONE);
 
     // Healing bonus of spirit, intellect and strength
     if (GetTypeId() == TYPEID_PLAYER)
@@ -8469,7 +8448,9 @@ uint32 Unit::MeleeDamageBonusTaken(Unit *pCaster, uint32 pdamage,WeaponAttackTyp
                 break;
             case 20911:                                     // Blessing of Sanctuary
             case 25899:                                     // Greater Blessing of Sanctuary
-                TakenPercent *= ((*i)->GetModifier()->m_amount + 100.0f) / 100.0f;
+                // don't stack with Vigilance dmg reduction effect (calculated above)
+                if (!HasAura(68066))
+                    TakenPercent *= ((*i)->GetModifier()->m_amount + 100.0f) / 100.0f;
                 break;
         }
     }
@@ -10103,13 +10084,9 @@ float Unit::GetModifierValue(UnitMods unitMod, UnitModifierType modifierType) co
     if(modifierType == TOTAL_PCT)
     {
         if(m_auraModifiersGroup[unitMod][modifierType] <= 0.0f)
-        {
             return 0.0f;
-        }
         else
-        {
             return m_auraModifiersGroup[unitMod][TOTAL_PCT] * ((m_auraModifiersGroup[unitMod][NONSTACKING_PCT] + m_auraModifiersGroup[unitMod][NONSTACKING_PCT_MINOR] + 100.0f) / 100.0f);
-        }
     }
     else if(modifierType == TOTAL_VALUE)
     {

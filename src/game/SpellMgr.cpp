@@ -2077,14 +2077,6 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
     if (spellId_1 == spellId_2)
         return false;
 
-    // Resurrection sickness
-    if ((spellInfo_1->Id == SPELL_ID_PASSIVE_RESURRECTION_SICKNESS) != (spellInfo_2->Id==SPELL_ID_PASSIVE_RESURRECTION_SICKNESS))
-        return false;
-
-    // Allow stack passive and not passive spells
-    if ((spellInfo_1->Attributes & SPELL_ATTR_PASSIVE)!=(spellInfo_2->Attributes & SPELL_ATTR_PASSIVE))
-        return false;
-
     // Mangle and Trauma 
     if (spellInfo_1->EffectApplyAuraName[EFFECT_INDEX_1] == SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT && 
         spellInfo_1->EffectMiscValue[EFFECT_INDEX_1] == MECHANIC_BLEED &&
@@ -2126,6 +2118,7 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                 return false;
 
     // Specific spell family spells
+    // also some SpellIconID exceptions related to late checks (isModifier)
     switch(spellInfo_1->SpellFamilyName)
     {
         case SPELLFAMILY_GENERIC:
@@ -2751,23 +2744,7 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
     if (IsRankSpellDueToSpell(spellInfo_1, spellId_2))
         return true;
 
-    bool dummy_only = true;
-    for (int i = 0; i < MAX_EFFECT_INDEX; ++i)
-    {
-        if (spellInfo_1->Effect[i] != spellInfo_2->Effect[i] ||
-            spellInfo_1->EffectItemType[i] != spellInfo_2->EffectItemType[i] ||
-            spellInfo_1->EffectMiscValue[i] != spellInfo_2->EffectMiscValue[i] ||
-            spellInfo_1->EffectApplyAuraName[i] != spellInfo_2->EffectApplyAuraName[i])
-            return false;
-
-        // ignore dummy only spells
-        if (spellInfo_1->Effect[i] && spellInfo_1->Effect[i] != SPELL_EFFECT_DUMMY && spellInfo_1->EffectApplyAuraName[i] != SPELL_AURA_DUMMY)
-            dummy_only = false;
-    }
-    if (dummy_only)
-        return false;
-
-    return true;
+    return false;
 }
 
 bool SpellMgr::IsProfessionOrRidingSpell(uint32 spellId)
