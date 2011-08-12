@@ -3268,6 +3268,20 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(m_caster, spell_id, true);
                     return;
                 }
+                case 67366:                                 // C-14 Gauss Rifle
+                {
+                    if (!unitTarget)
+                        return;
+
+                    Unit* pZerg = unitTarget->GetMiniPet();
+                    if (pZerg && pZerg->isAlive() && pZerg->GetEntry() == 11327)
+                    {
+                        pZerg->GetMotionMaster()->MovementExpired();
+                        m_caster->DealDamage(pZerg, unitTarget->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+                        ((Creature*)pZerg)->ForcedDespawn(5000);
+                    }
+                    return;
+                }
                 case 67400:                                 // Zergling Attack (on Grunty companion)
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT || !((Creature*)unitTarget)->IsPet())
@@ -8929,6 +8943,20 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                             m_caster->CastSpell(pGrunty, 67397, true); // zerg rush dummy aura
                             m_caster->GetMotionMaster()->MoveFollow(pGrunty,0,0);
                         }
+                    }
+                    return;
+                }
+                case 67369:                                 // Grunty Periodic usable only on Zergling companion
+                {
+                    if (!unitTarget)
+                        return;
+
+                    Unit* pZerg = unitTarget->GetMiniPet(); // Only usable on Grunty companion
+                    if (pZerg && pZerg->isAlive() && pZerg->GetEntry() == 11327)
+                    {
+                        m_caster->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
+                        m_caster->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_STATE_ATTACK_UNARMED);
+                        return;
                     }
                     return;
                 }
