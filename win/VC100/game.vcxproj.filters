@@ -633,6 +633,9 @@
     <ClInclude Include="..\..\src\game\Spell.h">
       <Filter>World/Handlers</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\game\SpellClassMask.h">
+      <Filter>World/Handlers</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\game\SpellAuraDefines.h">
       <Filter>World/Handlers</Filter>
     </ClInclude>
