@@ -2665,35 +2665,6 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     basepoints[0] = int32(triggerAmount * damage / 100) / GetSpellAuraMaxTicks(triggered_spell_id);
                     break;
                 }
-                // Item - Shaman T10 Elemental 2P Bonus
-                case 70811:
-                {
-                    if (GetTypeId() != TYPEID_PLAYER)
-                        return SPELL_AURA_PROC_FAILED;
-
-                    if (procSpell->SpellFamilyFlags.test<CF_SHAMAN_LIGHTNING_BOLT, CF_SHAMAN_CHAIN_LIGHTNING>())
-                    {
-                        ((Player*)this)->SendModifyCooldown(16166,-triggerAmount);
-                        return SPELL_AURA_PROC_OK;
-                    }
-                    return SPELL_AURA_PROC_FAILED;
-                }
-                // Item - Shaman T10 Elemental 4P Bonus
-                case 70817:
-                {
-                    if (Aura *aur = pVictim->GetAura<SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_SHAMAN, CF_SHAMAN_FLAME_SHOCK>(GetObjectGuid()))
-                    {
-                        SpellAuraHolder *aurHolder = GetSpellAuraHolder(aur->GetId());
-                        if (aurHolder)
-                        {
-                            int32 amount = aur->GetAuraDuration() + triggerAmount * IN_MILLISECONDS;
-                            aurHolder->SetAuraDuration(amount);
-                            aurHolder->SendAuraUpdate(false);
-                            return SPELL_AURA_PROC_OK;
-                        }
-                    }
-                    return SPELL_AURA_PROC_FAILED;
-                }
             }
             // Storm, Earth and Fire
             if (dummySpell->SpellIconID == 3063)
