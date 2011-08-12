@@ -436,9 +436,6 @@ SpellSpecific GetSpellSpecific(uint32 spellId)
             if (spellInfo->SpellFamilyFlags.test<CF_MAGE_POLYMORPH>() && spellInfo->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MOD_CONFUSE)
                 return SPELL_MAGE_POLYMORPH;
 
-            if (spellInfo->SpellFamilyFlags.test<CF_MAGE_ARCANE_INT>())
-                return SPELL_MAGE_INTELLECT;
-
             break;
         }
         case SPELLFAMILY_WARRIOR:
