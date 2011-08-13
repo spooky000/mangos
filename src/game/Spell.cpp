@@ -1676,55 +1676,55 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 38794:                                 // Murmur's Touch (h)
                 case 50988:                                 // Glare of the Tribunal (Halls of Stone)
                 case 59870:                                 // Glare of the Tribunal (h) (Halls of Stone)
-                case 68950:                                 // Fear (ICC: Forge of Souls)
-                case 66001:                                 // Touch of Darkness
-                case 67281:
-                case 67282:
-                case 67283:
-                case 65950:                                 // Touch of Light
-                case 67296:
-                case 67297:
-                case 67298:
-                case 62488:                                 // Activate Construct (Ulduar - Ignis encounter)
-                case 63024:                                 // Gravity Bomb (10 man)
-                case 64234:                                 // Gravity Bomb (25 man)
-                case 63018:                                 // Searing Light (10 man)
-                case 65121:                                 // Searing Light (25 man)
-                case 63713:                                 // Dominate Mind (Yogg-Saron)
-                case 63830:                                 // Malady of the Mind (Yogg-Saron)
-                case 71340:                                 // Pact of darkfallen (hack for script work)
-                case 63387:                                 // Rapid Burst
-                case 64531:                                 // Rapid Burst
-                case 62042:                                 // Stormhammer
-                case 64218:                                 // Overcharge
-                case 65301:                                 // Psychosis (Yogg-Saron)
-                case 63795:                                 // Psychosis (Yogg-Saron)
-                case 64465:                                 // Shadow Beacon
                 case 62016:                                 // Thorim charge orb
+                case 62042:                                 // Stormhammer
+                case 62488:                                 // Activate Construct (Ulduar - Ignis encounter)
+                case 63018:                                 // Searing Light (10 man)
+                case 63024:                                 // Gravity Bomb (10 man)
+                case 63387:                                 // Rapid Burst
+                case 63713:                                 // Dominate Mind (Yogg-Saron)
+                case 63795:                                 // Psychosis (Yogg-Saron)
+                case 63830:                                 // Malady of the Mind (Yogg-Saron)
+                case 64218:                                 // Overcharge
+                case 64234:                                 // Gravity Bomb (25 man)
+                case 64465:                                 // Shadow Beacon
+                case 64531:                                 // Rapid Burst
+                case 65121:                                 // Searing Light (25 man)
+                case 65301:                                 // Psychosis (Yogg-Saron)
+                case 65950:                                 // Touch of Light
+                case 66001:                                 // Touch of Darkness
                 case 66152:                                 // Bullet Foced Cast (Trial of the Crusader, ->
                 case 66153:
                 case 66336:                                 // Mistress' Kiss (Trial of the Crusader, ->
                 case 66339:                                 // Summon Scarab (Trial of the Crusader, Anub'arak encounter)
                 case 67077:                                 // -> Lord Jaraxxus encounter, 10 and 10 heroic)
+                case 67281:                                 // Touch of Darkness
+                case 67282:
+                case 67283:
+                case 67296:                                 // Touch of Light
+                case 67297:
+                case 67298:
+                case 68950:                                 // Fear (ICC: Forge of Souls)
+                case 71340:                                 // Pact of darkfallen (hack for script work)
                     unMaxTargets = 1;
                     break;
                 case 28542:                                 // Life Drain
-                case 66013:                                 // Penetrating Cold (10 man)
-                case 68509:                                 // Penetrating Cold (10 man heroic)
-                case 66332:                                 // Nerubian Burrower (Trial of the Crusader, ->
-                case 67755:                                 // -> Anub'arak encounter, 10 and 10 heroic)
-                case 69278:                                 // Gas spore - 10
                 case 63476:                                 // Icicle (Hodir 10man)
                 case 63802:                                 // Brain Link (Yogg-Saron)
+                case 66013:                                 // Penetrating Cold (10 man)
+                case 66332:                                 // Nerubian Burrower (Trial of the Crusader, ->
+                case 67755:                                 // -> Anub'arak encounter, 10 and 10 heroic)
+                case 68509:                                 // Penetrating Cold (10 man heroic)
+                case 69278:                                 // Gas spore - 10
                     unMaxTargets = 2;
                     break;
                 case 28796:                                 // Poison Bolt Volley
                 case 29213:                                 // Curse of the Plaguebringer
                 case 31298:                                 // Sleep
-                case 60936:                                 // Surge of Power (25 man)
                 case 51904:                                 // Limiting the count of Summoned Ghouls
+                case 54522:                                 // Summon Ghouls On Scarlet Crusade
+                case 60936:                                 // Surge of Power (25 man)
                 case 62477:                                 // Icicle (Hodir 25man)
-                case 54522:
                     unMaxTargets = 3;
                     break;
                 case 61916:                                 // Lightning Whirl (10 man)
