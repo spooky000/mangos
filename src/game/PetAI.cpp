@@ -102,6 +102,9 @@ bool PetAI::_needToStop() const
     if(m_creature->isCharmed() && m_creature->getVictim() == m_creature->GetCharmer())
         return true;
 
+    if(m_creature->getVictim() == m_creature->GetCharmerOrOwner())
+        return true;
+
     if (!m_creature->getVictim()->isVisibleForOrDetect(m_creature, m_creature, false))
         return true;
 
