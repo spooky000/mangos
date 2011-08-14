@@ -8529,32 +8529,6 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     }
                     return;
                 }
-                //Glyph of Scourge Strike
-                case 69961:
-                {
-                    Unit::SpellAuraHolderMap const& auras = unitTarget->GetSpellAuraHolderMap();
-                    for(Unit::SpellAuraHolderMap::const_iterator itr = auras.begin(); itr!=auras.end(); ++itr)
-                    {
-                        if (itr->second->GetSpellProto()->Dispel == DISPEL_DISEASE &&
-                            itr->second->GetCasterGuid() == m_caster->GetObjectGuid())
-                        if (Aura* aura =itr->second->GetAuraByEffectIndex(EFFECT_INDEX_0))
-                        {
-                            uint32 countMin = aura->GetAuraMaxDuration();
-                            uint32 countMax = GetSpellMaxDuration(aura->GetSpellProto());
-                            countMax += 9000;
-                            countMax += m_caster->HasAura(49036) ? 3000 : 0; //Epidemic (Rank 1)
-                            countMax += m_caster->HasAura(49562) ? 6000 : 0; //Epidemic (Rank 2)
-
-                            if (countMin < countMax)
-                            {
-                                aura->GetHolder()->SetAuraDuration(aura->GetAuraDuration() + 3000);
-                                aura->GetHolder()->SetAuraMaxDuration(countMin + 3000);
-                                aura->GetHolder()->SendAuraUpdate(false);
-                            }
-                        }
-                    }
-                return;
-                }
                 case 55328:                                    // Stoneclaw Totem I
                 case 55329:                                    // Stoneclaw Totem II
                 case 55330:                                    // Stoneclaw Totem III
@@ -9075,11 +9049,220 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     }
                     return;
                 }
+                //Glyph of Scourge Strike
+                case 69961:
+                {
+                    Unit::SpellAuraHolderMap const& auras = unitTarget->GetSpellAuraHolderMap();
+                    for(Unit::SpellAuraHolderMap::const_iterator itr = auras.begin(); itr!=auras.end(); ++itr)
+                    {
+                        if (itr->second->GetSpellProto()->Dispel == DISPEL_DISEASE &&
+                            itr->second->GetCasterGuid() == m_caster->GetObjectGuid())
+                        if (Aura* aura =itr->second->GetAuraByEffectIndex(EFFECT_INDEX_0))
+                        {
+                            uint32 countMin = aura->GetAuraMaxDuration();
+                            uint32 countMax = GetSpellMaxDuration(aura->GetSpellProto());
+                            countMax += 9000;
+                            countMax += m_caster->HasAura(49036) ? 3000 : 0; //Epidemic (Rank 1)
+                            countMax += m_caster->HasAura(49562) ? 6000 : 0; //Epidemic (Rank 2)
+
+                            if (countMin < countMax)
+                            {
+                                aura->GetHolder()->SetAuraDuration(aura->GetAuraDuration() + 3000);
+                                aura->GetHolder()->SetAuraMaxDuration(countMin + 3000);
+                                aura->GetHolder()->SendAuraUpdate(false);
+                            }
+                        }
+                    }
+                    return;
+                }
+                case 66336:                                 // Mistress' Kiss (Trial of the Crusader, ->
+                case 67076:                                 // -> Lord Jaraxxus encounter, all difficulties)
+                case 67077:                                 // ----- // -----
+                case 67078:                                 // ----- // -----
+                {
+                    if (unitTarget)
+                        unitTarget->CastSpell(unitTarget, 66334, true);
+                    return;
+                }
+                case 69057:                                 // Bone Spike Graveyard (Icecrown Citadel, ->
+                case 70826:                                 // -> Lord Marrowgar encounter, all difficulties)
+                case 72088:                                 // ----- // -----
+                case 72089:                                 // ----- // -----
+                case 73142:                                 // Bone Spike Graveyard (during Bone Storm) ->
+                case 73143:                                 // (Icecrown Citadel, -> Lord Marrowgar encounter, ->
+                case 73144:                                 // all difficulties)
+                case 73145:                                 // ----- // -----
+                {
+                    if (unitTarget)
+                        unitTarget->CastSpell(unitTarget, 69062, true);
+                    return;
+                }
+                case 69140:                                 // Coldflame (Lord Marrowgar - Icecrown Citadel)
+                {
+                    if (unitTarget)
+                        unitTarget->CastSpell(m_caster, m_spellInfo->CalculateSimpleValue(eff_idx), true);
+                    return;
+                }
+                case 69147:                                 // Coldflame (circle, Lord Marrowgar - Icecrown Citadel)
+                {
+                    m_caster->CastSpell(m_caster, m_spellInfo->CalculateSimpleValue(eff_idx), true);
+                    return;
+                }
+                case 70117:                                 // Ice grip (Sindragosa pull effect)
+                {
+                    if (!unitTarget)
+                        return;
+                    float fPosX, fPosY, fPosZ;
+                    m_caster->GetPosition(fPosX, fPosY, fPosZ);
+                    m_caster->GetRandomPoint(fPosX, fPosY, fPosZ, m_caster->GetObjectBoundingRadius(), fPosX, fPosY, fPosZ);
+                    unitTarget->NearTeleportTo(fPosX, fPosY, fPosZ+1.0f, -unitTarget->GetOrientation(), false);
+                    return;
+                }
+                case 71446:                                 // Twilight Bloodbolt 10N
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 71447, true);
+                    return;
+                }
+                case 71478:                                 // Twilight Bloodbolt 25N
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 71481, true);
+                    return;
+                }
+                case 71479:                                 // Twilight Bloodbolt 10H
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 71482, true);
+                    return;
+                }
+                case 71480:                                 // Twilight Bloodbolt 25H
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 71483, true);
+                    return;
+                }
+                case 71899:                                 // Bloodbolt Whirl 10N
+                {
+                    if (!unitTarget)
+                        return;
+
+                    m_caster->CastSpell(unitTarget, 71446, true);
+                    return;
+                }
+                case 71900:                                 // Bloodbolt Whirl 25N
+                {
+                    if (!unitTarget)
+                        return;
+
+                    m_caster->CastSpell(unitTarget, 71478, true);
+                    return;
+                }
+                case 71901:                                 // Bloodbolt Whirl 10H
+                {
+                    if (!unitTarget)
+                        return;
+
+                    m_caster->CastSpell(unitTarget, 71479, true);
+                    return;
+                }
+                case 71902:                                 // Bloodbolt Whirl 25H
+                {
+                    if (!unitTarget)
+                        return;
+
+                    m_caster->CastSpell(unitTarget, 71480, true);
+                    return;
+                }
                 case 72034:                                 // Whiteout
                 case 72096:                                 // Whiteout (heroic)
                 {
                     // cast Whiteout visual
                     m_caster->CastSpell(unitTarget, 72036, true);
+                    return;
+                }
+                case 72195:                                 // Blood link
+                {
+                    if (!unitTarget)
+                        return;
+                    if (unitTarget->HasAura(72371))
+                    {
+                        unitTarget->RemoveAurasDueToSpell(72371);
+                        int32 power = unitTarget->GetPower(unitTarget->getPowerType());
+                        unitTarget->CastCustomSpell(unitTarget, 72371, &power, &power, NULL, true);
+                    }
+                    return;
+                }
+                case 72219:
+                case 72551:
+                case 72552:
+                case 72553:
+                {
+                    if (!unitTarget)
+                        return;
+
+                    if (SpellAuraHolder* pHolder = unitTarget->GetSpellAuraHolder(m_spellInfo->Id))
+                    {
+                        if (pHolder->GetStackAmount() + 1 >= m_spellInfo->StackAmount)
+                        {
+                            switch (m_spellInfo->Id)
+                            {
+                                case 72219:
+                                    unitTarget->CastSpell(unitTarget, 72227, true);
+                                    break;
+                                case 72551:
+                                    unitTarget->CastSpell(unitTarget, 72228, true);
+                                    break;
+                                case 72552:
+                                    unitTarget->CastSpell(unitTarget, 72229, true);
+                                    break;
+                                case 72553:
+                                    unitTarget->CastSpell(unitTarget, 72230, true);
+                                    break;
+                                default:
+                                    break;
+
+                                unitTarget->RemoveAurasDueToSpell(m_spellInfo->Id);
+                                unitTarget->RemoveAurasDueToSpell(72231);
+                                return;
+                            }
+                        }
+                    }
+
+                    unitTarget->CastSpell(unitTarget, 72231, true);
+
+                    break;
+                }
+                case 72705:                                 // Coldflame (in bone storm, Lord Marrowgar - Icecrown Citadel)
+                {
+                    m_caster->CastSpell(m_caster, 72701, true);
+                    m_caster->CastSpell(m_caster, 72702, true);
+                    m_caster->CastSpell(m_caster, 72703, true);
+                    m_caster->CastSpell(m_caster, 72704, true);
+                    return;
+                }
+                case 72864:                                 // Death plague
+                {
+                    if (!unitTarget)
+                        return;
+
+                    if (unitTarget->GetObjectGuid() == m_caster->GetObjectGuid())
+                    {
+                        if ((int)m_UniqueTargetInfo.size() < 2)
+                            m_caster->CastSpell(m_caster, 72867, true, NULL, NULL, m_originalCasterGUID);
+                        else
+                            m_caster->CastSpell(m_caster, 72884, true);
+                    }
+                    else
+                        unitTarget->CastSpell(unitTarget, 72865, true, NULL, NULL, m_originalCasterGUID);
                     return;
                 }
             }

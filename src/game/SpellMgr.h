@@ -534,6 +534,19 @@ inline uint32 GetDispellMask(DispelType dispel)
         return (1 << dispel);
 }
 
+inline bool IsSpellHiddenStackable(SpellEntry const* spellInfo)
+{
+    if (!spellInfo || !(spellInfo->AttributesEx & SPELL_ATTR_EX_HIDDEN_AURA))
+        return false;
+
+    if (spellInfo->Attributes & SPELL_ATTR_CANT_CANCEL ||
+        spellInfo->Attributes & SPELL_ATTR_NOT_SHAPESHIFT ||
+        spellInfo->AttributesEx3 & SPELL_ATTR_EX3_DEATH_PERSISTENT)
+        return false;
+
+    return true;
+}
+
 // Diminishing Returns interaction with spells
 DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto, bool triggered);
 bool IsDiminishingReturnsGroupDurationLimited(DiminishingGroup group);

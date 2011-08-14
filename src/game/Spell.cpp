@@ -1676,48 +1676,55 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 38794:                                 // Murmur's Touch (h)
                 case 50988:                                 // Glare of the Tribunal (Halls of Stone)
                 case 59870:                                 // Glare of the Tribunal (h) (Halls of Stone)
-                case 68950:                                 // Fear (ICC: Forge of Souls)
+                case 62016:                                 // Thorim charge orb
+                case 62042:                                 // Stormhammer
+                case 62488:                                 // Activate Construct (Ulduar - Ignis encounter)
+                case 63018:                                 // Searing Light (10 man)
+                case 63024:                                 // Gravity Bomb (10 man)
+                case 63387:                                 // Rapid Burst
+                case 63713:                                 // Dominate Mind (Yogg-Saron)
+                case 63795:                                 // Psychosis (Yogg-Saron)
+                case 63830:                                 // Malady of the Mind (Yogg-Saron)
+                case 64218:                                 // Overcharge
+                case 64234:                                 // Gravity Bomb (25 man)
+                case 64465:                                 // Shadow Beacon
+                case 64531:                                 // Rapid Burst
+                case 65121:                                 // Searing Light (25 man)
+                case 65301:                                 // Psychosis (Yogg-Saron)
+                case 65950:                                 // Touch of Light
                 case 66001:                                 // Touch of Darkness
-                case 67281:
+                case 66152:                                 // Bullet Foced Cast (Trial of the Crusader, ->
+                case 66153:
+                case 66336:                                 // Mistress' Kiss (Trial of the Crusader, ->
+                case 66339:                                 // Summon Scarab (Trial of the Crusader, Anub'arak encounter)
+                case 67077:                                 // -> Lord Jaraxxus encounter, 10 and 10 heroic)
+                case 67281:                                 // Touch of Darkness
                 case 67282:
                 case 67283:
-                case 65950:                                 // Touch of Light
-                case 67296:
+                case 67296:                                 // Touch of Light
                 case 67297:
                 case 67298:
-                case 62488:                                 // Activate Construct (Ulduar - Ignis encounter)
-                case 63024:                                 // Gravity Bomb (10 man)
-                case 64234:                                 // Gravity Bomb (25 man)
-                case 63018:                                 // Searing Light (10 man)
-                case 65121:                                 // Searing Light (25 man)
-                case 63713:                                 // Dominate Mind (Yogg-Saron)
-                case 63830:                                 // Malady of the Mind (Yogg-Saron)
+                case 68950:                                 // Fear (ICC: Forge of Souls)
                 case 71340:                                 // Pact of darkfallen (hack for script work)
-                case 63387:                                 // Rapid Burst
-                case 64531:                                 // Rapid Burst
-                case 62042:                                 // Stormhammer
-                case 64218:                                 // Overcharge
-                case 65301:                                 // Psychosis (Yogg-Saron)
-                case 63795:                                 // Psychosis (Yogg-Saron)
-                case 64465:                                 // Shadow Beacon
-                case 62016:                                 // Thorim charge orb
                     unMaxTargets = 1;
                     break;
                 case 28542:                                 // Life Drain
-                case 66013:                                 // Penetrating Cold (10 man)
-                case 68509:                                 // Penetrating Cold (10 man heroic)
-                case 69278:                                 // Gas spore - 10
                 case 63476:                                 // Icicle (Hodir 10man)
                 case 63802:                                 // Brain Link (Yogg-Saron)
+                case 66013:                                 // Penetrating Cold (10 man)
+                case 66332:                                 // Nerubian Burrower (Trial of the Crusader, ->
+                case 67755:                                 // -> Anub'arak encounter, 10 and 10 heroic)
+                case 68509:                                 // Penetrating Cold (10 man heroic)
+                case 69278:                                 // Gas spore - 10
                     unMaxTargets = 2;
                     break;
                 case 28796:                                 // Poison Bolt Volley
                 case 29213:                                 // Curse of the Plaguebringer
                 case 31298:                                 // Sleep
-                case 60936:                                 // Surge of Power (25 man)
                 case 51904:                                 // Limiting the count of Summoned Ghouls
+                case 54522:                                 // Summon Ghouls On Scarlet Crusade
+                case 60936:                                 // Surge of Power (25 man)
                 case 62477:                                 // Icicle (Hodir 25man)
-                case 54522:
                     unMaxTargets = 3;
                     break;
                 case 61916:                                 // Lightning Whirl (10 man)
@@ -1726,12 +1733,16 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 63482:                                 // Lightning Whirl (25 man)
                     unMaxTargets = urand(3,6);
                     break;
+                case 67756:                                 // Nerubian Burrower (Trial of the Crusader, ->
+                case 67757:                                 // -> Anub'arak encounter, 25 and 25 heroic)
                 case 71221:                                 // Gas spore - 25
                     unMaxTargets = 4;
                     break;
                 case 30843:                                 // Enfeeble TODO: exclude top threat target from target selection
                 case 42005:                                 // Bloodboil TODO: need to be 5 targets(players) furthest away from caster
                 case 55665:                                 // Life Drain (h)
+                case 67076:                                 // Mistress' Kiss (Trial of the Crusader, ->
+                case 67078:                                 // -> Lord Jaraxxus encounter, 25 and 25 heroic)
                 case 67700:                                 // Penetrating Cold (25 man)
                 case 68510:                                 // Penetrating Cold (25 man, heroic)
                     unMaxTargets = 5;
@@ -1765,6 +1776,19 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 73710:                                 // Defile 25H
                     if (Unit* realCaster = GetAffectiveCaster())
                         radius = realCaster->GetFloatValue(OBJECT_FIELD_SCALE_X) * 6;
+                    break;
+                case 66881:                                 // Slime Pool (Acidmaw & Dreadscale encounter)
+                case 67638:                                 // (Trial of the Crusader, all difficulties)
+                case 67639:                                 // ----- // -----
+                case 67640:                                 // ----- // -----
+                    if (m_caster->HasAura(66882))
+                    {
+                        if (Aura* pAura = m_caster->GetAura(66882, EFFECT_INDEX_0))
+                            radius = 0.5*(60-(pAura->GetAuraDuration()/IN_MILLISECONDS));
+                    }
+                    break;
+                case 67732:                                 // Destroy all Frost Patches (Trial of the Crusader, Anub'arak)
+                    radius = 9.0f;
                     break;
                 default:
                     break;
@@ -8171,6 +8195,85 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
         case 65045: // Flame of demolisher
         {
             FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            break;
+        }
+        case 65919: // Anub'arak Cast Check Ice Spell (Trial of the Crusader - Anub'arak)
+        case 67858:
+        case 67859:
+        case 67860:
+        {
+            m_caster->CastSpell(m_caster, 66181, true);
+            m_targets.setDestination(m_caster->GetPositionX(), m_caster->GetPositionY(), m_caster->GetPositionZ());
+            SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetB[i], targetUnitMap);
+            break;
+        }
+        case 67470: // Pursuing Spikes (Check Aura and Summon Spikes) (Trial Of The Crusader - Anub'arak)
+        {
+            UnitList tmpUnitMap;
+            bool m_bOneTargetHaveAura = false;
+
+            FillAreaTargets(tmpUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            if (!tmpUnitMap.empty())
+            {
+                for (UnitList::const_iterator itr = tmpUnitMap.begin(); itr != tmpUnitMap.end(); ++itr)
+                {
+                    if ((*itr)->HasAura(67574))
+                    {
+                        m_bOneTargetHaveAura = true;
+                        break;
+                    }
+                    else
+                    {
+                        if ((*itr)->GetTypeId() == TYPEID_PLAYER)
+                            targetUnitMap.push_back(*itr);
+                    }
+                }
+                if (!m_bOneTargetHaveAura && !targetUnitMap.empty())
+                {
+                    uint32 t = 0;
+                    UnitList::iterator iter = targetUnitMap.begin();
+                    while (iter != targetUnitMap.end() && (*iter)->IsWithinDist(m_caster, radius))
+                    {
+                        ++t;
+                        ++iter;
+                    }
+
+                    iter = targetUnitMap.begin();
+                    std::advance(iter, urand(0, t-1));
+                    if (*iter)
+                        (*iter)->CastSpell((*iter), 67574, true);
+                }
+            }
+            break;
+        }
+        case 68921: // Soulstorm (Forge of Souls - Bronjahm)
+        case 69049:
+        {
+            UnitList tmpUnitMap;
+            FillAreaTargets(tmpUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            if (!tmpUnitMap.empty())
+            {
+                for (UnitList::const_iterator itr = tmpUnitMap.begin(); itr != tmpUnitMap.end(); ++itr)
+                {
+                    if (*itr && !(*itr)->IsWithinDistInMap(m_caster, 10.0f))
+                        targetUnitMap.push_back(*itr);
+                }
+            }
+            break;
+        }
+        case 66862: // Radiance (Trial of the Champion - Eadric the Pure)
+        case 67681:
+        {
+            UnitList tmpUnitMap;
+            FillAreaTargets(tmpUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            if (!tmpUnitMap.empty())
+            {
+                for (UnitList::const_iterator itr = tmpUnitMap.begin(); itr != tmpUnitMap.end(); ++itr)
+                {
+                    if (*itr && (*itr)->isInFrontInMap(m_caster, DEFAULT_VISIBILITY_DISTANCE) && (*itr)->IsWithinLOSInMap(m_caster))
+                        targetUnitMap.push_back(*itr);
+                }
+            }
             break;
         }
         case 72378: // Blood Nova
