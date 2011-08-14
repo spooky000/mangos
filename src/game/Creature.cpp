@@ -2552,3 +2552,25 @@ bool Creature::HasStaticDBSpawnData() const
 {
     return sObjectMgr.GetCreatureData(GetGUIDLow()) != NULL;
 }
+
+void Creature::SetWalk(bool enable)
+{
+    if (enable)
+        m_movementInfo.AddMovementFlag(MOVEFLAG_WALK_MODE);
+    else
+        m_movementInfo.RemoveMovementFlag(MOVEFLAG_WALK_MODE);
+    WorldPacket data(enable ? SMSG_SPLINE_MOVE_SET_WALK_MODE : SMSG_SPLINE_MOVE_SET_RUN_MODE, 9);
+    data << GetPackGUID();
+    SendMessageToSet(&data, true);
+}
+
+void Creature::SetLevitate(bool enable)
+{
+    if (enable)
+        m_movementInfo.AddMovementFlag(MOVEFLAG_LEVITATING);
+    else
+        m_movementInfo.RemoveMovementFlag(MOVEFLAG_LEVITATING);
+    WorldPacket data(enable ? SMSG_SPLINE_MOVE_GRAVITY_DISABLE : SMSG_SPLINE_MOVE_GRAVITY_ENABLE, 9);
+    data << GetPackGUID();
+    SendMessageToSet(&data, true);
+}

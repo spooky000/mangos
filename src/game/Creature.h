@@ -512,6 +512,9 @@ class MANGOS_DLL_SPEC Creature : public Unit
 
         CreatureAI* AI() { return i_AI; }
 
+        void SetWalk(bool enable);
+        void SetLevitate(bool enable);
+
         void AddSplineFlag(SplineFlags f)
         {
             bool need_walk_sync = (f & SPLINEFLAG_WALKMODE) != (m_splineFlags & SPLINEFLAG_WALKMODE);
