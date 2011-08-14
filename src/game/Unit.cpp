@@ -4865,6 +4865,10 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolder *holder)
                 continue;
             }
 
+            // different ranks spells with different casters should also stack
+            if (holder->GetCasterGuid() != i->second->GetCasterGuid() && sSpellMgr.IsStackableSpellAuraHolder(spellProto))
+                continue;
+
             RemoveAurasDueToSpell(i_spellId);
 
             if( m_spellAuraHolders.empty() )
