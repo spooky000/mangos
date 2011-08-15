@@ -1682,7 +1682,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 63018:                                 // Searing Light (10 man)
                 case 63024:                                 // Gravity Bomb (10 man)
                 case 63387:                                 // Rapid Burst
-                case 64174:                                 // Hodirs protective gaze (Yogg-saron)
                 case 63713:                                 // Dominate Mind (Yogg-Saron)
                 case 63795:                                 // Psychosis (Yogg-Saron)
                 case 63830:                                 // Malady of the Mind (Yogg-Saron)
