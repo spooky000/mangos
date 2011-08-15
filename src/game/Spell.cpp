@@ -2105,6 +2105,18 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 else
                     unMaxTargets = 1;
             }
+            // Brain Link (Yogg saron)
+            else if (m_spellInfo->Id == 63802)
+            {
+                for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
+                {
+                    next = itr;
+                    ++next;
+
+                    if (!(*itr)->GetTypeId() != TYPEID_PLAYER)
+                        targetUnitMap.erase(itr);
+                }
+            }
             // Lunatic Gaze (Yogg saron and laughing skulls)
             else if (m_spellInfo->Id == 64168 || m_spellInfo->Id == 64164)
             {
