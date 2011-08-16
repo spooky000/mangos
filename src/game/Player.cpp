@@ -1774,9 +1774,9 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     }
 
     // if we were on a transport, leave
-    if (!(options & TELE_TO_NOT_LEAVE_TRANSPORT) && GetTransport())
+    if (!(options & TELE_TO_NOT_LEAVE_TRANSPORT) && m_transport)
     {
-        GetTransport()->RemovePassenger(this);
+        m_transport->RemovePassenger(this);
         SetTransport(NULL);
         m_movementInfo.ClearTransportData();
     }
@@ -1796,7 +1796,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
     // reset movement flags at teleport, because player will continue move with these flags after teleport
     m_movementInfo.SetMovementFlags(MOVEFLAG_NONE);
 
-    if (GetMapId() == mapid && !GetTransport())
+    if (GetMapId() == mapid && !m_transport)
     {
         //lets reset far teleport flag if it wasn't reset during chained teleports
         SetSemaphoreTeleportFar(false);
@@ -1904,9 +1904,9 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
                 // send transfer packet to display load screen
                 WorldPacket data(SMSG_TRANSFER_PENDING, (4+4+4));
                 data << uint32(mapid);
-                if (GetTransport())
+                if (m_transport)
                 {
-                    data << uint32(GetTransport()->GetEntry());
+                    data << uint32(m_transport->GetEntry());
                     data << uint32(GetMapId());
                 }
                 GetSession()->SendPacket(&data);
@@ -1922,7 +1922,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
             float final_z = z;
             float final_o = orientation;
 
-            if (GetTransport())
+            if (m_transport)
             {
                 final_x += m_movementInfo.GetTransportPos()->x;
                 final_y += m_movementInfo.GetTransportPos()->y;
@@ -1944,7 +1944,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
                 // transfer finished, inform client to start load
                 WorldPacket data(SMSG_NEW_WORLD, (20));
                 data << uint32(mapid);
-                if (GetTransport())
+                if (m_transport)
                 {
                     data << float(m_movementInfo.GetTransportPos()->x);
                     data << float(m_movementInfo.GetTransportPos()->y);
@@ -6932,7 +6932,7 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
             pvpInfo.endTimer = time(0);                     // start toggle-off
     }
 
-    if(zone->flags & AREA_FLAG_SANCTUARY || (GetAreaId() == 4658))                   // in sanctuary and Argent Tournament Grounds
+    if(zone->flags & AREA_FLAG_SANCTUARY)                   // in sanctuary
     {
         SetByteFlag(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_SANCTUARY);
         if(sWorld.IsFFAPvPRealm())
@@ -7077,8 +7077,6 @@ void Player::DuelComplete(DuelCompleteType type)
     SetUInt32Value(PLAYER_DUEL_TEAM, 0);
     duel->opponent->SetGuidValue(PLAYER_DUEL_ARBITER, ObjectGuid());
     duel->opponent->SetUInt32Value(PLAYER_DUEL_TEAM, 0);
-    duel->opponent->RemoveArenaSpellCooldowns();
-    RemoveArenaSpellCooldowns();
 
     delete duel->opponent->duel;
     duel->opponent->duel = NULL;
@@ -7831,7 +7829,7 @@ void Player::CastItemCombatSpell(Unit* Target, WeaponAttackType attType)
                 else
                 {
                     // Deadly Poison, unique effect needs to be handled before casting triggered spell
-                    if (spellInfo->SpellFamilyName == SPELLFAMILY_ROGUE && spellInfo->SpellFamilyFlags & UI64LIT(0x10000))
+                    if (spellInfo->IsFitToFamily<SPELLFAMILY_ROGUE, CF_ROGUE_DEADLY_POISON>())
                         _HandleDeadlyPoison(Target, attType, spellInfo);
 
                     CastSpell(Target, spellInfo->Id, true, item);
@@ -17758,7 +17756,7 @@ void Player::SaveToDB()
     uberInsert.addFloat(finiteAlways(m_movementInfo.GetTransportPos()->y));
     uberInsert.addFloat(finiteAlways(m_movementInfo.GetTransportPos()->z));
     uberInsert.addFloat(finiteAlways(m_movementInfo.GetTransportPos()->o));
-    if (GetTransport())
+    if (m_transport)
         uberInsert.addUInt32(m_transport->GetGUIDLow());
     else
         uberInsert.addUInt32(0);
@@ -18826,8 +18824,16 @@ void Player::UpdateDuelFlag(time_t currTime)
 
 void Player::RemovePet(PetSaveMode mode)
 {
-    if (Pet* pet = GetPet())
-        pet->Unsummon(mode, this);
+    GroupPetList groupPets = GetPets();
+    if (!groupPets.empty())
+    {
+        for (GroupPetList::const_iterator itr = groupPets.begin(); itr != groupPets.end(); ++itr)
+             if (Pet* _pet = GetMap()->GetPet(*itr))
+                 _pet->Unsummon(mode, this);
+    }
+    else
+        if (Pet* pet = GetPet())
+            pet->Unsummon(mode, this);
 }
 
 void Player::BuildPlayerChat(WorldPacket *data, uint8 msgtype, const std::string& text, uint32 language) const
@@ -18917,6 +18923,9 @@ void Player::PetSpellInitialize()
 
     CharmInfo *charmInfo = pet->GetCharmInfo();
 
+    if (!charmInfo)
+        return;
+
     WorldPacket data(SMSG_PET_SPELLS, 8+2+4+4+4*MAX_UNIT_ACTION_BAR_INDEX+1+1);
     data << pet->GetObjectGuid();
     data << uint16(pet->GetCreatureInfo()->family);         // creature family (required for pet talents)
@@ -18977,13 +18986,14 @@ void Player::PetSpellInitialize()
 
 void Player::SendPetGUIDs()
 {
-    if (!GetPetGuid())
+    GroupPetList m_groupPets = GetPets();
+    if (m_groupPets.empty())
         return;
 
-    // Later this function might get modified for multiple guids
-    WorldPacket data(SMSG_PET_GUIDS, 12);
-    data << uint32(1);                      // count
-    data << ObjectGuid(GetPetGuid());
+    WorldPacket data(SMSG_PET_GUIDS, 4+8*m_groupPets.size());
+    data << uint32(m_groupPets.size());                      // count
+    for (GroupPetList::const_iterator itr = m_groupPets.begin(); itr != m_groupPets.end(); ++itr)
+        data << (*itr);
     GetSession()->SendPacket(&data);
 }
 
@@ -19161,20 +19171,12 @@ void Player::AddSpellMod(SpellModifier* mod, bool apply)
 
     for(int eff = 0; eff < 96; ++eff)
     {
-        uint64 _mask = 0;
-        uint32 _mask2= 0;
-
-        if (eff < 64)
-            _mask = uint64(1) << (eff - 0);
-        else
-            _mask2= uint32(1) << (eff - 64);
-
-        if (mod->mask.IsFitToFamilyMask(_mask, _mask2))
+        if (mod->mask.test(eff))
         {
             int32 val = 0;
             for (SpellModList::const_iterator itr = m_spellMods[mod->op].begin(); itr != m_spellMods[mod->op].end(); ++itr)
             {
-                if ((*itr)->type == mod->type && ((*itr)->mask.IsFitToFamilyMask(_mask, _mask2)))
+                if ((*itr)->type == mod->type && (*itr)->mask.test(eff))
                     val += (*itr)->value;
             }
             val += apply ? mod->value : -(mod->value);
@@ -19658,6 +19660,29 @@ void Player::ProhibitSpellSchool(SpellSchoolMask idSchoolMask, uint32 unTimeMs )
             AddSpellCooldown(unSpellId, 0, curTime + unTimeMs/IN_MILLISECONDS);
         }
     }
+    GetSession()->SendPacket(&data);
+}
+
+void Player::SendModifyCooldown( uint32 spell_id, int32 delta)
+{
+    SpellEntry const* spellInfo = sSpellStore.LookupEntry(spell_id);
+    if (!spellInfo)
+        return;
+
+    uint32 cooldown = GetSpellCooldownDelay(spell_id);
+    if (cooldown == 0 && delta < 0)
+        return;
+
+    int32 result = int32(cooldown * IN_MILLISECONDS + delta);
+    if (result < 0)
+        result = 0;
+
+    AddSpellCooldown(spell_id, 0, uint32(time(NULL) + int32(result / IN_MILLISECONDS)));
+
+    WorldPacket data(SMSG_MODIFY_COOLDOWN, 4 + 8 + 4);
+    data << uint32(spell_id);
+    data << GetObjectGuid();
+    data << int32(result > 0 ? delta : result - cooldown * IN_MILLISECONDS);
     GetSession()->SendPacket(&data);
 }
 
@@ -21437,9 +21462,8 @@ bool Player::CanNoReagentCast(SpellEntry const* spellInfo) const
         return true;
 
     // Check no reagent use mask
-    uint64 noReagentMask_0_1 = GetUInt64Value(PLAYER_NO_REAGENT_COST_1);
-    uint32 noReagentMask_2   = GetUInt32Value(PLAYER_NO_REAGENT_COST_1+2);
-    if (spellInfo->IsFitToFamilyMask(noReagentMask_0_1, noReagentMask_2))
+    ClassFamilyMask noReagentMask(GetUInt64Value(PLAYER_NO_REAGENT_COST_1), GetUInt32Value(PLAYER_NO_REAGENT_COST_1+2));
+    if (spellInfo->IsFitToFamilyMask(noReagentMask))
         return true;
 
     return false;
@@ -22858,14 +22882,14 @@ void Player::UpdateFallInformationIfNeed( MovementInfo const& minfo,uint16 opcod
         SetFallInformation(minfo.GetFallTime(), minfo.GetPos()->z);
 }
 
-void Player::UnsummonPetTemporaryIfAny()
+void Player::UnsummonPetTemporaryIfAny(bool full)
 {
     if(!IsInWorld() || !GetMap())
         return;
 
     Pet* minipet = GetMiniPet();
 
-    if (minipet)
+    if (full && minipet)
         minipet->Unsummon(PET_SAVE_AS_DELETED, this);
 
     Pet* pet = GetPet();
@@ -22876,12 +22900,13 @@ void Player::UnsummonPetTemporaryIfAny()
     GroupPetList m_groupPetsTmp = GetPets();  // Original list may be modified in this function
     for (GroupPetList::const_iterator itr = m_groupPetsTmp.begin(); itr != m_groupPetsTmp.end(); ++itr)
     {
-        if (Pet* _pet = ObjectAccessor::FindPet(*itr))
+        if (Pet* _pet = GetMap()->GetPet(*itr))
         {
             if (!_pet->isTemporarySummoned())
                 _pet->Unsummon(PET_SAVE_AS_CURRENT, this);
             else
-                _pet->Unsummon(PET_SAVE_NOT_IN_SLOT, this);
+                if (full)
+                    _pet->Unsummon(PET_SAVE_NOT_IN_SLOT, this);
         }
     }
 }

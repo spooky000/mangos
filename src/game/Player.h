@@ -1667,6 +1667,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         void RemoveSpellCooldown(uint32 spell_id, bool update = false);
         void RemoveSpellCategoryCooldown(uint32 cat, bool update = false);
         void SendClearCooldown( uint32 spell_id, Unit* target );
+        void SendModifyCooldown( uint32 spell_id, int32 delta);
 
         GlobalCooldownMgr& GetGlobalCooldownMgr() { return m_GlobalCooldownMgr; }
 
@@ -2264,7 +2265,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         // Temporarily removed pet cache
         uint32 GetTemporaryUnsummonedPetNumber() const { return m_temporaryUnsummonedPetNumber; }
         void SetTemporaryUnsummonedPetNumber(uint32 petnumber) { m_temporaryUnsummonedPetNumber = petnumber; }
-        void UnsummonPetTemporaryIfAny();
+        void UnsummonPetTemporaryIfAny(bool full = true);
         void ResummonPetTemporaryUnSummonedIfAny();
         bool IsPetNeedBeTemporaryUnsummoned() const { return !IsInWorld() || !isAlive() || IsMounted() /*+in flight*/; }
         KnownPetNames m_knownPetNames;

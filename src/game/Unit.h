@@ -979,7 +979,9 @@ class GlobalCooldownMgr                                     // Shared by Player 
 enum ActiveStates
 {
     ACT_PASSIVE  = 0x01,                                    // 0x01 - passive
+    ACT_CASTABLE = 0x80,                                    // 0x80 - castable
     ACT_DISABLED = 0x81,                                    // 0x80 - castable
+    ACT_ACTIVE   = 0xC0,                                    // 0x40 | 0x80 - auto cast + castable
     ACT_ENABLED  = 0xC1,                                    // 0x40 | 0x80 - auto cast + castable
     ACT_COMMAND  = 0x07,                                    // 0x01 | 0x02 | 0x04
     ACT_REACTION = 0x06,                                    // 0x02 | 0x04
@@ -1798,7 +1800,17 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         uint8 GetVisibleAurasCount() const { return m_visibleAuras.size(); }
 
         Aura* GetAura(uint32 spellId, SpellEffectIndex effindex);
-        Aura* GetAura(AuraType type, SpellFamily family, uint64 familyFlag, uint32 familyFlag2 = 0, ObjectGuid casterGuid = ObjectGuid());
+        Aura* GetAura(AuraType type, SpellFamily family, ClassFamilyMask const& classMask, ObjectGuid casterGuid = ObjectGuid());
+        Aura* GetAura(AuraType type, SpellFamily family, uint64 familyFlag, uint32 familyFlag2 = 0, ObjectGuid casterGuid = ObjectGuid())
+        {
+            return GetAura(type, family, ClassFamilyMask(familyFlag, familyFlag2), casterGuid);
+        }
+        template <AuraType type, SpellFamily family, CFM_ARGS_1>
+        Aura* GetAura(ObjectGuid casterGuid = ObjectGuid())
+        {
+            return GetAura(type, family, ClassFamilyMask::create<CFM_VALUES_1>(), casterGuid);
+        }
+
         SpellAuraHolder* GetSpellAuraHolder (uint32 spellid) const;
         SpellAuraHolder* GetSpellAuraHolder (uint32 spellid, ObjectGuid casterGUID) const;
 
@@ -1989,8 +2001,9 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void SendPetTalk (uint32 pettalk);
         void SendPetAIReaction();
         ///----------End of Pet responses methods----------
-        void DoPetAction (Player* owner, uint8 flag, uint32 spellid, ObjectGuid petGuid, ObjectGuid targetGuid);
-        void DoPetCastSpell (Player *owner, uint8 cast_count, SpellCastTargets* targets, SpellEntry const* spellInfo);
+        void DoPetAction(Player* owner, uint8 flag, uint32 spellid, ObjectGuid petGuid, ObjectGuid targetGuid);
+        void DoPetCastSpell(Player *owner, uint8 cast_count, SpellCastTargets* targets, SpellEntry const* spellInfo);
+        void DoPetCastSpell(Unit* target, uint32 spellId);
 
         void propagateSpeedChange() { GetMotionMaster()->propagateSpeedChange(); }
 
@@ -2192,8 +2205,8 @@ template<typename Func>
 bool Unit::CheckAllControlledUnits(Func const& func, uint32 controlledMask) const
 {
     if (controlledMask & CONTROLLED_PET)
-        for (GroupPetList::const_iterator itr = m_groupPets.begin(); itr != m_groupPets.end(); ++itr)
-           if (Pet* pet = _GetPet(*itr))
+        for (GroupPetList::const_iterator itr = m_groupPets.begin(); itr != m_groupPets.end();)
+           if (Pet const* pet = _GetPet(*(itr++)))
                if (func(pet))
                    return true;
 

@@ -282,7 +282,7 @@ void WorldSession::HandlePetSetAction(WorldPacket& recv_data)
                 else if (!m_groupPets->empty())
                 {
                     for (GroupPetList::const_iterator itr = m_groupPets->begin(); itr != m_groupPets->end(); ++itr)
-                        if (Pet* _pet = ObjectAccessor::FindPet(*itr))
+                        if (Pet* _pet = GetPlayer()->GetMap()->GetPet(*itr))
                             if ( _pet->IsInWorld())
                             {
                                 _pet->ToggleAutocast(spell_id, true);
@@ -297,7 +297,7 @@ void WorldSession::HandlePetSetAction(WorldPacket& recv_data)
                 else if (!m_groupPets->empty())
                 {
                     for (GroupPetList::const_iterator itr = m_groupPets->begin(); itr != m_groupPets->end(); ++itr)
-                        if (Pet* _pet = ObjectAccessor::FindPet(*itr))
+                        if (Pet* _pet = GetPlayer()->GetMap()->GetPet(*itr))
                             if ( _pet->IsInWorld())
                             {
                                 _pet->ToggleAutocast(spell_id, false);
@@ -496,6 +496,9 @@ void WorldSession::HandlePetCastSpellOpcode(WorldPacket& recvPacket)
     // do not cast not learned spells
     if (!pet->HasSpell(spellid) || IsPassiveSpell(spellInfo))
         return;
+
+    if (pet->IsNonMeleeSpellCasted(false))
+        pet->InterruptNonMeleeSpells(false);
 
     SpellCastTargets* targets = new SpellCastTargets;
 

@@ -169,8 +169,13 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
         passenger->SendMessageToSet(&data, true);
     }
 
-    if (m_pBase->GetEntry() == 28669) 
-        passenger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+    switch (m_pBase->GetEntry())
+    {
+        case 28669:
+        case 28817:
+            passenger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+            break;
+    }
 
     if (seat->second.seatInfo->m_flags & SEAT_FLAG_UNATTACKABLE || seat->second.seatInfo->m_flags & SEAT_FLAG_CAN_CONTROL)
     {
@@ -179,6 +184,7 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
         {
             case 33118:                  // Ignis slag pot
             case 32934:                  // Kologarn Right Arm
+            case 33983:                  // Constrictor tentacle (Yogg encounter)
                 break;
             default:
                 passenger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
@@ -301,8 +307,13 @@ void VehicleKit::RemovePassenger(Unit *passenger)
             ((Creature*)m_pBase)->AIM_Initialize();
     }
 
-    if (m_pBase->GetEntry() == 28669) 
-        passenger->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+    switch (m_pBase->GetEntry())
+    {
+        case 28669:
+        case 28817:
+            passenger->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+            break;
+    }
 
     if (passenger->GetTypeId() == TYPEID_PLAYER)
     {
