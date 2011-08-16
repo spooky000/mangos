@@ -1686,6 +1686,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 63795:                                 // Psychosis (Yogg-Saron)
                 case 63830:                                 // Malady of the Mind (Yogg-Saron)
                 case 64218:                                 // Overcharge
+                case 64174:                                 // Hodirs Protective Gaze (Yogg-saron)
                 case 64234:                                 // Gravity Bomb (25 man)
                 case 64465:                                 // Shadow Beacon
                 case 64531:                                 // Rapid Burst
@@ -2105,18 +2106,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 else
                     unMaxTargets = 1;
             }
-            // Brain Link (Yogg saron)
-            else if (m_spellInfo->Id == 63802)
-            {
-                for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
-                {
-                    next = itr;
-                    ++next;
-
-                    if (!(*itr)->GetTypeId() != TYPEID_PLAYER)
-                        targetUnitMap.erase(itr);
-                }
-            }
             // Lunatic Gaze (Yogg saron and laughing skulls)
             else if (m_spellInfo->Id == 64168 || m_spellInfo->Id == 64164)
             {
@@ -2132,8 +2121,9 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     }
                 }
             }
+            // Brain Link (Yogg saron)
             // Frozen blows (Hodir)
-            else if(m_spellInfo->Id == 64545 || m_spellInfo->Id == 64544)
+            else if(m_spellInfo->Id == 64545 || m_spellInfo->Id == 64544 || m_spellInfo->Id == 63802)
             {
                 for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
                 {
