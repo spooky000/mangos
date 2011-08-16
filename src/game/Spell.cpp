@@ -6238,6 +6238,23 @@ SpellCastResult Spell::CheckCast(bool strict)
 
                 break;
             }
+            case SPELL_AURA_MIRROR_IMAGE:
+            {
+                Unit* pTarget = m_targets.getUnitTarget();
+
+                // In case of TARGET_SCRIPT, we have already added a target. Use it here (and find a better solution)
+                if (m_UniqueTargetInfo.size() == 1)
+                    pTarget = m_caster->GetMap()->GetAnyTypeCreature(m_UniqueTargetInfo.front().targetGUID);
+
+                if (!pTarget)
+                    return SPELL_FAILED_BAD_TARGETS;
+
+                // It is assumed that target can not be cloned if already cloned by same or other clone auras
+                if (pTarget->HasAuraType(SPELL_AURA_MIRROR_IMAGE))
+                    return SPELL_FAILED_BAD_TARGETS;
+
+                break;
+            }
             default:
                 break;
         }

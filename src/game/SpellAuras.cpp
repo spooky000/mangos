@@ -9353,26 +9353,49 @@ void Aura::HandleAuraOpenStable(bool apply, bool Real)
     // client auto close stable dialog at !apply aura
 }
 
-void Aura::HandleAuraMirrorImage(bool Apply, bool Real)
+void Aura::HandleAuraMirrorImage(bool apply, bool Real)
 {
     if (!Real)
         return;
 
     Unit* target = GetTarget();
 
-    if (Apply)
+    if (!target)
+        return;
+
+    if (apply)
     {
         Unit* caster = GetCaster();
-        if (!caster)
-            return;
-        // Set display id
-        target->SetDisplayId(caster->GetDisplayId());
+        if (target->GetTypeId() == TYPEID_UNIT)
+        {
+            Creature* pCreature = (Creature*)target;
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 0, caster->getRace());
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 1, caster->getClass());
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 2, caster->getGender());
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 3, caster->getPowerType());
+        }
         target->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_CLONED);
+
+        target->SetDisplayId(caster->GetDisplayId());
     }
     else
     {
-        target->SetDisplayId(target->GetNativeDisplayId());
+        if (target->GetTypeId() == TYPEID_UNIT)
+        {
+            Creature* pCreature = (Creature*)target;
+
+            const CreatureInfo* cinfo = pCreature->GetCreatureInfo();
+            const CreatureModelInfo* minfo = sObjectMgr.GetCreatureModelInfo(pCreature->GetNativeDisplayId());
+
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 0, 0);
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 1, cinfo->unit_class);
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 2, minfo->gender);
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 3, 0);
+        }
+
         target->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_CLONED);
+
+        target->SetDisplayId(target->GetNativeDisplayId());
     }
 }
 
