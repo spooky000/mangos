@@ -1685,6 +1685,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 63713:                                 // Dominate Mind (Yogg-Saron)
                 case 63795:                                 // Psychosis (Yogg-Saron)
                 case 63830:                                 // Malady of the Mind (Yogg-Saron)
+                case 63881:                                 // Malady of the Mind Jump(Yogg-Saron)
                 case 64218:                                 // Overcharge
                 case 64174:                                 // Hodirs Protective Gaze (Yogg-saron)
                 case 64234:                                 // Gravity Bomb (25 man)
