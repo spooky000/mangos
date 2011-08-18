@@ -3116,31 +3116,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                         ((Creature*)m_caster)->ForcedDespawn(500);
                     return;
                 }
-
-                case 49319:                                 // Q:The Horse Hollerer
-                {
-                    if (m_caster->GetTypeId() != TYPEID_PLAYER)
-                        return;
-
-                    std::list<Creature*> creatureList;
-                    {
-                        MaNGOS::AnyUnitInPointRangeCheck go_check(m_caster, m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, 5); // 5 yards check
-                        MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInPointRangeCheck> go_search(creatureList, go_check);
-                        Cell::VisitAllObjects(unitTarget, go_search, 5);
-                    }
-
-                    if (!creatureList.empty())
-                    {
-                        uint8 m_counted = 0;
-                        for(std::list<Creature*>::iterator itr = creatureList.begin(); itr != creatureList.end(); ++itr)
-                            if ((*itr)->GetEntry() == 26472)
-                                ++m_counted; // Increment if found
-
-                        for(int i = 0; i < m_counted; ++i)
-                            ((Player*)m_caster)->KilledMonsterCredit(27221);
-                    }
-                    return;
-                }
                 case 49634:                                 // Q: Towers of Certain Doom
                 case 49625:
                 {
