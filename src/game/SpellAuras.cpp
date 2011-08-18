@@ -5888,11 +5888,15 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
                     if (!caster || !target)
                         return;
 
-                    // Haste buff (Slag Imbued)
+                    // Haste buff (Slag Imbued) and achievement completion
                     if (!apply)
                     {
                         target->ExitVehicle();
                         target->CastSpell(target, (spell->Id == 62717) ? 62836 : 63536, true);
+                        
+                        if (target->GetTypeId() == TYPEID_PLAYER)
+                            if (target->isAlive())
+                                ((Player*)target)->CompletedAchievement((spell->Id == 62717) ? 2927 : 2928);
                     }
 
                     break;
