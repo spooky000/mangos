@@ -5892,7 +5892,7 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
                     if (!apply)
                     {
                         target->ExitVehicle();
-                        target->CastSpell(caster, (spell->Id == 62717) ? 62836 : 63536, true);
+                        target->CastSpell(target, (spell->Id == 62717) ? 62836 : 63536, true);
                     }
 
                     break;
