@@ -5891,6 +5891,7 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
                     // Haste buff (Slag Imbued) and achievement completion
                     if (!apply)
                     {
+                        target->ApplySpellImmune(0, IMMUNITY_SCHOOL, SPELL_SCHOOL_MASK_FIRE, false);
                         target->ExitVehicle();
                         target->CastSpell(target, (spell->Id == 62717) ? 62836 : 63536, true);
                         
@@ -5898,6 +5899,7 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
                             if (target->isAlive())
                                 ((Player*)target)->CompletedAchievement((spell->Id == 62717) ? 2927 : 2928);
                     }
+                    else target->ApplySpellImmune(0, IMMUNITY_SCHOOL, SPELL_SCHOOL_MASK_FIRE, true);
 
                     break;
                 }
