@@ -2124,7 +2124,8 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
             }
             // Brain Link (Yogg saron)
             // Frozen blows (Hodir)
-            else if(m_spellInfo->Id == 64545 || m_spellInfo->Id == 64544 || m_spellInfo->Id == 63802)
+            // Sif Frostbolt Volley (Thorim)
+            else if(m_spellInfo->Id == 64545 || m_spellInfo->Id == 64544 || m_spellInfo->Id == 63802 || m_spellInfo->Id == 62580 || m_spellInfo->Id == 62604)
             {
                 for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
                 {
