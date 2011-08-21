@@ -1029,23 +1029,6 @@ namespace MaNGOS
             WorldObject const* i_fobj;
     };
 
-    class AnyDeadUnitRangeCheck
-    {
-        public:
-            explicit AnyDeadUnitRangeCheck(WorldObject const* fobj, float range) : i_fobj(fobj), i_range(range)  {}
-            WorldObject const& GetFocusObject() const { return *i_fobj; }
-            bool operator()(Unit* u)
-            {
-                if(!u->isAlive() && i_fobj->IsWithinDistInMap(u, i_range))
-                    return true;
-
-                return false;
-            }
-        private:
-            WorldObject const* i_fobj;
-            float i_range;
-    };
-
     class AnyStealthedCheck
     {
         public:
