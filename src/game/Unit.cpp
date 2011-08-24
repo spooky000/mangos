@@ -245,7 +245,8 @@ Unit::Unit() :
         m_auraModifiersGroup[i][NONSTACKING_PCT] = 0.0f;
         m_auraModifiersGroup[i][NONSTACKING_PCT_MINOR] = 0.0f;
     }
-                                                            // implement 50% base damage from offhand
+
+    // implement 50% base damage from offhand
     m_auraModifiersGroup[UNIT_MOD_DAMAGE_OFFHAND][TOTAL_PCT] = 0.5f;
 
     for (int i = 0; i < MAX_ATTACK; ++i)
@@ -3900,10 +3901,10 @@ bool Unit::IsNonMeleeSpellCasted(bool withDelayed, bool skipChanneled, bool skip
     if (m_currentSpells[CURRENT_GENERIC_SPELL] &&
         (m_currentSpells[CURRENT_GENERIC_SPELL]->getState() != SPELL_STATE_FINISHED) &&
         (withDelayed || m_currentSpells[CURRENT_GENERIC_SPELL]->getState() != SPELL_STATE_DELAYED))
-        {
-            if (!(m_currentSpells[CURRENT_GENERIC_SPELL]->m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_NOT_RESET_AUTOSHOT))
-                return(true);
-        }
+    {
+        if (!(m_currentSpells[CURRENT_GENERIC_SPELL]->m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_NOT_RESET_AUTOSHOT))
+            return true;
+    }
 
     // channeled spells may be delayed, but they are still considered casted
     else if (!skipChanneled && m_currentSpells[CURRENT_CHANNELED_SPELL] &&
@@ -4306,14 +4307,16 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
     // passive and persistent auras can stack with themselves any number of times
     if ((!holder->IsPassive() && !holder->IsPersistent()) || holder->IsAreaAura())
     {
-        SpellAuraHolderBounds spair = GetSpellAuraHolderBounds(aurSpellInfo->Id);
+        SpellAuraHolderMap tmpMap = GetSpellAuraHolderMap();
+        SpellAuraHolderBounds spair = tmpMap.equal_range(aurSpellInfo->Id);
 
         // take out same spell
         for (SpellAuraHolderMap::iterator iter = spair.first; iter != spair.second; ++iter)
         {
-            SpellAuraHolder *foundHolder = iter->second;
-            if (foundHolder->GetCasterGuid() == holder->GetCasterGuid() ||
-                foundHolder->GetCasterGuid().IsPet() && holder->GetCasterGuid().IsPet())
+            SpellAuraHolder* foundHolder = iter->second;
+            if (foundHolder && !foundHolder->IsDeleted() &&
+               (foundHolder->GetCasterGuid() == holder->GetCasterGuid() ||
+                foundHolder->GetCasterGuid().IsPet() && holder->GetCasterGuid().IsPet()))
             {
                 // Aura can stack on self -> Stack it;
                 if (aurSpellInfo->StackAmount)
@@ -6803,9 +6806,9 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
         return pdamage;
 
     // For totems get damage bonus from owner (statue isn't totem in fact)
-    if( GetTypeId()==TYPEID_UNIT && ((Creature*)this)->IsTotem() && ((Totem*)this)->GetTotemType()!=TOTEM_STATUE)
+    if ( GetTypeId()==TYPEID_UNIT && ((Creature*)this)->IsTotem() && ((Totem*)this)->GetTotemType()!=TOTEM_STATUE)
     {
-        if(Unit* owner = GetOwner())
+        if (Unit* owner = GetOwner())
             return owner->SpellDamageBonusDone(pVictim, spellProto, pdamage, damagetype);
     }
 
@@ -6813,22 +6816,29 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
     int32 DoneTotal = 0;
 
     // Creature damage
-    if( GetTypeId() == TYPEID_UNIT && !((Creature*)this)->IsPet() )
+    if ( GetTypeId() == TYPEID_UNIT && !((Creature*)this)->IsPet() )
         DoneTotalMod *= ((Creature*)this)->GetSpellDamageMod(((Creature*)this)->GetCreatureInfo()->rank);
 
     float nonStackingPos = 0.0f;
     float nonStackingNeg = 0.0f;
 
-    AuraList const& mModDamagePercentDone = GetAurasByType(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
+    AuraList const mModDamagePercentDone = GetAurasByType(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
     for(AuraList::const_iterator i = mModDamagePercentDone.begin(); i != mModDamagePercentDone.end(); ++i)
     {
-        if( ((*i)->GetModifier()->m_miscvalue & GetSpellSchoolMask(spellProto)) &&
+        if (!*i)
+            continue;
+
+        SpellAuraHolder* holder = (*i)->GetHolder();
+        if (!holder || holder->IsDeleted())
+            continue;
+
+        if ( ((*i)->GetModifier()->m_miscvalue & GetSpellSchoolMask(spellProto)) &&
             (*i)->GetSpellProto()->EquippedItemClass == -1 &&
                                                             // -1 == any item class (not wand then)
             (*i)->GetSpellProto()->EquippedItemInventoryTypeMask == 0 )
                                                             // 0 == any inventory type (not wand then)
         {
-             float calculatedBonus = (*i)->GetModifier()->m_amount;
+            float calculatedBonus = (*i)->GetModifier()->m_amount;
 
             // bonus stored in another auras basepoints
             if (calculatedBonus == 0)
@@ -10543,7 +10553,7 @@ void CharmInfo::SetSpellAutocast( uint32 spell_id, bool state )
 
 void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid petGuid, ObjectGuid targetGuid)
 {
-    if ((((Creature*)this)->IsPet() && !((Pet*)this)->IsInWorld()) || !GetCharmInfo())
+    if (GetTypeId() != TYPEID_UNIT || !IsInWorld() || (((Creature*)this)->IsPet() && !((Pet*)this)->IsInWorld()) || !GetCharmInfo())
         return;
 
     switch(flag)
@@ -10795,7 +10805,7 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
                 pet->SendPetAIReaction();
         }
 
-        if ( unit_target && !owner->IsFriendlyTo(unit_target) && !HasAuraType(SPELL_AURA_MOD_POSSESS))
+        if ( unit_target && owner && !owner->IsFriendlyTo(unit_target) && !HasAuraType(SPELL_AURA_MOD_POSSESS))
         {
             // This is true if pet has no target or has target but targets differs.
             if (getVictim() != unit_target)
