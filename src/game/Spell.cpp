@@ -8125,13 +8125,13 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
 
             break;
         }
-        case 48018:
-        case 60854:
+        case 48018: // Demonic Circle: Summon
+        case 60854: // Demonic Circle: Clear
         {
             targetUnitMap.push_back(m_caster);
             break;
         }
-        case 48743:
+        case 48743: // Death Pact
         {
             if (i != EFFECT_INDEX_1)
                 return false;

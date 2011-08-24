@@ -9670,19 +9670,20 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     m_caster->GetClosePoint(x, y, z, m_caster->GetObjectBoundingRadius(), PET_FOLLOW_DIST);
 
-                    if ( unitTarget != (Unit*)m_caster )
+                    if (unitTarget != (Unit*)m_caster)
                     {
-                        m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid());//, m_spellInfo);
-                        unitTarget->RemoveFromWorld();
+                        m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
+                        if (unitTarget->GetTypeId() == TYPEID_UNIT)
+                            ((Creature*)unitTarget)->RemoveCorpse();
                     }
                     else if (m_caster->HasAura(60200))
                     {
-                        m_caster->CastSpell(x,y,z,triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid());//, m_spellInfo);
+                        m_caster->CastSpell(x,y,z,triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
                     }
                     else  if (((Player*)m_caster)->HasItemCount(37201,1))
                     {
                         m_caster->CastSpell(m_caster,48289,true);
-                        m_caster->CastSpell(x,y,z,triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid());//, m_spellInfo);
+                        m_caster->CastSpell(x,y,z,triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
                     }
                     else
                     {
