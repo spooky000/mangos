@@ -10620,42 +10620,24 @@ void Spell::EffectSendTaxi(SpellEffectIndex eff_idx)
 }
 
 void Spell::EffectPlayerPull(SpellEffectIndex eff_idx)
-/*{
-    if (!unitTarget)
-        return;
-
-    float dist = unitTarget->GetDistance2d(m_caster);
-    if (damage && dist > damage)
-        dist = float(damage);
-
-    unitTarget->KnockBackFrom(m_caster,-dist,float(m_spellInfo->EffectMiscValue[eff_idx])/10);
-}*/
-
 {
     if( !unitTarget || !unitTarget->isAlive())
         return;
 
-    Unit * m_caster = GetCaster();
+    float speedZ = (float)(m_caster->CalculateSpellDamage(unitTarget, m_spellInfo, eff_idx) / 10);
+    float speedXY = (float)(m_spellInfo->EffectMiscValue[eff_idx]/10);
 
-    // calculate destination
-    float dist = unitTarget->GetDistance(m_caster);
-    float pullO = unitTarget->GetAngle(m_caster);
-    float pullX = unitTarget->GetPositionX() + dist * cosf(pullO);
-    float pullY = unitTarget->GetPositionY() + dist * sinf(pullO);
-    float pullZ = m_caster->GetPositionZ() + 0.3f;
-    uint32 time = uint32(dist * 42.0f);
+    float x,y,z;
+    if(m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
+    {
+        x = m_targets.m_destX;
+        y = m_targets.m_destY;
+        z = m_targets.m_destZ;
+    }
+    else
+        m_caster->GetPosition(x,y,z);
 
-    unitTarget->SetOrientation(pullO);
-
-    uint32 speed_z = (m_spellInfo->EffectMiscValue[eff_idx])/5;
-    if (!speed_z)
-        speed_z = 10;
-
-    /*uint32 time = m_spellInfo->EffectMiscValueB[eff_idx];
-    if (!time)
-        time = speed_z * 10;*/
-
-    unitTarget->MonsterMoveJump(pullX, pullY, pullZ, pullO, time, 1);
+        unitTarget->MonsterMoveJump(x, y, z, unitTarget->GetOrientation(), speedXY, speedZ);
 }
 
 void Spell::EffectDispelMechanic(SpellEffectIndex eff_idx)
