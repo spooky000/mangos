@@ -362,7 +362,7 @@ Spell::Spell( Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid o
     for(int i = 0; i < MAX_EFFECT_INDEX; ++i)
         m_currentBasePoints[i] = m_spellInfo->CalculateSimpleValue(SpellEffectIndex(i));
 
-    m_spellState = SPELL_STATE_NULL;
+    m_spellState = SPELL_STATE_PREPARING;
 
     m_castPositionX = m_castPositionY = m_castPositionZ = 0;
     m_TriggerSpells.clear();
@@ -393,12 +393,17 @@ Spell::Spell( Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid o
     // determine reflection
     m_canReflect = false;
 
+
     // AoE spells, spells with non-magic DmgClass or SchoolMask or with SPELL_ATTR_EX2_CANT_REFLECTED cannot be reflected
     if (m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC &&
         m_spellInfo->SchoolMask != SPELL_SCHOOL_MASK_NORMAL &&
         !(m_spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER && m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000000000000008)) &&
         !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_CANT_REFLECTED) &&                // Thunderstorm should be reflectable
         (!IsAreaOfEffectSpell(m_spellInfo) || (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN && m_spellInfo->SpellFamilyFlags & UI64LIT(0x00200000000000))))
+
+    m_spellFlags = SPELL_FLAG_NORMAL;
+
+    if(m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC && !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_CANT_REFLECTED))
     {
         for(int j = 0; j < MAX_EFFECT_INDEX; ++j)
         {
@@ -821,6 +826,9 @@ void Spell::AddUnitTarget(Unit* pVictim, SpellEffectIndex effIndex)
     // Check for effect immune skip if immuned
     bool immuned = pVictim->IsImmuneToSpellEffect(m_spellInfo, effIndex);
 
+    if (pVictim->GetTypeId() == TYPEID_UNIT && ((Creature*)pVictim)->IsTotem() && (m_spellFlags & SPELL_FLAG_REDIRECTED))
+        immuned = false;
+
     ObjectGuid targetGUID = pVictim->GetObjectGuid();
 
     // Lookup target in already in list
@@ -880,6 +888,8 @@ void Spell::AddUnitTarget(Unit* pVictim, SpellEffectIndex effIndex)
 
         // Increase time interval for reflected spells by 1.5
         target.timeDelay += target.timeDelay >> 1;
+
+        m_spellFlags |= SPELL_FLAG_REFLECTED;
     }
     else
         target.reflectResult = SPELL_MISS_NONE;
@@ -1058,7 +1068,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
     {
         if (target->reflectResult == SPELL_MISS_NONE)       // If reflected spell hit caster -> do all effect on him
         {
-            DoSpellHitOnUnit(m_caster, mask, true);
+            DoSpellHitOnUnit(m_caster, mask);
             unitTarget = m_caster;
         }
     }
@@ -1206,7 +1216,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
         ((Creature*)m_caster)->AI()->SpellHitTarget(unit, m_spellInfo);
 }
 
-void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask, bool isReflected)
+void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
 {
     if (!unit || !effectMask && !damage)
         return;
@@ -1395,7 +1405,7 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask, bool isReflected)
             if (duration > 0)
             {
                 int32 limitduration = GetDiminishingReturnsLimitDuration(m_diminishGroup, m_spellInfo);
-                unit->ApplyDiminishingToDuration(m_diminishGroup, duration, m_caster, m_diminishLevel, limitduration, isReflected);
+                unit->ApplyDiminishingToDuration(m_diminishGroup, duration, m_caster, m_diminishLevel, limitduration, m_spellFlags & SPELL_FLAG_REFLECTED);
 
                 // Fully diminished
                 if (duration == 0)
@@ -1685,9 +1695,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 63713:                                 // Dominate Mind (Yogg-Saron)
                 case 63795:                                 // Psychosis (Yogg-Saron)
                 case 63830:                                 // Malady of the Mind (Yogg-Saron)
-                case 63881:                                 // Malady of the Mind Jump(Yogg-Saron)
                 case 64218:                                 // Overcharge
-                case 64174:                                 // Hodirs Protective Gaze (Yogg-saron)
                 case 64234:                                 // Gravity Bomb (25 man)
                 case 64465:                                 // Shadow Beacon
                 case 64531:                                 // Rapid Burst
@@ -1743,7 +1751,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 30843:                                 // Enfeeble TODO: exclude top threat target from target selection
                 case 42005:                                 // Bloodboil TODO: need to be 5 targets(players) furthest away from caster
                 case 55665:                                 // Life Drain (h)
-                case 58917:                                 // Consume Minions
                 case 67076:                                 // Mistress' Kiss (Trial of the Crusader, ->
                 case 67078:                                 // -> Lord Jaraxxus encounter, 25 and 25 heroic)
                 case 67700:                                 // Penetrating Cold (25 man)
@@ -2035,6 +2042,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 if(Unit* pUnitTarget = m_caster->SelectMagnetTarget(m_targets.getUnitTarget(), this, effIndex))
                 {
                     m_targets.setUnitTarget(pUnitTarget);
+                    m_spellFlags |= SPELL_FLAG_REDIRECTED;
                     targetUnitMap.push_back(pUnitTarget);
                 }
             }
@@ -2108,6 +2116,18 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 else
                     unMaxTargets = 1;
             }
+            // Brain Link (Yogg saron)
+            else if (m_spellInfo->Id == 63802)
+            {
+                for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
+                {
+                    next = itr;
+                    ++next;
+
+                    if ((*itr)->GetTypeId() != TYPEID_PLAYER)
+                        targetUnitMap.erase(itr);
+                }
+            }
             // Lunatic Gaze (Yogg saron and laughing skulls)
             else if (m_spellInfo->Id == 64168 || m_spellInfo->Id == 64164)
             {
@@ -2123,10 +2143,8 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     }
                 }
             }
-            // Brain Link (Yogg saron)
             // Frozen blows (Hodir)
-            // Sif Frostbolt Volley (Thorim)
-            else if(m_spellInfo->Id == 64545 || m_spellInfo->Id == 64544 || m_spellInfo->Id == 63802 || m_spellInfo->Id == 62580 || m_spellInfo->Id == 62604)
+            else if(m_spellInfo->Id == 64545 || m_spellInfo->Id == 64544)
             {
                 for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
                 {
@@ -2732,6 +2750,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     if(Unit* pUnitTarget = m_caster->SelectMagnetTarget(m_targets.getUnitTarget(), this, effIndex))
                     {
                         m_targets.setUnitTarget(pUnitTarget);
+                        m_spellFlags |= SPELL_FLAG_REDIRECTED;
                         targetUnitMap.push_back(pUnitTarget);
                     }
                 }
@@ -2762,6 +2781,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
             if(Unit* pUnitTarget = m_caster->SelectMagnetTarget(m_targets.getUnitTarget(), this, effIndex))
             {
                 m_targets.setUnitTarget(pUnitTarget);
+                m_spellFlags |= SPELL_FLAG_REDIRECTED;
                 targetUnitMap.push_back(pUnitTarget);
             }
             break;
@@ -3435,13 +3455,18 @@ void Spell::cancel()
 
         case SPELL_STATE_CASTING:
         {
-            for(TargetList::const_iterator ihit = m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
+            for(TargetList::iterator ihit = m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
             {
                 if (ihit->missCondition == SPELL_MISS_NONE)
                 {
                     Unit* unit = m_caster->GetObjectGuid() == (*ihit).targetGUID ? m_caster : ObjectAccessor::GetUnit(*m_caster, ihit->targetGUID);
                     if (unit && unit->isAlive())
                         unit->RemoveAurasByCasterSpell(m_spellInfo->Id, m_caster->GetObjectGuid());
+
+                    // prevent other effects applying if spell is already interrupted
+                    // i.e. if effects have different targets and it was interrupted on one of them when 
+                    // haven't yet applied to another
+                    ihit->processed = true;
                 }
             }
 
@@ -3757,6 +3782,10 @@ void Spell::cast(bool skipCheck)
 
     InitializeDamageMultipliers();
 
+    Unit *procTarget = m_targets.getUnitTarget();
+    if (!procTarget)
+        procTarget = m_caster;
+
     // Okay, everything is prepared. Now we need to distinguish between immediate and evented delayed spells
     if (m_spellInfo->speed > 0.0f)
     {
@@ -3773,9 +3802,17 @@ void Spell::cast(bool skipCheck)
         m_immediateHandled = false;
         m_spellState = SPELL_STATE_DELAYED;
         SetDelayStart(0);
+
+        // on spell cast end proc, 
+        // critical hit related part is currently done on hit so proc there, 
+        // 0 damage since any damage based procs should be on hit
+        // 0 victim proc since there is no victim proc dependent on successfull cast for caster
+        m_caster->ProcDamageAndSpell(procTarget, m_procAttacker, 0, PROC_EX_CAST_END, 0, m_attackType, m_spellInfo);
     }
     else
     {
+        m_caster->ProcDamageAndSpell(procTarget, m_procAttacker, 0, PROC_EX_CAST_END, 0, m_attackType, m_spellInfo);
+
         // Immediate spell, no big deal
         handle_immediate();
     }
@@ -4070,21 +4107,17 @@ void Spell::update(uint32 difftime)
 
 void Spell::finish(bool ok)
 {
-    if(!m_caster)
+    if (!m_caster)
         return;
 
-    if(m_spellState == SPELL_STATE_FINISHED)
+    if (m_spellState == SPELL_STATE_FINISHED)
         return;
 
     m_spellState = SPELL_STATE_FINISHED;
 
     // other code related only to successfully finished spells
-    if(!ok)
+    if (!ok)
         return;
-
-    // remove spell mods
-    if (m_caster->GetTypeId() == TYPEID_PLAYER)
-        ((Player*)m_caster)->RemoveSpellMods(this);
 
     // handle SPELL_AURA_ADD_TARGET_TRIGGER auras
     Unit::AuraList const& targetTriggers = m_caster->GetAurasByType(SPELL_AURA_ADD_TARGET_TRIGGER);
@@ -5270,7 +5303,11 @@ SpellCastResult Spell::CheckCast(bool strict)
         }
 
         // totem immunity for channeled spells(needs to be before spell cast)
-        if (IsChanneledSpell(m_spellInfo) && target->GetTypeId() == TYPEID_UNIT && ((Creature*)target)->IsTotem())
+        // spell attribs for player channeled spells
+        if ((m_spellInfo->AttributesEx & SPELL_ATTR_EX_CHANNEL_TRACKING_TARGET)
+            && (m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_AFFECTED_BY_HASTE)
+            && target->GetTypeId() == TYPEID_UNIT 
+            && ((Creature*)target)->IsTotem())
             return SPELL_FAILED_IMMUNE;
 
         bool non_caster_target = target != m_caster && !IsSpellWithCasterSourceTargetsOnly(m_spellInfo);
@@ -6256,23 +6293,6 @@ SpellCastResult Spell::CheckCast(bool strict)
                     break;
 
                 if(m_targets.getUnitTarget()->getPowerType() != POWER_MANA)
-                    return SPELL_FAILED_BAD_TARGETS;
-
-                break;
-            }
-            case SPELL_AURA_MIRROR_IMAGE:
-            {
-                Unit* pTarget = m_targets.getUnitTarget();
-
-                // In case of TARGET_SCRIPT, we have already added a target. Use it here (and find a better solution)
-                if (m_UniqueTargetInfo.size() == 1)
-                    pTarget = m_caster->GetMap()->GetAnyTypeCreature(m_UniqueTargetInfo.front().targetGUID);
-
-                if (!pTarget)
-                    return SPELL_FAILED_BAD_TARGETS;
-
-                // It is assumed that target can not be cloned if already cloned by same or other clone auras
-                if (pTarget->HasAuraType(SPELL_AURA_MIRROR_IMAGE))
                     return SPELL_FAILED_BAD_TARGETS;
 
                 break;
@@ -7501,7 +7521,7 @@ bool Spell::CheckTarget( Unit* target, SpellEffectIndex eff )
             // player far away, maybe his corpse near?
             if(target != m_caster && !target->IsWithinLOSInMap(m_caster))
             {
-                if (m_targets.getCorpseTargetGuid())
+                if (!m_targets.getCorpseTargetGuid())
                     return false;
 
                 Corpse *corpse = m_caster->GetMap()->GetCorpse(m_targets.getCorpseTargetGuid());
@@ -8207,7 +8227,7 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
         }
         case 61999: // Raise ally
         {
-            WorldObject* result = FindCorpseUsing<MaNGOS::RaiseAllyObjectCheck>();
+            WorldObject* result = FindCorpseUsing <MaNGOS::RaiseAllyObjectCheck>  ();
             if (result)
                 targetUnitMap.push_back((Unit*)result);
             else

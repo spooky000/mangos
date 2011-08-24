@@ -297,7 +297,6 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
         SetPower(getPowerType(), GetMaxPower(getPowerType()));
     }
 
-    UpdateWalkMode(owner);
     AIM_Initialize();
 
     GetMap()->Add((Creature*)this);
@@ -3000,7 +2999,6 @@ bool Pet::Summon()
 
     SetHealth(GetMaxHealth());
     SetPower(getPowerType(), GetMaxPower(getPowerType()));
-    UpdateWalkMode(owner);
     AIM_Initialize();
 
     map->Add((Creature*)this);

@@ -611,12 +611,6 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                 }
                 break;
             }
-            case SPELLFAMILY_MAGE:
-                // remove Arcane Blast buffs at any non-Arcane Blast arcane damage spell.
-                // NOTE: it removed at hit instead cast because currently spell done-damage calculated at hit instead cast
-                if ((m_spellInfo->SchoolMask & SPELL_SCHOOL_MASK_ARCANE) && !m_spellInfo->SpellFamilyFlags.test<CF_MAGE_ARCANE_BLAST>())
-                    m_caster->RemoveAurasDueToSpell(36032); // Arcane Blast buff
-                break;
             case SPELLFAMILY_WARRIOR:
             {
                 // Bloodthirst
@@ -1027,7 +1021,7 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
             case SPELLFAMILY_DEATHKNIGHT:
             {
                 // Blood Boil - bonus for diseased targets
-                if (m_spellInfo->SpellFamilyFlags.test<CF_DEATHKNIGHT_BLOOD_BOIL>() && unitTarget->GetAura(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DEATHKNIGHT, ClassFamilyMask::create<CF_DEATHKNIGHT_FF_BP_ACTIVE>(), m_caster->GetObjectGuid()))
+                if (m_spellInfo->SpellFamilyFlags.test<CF_DEATHKNIGHT_BLOOD_BOIL>() && unitTarget->GetAura<SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DEATHKNIGHT, CF_DEATHKNIGHT_FF_BP_ACTIVE>(m_caster->GetObjectGuid()))
                 {
                     damage += damage / 2;
                     damage += int32(m_caster->GetTotalAttackPowerValue(BASE_ATTACK)* 0.035f);
@@ -2252,8 +2246,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     // Iron Dwarf Snapshot Credit
                     m_caster->CastSpell(m_caster, 48047, true, m_CastItem, NULL, unitTarget->GetObjectGuid());
-					//till someone implements way not getting credits on 1 target
-					((Creature*)unitTarget)->ForcedDespawn();
                     return;
                 }
                 case 48790:                                 // Neltharion's Flame
@@ -2528,7 +2520,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                         if (unitTarget->hasUnitState(UNIT_STAT_FOLLOW | UNIT_STAT_FOLLOW_MOVE))
                             unitTarget->GetMotionMaster()->MovementExpired();
 
-                        unitTarget->MonsterMove(pTargetDummy->GetPositionX(), pTargetDummy->GetPositionY(), pTargetDummy->GetPositionZ(), IN_MILLISECONDS);
+                        unitTarget->MonsterMoveWithSpeed(pTargetDummy->GetPositionX(), pTargetDummy->GetPositionY(), pTargetDummy->GetPositionZ(), 24.f);
 
                         // Add state to temporarily prevent follow
                         unitTarget->addUnitState(UNIT_STAT_ROOT);
@@ -2860,7 +2852,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                                 y = m_targets.m_destY;
                                 z = m_targets.m_destZ;
                                 //m_targets.m_dstPos.GetPosition(x, y, z);
-                                passenger->MonsterJump(x, y, z, passenger->GetOrientation(), 100, 10);
+                                passenger->MonsterMoveJump(x, y, z, passenger->GetOrientation(), 100, 10);
                             }
                         }
                     return;
@@ -2985,6 +2977,11 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     unitTarget->setFaction(190);            // Ambient (neutral)
                     unitTarget->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_OOC_NOT_ATTACKABLE);
+                    return;
+                }
+                case 64385:                                 // Spinning (from Unusual Compass)
+                {
+                    m_caster->SetFacingTo(frand(0, M_PI_F*2));
                     return;
                 }
                 case 64981:                                 // Summon Random Vanquished Tentacle
@@ -3118,6 +3115,31 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                         ((Creature*)m_caster)->ForcedDespawn(500);
                     return;
                 }
+
+                case 49319:                                 // Q:The Horse Hollerer
+                {
+                    if (m_caster->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    std::list<Creature*> creatureList;
+                    {
+                        MaNGOS::AnyUnitInPointRangeCheck go_check(m_caster, m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, 5); // 5 yards check
+                        MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInPointRangeCheck> go_search(creatureList, go_check);
+                        Cell::VisitAllObjects(unitTarget, go_search, 5);
+                    }
+
+                    if (!creatureList.empty())
+                    {
+                        uint8 m_counted = 0;
+                        for(std::list<Creature*>::iterator itr = creatureList.begin(); itr != creatureList.end(); ++itr)
+                            if ((*itr)->GetEntry() == 26472)
+                                ++m_counted; // Increment if found
+
+                        for(int i = 0; i < m_counted; ++i)
+                            ((Player*)m_caster)->KilledMonsterCredit(27221);
+                    }
+                    return;
+                }
                 case 49634:                                 // Q: Towers of Certain Doom
                 case 49625:
                 {
@@ -3203,11 +3225,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                             //caster->CastSpell(unitTarget, 63992, true);                                 // Teleport back to Main Room of Yogg Saron
                         }
                     }
-                    return;
-                }
-                case 64385:                                 // Spinning (from Unusual Compass)
-                {
-                    m_caster->SetFacingTo(frand(0, M_PI_F*2), true);
                     return;
                 }
                 case 67019:                                 // Flask of the North
@@ -3470,7 +3487,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 {
                     if (!unitTarget)
                         return;
-                    m_caster->CastSpell(unitTarget, 21887, true);// spell mod
+                    m_caster->CastSpell(unitTarget, 21887, true);   // spell mod
                     return;
                 }
                 // Last Stand
@@ -4367,6 +4384,12 @@ void Spell::EffectTriggerSpell(SpellEffectIndex effIndex)
             }
             return;
         }
+        // Coldflame (Lord Marrowgar - Icecrown Citadel) - have casting time 0.2s, must be casted with triggered=false
+        case 69147:
+        {
+            m_caster->CastSpell(m_caster, triggered_spell_id, false);
+            return;
+        }
     }
 
     // normal case
@@ -4450,7 +4473,20 @@ void Spell::EffectTriggerMissileSpell(SpellEffectIndex effect_idx)
         && m_spellInfo->Category == spellInfo->Category)
         ((Player*)m_caster)->RemoveSpellCooldown(spellInfo->Id);
 
-    m_caster->CastSpell(m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, spellInfo, true, m_CastItem, 0, m_originalCasterGUID);
+    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+        ((Player*)m_caster)->RemoveSpellCooldown(triggered_spell_id);
+
+    // Init dest coordinates
+    float x,y,z;
+    x = m_targets.m_destX;
+    y = m_targets.m_destY;
+    z = m_targets.m_destZ;
+
+    MaNGOS::NormalizeMapCoord(x);
+    MaNGOS::NormalizeMapCoord(y);
+    m_caster->UpdateGroundPositionZ(x,y,z);
+
+    m_caster->CastSpell(x, y, z, spellInfo, true, m_CastItem, 0, m_originalCasterGUID);
 }
 
 void Spell::EffectJump(SpellEffectIndex eff_idx)
@@ -4502,11 +4538,12 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
     uint32 speed_z = m_spellInfo->EffectMiscValue[eff_idx];
     if (!speed_z)
         speed_z = 10;
+
     uint32 time = m_spellInfo->EffectMiscValueB[eff_idx];
     if (!time)
         time = speed_z * 10;
 
-    m_caster->MonsterJump(x, y, z, o, time, speed_z);
+    m_caster->MonsterMoveJump(x, y, z, o, time, speed_z);
 }
 
 void Spell::EffectTeleportUnits(SpellEffectIndex eff_idx)
@@ -6028,11 +6065,8 @@ void Spell::EffectDistract(SpellEffectIndex /*eff_idx*/)
     if (unitTarget->hasUnitState(UNIT_STAT_CAN_NOT_REACT))
         return;
 
-    float angle = unitTarget->GetAngle(m_targets.m_destX, m_targets.m_destY);
-
+    unitTarget->SetFacingTo(unitTarget->GetAngle(m_targets.m_destX, m_targets.m_destY));
     unitTarget->clearUnitState(UNIT_STAT_MOVING);
-    unitTarget->SetOrientation(angle);
-    unitTarget->SendMonsterMove(unitTarget->GetPositionX(), unitTarget->GetPositionY(), unitTarget->GetPositionZ(), SPLINETYPE_FACINGANGLE, SPLINEFLAG_WALKMODE, 0, NULL, angle);
 
     if (unitTarget->GetTypeId() == TYPEID_UNIT)
         unitTarget->GetMotionMaster()->MoveDistract(damage * IN_MILLISECONDS);
@@ -6938,7 +6972,7 @@ void Spell::EffectWeaponDmg(SpellEffectIndex eff_idx)
             if(m_spellInfo->SpellVisual[0] == 12295 && m_spellInfo->SpellIconID == 1508)
             {
                 // Sunder Armor
-                Aura* sunder = unitTarget->GetAura(SPELL_AURA_MOD_RESISTANCE_PCT, SPELLFAMILY_WARRIOR, ClassFamilyMask::create<CF_WARRIOR_SUNDER_ARMOR>(), m_caster->GetObjectGuid());
+                Aura* sunder = unitTarget->GetAura<SPELL_AURA_MOD_RESISTANCE_PCT, SPELLFAMILY_WARRIOR, CF_WARRIOR_SUNDER_ARMOR>(m_caster->GetObjectGuid());
 
                 // Devastate bonus and sunder armor refresh
                 if (sunder)
@@ -8489,7 +8523,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                 // Glyph of Starfire
                 case 54846:
                 {
-                    if (Aura* aura = unitTarget->GetAura(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, ClassFamilyMask::create<CF_DRUID_MOONFIRE>(), m_caster->GetObjectGuid()))
+                    if (Aura* aura = unitTarget->GetAura<SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, CF_DRUID_MOONFIRE>(m_caster->GetObjectGuid()))
                     {
                         uint32 countMin = aura->GetAuraMaxDuration();
                         uint32 countMax = GetSpellMaxDuration(aura->GetSpellProto());
@@ -8592,29 +8626,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         unitTarget->CastSpell(unitTarget, 59314, true);
 
                     return;
-                }
-                case 58916:                                 // Gift of the Lich King
-                {
-                    if (!unitTarget || unitTarget->isAlive())
-                        return;
-
-                    m_caster->CastSpell(unitTarget, 58915, true);
-
-                    unitTarget->RemoveFromWorld();
-
-                    if (Unit* master = m_caster->GetCharmerOrOwner())
-                        master->CastSpell(master, 58987, true);
-                    return;
-                }
-                case 58917:                                 // Consume minions
-                {
-                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
-                        return;
-
-                    m_caster->CastSpell(unitTarget, 58919, true);
-                    return;
-                }
-                                                            // random spell learn instead placeholder
+                }                                           // random spell learn instead placeholder
                 case 60893:                                 // Northrend Alchemy Research
                 case 61177:                                 // Northrend Inscription Research
                 case 61288:                                 // Minor Inscription Research
@@ -8741,8 +8753,8 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!unitTarget || !m_caster)
                         return;
 
-                    unitTarget->EnterVehicle(m_caster->GetVehicleKit(), 1);
-                    m_caster->CastSpell(unitTarget, (m_spellInfo->Id == 62707) ? 62717 : 63477, true);
+                    unitTarget->CastSpell(m_caster, 62708, true); // Control Vehicle aura
+                    m_caster->CastSpell(unitTarget, (m_spellInfo->Id == 62707) ? 62717 : 63477, true); // DoT/Immunity
                     break;
                 }
                 case 63795:                                 // Psychosis nh (Ulduar - Yogg Saron)
@@ -8948,9 +8960,11 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     return;
                 }
                 case 68861:                                 // Consume Soul (ICC FoS: Bronjahm)
+                {
                     if (unitTarget)
                         unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
                     return;
+                }
                 case 69377:                                 // Fortitude
                 {
                     if (!unitTarget)
@@ -10297,77 +10311,28 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
 
     if( m_spellInfo->rangeIndex == 1)                       //self range
     {
-        TerrainInfo const* map = unitTarget->GetTerrain();
         float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
+
         //For glyph of blink
         if(m_caster->GetTypeId() == TYPEID_PLAYER)
             ((Player*)m_caster)->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RADIUS, dis, this);
 
-        // Start Info //
-        float cx,cy,cz;
-        float dx,dy,dz;
-        float angle = unitTarget->GetOrientation();
-        unitTarget->GetPosition(cx,cy,cz);
-          
-        //Check use of vmaps//
-        bool useVmap = false;
-        bool swapZone = true;
+        // before caster
+        float fx, fy, fz;
+        unitTarget->GetClosePoint(fx, fy, fz, unitTarget->GetObjectBoundingRadius(), dis);
+        float ox, oy, oz;
+        unitTarget->GetPosition(ox, oy, oz);
 
-        if (map->GetHeight(cx, cy, cz, false) < map->GetHeight(cx, cy, cz, true))
-            useVmap = true;
-
-        const float _dx = 0.5f * cos(angle);
-        const float _dy = 0.5f * sin(angle);
-        dx = cx;
-        dy = cy;
-
-        //Going foward 0.5f until max distance
-        for (float i=0.5f; i<dis; i+=0.5f)
+        float fx2, fy2, fz2;                                // getObjectHitPos overwrite last args in any result case
+        if(VMAP::VMapFactory::createOrGetVMapManager()->getObjectHitPos(unitTarget->GetMapId(), ox,oy,oz+0.5f, fx,fy,oz+0.5f,fx2,fy2,fz2, -0.5f))
         {
-            //unitTarget->GetNearPoint2D(dx,dy,i,angle);
-            dx += _dx;
-            dy += _dy;
-            MaNGOS::NormalizeMapCoord(dx);
-            MaNGOS::NormalizeMapCoord(dy);
-            dz = cz;
-             
-            //Prevent climbing and go around object maybe 2.0f is to small? use 3.0f?
-            if (map->IsNextZcoordOK(dx, dy, dz, 3.0f) && (unitTarget->IsWithinLOS(dx, dy, dz)))
-            {
-                //No climb, the z differenze between this and prev step is ok. Store this destination for future use or check.
-                cx = dx;
-                cy = dy;
-                unitTarget->UpdateGroundPositionZ(cx, cy, cz, 3.0f);
-            }
-            else
-            {
-                //Something wrong with los or z differenze... maybe we are going from outer world inside a building or viceversa
-                if(swapZone)
-                {
-                    //so... change use of vamp and go back 1 step backward and recheck again.
-                    swapZone = false;
-                    useVmap = !useVmap;
-                    //i-=0.5f;
-                    --i;
-                    dx -= _dx;
-                    dy -= _dy;
-                }
-                else
-                {
-                    //bad recheck result... so break this and use last good coord for teleport player...
-                    dz += 0.5f;
-                    break;
-                }
-            }
+            fx = fx2;
+            fy = fy2;
+            fz = fz2;
+            unitTarget->UpdateAllowedPositionZ(fx, fy, fz);
         }
 
-        //Prevent Falling during swap building/outerspace
-        unitTarget->UpdateGroundPositionZ(cx, cy, cz);
-
-        if(unitTarget->GetTypeId() == TYPEID_PLAYER)
-            ((Player*)unitTarget)->TeleportTo(map->GetMapId(), cx, cy, cz, unitTarget->GetOrientation(), TELE_TO_NOT_LEAVE_COMBAT | TELE_TO_NOT_UNSUMMON_PET | (unitTarget==m_caster ? TELE_TO_SPELL : 0));
-        else
-            unitTarget->GetMap()->CreatureRelocation((Creature*)unitTarget, cx, cy, cz, unitTarget->GetOrientation());
+        unitTarget->NearTeleportTo(fx, fy, fz, unitTarget->GetOrientation(), unitTarget == m_caster);
     }
 }
 
@@ -10492,8 +10457,11 @@ void Spell::EffectCharge(SpellEffectIndex /*eff_idx*/)
     if (!unitTarget)
         return;
 
+    //TODO: research more ContactPoint/attack distance.
+    //3.666666 instead of ATTACK_DISTANCE(5.0f) in below seem to give more accurate result.
+
     float x, y, z;
-    unitTarget->GetContactPoint(m_caster, x, y, z, 1.5f);
+    unitTarget->GetContactPoint(m_caster, x, y, z, 3.666666f);
 
     // Try to normalize Z coord cuz GetContactPoint do nothing with Z axis
     unitTarget->UpdateGroundPositionZ(x, y, z, 7.0f);
@@ -10502,7 +10470,7 @@ void Spell::EffectCharge(SpellEffectIndex /*eff_idx*/)
         ((Creature *)unitTarget)->StopMoving();
 
     // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
-    m_caster->MonsterMove(x, y, z, 1);
+    m_caster->MonsterMoveWithSpeed(x, y, z, 24.f);
 
     // not all charge effects used in negative spells
     if (unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
@@ -10526,7 +10494,7 @@ void Spell::EffectCharge2(SpellEffectIndex /*eff_idx*/)
             ((Creature *)unitTarget)->StopMoving();
     }
     else if (unitTarget && unitTarget != m_caster)
-        unitTarget->GetContactPoint(m_caster, x, y, z, 1.5f);
+        unitTarget->GetContactPoint(m_caster, x, y, z, 3.666666f);
     else
         return;
 
@@ -10534,7 +10502,7 @@ void Spell::EffectCharge2(SpellEffectIndex /*eff_idx*/)
     unitTarget->UpdateGroundPositionZ(x, y, z, 7.0f);
 
     // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
-    m_caster->MonsterMove(x, y, z, 1);
+    m_caster->MonsterMoveWithSpeed(x, y, z, 24.f);
 
     // not all charge effects used in negative spells
     if (unitTarget && unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
@@ -10615,26 +10583,30 @@ void Spell::EffectKnockBack(SpellEffectIndex eff_idx)
     if (unitTarget->GetObjectGuid().IsVehicle())
         return;
 
+    // Can't knockback unit underwater
+    if (unitTarget->IsInWater())
+        return;
+
     // Can't knockback rooted target
     if (unitTarget->hasUnitState(UNIT_STAT_ROOT))
         return;
 
     // Typhoon
-    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_DRUID && m_spellInfo->SpellFamilyFlags & UI64LIT(0x100000000000000) )
+    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_DRUID && m_spellInfo->SpellFamilyFlags.test<CF_DRUID_TYPHOON>())
         if (m_caster->HasAura(62135))         // Glyph of Typhoon
             return;
 
     // Thunderstorm
-    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN && m_spellInfo->SpellFamilyFlags & UI64LIT(0x00200000000000))
+    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN && m_spellInfo->SpellFamilyFlags.test<CF_SHAMAN_THUNDERSTORM>())
         if (m_caster->HasAura(62132))         // Glyph of Thunderstorm
             return;
 
     // Blast Wave
-    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_MAGE && m_spellInfo->SpellFamilyFlags & UI64LIT(0x0004000000000))
+    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_MAGE && m_spellInfo->SpellFamilyFlags.test<CF_MAGE_BLAST_WAVE2, CF_MAGE_BLAST_WAVE1>())
         if (m_caster->HasAura(62126))         // Glyph of Blast Wave
             return;
 
-    unitTarget->KnockBackFrom(m_caster,float(m_spellInfo->EffectMiscValue[eff_idx])/10,float(damage)/10);
+    unitTarget->KnockBackFrom(m_caster,float(m_spellInfo->EffectMiscValue[eff_idx])/5,float(damage)/10);
 }
 
 void Spell::EffectSendTaxi(SpellEffectIndex eff_idx)
@@ -10646,6 +10618,17 @@ void Spell::EffectSendTaxi(SpellEffectIndex eff_idx)
 }
 
 void Spell::EffectPlayerPull(SpellEffectIndex eff_idx)
+/*{
+    if (!unitTarget)
+        return;
+
+    float dist = unitTarget->GetDistance2d(m_caster);
+    if (damage && dist > damage)
+        dist = float(damage);
+
+    unitTarget->KnockBackFrom(m_caster,-dist,float(m_spellInfo->EffectMiscValue[eff_idx])/10);
+}*/
+
 {
     if( !unitTarget || !unitTarget->isAlive())
         return;
@@ -10657,7 +10640,7 @@ void Spell::EffectPlayerPull(SpellEffectIndex eff_idx)
     float pullO = unitTarget->GetAngle(m_caster);
     float pullX = unitTarget->GetPositionX() + dist * cosf(pullO);
     float pullY = unitTarget->GetPositionY() + dist * sinf(pullO);
-    float pullZ = unitTarget->GetPositionZ() + 0.3f;
+    float pullZ = m_caster->GetPositionZ() + 0.3f;
     uint32 time = uint32(dist * 42.0f);
 
     unitTarget->SetOrientation(pullO);
@@ -10666,7 +10649,11 @@ void Spell::EffectPlayerPull(SpellEffectIndex eff_idx)
     if (!speed_z)
         speed_z = 10;
 
-    unitTarget->MonsterJump(pullX, pullY, pullZ, pullO, time, speed_z);
+    /*uint32 time = m_spellInfo->EffectMiscValueB[eff_idx];
+    if (!time)
+        time = speed_z * 10;*/
+
+    unitTarget->MonsterMoveJump(pullX, pullY, pullZ, pullO, time, 1);
 }
 
 void Spell::EffectDispelMechanic(SpellEffectIndex eff_idx)
@@ -10858,34 +10845,47 @@ void Spell::EffectTransmitted(SpellEffectIndex eff_idx)
         float max_dis = GetSpellMaxRange(sSpellRangeStore.LookupEntry(m_spellInfo->rangeIndex));
         float dis = rand_norm_f() * (max_dis - min_dis) + min_dis;
 
-        m_caster->GetClosePoint(fx, fy, fz, DEFAULT_WORLD_OBJECT_SIZE, dis);
+        // special code for fishing bobber (TARGET_SELF_FISHING), should not try to avoid objects
+        // nor try to find ground level, but randomly vary in angle
+        if (goinfo->type == GAMEOBJECT_TYPE_FISHINGNODE)
+        {
+            // calculate angle variation for roughly equal dimensions of target area
+            float max_angle = (max_dis - min_dis)/(max_dis + m_caster->GetObjectBoundingRadius());
+            float angle_offset = max_angle * (rand_norm_f() - 0.5f);
+            m_caster->GetNearPoint2D(fx, fy, dis, m_caster->GetOrientation() + angle_offset);
+
+            GridMapLiquidData liqData;
+            if (!m_caster->GetTerrain()->IsInWater(fx, fy, m_caster->GetPositionZ() + 1.f, &liqData))
+            {
+                SendCastResult(SPELL_FAILED_NOT_FISHABLE);
+                SendChannelUpdate(0);
+                return;
+            }
+
+            fz = liqData.level;
+            // finally, check LoS
+            if (!m_caster->IsWithinLOS(fx, fy, fz))
+            {
+                SendCastResult(SPELL_FAILED_LINE_OF_SIGHT);
+                SendChannelUpdate(0);
+                return;
+            }
+        }
+        else
+            m_caster->GetClosePoint(fx, fy, fz, DEFAULT_WORLD_OBJECT_SIZE, dis);
     }
 
     Map *cMap = m_caster->GetMap();
 
-    if (goinfo->type==GAMEOBJECT_TYPE_FISHINGNODE)
-    {
-        GridMapLiquidData liqData;
-        if ( !m_caster->GetTerrain()->IsInWater(fx, fy, fz + 1.f/* -0.5f */, &liqData))             // Hack to prevent fishing bobber from failing to land on fishing hole
-        { // but this is not proper, we really need to ignore not materialized objects
-            SendCastResult(SPELL_FAILED_NOT_HERE);
-            SendChannelUpdate(0);
-            return;
-        }
-
-        // replace by water level in this case
-        // fz = cMap->GetWaterLevel(fx, fy);
-        fz = liqData.level;
-    }
     // if gameobject is summoning object, it should be spawned right on caster's position
-    else if (goinfo->type==GAMEOBJECT_TYPE_SUMMONING_RITUAL)
+    if (goinfo->type==GAMEOBJECT_TYPE_SUMMONING_RITUAL)
     {
         m_caster->GetPosition(fx, fy, fz);
     }
 
     GameObject* pGameObj = new GameObject;
 
-    if (!pGameObj->Create(m_caster->GetMap()->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT), name_id, cMap,
+    if (!pGameObj->Create(cMap->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT), name_id, cMap,
         m_caster->GetPhaseMask(), fx, fy, fz, m_caster->GetOrientation(), 0.0f, 0.0f, 0.0f, 0.0f, GO_ANIMPROGRESS_DEFAULT, GO_STATE_READY))
     {
         delete pGameObj;

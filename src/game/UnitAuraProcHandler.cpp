@@ -128,7 +128,7 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
     &Unit::HandleNULLProc,                                  // 93 SPELL_AURA_MOD_UNATTACKABLE
     &Unit::HandleNULLProc,                                  // 94 SPELL_AURA_INTERRUPT_REGEN
     &Unit::HandleNULLProc,                                  // 95 SPELL_AURA_GHOST
-    &Unit::HandleNULLProc,                                  // 96 SPELL_AURA_SPELL_MAGNET
+    &Unit::HandleSpellMagnetAuraProc,                       // 96 SPELL_AURA_SPELL_MAGNET
     &Unit::HandleManaShieldAuraProc,                        // 97 SPELL_AURA_MANA_SHIELD
     &Unit::HandleNULLProc,                                  // 98 SPELL_AURA_MOD_SKILL_TALENT
     &Unit::HandleNULLProc,                                  // 99 SPELL_AURA_MOD_ATTACK_POWER
@@ -2803,17 +2803,11 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                         return SPELL_AURA_PROC_FAILED;
                 }
 
-                // TODO: exist special flag in spell attributes for this, need found and use!
-                SpellModifier *modBonusDmg = new SpellModifier(SPELLMOD_SPELL_BONUS_DAMAGE, SPELLMOD_PCT, -50, triggeredByAura);
-                ((Player*)this)->AddSpellMod(modBonusDmg, true);
-
                 // Remove cooldown (Chain Lightning - have Category Recovery time)
                 if (procSpell->SpellFamilyFlags.test<CF_SHAMAN_CHAIN_LIGHTNING>())
                     ((Player*)this)->RemoveSpellCooldown(spellId);
 
                 CastSpell(pVictim, spellId, true, castItem, triggeredByAura);
-
-                ((Player*)this)->AddSpellMod(modBonusDmg, false);
 
                 if (cooldown && GetTypeId() == TYPEID_PLAYER)
                     ((Player*)this)->AddSpellCooldown(dummySpell->Id, 0, time(NULL) + cooldown);
@@ -4268,9 +4262,6 @@ SpellAuraProcResult Unit::HandleMendingAuraProc( Unit* /*pVictim*/, uint32 /*dam
     // jumps
     int32 jumps = triggeredByAura->GetHolder()->GetAuraCharges()-1;
 
-    // current aura expire
-    triggeredByAura->GetHolder()->SetAuraCharges(1);             // will removed at next charges decrease
-
     // next target selection
     if (jumps > 0 && GetTypeId()==TYPEID_PLAYER && caster_guid.IsPlayer())
     {
@@ -4282,27 +4273,36 @@ SpellAuraProcResult Unit::HandleMendingAuraProc( Unit* /*pVictim*/, uint32 /*dam
 
         if(Player* caster = ((Player*)triggeredByAura->GetCaster()))
         {
-            caster->ApplySpellMod(spellProto->Id, SPELLMOD_RADIUS, radius,NULL);
+            caster->ApplySpellMod(spellProto->Id, SPELLMOD_RADIUS, radius, NULL);
 
             if(Player* target = ((Player*)this)->GetNextRandomRaidMember(radius))
             {
-                // aura will applied from caster, but spell casted from current aura holder
-                SpellModifier *mod = new SpellModifier(SPELLMOD_CHARGES,SPELLMOD_FLAT,jumps-5,spellProto->Id,spellProto->SpellFamilyFlags);
+                SpellAuraHolder *holder = GetSpellAuraHolder(spellProto->Id, caster->GetObjectGuid());
+                SpellAuraHolder *new_holder = CreateSpellAuraHolder(spellProto, target, caster);
 
-                // remove before apply next (locked against deleted)
+                for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+                {
+                    Aura *aur = holder->GetAuraByEffectIndex(SpellEffectIndex(i));
+                    if (!aur)
+                        continue;
+
+                    int32 basePoints = aur->GetBasePoints();
+                    Aura * new_aur = CreateAura(spellProto, aur->GetEffIndex(), &basePoints, new_holder, target, caster);
+                    new_holder->AddAura(new_aur, new_aur->GetEffIndex());
+                }
+                new_holder->SetAuraCharges(jumps, false);
+
+                // lock aura holder (currently SPELL_AURA_PRAYER_OF_MENDING is single target spell, so will attempt removing from old target
+                // when applied to new one)
                 triggeredByAura->SetInUse(true);
-                RemoveAurasByCasterSpell(spellProto->Id,caster->GetObjectGuid());
-
-                caster->AddSpellMod(mod, true);
-                CastCustomSpell(target, spellProto->Id, &heal, NULL, NULL, true, NULL, triggeredByAura, caster->GetObjectGuid());
-                caster->AddSpellMod(mod, false);
+                target->AddSpellAuraHolder(new_holder);
                 triggeredByAura->SetInUse(false);
             }
         }
     }
 
     // heal
-    CastCustomSpell(this,33110,&heal,NULL,NULL,true,NULL,NULL,caster_guid);
+    CastCustomSpell(this,33110,&heal,NULL,NULL,true,NULL,NULL,caster_guid, spellProto);
     return SPELL_AURA_PROC_OK;
 }
 
@@ -4389,6 +4389,8 @@ SpellAuraProcResult Unit::HandleAddFlatModifierAuraProc(Unit* pVictim, uint32 /*
             CastCustomSpell(pVictim, 68055, &bp, NULL, NULL, true, NULL, triggeredByAura);
             break;
         }
+        default:
+            break;
     }
 
     return SPELL_AURA_PROC_OK;
@@ -4591,13 +4593,13 @@ SpellAuraProcResult Unit::HandleRemoveByDamageChanceProc(Unit* pVictim, uint32 d
 {
     switch (triggeredByAura->GetSpellProto()->Id)
     {
+        case 23694:                               // Improved Hamstring
+        case 58373:                               // Glyph of Hamstring
+        case 61969:                               // Flash Freeze (Hodir)
         case 62283:                               // Iron Roots (Freya)
         case 62930:
         case 62438:
         case 62861:
-        case 58373:                               // Glyph of Hamstring
-        case 23694:                               // Improved Hamstring
-        case 61969:                               // Flash Freeze (Hodir)
         case 62469:                               // Freeze (Hodir)
         // don't remove
             return SPELL_AURA_PROC_CANT_TRIGGER;
@@ -4617,7 +4619,32 @@ SpellAuraProcResult Unit::HandleRemoveByDamageChanceProc(Unit* pVictim, uint32 d
             triggeredByAura->GetModifier()->m_amount = (damageLeft-damage);
     }
 
+    // The chance to dispel an aura depends on the damage taken with respect to the casters level.
+    uint32 max_dmg = getLevel() > 8 ? 25 * getLevel() - 150 : 50;
+    float chance = float(damage) / max_dmg * 100.0f;
+    if (roll_chance_f(chance))
+    {
+        triggeredByAura->SetInUse(true);
+        RemoveAurasByCasterSpell(triggeredByAura->GetId(), triggeredByAura->GetCasterGuid());
+        triggeredByAura->SetInUse(false);
+        return SPELL_AURA_PROC_OK;
+    }
+
     return SPELL_AURA_PROC_FAILED;
+}
+
+SpellAuraProcResult Unit::HandleSpellMagnetAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown)
+{
+    if (triggeredByAura->GetId() == 8178)                   // Grounding Totem Effect
+    {
+        // for spells that doesn't do damage but need to destroy totem anyway
+        if ((!damage || damage < GetHealth()) && GetTypeId() == TYPEID_UNIT && ((Creature*)this)->IsTotem())
+        {
+            DealDamage(this, GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+            return SPELL_AURA_PROC_OK;
+        }
+    }
+    return SPELL_AURA_PROC_OK;
 }
 
 SpellAuraProcResult Unit::HandleManaShieldAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const * procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown)
