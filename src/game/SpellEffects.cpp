@@ -4122,11 +4122,13 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
             }
             else if (m_spellInfo->Id == 49560)
             {
-                if (!unitTarget)
+                if (!unitTarget || unitTarget == m_caster)
                     return;
 
                 uint32 spellId = m_spellInfo->CalculateSimpleValue(EFFECT_INDEX_0);
-                unitTarget->CastSpell(m_caster->GetPositionX(), m_caster->GetPositionY(), m_caster->GetPositionZ(), spellId, true);
+                float dest_x, dest_y;
+                m_caster->GetNearPoint2D(dest_x, dest_y, m_caster->GetObjectBoundingRadius() + unitTarget->GetObjectBoundingRadius(), m_caster->GetOrientation());
+                unitTarget->CastSpell(dest_x, dest_y, m_caster->GetPositionZ()+0.5f, spellId, true,NULL,NULL,m_caster->GetObjectGuid(),m_spellInfo);
                 return;
             }
             // Corpse Explosion. Execute for Effect1 only
