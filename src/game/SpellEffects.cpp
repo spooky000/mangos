@@ -4535,15 +4535,15 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
         return;
     }
 
-    float speed_z = (m_spellInfo->EffectMiscValue[eff_idx] / 10);
+    int32 speed_z = m_spellInfo->EffectMiscValue[eff_idx];
     if (!speed_z)
-        speed_z = 1;
+        speed_z = 5;
 
-    uint32 time = m_spellInfo->EffectMiscValueB[eff_idx];
-    if (!time)
-        time = speed_z * 10;
+    int32 speed_xy = m_spellInfo->EffectMiscValueB[eff_idx];
+    if (!speed_xy)
+        speed_xy = 150;
 
-    m_caster->MonsterMoveJump(x, y, z, o, time, speed_z);
+    m_caster->MonsterMoveJump(x, y, z, o, float(speed_xy) / 2, float(speed_z) / 10);
 }
 
 void Spell::EffectTeleportUnits(SpellEffectIndex eff_idx)
@@ -10470,7 +10470,7 @@ void Spell::EffectCharge(SpellEffectIndex /*eff_idx*/)
         ((Creature *)unitTarget)->StopMoving();
 
     // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
-    m_caster->MonsterMoveWithSpeed(x, y, z, 70.f);
+    m_caster->MonsterMoveWithSpeed(x, y, z, 100.f);
 
     // not all charge effects used in negative spells
     if (unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
@@ -10502,7 +10502,7 @@ void Spell::EffectCharge2(SpellEffectIndex /*eff_idx*/)
     unitTarget->UpdateGroundPositionZ(x, y, z, 7.0f);
 
     // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
-    m_caster->MonsterMoveWithSpeed(x, y, z, 70.f);
+    m_caster->MonsterMoveWithSpeed(x, y, z, 100.f);
 
     // not all charge effects used in negative spells
     if (unitTarget && unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
