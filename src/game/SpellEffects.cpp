@@ -4535,9 +4535,9 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
         return;
     }
 
-    uint32 speed_z = m_spellInfo->EffectMiscValue[eff_idx];
+    float speed_z = (m_spellInfo->EffectMiscValue[eff_idx] / 10);
     if (!speed_z)
-        speed_z = 10;
+        speed_z = 1;
 
     uint32 time = m_spellInfo->EffectMiscValueB[eff_idx];
     if (!time)
@@ -10461,7 +10461,7 @@ void Spell::EffectCharge(SpellEffectIndex /*eff_idx*/)
     //3.666666 instead of ATTACK_DISTANCE(5.0f) in below seem to give more accurate result.
 
     float x, y, z;
-    unitTarget->GetContactPoint(m_caster, x, y, z, 3.666666f);
+    unitTarget->GetContactPoint(m_caster, x, y, z, 1.5f);
 
     // Try to normalize Z coord cuz GetContactPoint do nothing with Z axis
     unitTarget->UpdateGroundPositionZ(x, y, z, 7.0f);
@@ -10470,7 +10470,7 @@ void Spell::EffectCharge(SpellEffectIndex /*eff_idx*/)
         ((Creature *)unitTarget)->StopMoving();
 
     // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
-    m_caster->MonsterMoveWithSpeed(x, y, z, 24.f);
+    m_caster->MonsterMoveWithSpeed(x, y, z, 70.f);
 
     // not all charge effects used in negative spells
     if (unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
@@ -10494,7 +10494,7 @@ void Spell::EffectCharge2(SpellEffectIndex /*eff_idx*/)
             ((Creature *)unitTarget)->StopMoving();
     }
     else if (unitTarget && unitTarget != m_caster)
-        unitTarget->GetContactPoint(m_caster, x, y, z, 3.666666f);
+        unitTarget->GetContactPoint(m_caster, x, y, z, 1.5f);
     else
         return;
 
@@ -10502,7 +10502,7 @@ void Spell::EffectCharge2(SpellEffectIndex /*eff_idx*/)
     unitTarget->UpdateGroundPositionZ(x, y, z, 7.0f);
 
     // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
-    m_caster->MonsterMoveWithSpeed(x, y, z, 24.f);
+    m_caster->MonsterMoveWithSpeed(x, y, z, 70.f);
 
     // not all charge effects used in negative spells
     if (unitTarget && unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
