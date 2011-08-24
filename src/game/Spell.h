@@ -415,7 +415,7 @@ class Spell
 
         typedef std::list<Unit*> UnitList;
         void FillTargetMap();
-        bool FillCustomTargetMap(SpellEffectIndex effIndex, UnitList &targetUnitMap); 
+        bool FillCustomTargetMap(SpellEffectIndex effIndex, UnitList &targetUnitMap);
         void SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList &targetUnitMap);
 
         void FillAreaTargets(UnitList &targetUnitMap, float radius, SpellNotifyPushType pushType, SpellTargets spellTargets, WorldObject* originalCaster = NULL);
@@ -556,7 +556,7 @@ class Spell
         bool m_executedCurrently;                           // mark as executed to prevent deleted and access by dead pointers
         bool m_needSpellLog;                                // need to send spell log?
         uint8 m_applyMultiplierMask;                        // by effect: damage multiplier needed?
-        float m_damageMultipliers[3];                       // by effect: damage multiplier
+        float m_damageMultipliers[MAX_EFFECT_INDEX];        // by effect: damage multiplier
 
         // Current targets, to be used in SpellEffects (MUST BE USED ONLY IN SPELL EFFECTS)
         Unit* unitTarget;
@@ -615,7 +615,6 @@ class Spell
         {
             Item  *item;
             uint8 effectMask;
-            bool   processed:1;
         };
 
         typedef std::list<TargetInfo>     TargetList;
