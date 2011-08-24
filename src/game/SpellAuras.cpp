@@ -5083,8 +5083,27 @@ void Aura::HandleInvisibility(bool apply, bool Real)
             }
         }
 
-        if (GetId() == 48809)                               // Binding Life
-            target->CastSpell(target, GetSpellProto()->CalculateSimpleValue(m_effIndex), true);
+        switch(GetId())
+        {
+            case 49097:                         // Out of Body Experience
+            {
+                Unit* pCaster = GetCaster();
+
+                if(m_removeMode == AURA_REMOVE_BY_EXPIRE)
+                {
+                    pCaster->RemoveByteFlag(PLAYER_FIELD_BYTES2, 3, PLAYER_FIELD_BYTE2_INVISIBILITY_GLOW);
+                    pCaster->CastSpell(pCaster, 49098, true);
+                }
+                return;
+            }
+            case 48809:                         // Binding Life
+            {
+                target->CastSpell(target, GetSpellProto()->CalculateSimpleValue(m_effIndex), true);
+                return;
+            }
+            default:
+                break;
+        }
     }
 }
 
@@ -5737,6 +5756,8 @@ void Aura::HandlePeriodicTriggerSpell(bool apply, bool /*Real*/)
                     if (pCaster->HasAura(GetModifier()->m_amount))
                         pCaster->CastSpell(target, spellId, true);
                 }
+
+                return;
             case 66083:                                     // Lightning Arrows (Trial of the Champion encounter)
                 if (m_removeMode == AURA_REMOVE_BY_EXPIRE)
                 {
@@ -5867,9 +5888,18 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
                     if (!caster || !target)
                         return;
 
-                    // Haste buff (Slag Imbued)
+                    // Haste buff (Slag Imbued) and achievement completion
                     if (!apply)
-                        target->CastSpell(caster, (spell->Id == 62717) ? 62836 : 63536, true);
+                    {
+                        target->ApplySpellImmune(0, IMMUNITY_SCHOOL, SPELL_SCHOOL_MASK_FIRE, false);
+                        target->ExitVehicle();
+                        target->CastSpell(target, (spell->Id == 62717) ? 62836 : 63536, true);
+
+                        if (target->GetTypeId() == TYPEID_PLAYER)
+                            if (target->isAlive())
+                                ((Player*)target)->CompletedAchievement((spell->Id == 62717) ? 2927 : 2928);
+                    }
+                    else target->ApplySpellImmune(0, IMMUNITY_SCHOOL, SPELL_SCHOOL_MASK_FIRE, true);
 
                     break;
                 }
@@ -8952,7 +8982,11 @@ void Aura::PeriodicDummyTick()
                     Unit *caster = GetCaster();
 
                     if (caster && target)
+                    {
+                        target->ApplySpellImmune(0, IMMUNITY_SCHOOL, SPELL_SCHOOL_MASK_FIRE, false);
                         caster->CastSpell(target, (spell->Id == 62717) ? 65722 : 65723, true, 0, this, GetCasterGuid(), GetSpellProto());
+                        target->ApplySpellImmune(0, IMMUNITY_SCHOOL, SPELL_SCHOOL_MASK_FIRE, true);
+                    }
                     return;
                 }
                 /* Feanor: CHECK LATER
@@ -9354,26 +9388,49 @@ void Aura::HandleAuraOpenStable(bool apply, bool Real)
     // client auto close stable dialog at !apply aura
 }
 
-void Aura::HandleAuraMirrorImage(bool Apply, bool Real)
+void Aura::HandleAuraMirrorImage(bool apply, bool Real)
 {
     if (!Real)
         return;
 
     Unit* target = GetTarget();
 
-    if (Apply)
+    if (!target)
+        return;
+
+    if (apply)
     {
         Unit* caster = GetCaster();
-        if (!caster)
-            return;
-        // Set display id
-        target->SetDisplayId(caster->GetDisplayId());
+        if (target->GetTypeId() == TYPEID_UNIT)
+        {
+            Creature* pCreature = (Creature*)target;
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 0, caster->getRace());
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 1, caster->getClass());
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 2, caster->getGender());
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 3, caster->getPowerType());
+        }
         target->SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_CLONED);
+
+        target->SetDisplayId(caster->GetDisplayId());
     }
     else
     {
-        target->SetDisplayId(target->GetNativeDisplayId());
+        if (target->GetTypeId() == TYPEID_UNIT)
+        {
+            Creature* pCreature = (Creature*)target;
+
+            const CreatureInfo* cinfo = pCreature->GetCreatureInfo();
+            const CreatureModelInfo* minfo = sObjectMgr.GetCreatureModelInfo(pCreature->GetNativeDisplayId());
+
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 0, 0);
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 1, cinfo->unit_class);
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 2, minfo->gender);
+            pCreature->SetByteValue(UNIT_FIELD_BYTES_0, 3, 0);
+        }
+
         target->RemoveFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_CLONED);
+
+        target->SetDisplayId(target->GetNativeDisplayId());
     }
 }
 

@@ -1695,7 +1695,9 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 63713:                                 // Dominate Mind (Yogg-Saron)
                 case 63795:                                 // Psychosis (Yogg-Saron)
                 case 63830:                                 // Malady of the Mind (Yogg-Saron)
+                case 63881:                                 // Malady of the Mind Jump(Yogg-Saron)
                 case 64218:                                 // Overcharge
+                case 64174:                                 // Hodirs Protective Gaze (Yogg-saron)
                 case 64234:                                 // Gravity Bomb (25 man)
                 case 64465:                                 // Shadow Beacon
                 case 64531:                                 // Rapid Burst
@@ -2116,18 +2118,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 else
                     unMaxTargets = 1;
             }
-            // Brain Link (Yogg saron)
-            else if (m_spellInfo->Id == 63802)
-            {
-                for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
-                {
-                    next = itr;
-                    ++next;
-
-                    if ((*itr)->GetTypeId() != TYPEID_PLAYER)
-                        targetUnitMap.erase(itr);
-                }
-            }
             // Lunatic Gaze (Yogg saron and laughing skulls)
             else if (m_spellInfo->Id == 64168 || m_spellInfo->Id == 64164)
             {
@@ -2143,8 +2133,10 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     }
                 }
             }
+            // Brain Link (Yogg saron)
             // Frozen blows (Hodir)
-            else if(m_spellInfo->Id == 64545 || m_spellInfo->Id == 64544)
+            // Sif Frostbolt Volley (Thorim)
+            else if(m_spellInfo->Id == 64545 || m_spellInfo->Id == 64544 || m_spellInfo->Id == 63802 || m_spellInfo->Id == 62580 || m_spellInfo->Id == 62604)
             {
                 for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
                 {
@@ -6293,6 +6285,23 @@ SpellCastResult Spell::CheckCast(bool strict)
                     break;
 
                 if(m_targets.getUnitTarget()->getPowerType() != POWER_MANA)
+                    return SPELL_FAILED_BAD_TARGETS;
+
+                break;
+            }
+            case SPELL_AURA_MIRROR_IMAGE:
+            {
+                Unit* pTarget = m_targets.getUnitTarget();
+
+                // In case of TARGET_SCRIPT, we have already added a target. Use it here (and find a better solution)
+                if (m_UniqueTargetInfo.size() == 1)
+                    pTarget = m_caster->GetMap()->GetAnyTypeCreature(m_UniqueTargetInfo.front().targetGUID);
+
+                if (!pTarget)
+                    return SPELL_FAILED_BAD_TARGETS;
+
+                // It is assumed that target can not be cloned if already cloned by same or other clone auras
+                if (pTarget->HasAuraType(SPELL_AURA_MIRROR_IMAGE))
                     return SPELL_FAILED_BAD_TARGETS;
 
                 break;
