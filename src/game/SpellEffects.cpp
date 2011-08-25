@@ -9674,7 +9674,8 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     {
                         m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
                         if (unitTarget->GetTypeId() == TYPEID_UNIT)
-                            ((Creature*)unitTarget)->RemoveCorpse();
+                            if (!((Creature*)unitTarget)->IsWorldBoss())
+                                ((Creature*)unitTarget)->RemoveCorpse();
                     }
                     else if (m_caster->HasAura(60200))
                     {
