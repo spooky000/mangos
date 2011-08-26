@@ -3187,6 +3187,28 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     }
                     return;
                 }
+                case 57385:                                 // Argent Cannon
+                case 57412:                                 // Reckoning Bomb
+                {
+                    if (!unitTarget)
+                        return;
+.
+                    SpellEntry const* spellInfo = sSpellStore.LookupEntry(m_spellInfo->CalculateSimpleValue(eff_idx));
+
+                    // Init dest coordinates
+                    float x,y,z;
+                    x = m_targets.m_destX;
+                    y = m_targets.m_destY;
+                    z = m_targets.m_destZ;
+
+                    MaNGOS::NormalizeMapCoord(x);
+                    MaNGOS::NormalizeMapCoord(y);
+                    m_caster->UpdateGroundPositionZ(x,y,z);
+
+                    m_caster->CastSpell(x, y, z, spellInfo, true, NULL, NULL, m_originalCasterGUID);
+
+                    break;
+                }
                 case 63984:                                 // Hate to Zero (Ulduar - Yogg Saron), if the player teleport into the "brain"
                 {
                     if (!unitTarget)
