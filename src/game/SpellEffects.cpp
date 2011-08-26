@@ -7374,7 +7374,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (m_caster->GetTypeId() != TYPEID_PLAYER)
                         return;
 
-                    if (((Player*)m_caster)->GetTemporaryUnsummonedPetNumber() != 0 )
+                    if (((Player*)m_caster)->GetTemporaryUnsummonedPetCount())
                         ((Player*)m_caster)->ResummonPetTemporaryUnSummonedIfAny();
                     else
                         ((Player*)m_caster)->LoadPet();
