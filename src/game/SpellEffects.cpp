@@ -3192,7 +3192,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 {
                     if (!unitTarget)
                         return;
-.
+
                     SpellEntry const* spellInfo = sSpellStore.LookupEntry(m_spellInfo->CalculateSimpleValue(eff_idx));
 
                     // Init dest coordinates
