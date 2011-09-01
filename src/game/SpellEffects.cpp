@@ -2246,8 +2246,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     // Iron Dwarf Snapshot Credit
                     m_caster->CastSpell(m_caster, 48047, true, m_CastItem, NULL, unitTarget->GetObjectGuid());
-                    //till someone implements way not getting credits on 1 target
-                    ((Creature*)unitTarget)->ForcedDespawn();
                     return;
                 }
                 case 48790:                                 // Neltharion's Flame
