@@ -278,7 +278,7 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_EX_UNK0                        0x00000001            // 0
 #define SPELL_ATTR_EX_DRAIN_ALL_POWER             0x00000002            // 1 use all power (Only paladin Lay of Hands and Bunyanize)
 #define SPELL_ATTR_EX_CHANNELED_1                 0x00000004            // 2 channeled 1
-#define SPELL_ATTR_EX_UNK3                        0x00000008            // 3
+#define SPELL_ATTR_EX_CANT_REFLECTED              0x00000008            // 3 used for detect can or not spell reflected
 #define SPELL_ATTR_EX_UNK4                        0x00000010            // 4
 #define SPELL_ATTR_EX_NOT_BREAK_STEALTH           0x00000020            // 5 Not break stealth
 #define SPELL_ATTR_EX_CHANNELED_2                 0x00000040            // 6 channeled 2
@@ -304,11 +304,11 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_EX_UNK26                       0x04000000            // 26
 #define SPELL_ATTR_EX_UNK27                       0x08000000            // 27
 #define SPELL_ATTR_EX_HIDDEN_AURA                 0x10000000            // 28 client doesn't display these spells in aura bar (special and server-side spells)
-#define SPELL_ATTR_EX_UNK29                       0x20000000            // 29
+#define SPELL_ATTR_EX_CHANNEL_DISPLAY_SPELL_NAME  0x20000000            // 29 spell name is displayed in cast bar instead of 'channeling' text
 #define SPELL_ATTR_EX_UNK30                       0x40000000            // 30 overpower
 #define SPELL_ATTR_EX_UNK31                       0x80000000            // 31
 
-#define SPELL_ATTR_EX2_UNK0                       0x00000001            // 0
+#define SPELL_ATTR2_ALLOW_DEAD_TARGET             0x00000001            // 0
 #define SPELL_ATTR_EX2_UNK1                       0x00000002            // 1
 #define SPELL_ATTR_EX2_CANT_REFLECTED             0x00000004            // 2 ? used for detect can or not spell reflected // do not need LOS (e.g. 18220 since 3.3.3)
 #define SPELL_ATTR_EX2_UNK3                       0x00000008            // 3 auto targeting? (e.g. fishing skill enhancement items since 3.3.3)
@@ -344,8 +344,8 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_EX3_UNK0                       0x00000001            // 0
 #define SPELL_ATTR_EX3_UNK1                       0x00000002            // 1
 #define SPELL_ATTR_EX3_UNK2                       0x00000004            // 2
-#define SPELL_ATTR_EX3_UNK3                       0x00000008            // 3
-#define SPELL_ATTR_EX3_UNK4                       0x00000010            // 4 Druid Rebirth only this spell have this flag
+#define SPELL_ATTR_EX3_MELEE                      0x00000008            // 3
+#define SPELL_ATTR_EX3_IGNORE_RESURRECTION_TIMER  0x00000010            // 4 Druid Rebirth only this spell have this flag -you don't have to wait to be resurrected with these spells
 #define SPELL_ATTR_EX3_UNK5                       0x00000020            // 5
 #define SPELL_ATTR_EX3_UNK6                       0x00000040            // 6
 #define SPELL_ATTR_EX3_STACK_FOR_DIFF_CASTERS     0x00000080            // 7 create a separate (de)buff stack for each caster
@@ -370,7 +370,7 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_EX3_UNK26                      0x04000000            // 26
 #define SPELL_ATTR_EX3_UNK27                      0x08000000            // 27
 #define SPELL_ATTR_EX3_UNK28                      0x10000000            // 28
-#define SPELL_ATTR_EX3_UNK29                      0x20000000            // 29
+#define SPELL_ATTR_EX3_UNK29                      0x20000000            // 29 Ignore caster spellbonus?
 #define SPELL_ATTR_EX3_UNK30                      0x40000000            // 30
 #define SPELL_ATTR_EX3_UNK31                      0x80000000            // 31
 
@@ -381,14 +381,14 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_EX4_UNK4                       0x00000010            // 4 This will no longer cause guards to attack on use??
 #define SPELL_ATTR_EX4_UNK5                       0x00000020            // 5
 #define SPELL_ATTR_EX4_NOT_STEALABLE              0x00000040            // 6 although such auras might be dispellable, they cannot be stolen
-#define SPELL_ATTR_EX4_UNK7                       0x00000080            // 7
+#define SPELL_ATTR_EX4_UNK7                       0x00000080            // 7 forced triggered?
 #define SPELL_ATTR_EX4_STACK_DOT_MODIFIER         0x00000100            // 8 no effect on non DoTs?
 #define SPELL_ATTR_EX4_UNK9                       0x00000200            // 9
 #define SPELL_ATTR_EX4_SPELL_VS_EXTEND_COST       0x00000400            // 10 Rogue Shiv have this flag
 #define SPELL_ATTR_EX4_UNK11                      0x00000800            // 11
 #define SPELL_ATTR_EX4_UNK12                      0x00001000            // 12
 #define SPELL_ATTR_EX4_UNK13                      0x00002000            // 13
-#define SPELL_ATTR_EX4_UNK14                      0x00004000            // 14
+#define SPELL_ATTR_EX4_DAMAGE_DOESNT_BREAK_AURAS  0x00004000            // 14 doesn't break auras by damage from these spells
 #define SPELL_ATTR_EX4_UNK15                      0x00008000            // 15
 #define SPELL_ATTR_EX4_NOT_USABLE_IN_ARENA        0x00010000            // 16 not usable in arena
 #define SPELL_ATTR_EX4_USABLE_IN_ARENA            0x00020000            // 17 usable in arena
@@ -463,7 +463,7 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_EX6_UNK20                      0x00100000            // 20
 #define SPELL_ATTR_EX6_UNK21                      0x00200000            // 21
 #define SPELL_ATTR_EX6_UNK22                      0x00400000            // 22
-#define SPELL_ATTR_EX6_NO_STACK_DEBUFF            0x00800000            // 23 not set in 3.0.3
+#define SPELL_ATTR_EX6_NO_STACK_DEBUFF            0x00800000            // 23 only debuff and debuff-like spells in 3.3.5a
 #define SPELL_ATTR_EX6_UNK24                      0x01000000            // 24 not set in 3.0.3
 #define SPELL_ATTR_EX6_UNK25                      0x02000000            // 25 not set in 3.0.3
 #define SPELL_ATTR_EX6_NO_STACK_BUFF              0x04000000            // 26 not set in 3.0.3
@@ -501,7 +501,7 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_EX7_UNK25                      0x02000000            // 25
 #define SPELL_ATTR_EX7_UNK26                      0x04000000            // 26
 #define SPELL_ATTR_EX7_UNK27                      0x08000000            // 27
-#define SPELL_ATTR_EX7_UNK28                      0x10000000            // 28
+#define SPELL_ATTR_EX7_REPLACEABLE_AURA           0x10000000            // 28
 #define SPELL_ATTR_EX7_UNK29                      0x20000000            // 29
 #define SPELL_ATTR_EX7_UNK30                      0x40000000            // 30
 #define SPELL_ATTR_EX7_UNK31                      0x80000000            // 31
@@ -728,14 +728,14 @@ enum SpellEffects
     SPELL_EFFECT_TRIGGER_SPELL_WITH_VALUE  = 142,
     SPELL_EFFECT_APPLY_AREA_AURA_OWNER     = 143,
     SPELL_EFFECT_144                       = 144,
-    SPELL_EFFECT_145                       = 145,
+    SPELL_EFFECT_SUSPEND_GRAVITY           = 145,
     SPELL_EFFECT_ACTIVATE_RUNE             = 146,
     SPELL_EFFECT_QUEST_FAIL                = 147,
     SPELL_EFFECT_148                       = 148,
     SPELL_EFFECT_CHARGE2                   = 149,
     SPELL_EFFECT_QUEST_START               = 150,
     SPELL_EFFECT_TRIGGER_SPELL_2           = 151,
-    SPELL_EFFECT_152                       = 152,
+    SPELL_EFFECT_FRIEND_SUMMON             = 152,
     SPELL_EFFECT_CREATE_PET                = 153,
     SPELL_EFFECT_TEACH_TAXI_NODE           = 154,
     SPELL_EFFECT_TITAN_GRIP                = 155,
@@ -1084,38 +1084,38 @@ enum AuraState
 // Spell mechanics
 enum Mechanics
 {
-    MECHANIC_NONE             = 0,
-    MECHANIC_CHARM            = 1,
-    MECHANIC_DISORIENTED      = 2,
-    MECHANIC_DISARM           = 3,
-    MECHANIC_DISTRACT         = 4,
-    MECHANIC_FEAR             = 5,
-    MECHANIC_GRIP             = 6,
-    MECHANIC_ROOT             = 7,
-    MECHANIC_SLOW_ATTACK      = 8,
-    MECHANIC_SILENCE          = 9,
-    MECHANIC_SLEEP            = 10,
-    MECHANIC_SNARE            = 11,
-    MECHANIC_STUN             = 12,
-    MECHANIC_FREEZE           = 13,
-    MECHANIC_KNOCKOUT         = 14,
-    MECHANIC_BLEED            = 15,
-    MECHANIC_BANDAGE          = 16,
-    MECHANIC_POLYMORPH        = 17,
-    MECHANIC_BANISH           = 18,
-    MECHANIC_SHIELD           = 19,
-    MECHANIC_SHACKLE          = 20,
-    MECHANIC_MOUNT            = 21,
-    MECHANIC_INFECTED         = 22,
-    MECHANIC_TURN             = 23,
-    MECHANIC_HORROR           = 24,
-    MECHANIC_INVULNERABILITY  = 25,
-    MECHANIC_INTERRUPT        = 26,
-    MECHANIC_DAZE             = 27,
-    MECHANIC_DISCOVERY        = 28,
-    MECHANIC_IMMUNE_SHIELD    = 29,                         // Divine (Blessing) Shield/Protection and Ice Block
-    MECHANIC_SAPPED           = 30,
-    MECHANIC_ENRAGED          = 31
+    MECHANIC_NONE             = 0,  // 0x00000000
+    MECHANIC_CHARM            = 1,  // 0x00000001
+    MECHANIC_DISORIENTED      = 2,  // 0x00000002
+    MECHANIC_DISARM           = 3,  // 0x00000004
+    MECHANIC_DISTRACT         = 4,  // 0x00000008
+    MECHANIC_FEAR             = 5,  // 0x00000010
+    MECHANIC_GRIP             = 6,  // 0x00000020
+    MECHANIC_ROOT             = 7,  // 0x00000040
+    MECHANIC_SLOWATTACK       = 8,  // 0x00000080           //0 spells use this mechanic, but some SPELL_AURA_MOD_HASTE and SPELL_AURA_MOD_RANGED_HASTE use as effect mechanic
+    MECHANIC_SILENCE          = 9,  // 0x00000100
+    MECHANIC_SLEEP            = 10, // 0x00000200
+    MECHANIC_SNARE            = 11, // 0x00000400
+    MECHANIC_STUN             = 12, // 0x00000800
+    MECHANIC_FREEZE           = 13, // 0x00001000
+    MECHANIC_KNOCKOUT         = 14, // 0x00002000
+    MECHANIC_BLEED            = 15, // 0x00004000
+    MECHANIC_BANDAGE          = 16, // 0x00008000
+    MECHANIC_POLYMORPH        = 17, // 0x00010000
+    MECHANIC_BANISH           = 18, // 0x00020000
+    MECHANIC_SHIELD           = 19, // 0x00040000
+    MECHANIC_SHACKLE          = 20, // 0x00080000
+    MECHANIC_MOUNT            = 21, // 0x00100000
+    MECHANIC_INFECTED         = 22, // 0x00200000
+    MECHANIC_TURN             = 23, // 0x00400000
+    MECHANIC_HORROR           = 24, // 0x00800000
+    MECHANIC_INVULNERABILITY  = 25, // 0x01000000
+    MECHANIC_INTERRUPT        = 26, // 0x02000000
+    MECHANIC_DAZE             = 27, // 0x04000000
+    MECHANIC_DISCOVERY        = 28, // 0x08000000
+    MECHANIC_IMMUNE_SHIELD    = 29, // 0x10000000           // Divine (Blessing) Shield/Protection and Ice Block
+    MECHANIC_SAPPED           = 30, // 0x20000000
+    MECHANIC_ENRAGED          = 31  // 0x40000000
 };
 
 #define FIRST_MECHANIC          1
@@ -1270,10 +1270,12 @@ enum Targets
     TARGET_POINT_AT_SW                 = 85,                // from spell desc: "(SW)"
     TARGET_RANDOM_NEARBY_DEST          = 86,                // "Test Nearby Dest Random" - random around selected destination
     TARGET_SELF2                       = 87,
+    TARGET_88                          = 88,
     TARGET_DIRECTLY_FORWARD            = 89,
     TARGET_NONCOMBAT_PET               = 90,
     TARGET_91                          = 91,
     TARGET_UNIT_CREATOR                = 92,
+    TARGET_93                          = 93,
     TARGET_OWNED_VEHICLE               = 94,
     TARGET_UNIT_DRIVER                 = 95,
     TARGET_UNIT_PASSENGER_0            = 96,
@@ -1285,7 +1287,15 @@ enum Targets
     TARGET_UNIT_PASSENGER_6            = 102,
     TARGET_UNIT_PASSENGER_7            = 103,
     TARGET_IN_FRONT_OF_CASTER_30       = 104,
+    TARGET_105                         = 105,
+    TARGET_106                         = 106,
+    TARGET_107                         = 107,
+    TARGET_108                         = 108,
+    TARGET_109                         = 109,
+    TARGET_110                         = 110,
 };
+
+#define MAX_SPELL_TARGET               111
 
 enum SpellMissInfo
 {
@@ -2118,7 +2128,7 @@ enum CreatureTypeFlags
     CREATURE_TYPEFLAGS_HERBLOOT         = 0x00000100,       // Can be looted by herbalist
     CREATURE_TYPEFLAGS_MININGLOOT       = 0x00000200,       // Can be looted by miner
     CREATURE_TYPEFLAGS_UNK11            = 0x00000400,       // no idea, but it used by client
-    CREATURE_TYPEFLAGS_UNK12            = 0x00000800,       // related to possibility to cast spells while mounted
+    CREATURE_TYPEFLAGS_MOUNTED_COMBAT   = 0x00000800,       // Creature can remain mounted when entering combat
     CREATURE_TYPEFLAGS_CAN_ASSIST       = 0x00001000,       // Can aid any player (and group) in combat. Typically seen for escorting NPC's
     CREATURE_TYPEFLAGS_UNK14            = 0x00002000,       // checked from calls in Lua_PetHasActionBar
     CREATURE_TYPEFLAGS_UNK15            = 0x00004000,       // Lua_UnitGUID, client does guid_low &= 0xFF000000 if this flag is set

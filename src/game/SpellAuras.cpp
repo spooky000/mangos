@@ -5664,7 +5664,7 @@ void Aura::HandleAuraProcTriggerSpell(bool apply, bool Real)
     {
         // some spell have charges by functionality not have its in spell data
         case 28200:                                         // Ascendance (Talisman of Ascendance trinket)
-            if(apply)
+            if (apply)
                 GetHolder()->SetAuraCharges(6);
             break;
         case 50720:                                         // Vigilance (threat transfering)
@@ -5731,7 +5731,7 @@ void Aura::HandlePeriodicTriggerSpell(bool apply, bool /*Real*/)
                 return;
             }
             case 51912:                                     // Ultra-Advanced Proto-Typical Shortening Blaster
-            case 53102:                                        // Scepter of Domination
+            case 53102:                                     // Scepter of Domination
                 if (m_removeMode == AURA_REMOVE_BY_EXPIRE)
                 {
                     if (Unit* pCaster = GetCaster())
@@ -5741,7 +5741,7 @@ void Aura::HandlePeriodicTriggerSpell(bool apply, bool /*Real*/)
                 return;
             case 63018:                                     // Searing Light (Ulduar: XT-002)
             case 65121:                                     // Searing Light (h) (Ulduar: XT-002)
-                if (Unit *pCaster = pCaster = GetCaster())
+                if (Unit *pCaster = GetCaster())
                 {
                     if (pCaster->HasAura(GetModifier()->m_amount))
                         pCaster->CastSpell(target, 64210, true);
@@ -5750,7 +5750,7 @@ void Aura::HandlePeriodicTriggerSpell(bool apply, bool /*Real*/)
                 return;
             case 63024:                                     // Gravity Bomb (Ulduar: XT-002)
             case 64234:                                     // Gravity Bomb (h) (Ulduar: XT-002)
-                if (Unit *pCaster = pCaster = GetCaster())
+                if (Unit *pCaster = GetCaster())
                 {
                     uint32 spellId = GetId() == 63024 ? 64203 : 64235;
                     if (pCaster->HasAura(GetModifier()->m_amount))
