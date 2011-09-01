@@ -714,6 +714,11 @@ LogColors = ""
 #                 0 - unsummon only for flying mounts
 #        Default: 1 - unsummon for any mount
 #
+#    PetSaveAllInDB
+#        Persmanent pet state saving in database
+#        Default: 0 - default mangos style, only permanent pets saved in DB
+#                 1 - all pets (including multipets and temporary summoned pets) saved in DB.
+#
 #    ClientCacheVersion
 #        Client cache version for client cache data reset. Use any different from DB value and not recently used for triggering reset.
 #        Default: 0 (use DB value from world DB db_version.cache_id field)
@@ -811,6 +816,7 @@ SkillChance.Prospecting = 0
 SkillChance.Milling = 0
 OffhandCheckAtTalentsReset = 0
 PetUnsummonAtMount = 1
+PetSaveAllInDB = 0
 ClientCacheVersion = 0
 Event.Announce = 0
 BeepAtStart = 1
