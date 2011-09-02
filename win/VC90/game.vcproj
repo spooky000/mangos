@@ -979,6 +979,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\game\SpellClassMask.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\game\SpellEffects.cpp"
 				>
 			</File>
@@ -1160,6 +1164,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\game\ArenaTeam.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\AuctionHouseBot\AuctionHouseBot.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\AuctionHouseBot\AuctionHouseBot.h"
 				>
 			</File>
 			<File
@@ -1744,6 +1756,62 @@
 			</File>
 			<File
 				RelativePath="..\..\src\game\vmap\WorldModel.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="movement"
+			>
+			<File
+				RelativePath="..\..\src\movement\MoveSpline.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\movement\MoveSpline.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\movement\MoveSplineFlag.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\movement\MoveSplineInit.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\movement\MoveSplineInit.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\movement\MoveSplineInitArgs.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\movement\packet_builder.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\movement\packet_builder.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\movement\spline.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\movement\spline.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\movement\spline.impl.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\movement\typedefs.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\movement\util.cpp"
 				>
 			</File>
 		</Filter>

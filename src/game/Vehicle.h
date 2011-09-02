@@ -27,6 +27,15 @@
 
 struct VehicleEntry;
 
+class VehicleInfo
+{
+        VehicleEntry const* m_vehicleEntry;
+    public:
+        explicit VehicleInfo(VehicleEntry const* entry);
+
+        VehicleEntry const* GetEntry() const { return m_vehicleEntry; }
+};
+
 struct VehicleSeat
 {
     VehicleSeat(VehicleSeatEntry const *pSeatInfo = NULL) : seatInfo(pSeatInfo), passenger(NULL) {}
@@ -51,7 +60,7 @@ typedef std::map<uint32, VehicleAccessoryList> VehicleAccessoryMap;
 class MANGOS_DLL_SPEC VehicleKit
 {
     public:
-        explicit VehicleKit(Unit* base, VehicleEntry const* vehicleInfo);
+        explicit VehicleKit(Unit* base);
         ~VehicleKit();
 
         void Reset();
@@ -67,8 +76,6 @@ class MANGOS_DLL_SPEC VehicleKit
         VehicleSeatEntry const* GetSeatInfo(Unit* passenger);
 
         Unit* GetBase() { return m_pBase; }
-        VehicleEntry const* GetVehicleInfo() const { return m_vehicleInfo; }
-        uint32 GetVehicleId() const { return m_vehicleInfo->m_ID; }
 
     private:
         void UpdateFreeSeatCount();
@@ -76,7 +83,6 @@ class MANGOS_DLL_SPEC VehicleKit
 
         SeatMap m_Seats;
         uint32 m_uiNumFreeSeats;
-        VehicleEntry const *m_vehicleInfo;
         Unit* m_pBase;
 };
 

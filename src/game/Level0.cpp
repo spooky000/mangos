@@ -199,7 +199,10 @@ bool ChatHandler::HandleAccountPasswordCommand(char* args)
     PSendSysMessage("Due to security reasons you can only change your password through the forum. Please visit http://gamingconsortium.org/ for more information.");
     SetSentErrorMessage(true);
 
-    return true;
+    // OK, but avoid normal report for hide passwords, but log use command for anyone
+    LogCommand(".account password *** *** ***");
+    SetSentErrorMessage(true);
+    return false;
 }
 
 bool ChatHandler::HandleAccountLockCommand(char* args)
