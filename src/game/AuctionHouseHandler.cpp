@@ -265,7 +265,7 @@ void WorldSession::HandleAuctionSellItem(WorldPacket & recv_data)
     if (!bid || !etime)
         return;
 
-    if (GetPlayer().isTrialAccount())
+    if (GetPlayer()->isTrialAccount())
     {
         SendAuctionCommandResult(null, AUCTION_STARTED, AUCTION_ERR_RESTRICTED_ACCOUNT);
         return;
@@ -399,7 +399,7 @@ void WorldSession::HandleAuctionPlaceBid(WorldPacket & recv_data)
     // always return pointer
     AuctionHouseObject* auctionHouse = sAuctionMgr.GetAuctionsMap(auctionHouseEntry);
 
-    if (GetPlayer().isTrialAccount())
+    if (GetPlayer()->isTrialAccount())
     {
         SendAuctionCommandResult(null, AUCTION_BID_PLACED, AUCTION_ERR_RESTRICTED_ACCOUNT);
         return;
