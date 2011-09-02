@@ -574,7 +574,7 @@ void WorldSession::HandleInitiateTradeOpcode(WorldPacket& recvPacket)
         return;
     }
 
-    if (GetPlayer().isTrialAccount())
+    if (GetPlayer()->isTrialAccount())
     {
         SendTradeStatus(TRADE_STATUS_TRIAL_ACCOUNT);
         return;
@@ -636,7 +636,7 @@ void WorldSession::HandleInitiateTradeOpcode(WorldPacket& recvPacket)
         return;
     }
 
-    if (pOther.isTrialAccount())
+    if (pOther->isTrialAccount())
     {
         SendTradeStatus(TRADE_STATUS_TRIAL_ACCOUNT);
         return;
