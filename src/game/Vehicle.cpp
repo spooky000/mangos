@@ -25,22 +25,27 @@
 #include "Util.h"
 #include "WorldPacket.h"
 
-VehicleKit::VehicleKit(Unit* base, VehicleEntry const* vehicleInfo) : m_vehicleInfo(vehicleInfo), m_pBase(base), m_uiNumFreeSeats(0)
+VehicleInfo::VehicleInfo(VehicleEntry const* entry) :
+    m_vehicleEntry(entry)
+{
+}
+
+VehicleKit::VehicleKit(Unit* base) : m_pBase(base), m_uiNumFreeSeats(0)
 {
     for (uint32 i = 0; i < MAX_VEHICLE_SEAT; ++i)
     {
-        uint32 seatId = m_vehicleInfo->m_seatID[i];
+        uint32 seatId = GetBase()->GetVehicleInfo()->GetEntry()->m_seatID[i];
 
         if (!seatId)
             continue;
 
-        if(base)
+        if (base)
         {
-            if(m_vehicleInfo->m_flags & VEHICLE_FLAG_NO_STRAFE)
-                base->m_movementInfo.AddMovementFlag2(MOVEFLAG2_NO_STRAFE);
+            if (GetBase()->GetVehicleInfo()->GetEntry()->m_flags & VEHICLE_FLAG_NO_STRAFE)
+                GetBase()->m_movementInfo.AddMovementFlag2(MOVEFLAG2_NO_STRAFE);
 
-            if(m_vehicleInfo->m_flags & VEHICLE_FLAG_NO_JUMPING)
-                base->m_movementInfo.AddMovementFlag2(MOVEFLAG2_NO_JUMPING);
+            if (GetBase()->GetVehicleInfo()->GetEntry()->m_flags & VEHICLE_FLAG_NO_JUMPING)
+                GetBase()->m_movementInfo.AddMovementFlag2(MOVEFLAG2_NO_JUMPING);
         }
 
         if (VehicleSeatEntry const *seatInfo = sVehicleSeatStore.LookupEntry(seatId))
@@ -169,8 +174,13 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
         passenger->SendMessageToSet(&data, true);
     }
 
-    if (m_pBase->GetEntry() == 28669) 
-        passenger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+    switch (m_pBase->GetEntry())
+    {
+        case 28669:
+        case 28817:
+            passenger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+            break;
+    }
 
     if (seat->second.seatInfo->m_flags & SEAT_FLAG_UNATTACKABLE || seat->second.seatInfo->m_flags & SEAT_FLAG_CAN_CONTROL)
     {
@@ -179,6 +189,7 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
         {
             case 33118:                  // Ignis slag pot
             case 32934:                  // Kologarn Right Arm
+            case 33983:                  // Constrictor tentacle (Yogg encounter)
                 break;
             default:
                 passenger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
@@ -189,9 +200,13 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
 
     if (seatInfo->m_flags & SEAT_FLAG_CAN_CONTROL)
     {
-        m_pBase->StopMoving();
-        m_pBase->GetMotionMaster()->Clear();
-        m_pBase->CombatStop(true);
+        if (!(m_pBase->GetVehicleInfo()->GetEntry()->m_flags & (VEHICLE_FLAG_ACCESSORY)))
+        {
+            m_pBase->StopMoving();
+            m_pBase->GetMotionMaster()->Clear();
+            m_pBase->CombatStop(true);
+        }
+
         m_pBase->DeleteThreatList();
         m_pBase->getHostileRefManager().deleteReferences();
         m_pBase->SetCharmerGuid(passenger->GetObjectGuid());
@@ -226,16 +241,20 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
             player->VehicleSpellInitialize();
         }
 
-        if(!(((Creature*)m_pBase)->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_KEEP_AI))
+        if (!(((Creature*)m_pBase)->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_KEEP_AI))
             ((Creature*)m_pBase)->AIM_Initialize();
 
-        if(m_pBase->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE))
+        if (m_pBase->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE))
         {
             WorldPacket data2(SMSG_FORCE_MOVE_ROOT, 8+4);
             data2 << m_pBase->GetPackGUID();
             data2 << (uint32)(2);
             m_pBase->SendMessageToSet(&data2,false);
         }
+        else if (passenger->m_movementInfo.GetMovementFlags() & MOVEFLAG_WALK_MODE)
+            ((Creature*)m_pBase)->SetWalk(true);
+        else
+            ((Creature*)m_pBase)->SetWalk(false);
     }
 
     passenger->SendMonsterMoveTransport(m_pBase, SPLINETYPE_FACINGANGLE, SPLINEFLAG_UNKNOWN5, 0, 0.0f);
@@ -301,8 +320,13 @@ void VehicleKit::RemovePassenger(Unit *passenger)
             ((Creature*)m_pBase)->AIM_Initialize();
     }
 
-    if (m_pBase->GetEntry() == 28669) 
-        passenger->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+    switch (m_pBase->GetEntry())
+    {
+        case 28669:
+        case 28817:
+            passenger->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+            break;
+    }
 
     if (passenger->GetTypeId() == TYPEID_PLAYER)
     {
@@ -357,7 +381,8 @@ void VehicleKit::InstallAccessory( uint32 entry, int8 seatId, bool minion)
     {
         accessory->SetCreatorGuid(ObjectGuid());
         accessory->EnterVehicle(this, seatId);
-        accessory->SendHeartBeat(false);
+        accessory->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
+        accessory->SendHeartBeat();
     }
 }
 
