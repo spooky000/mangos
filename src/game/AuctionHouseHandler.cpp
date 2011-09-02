@@ -267,7 +267,7 @@ void WorldSession::HandleAuctionSellItem(WorldPacket & recv_data)
 
     if (GetPlayer()->isTrialAccount())
     {
-        SendAuctionCommandResult(null, AUCTION_STARTED, AUCTION_ERR_RESTRICTED_ACCOUNT);
+        SendAuctionCommandResult(NULL, AUCTION_STARTED, AUCTION_ERR_RESTRICTED_ACCOUNT);
         return;
     }                                     // check for cheaters
 
