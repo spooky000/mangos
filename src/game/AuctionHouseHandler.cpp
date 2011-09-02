@@ -401,7 +401,7 @@ void WorldSession::HandleAuctionPlaceBid(WorldPacket & recv_data)
 
     if (GetPlayer()->isTrialAccount())
     {
-        SendAuctionCommandResult(null, AUCTION_BID_PLACED, AUCTION_ERR_RESTRICTED_ACCOUNT);
+        SendAuctionCommandResult(NULL, AUCTION_BID_PLACED, AUCTION_ERR_RESTRICTED_ACCOUNT);
         return;
     }
 
