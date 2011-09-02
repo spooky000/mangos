@@ -151,6 +151,13 @@ void WorldSession::HandleSendMail(WorldPacket & recv_data )
     if (receiver.empty())
         return;
 
+
+    if (GetPlayer().isTrialAccount())
+    {
+        GetPlayer()->SendMailResult(0, MAIL_SEND, MAIL_ERR_DISABLED_FOR_TRIAL_ACC);
+        return;
+    }
+
     Player* pl = _player;
 
     ObjectGuid rc;
