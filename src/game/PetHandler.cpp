@@ -145,18 +145,25 @@ void WorldSession::SendPetNameQuery(ObjectGuid petguid, uint32 petnumber)
         return;
     }
 
-    char const* name = pet->GetName();
+    std::string name = pet->GetName();
 
     // creature pets have localization like other creatures
     if (!pet->GetOwnerGuid().IsPlayer())
     {
         int loc_idx = GetSessionDbLocaleIndex();
-        sObjectMgr.GetCreatureLocaleStrings(pet->GetEntry(), loc_idx, &name);
+        if (loc_idx >= 0)
+        {
+            if (CreatureLocale const *cl = sObjectMgr.GetCreatureLocale(pet->GetEntry()))
+            {
+                if (cl->Name.size() > size_t(loc_idx) && !cl->Name[loc_idx].empty())
+                    name = cl->Name[loc_idx];
+            }
+        }
     }
 
-    WorldPacket data(SMSG_PET_NAME_QUERY_RESPONSE, (4+4+strlen(name)+1));
+    WorldPacket data(SMSG_PET_NAME_QUERY_RESPONSE, (4+4+name.size()+1));
     data << uint32(petnumber);
-    data << name;
+    data << name.c_str();
     data << uint32(pet->GetUInt32Value(UNIT_FIELD_PET_NAME_TIMESTAMP));
 
     if (pet->IsPet() && ((Pet*)pet)->GetDeclinedNames())
@@ -275,7 +282,7 @@ void WorldSession::HandlePetSetAction(WorldPacket& recv_data)
                 else if (!m_groupPets->empty())
                 {
                     for (GroupPetList::const_iterator itr = m_groupPets->begin(); itr != m_groupPets->end(); ++itr)
-                        if (Pet* _pet = GetPlayer()->GetMap()->GetPet(*itr))
+                        if (Pet* _pet = ObjectAccessor::FindPet(*itr))
                             if ( _pet->IsInWorld())
                             {
                                 _pet->ToggleAutocast(spell_id, true);
@@ -290,7 +297,7 @@ void WorldSession::HandlePetSetAction(WorldPacket& recv_data)
                 else if (!m_groupPets->empty())
                 {
                     for (GroupPetList::const_iterator itr = m_groupPets->begin(); itr != m_groupPets->end(); ++itr)
-                        if (Pet* _pet = GetPlayer()->GetMap()->GetPet(*itr))
+                        if (Pet* _pet = ObjectAccessor::FindPet(*itr))
                             if ( _pet->IsInWorld())
                             {
                                 _pet->ToggleAutocast(spell_id, false);
@@ -391,8 +398,11 @@ void WorldSession::HandlePetAbandon(WorldPacket& recv_data)
     {
         if (pet->IsPet())
         {
-            if (pet->GetObjectGuid() == _player->GetPetGuid())
-                pet->ModifyPower(POWER_HAPPINESS, -50000);
+            if (pet->GetObjectGuid() == GetPlayer()->GetPetGuid())
+            {
+                uint32 feelty = pet->GetPower(POWER_HAPPINESS);
+                pet->SetPower(POWER_HAPPINESS, (feelty - 50000) > 0 ? (feelty - 50000) : 0);
+            }
 
             ((Pet*)pet)->Unsummon(PET_SAVE_AS_DELETED, GetPlayer());
 
@@ -471,8 +481,6 @@ void WorldSession::HandlePetCastSpellOpcode(WorldPacket& recvPacket)
         sLog.outError("HandlePetCastSpellOpcode: %s isn't pet of %s .", guid.GetString().c_str(), GetPlayer()->GetGuidStr().c_str());
         return;
     }
-    SpellCastTargets targets;
-    recvPacket >> targets.ReadForCaster(pet);
 
     SpellEntry const* spellInfo = sSpellStore.LookupEntry(spellid);
     if (!spellInfo)
@@ -484,17 +492,20 @@ void WorldSession::HandlePetCastSpellOpcode(WorldPacket& recvPacket)
     if (pet->GetCharmInfo() && pet->GetCharmInfo()->GetGlobalCooldownMgr().HasGlobalCooldown(spellInfo))
         return;
 
+
     // do not cast not learned spells
     if (!pet->HasSpell(spellid) || IsPassiveSpell(spellInfo))
         return;
 
-    if (pet->IsNonMeleeSpellCasted(false))
-        pet->InterruptNonMeleeSpells(false);
+    SpellCastTargets* targets = new SpellCastTargets;
 
+    recvPacket >> targets->ReadForCaster(pet);
 
     if (pet->IsPet() || pet->isCharmed())
-        GetPlayer()->CallForAllControlledUnits(DoPetCastWithHelper(GetPlayer(), cast_count, &targets, spellInfo ),CONTROLLED_PET|CONTROLLED_GUARDIANS|CONTROLLED_CHARM);
+        GetPlayer()->CallForAllControlledUnits(DoPetCastWithHelper(GetPlayer(), cast_count, targets, spellInfo ),CONTROLLED_PET|CONTROLLED_GUARDIANS|CONTROLLED_CHARM);
 
+    if (targets)
+       delete targets;
 }
 
 void WorldSession::SendPetNameInvalid(uint32 error, const std::string& name, DeclinedName* declinedName)

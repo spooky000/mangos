@@ -388,8 +388,7 @@ bool StartDB()
         return false;
     }
 
-    sLog.outString("Login Database total connections: %i", 1 + 1);
-
+    sLog.outString("Database: %s", dbstring.c_str() );
     if(!LoginDatabase.Initialize(dbstring.c_str()))
     {
         sLog.outError("Cannot connect to database");

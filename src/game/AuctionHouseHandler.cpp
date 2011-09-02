@@ -155,7 +155,7 @@ void WorldSession::SendAuctionOutbiddedMail(AuctionEntry *auction)
     Player *oldBidder = sObjectMgr.GetPlayer(oldBidder_guid);
 
     uint32 oldBidder_accId = 0;
-    if(!oldBidder)
+    if(!oldBidder && oldBidder_guid)
         oldBidder_accId = sObjectMgr.GetPlayerAccountIdByGUID(oldBidder_guid);
 
     // old bidder exist
@@ -180,7 +180,7 @@ void WorldSession::SendAuctionCancelledToBidderMail(AuctionEntry* auction)
     Player *bidder = sObjectMgr.GetPlayer(bidder_guid);
 
     uint32 bidder_accId = 0;
-    if (!bidder)
+    if (!bidder && bidder_guid)
         bidder_accId = sObjectMgr.GetPlayerAccountIdByGUID(bidder_guid);
 
     // bidder exist
@@ -263,13 +263,7 @@ void WorldSession::HandleAuctionSellItem(WorldPacket & recv_data)
     recv_data >> etime;
 
     if (!bid || !etime)
-        return;
-
-    if (GetPlayer().isTrialAccount())
-    {
-        SendAuctionCommandResult(null, AUCTION_STARTED, AUCTION_ERR_RESTRICTED_ACCOUNT);
-        return;
-    }                                     // check for cheaters
+        return;                                             // check for cheaters
 
     Player *pl = GetPlayer();
 
@@ -399,12 +393,6 @@ void WorldSession::HandleAuctionPlaceBid(WorldPacket & recv_data)
     // always return pointer
     AuctionHouseObject* auctionHouse = sAuctionMgr.GetAuctionsMap(auctionHouseEntry);
 
-    if (GetPlayer().isTrialAccount())
-    {
-        SendAuctionCommandResult(null, AUCTION_BID_PLACED, AUCTION_ERR_RESTRICTED_ACCOUNT);
-        return;
-    }
-
     // remove fake death
     if (GetPlayer()->hasUnitState(UNIT_STAT_DIED))
         GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
@@ -423,7 +411,7 @@ void WorldSession::HandleAuctionPlaceBid(WorldPacket & recv_data)
 
     // impossible have online own another character (use this for speedup check in case online owner)
     Player* auction_owner = sObjectMgr.GetPlayer(ownerGuid);
-    if (!auction_owner && sObjectMgr.GetPlayerAccountIdByGUID(ownerGuid) == pl->GetSession()->GetAccountId())
+    if (!auction_owner && ownerGuid && sObjectMgr.GetPlayerAccountIdByGUID(ownerGuid) == pl->GetSession()->GetAccountId())
     {
         // you cannot bid your another character auction:
         SendAuctionCommandResult(NULL, AUCTION_BID_PLACED, AUCTION_ERR_BID_OWN);
@@ -672,15 +660,12 @@ void WorldSession::HandleAuctionListItems(WorldPacket & recv_data)
     AuctionHouseObject* auctionHouse = sAuctionMgr.GetAuctionsMap(auctionHouseEntry);
 
     // Sort
-    AuctionHouseObject::AuctionEntryMap const& aucs = auctionHouse->GetAuctions();
-    std::vector<AuctionEntry*> auctions;
-    auctions.reserve(aucs.size());
-
-    for (AuctionHouseObject::AuctionEntryMap::const_iterator itr = aucs.begin(); itr != aucs.end(); ++itr)
+    AuctionHouseObject::AuctionEntryMap *aucs = auctionHouse->GetAuctions();
+    std::list<AuctionEntry*> auctions;
+    for (AuctionHouseObject::AuctionEntryMap::const_iterator itr = aucs->begin(); itr != aucs->end(); ++itr)
         auctions.push_back(itr->second);
-
     AuctionSorter sorter(Sort, GetPlayer());
-    std::sort(auctions.begin(), auctions.end(), sorter);
+    auctions.sort(sorter);
 
     // remove fake death
     if (GetPlayer()->hasUnitState(UNIT_STAT_DIED))
@@ -729,11 +714,7 @@ void WorldSession::HandleAuctionListPendingSales(WorldPacket & recv_data)
 
     WorldPacket data(SMSG_AUCTION_LIST_PENDING_SALES, 4);
     data << uint32(count);                                  // count
-
-    // pending list include all auction house entries for character
-    for (int i = 0; i < MAX_AUCTION_HOUSE_TYPE; ++i)
-        sAuctionMgr.GetAuctionsMap(AuctionHouseType(i))->BuildListPendingSales(data, _player, count);
-
+    auctionHouse->BuildListPendingSales(data, _player, count);
     data.put<uint32>(0, count);
     SendPacket(&data);
 }

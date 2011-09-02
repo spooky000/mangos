@@ -37,6 +37,7 @@ class Player;
 class Spell;
 class Unit;
 struct CreatureInfo;
+struct SpellModifier;
 
 // only used in code
 enum SpellCategories
@@ -73,9 +74,7 @@ enum SpellSpecific
     SPELL_DRINK             = 21,
     SPELL_FOOD_AND_DRINK    = 22,
     SPELL_UA_IMMOLATE       = 23,                           // Unstable Affliction and Immolate
-    SPELL_BLEED_DEBUFF      = 24,                           // Mangle and Trauma
-    SPELL_MAGE_INTELLECT    = 25,
-    SPELL_SCROLL            = 30
+    SPELL_SCROLL            = 30,
 };
 
 SpellSpecific GetSpellSpecific(uint32 spellId);
@@ -167,8 +166,6 @@ inline bool IsPeriodicRegenerateEffect(SpellEntry const *spellInfo, SpellEffectI
     }
 }
 
-bool IsCastEndProcModifierAura(SpellEntry const *spellInfo, SpellEffectIndex effecIdx, SpellEntry const *procSpell);
-
 inline bool IsSpellHaveAura(SpellEntry const *spellInfo, AuraType aura)
 {
     for(int i = 0; i < MAX_EFFECT_INDEX; ++i)
@@ -190,17 +187,15 @@ bool IsNoStackAuraDueToAura(uint32 spellId_1, uint32 spellId_2);
 inline bool IsSealSpell(SpellEntry const *spellInfo)
 {
     //Collection of all the seal family flags. No other paladin spell has any of those.
-    return spellInfo->SpellFamilyName == SPELLFAMILY_PALADIN &&
-        spellInfo->SpellFamilyFlags.test<CF_PALADIN_SEAL_OF_COMMAND, CF_PALADIN_SEAL_OF_JUST_RIGHT, CF_PALADIN_SEAL_OF_BLOOD_MARTYR,
-            CF_PALADIN_SEAL_OF_CORRUPT_VENGE, CF_PALADIN_SEAL_OF_LIGHT, CF_PALADIN_SEAL_OF_WISDOM, CF_PALADIN_SEAL_OF_RIGHTEOUSNESS>() &&
+    return spellInfo->IsFitToFamily(SPELLFAMILY_PALADIN, UI64LIT(0x26000C000A000000)) &&
         // avoid counting target triggered effect as seal for avoid remove it or seal by it.
         spellInfo->EffectImplicitTargetA[EFFECT_INDEX_0] == TARGET_SELF;
 }
 
 inline bool IsElementalShield(SpellEntry const *spellInfo)
 {
-    return spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN &&
-        (spellInfo->SpellFamilyFlags.test<CF_SHAMAN_LIGHTNING_SHIELD, CF_SHAMAN_WATER_SHIELD, CF_SHAMAN_EARTH_SHIELD>() || spellInfo->Id == 23552);
+    // family flags 10 (Lightning), 42 (Earth), 37 (Water), proc shield from T2 8 pieces bonus
+    return (spellInfo->SpellFamilyFlags & UI64LIT(0x42000000400)) || spellInfo->Id == 23552;
 }
 
 inline bool IsExplicitDiscoverySpell(SpellEntry const *spellInfo)
@@ -604,13 +599,6 @@ enum ProcFlags
                                PROC_FLAG_SUCCESSFUL_NEGATIVE_SPELL_HIT | \
                                PROC_FLAG_TAKEN_NEGATIVE_SPELL_HIT)
 
-#define SPELL_CAST_TRIGGER_MASK (PROC_FLAG_SUCCESSFUL_MELEE_SPELL_HIT    | \
-                                 PROC_FLAG_SUCCESSFUL_RANGED_HIT         | \
-                                 PROC_FLAG_SUCCESSFUL_RANGED_SPELL_HIT   | \
-                                 PROC_FLAG_SUCCESSFUL_POSITIVE_AOE_HIT   | \
-                                 PROC_FLAG_SUCCESSFUL_AOE_SPELL_HIT      | \
-                                 PROC_FLAG_SUCCESSFUL_POSITIVE_SPELL     | \
-                                 PROC_FLAG_SUCCESSFUL_NEGATIVE_SPELL_HIT)
 enum ProcFlagsEx
 {
     PROC_EX_NONE                = 0x0000000,                // If none can tigger on Hit/Crit only (passive spells MUST defined by SpellFamily flag)
@@ -633,8 +621,7 @@ enum ProcFlagsEx
     PROC_EX_EX_TRIGGER_ALWAYS   = 0x0010000,                // If set trigger always ( no matter another flags) used for drop charges
     PROC_EX_EX_ONE_TIME_TRIGGER = 0x0020000,                // If set trigger always but only one time (not used)
     PROC_EX_PERIODIC_POSITIVE   = 0x0040000,                // For periodic heal
-    PROC_EX_CAST_END            = 0x0080000,                // procs on end of cast            
-    PROC_EX_DIRECT_DAMAGE       = 0x0100000                 // do not proc from absorbed damage
+    PROC_EX_DIRECT_DAMAGE       = 0x0080000                 // do not proc from absorbed damage
 };
 
 struct SpellProcEventEntry

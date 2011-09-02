@@ -43,66 +43,25 @@ void WorldSession::HandleDismissControlledVehicle(WorldPacket &recv_data)
 
     Creature* vehicle = GetPlayer()->GetMap()->GetAnyTypeCreature(guid);
 
-    if (!vehicle || !vehicle->GetVehicleInfo())
+    if (!vehicle || !GetPlayer()->GetVehicle()->GetVehicleInfo())
         return;
 
-    if (vehicle->GetVehicleInfo()->GetEntry()->m_flags & (VEHICLE_FLAG_NOT_DISMISS | VEHICLE_FLAG_ACCESSORY))
+    if (GetPlayer()->GetVehicle()->GetVehicleInfo()->m_flags & (VEHICLE_FLAG_NOT_DISMISS | VEHICLE_FLAG_ACCESSORY))
         dismiss = false;
 
     GetPlayer()->m_movementInfo = mi;
+    GetPlayer()->ExitVehicle();
 
-    uint32 controlSpell = 0;
-    Unit::AuraList const& controlAuras = vehicle->GetAurasByType(SPELL_AURA_CONTROL_VEHICLE);
-    for(Unit::AuraList::const_iterator i = controlAuras.begin(); i != controlAuras.end(); ++i)
-    {
-        if ((*i)->GetCasterGuid() == GetPlayer()->GetObjectGuid())
-        {
-            controlSpell = (*i)->GetId();
-            break;
-        }
-    }
+    if (dismiss)
+        vehicle->ForcedDespawn();
 
-    if (controlSpell)
-    {
-        vehicle->RemoveAurasByCasterSpell(controlSpell, GetPlayer()->GetObjectGuid());
-    }
-    else
-    {
-        GetPlayer()->ExitVehicle();
-
-        if (dismiss)
-            vehicle->ForcedDespawn();
-    }
 }
 
 void WorldSession::HandleRequestVehicleExit(WorldPacket &recv_data)
 {
     DEBUG_LOG("WORLD: Received CMSG_REQUEST_VEHICLE_EXIT");
 
-    if(!GetPlayer()->GetVehicle())
-        return;
-
-    Unit* vehicle = GetPlayer()->GetVehicle()->GetBase();
-    if (!vehicle)
-        return;
-
-    uint32 controlSpell = 0;
-    Unit::AuraList const& controlAuras = vehicle->GetAurasByType(SPELL_AURA_CONTROL_VEHICLE);
-    for(Unit::AuraList::const_iterator i = controlAuras.begin(); i != controlAuras.end(); ++i)
-    {
-        if ((*i)->GetCasterGuid() == GetPlayer()->GetObjectGuid())
-        {
-            controlSpell = (*i)->GetId();
-            break;
-        }
-    }
-
-    if (controlSpell)
-    {
-        vehicle->RemoveAurasByCasterSpell(controlSpell, GetPlayer()->GetObjectGuid());
-    }
-    else
-        GetPlayer()->ExitVehicle();
+    GetPlayer()->ExitVehicle();
 }
 
 void WorldSession::HandleRequestVehiclePrevSeat(WorldPacket &recv_data)
@@ -135,7 +94,7 @@ void WorldSession::HandleRequestVehicleSwitchSeat(WorldPacket &recv_data)
     if (!pVehicle)
         return;
 
-    if (pVehicle->GetBase()->GetVehicleInfo()->GetEntry()->m_flags & VEHICLE_FLAG_DISABLE_SWITCH)
+    if (pVehicle->GetVehicleInfo()->m_flags & VEHICLE_FLAG_DISABLE_SWITCH)
         return;
 
     if (pVehicle->GetBase()->GetObjectGuid() == guid)
@@ -223,7 +182,7 @@ void WorldSession::HandleChangeSeatsOnControlledVehicle(WorldPacket &recv_data)
     if (!pVehicle)
         return;
 
-    if (pVehicle->GetBase()->GetVehicleInfo()->GetEntry()->m_flags & VEHICLE_FLAG_DISABLE_SWITCH)
+    if (pVehicle->GetVehicleInfo()->m_flags & VEHICLE_FLAG_DISABLE_SWITCH)
         return;
 
     if(guid.GetRawValue() == guid2.GetRawValue())

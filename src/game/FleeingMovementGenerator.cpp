@@ -20,9 +20,8 @@
 #include "CreatureAI.h"
 #include "MapManager.h"
 #include "FleeingMovementGenerator.h"
+#include "DestinationHolderImp.h"
 #include "ObjectAccessor.h"
-#include "movement/MoveSplineInit.h"
-#include "movement/MoveSpline.h"
 
 #define MIN_QUIET_DISTANCE 28.0f
 #define MAX_QUIET_DISTANCE 43.0f
@@ -46,11 +45,8 @@ FleeingMovementGenerator<T>::_setTargetLocation(T &owner)
         return;
 
     owner.addUnitState(UNIT_STAT_FLEEING_MOVE);
-
-    Movement::MoveSplineInit init(owner);
-    init.MoveTo(x,y,z);
-    init.SetWalk(false);
-    init.Launch();
+    Traveller<T> traveller(owner);
+    i_destinationHolder.SetDestination(traveller, x, y, z);
 }
 
 template<class T>
@@ -312,6 +308,7 @@ template<>
 void
 FleeingMovementGenerator<Creature>::_Init(Creature &owner)
 {
+    owner.RemoveSplineFlag(SPLINEFLAG_WALKMODE);
     owner.SetTargetGuid(ObjectGuid());
     is_water_ok = owner.CanSwim();
     is_land_ok  = owner.CanWalk();
@@ -335,6 +332,7 @@ void FleeingMovementGenerator<Player>::Finalize(Player &owner)
 template<>
 void FleeingMovementGenerator<Creature>::Finalize(Creature &owner)
 {
+    owner.AddSplineFlag(SPLINEFLAG_WALKMODE);
     owner.clearUnitState(UNIT_STAT_FLEEING|UNIT_STAT_FLEEING_MOVE);
 }
 
@@ -364,10 +362,28 @@ bool FleeingMovementGenerator<T>::Update(T &owner, const uint32 & time_diff)
         return true;
     }
 
-    i_nextCheckTime.Update(time_diff);
-    if (i_nextCheckTime.Passed() && owner.movespline->Finalized())
-        _setTargetLocation(owner);
+    Traveller<T> traveller(owner);
 
+    i_nextCheckTime.Update(time_diff);
+
+    if( (owner.IsStopped() && !i_destinationHolder.HasArrived()) || !i_destinationHolder.HasDestination() )
+    {
+        _setTargetLocation(owner);
+        return true;
+    }
+
+    if (i_destinationHolder.UpdateTraveller(traveller, time_diff, false))
+    {
+        if (!IsActive(owner))                               // force stop processing (movement can move out active zone with cleanup movegens list)
+            return true;                                    // not expire now, but already lost
+
+        i_destinationHolder.ResetUpdate(50);
+        if(i_nextCheckTime.Passed() && i_destinationHolder.HasArrived())
+        {
+            _setTargetLocation(owner);
+            return true;
+        }
+    }
     return true;
 }
 

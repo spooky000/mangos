@@ -39,7 +39,6 @@
 #include "DBCStores.h"
 #include "SharedDefines.h"
 #include "LFG.h"
-#include "SpellAuras.h"
 
 #include<string>
 #include<vector>
@@ -115,6 +114,36 @@ struct PlayerTalent
 
 typedef UNORDERED_MAP<uint32, PlayerSpell> PlayerSpellMap;
 typedef UNORDERED_MAP<uint32, PlayerTalent> PlayerTalentMap;
+
+// Spell modifier (used for modify other spells)
+struct SpellModifier
+{
+    SpellModifier() : charges(0), lastAffected(NULL) {}
+
+    SpellModifier(SpellModOp _op, SpellModType _type, int32 _value, uint32 _spellId, uint64 _mask, uint32 _mask2 = 0, int16 _charges = 0)
+        : op(_op), type(_type), charges(_charges), value(_value), mask(_mask, _mask2), spellId(_spellId), lastAffected(NULL)
+    {}
+
+    SpellModifier(SpellModOp _op, SpellModType _type, int32 _value, uint32 _spellId, ClassFamilyMask _mask, int16 _charges = 0)
+        : op(_op), type(_type), charges(_charges), value(_value), mask(_mask), spellId(_spellId), lastAffected(NULL)
+    {}
+
+    SpellModifier(SpellModOp _op, SpellModType _type, int32 _value, SpellEntry const* spellEntry, SpellEffectIndex eff, int16 _charges = 0);
+
+    SpellModifier(SpellModOp _op, SpellModType _type, int32 _value, Aura const* aura, int16 _charges = 0);
+
+    bool isAffectedOnSpell(SpellEntry const *spell) const;
+
+    SpellModOp   op   : 8;
+    SpellModType type : 8;
+    int16 charges     : 16;
+    int32 value;
+    ClassFamilyMask mask;
+    uint32 spellId;
+    Spell const* lastAffected;
+};
+
+typedef std::list<SpellModifier*> SpellModList;
 
 struct SpellCooldown
 {
@@ -536,8 +565,7 @@ enum PlayerExtraFlags
     PLAYER_EXTRA_AUCTION_ENEMY      = 0x0080,               // overwrite PLAYER_EXTRA_AUCTION_NEUTRAL
 
     // other states
-    PLAYER_EXTRA_PVP_DEATH          = 0x0100,                // store PvP death status until corpse creating.
-    PLAYER_EXTRA_TRIAL_ACCOUNT      = 0x0200
+    PLAYER_EXTRA_PVP_DEATH          = 0x0100                // store PvP death status until corpse creating.
 };
 
 // 2^n values
@@ -1105,8 +1133,6 @@ class MANGOS_DLL_SPEC Player : public Unit
                 m_ExtraFlags |= PLAYER_EXTRA_AUCTION_NEUTRAL;
         }
 
-        bool isTrialAccount() const { return m_ExtraFlags & PLAYER_EXTRA_TRIAL_ACCOUNT; }
-
 
         void GiveXP(uint32 xp, Unit* victim);
         void GiveLevel(uint32 level);
@@ -1616,8 +1642,10 @@ class MANGOS_DLL_SPEC Player : public Unit
         PlayerTalent const* GetKnownTalentById(int32 talentId) const;
         SpellEntry const* GetKnownTalentRankById(int32 talentId) const;
 
-        void AddSpellMod(Aura* aura, bool apply);
+        void AddSpellMod(SpellModifier* mod, bool apply);
+        bool IsAffectedBySpellmod(SpellEntry const *spellInfo, SpellModifier *mod, Spell const* spell = NULL);
         template <class T> T ApplySpellMod(uint32 spellId, SpellModOp op, T &basevalue, Spell const* spell = NULL);
+        void RemoveSpellMods(Spell const* spell);
 
         static uint32 const infinityCooldownDelay = MONTH;  // used for set "infinity cooldowns" for spells and check
         static uint32 const infinityCooldownDelayCheck = MONTH/2;
@@ -1639,7 +1667,6 @@ class MANGOS_DLL_SPEC Player : public Unit
         void RemoveSpellCooldown(uint32 spell_id, bool update = false);
         void RemoveSpellCategoryCooldown(uint32 cat, bool update = false);
         void SendClearCooldown( uint32 spell_id, Unit* target );
-        void SendModifyCooldown( uint32 spell_id, int32 delta);
 
         GlobalCooldownMgr& GetGlobalCooldownMgr() { return m_GlobalCooldownMgr; }
 
@@ -2235,11 +2262,9 @@ class MANGOS_DLL_SPEC Player : public Unit
         void RemoveAtLoginFlag(AtLoginFlags f, bool in_db_also = false);
 
         // Temporarily removed pet cache
-        uint8 GetTemporaryUnsummonedPetCount() const { return m_temporaryUnsummonedPetNumber.size(); }
-        void SetTemporaryUnsummonedPetNumber(uint32 petnumber, uint8 count = 0) { m_temporaryUnsummonedPetNumber.insert(std::make_pair<uint8, uint32>(count,petnumber)); }
-        uint32 GetTemporaryUnsummonedPetNumber(uint8 count = 0);
-        void ClearTemporaryUnsummonedPetStorage() { m_temporaryUnsummonedPetNumber.clear(); }
-        void UnsummonPetTemporaryIfAny(bool full = true);
+        uint32 GetTemporaryUnsummonedPetNumber() const { return m_temporaryUnsummonedPetNumber; }
+        void SetTemporaryUnsummonedPetNumber(uint32 petnumber) { m_temporaryUnsummonedPetNumber = petnumber; }
+        void UnsummonPetTemporaryIfAny();
         void ResummonPetTemporaryUnSummonedIfAny();
         bool IsPetNeedBeTemporaryUnsummoned() const { return !IsInWorld() || !isAlive() || IsMounted() /*+in flight*/; }
         KnownPetNames m_knownPetNames;
@@ -2509,7 +2534,8 @@ class MANGOS_DLL_SPEC Player : public Unit
         float m_armorPenetrationPct;
         int32 m_spellPenetrationItemMod;
 
-        AuraList m_spellMods[MAX_SPELLMOD];
+        SpellModList m_spellMods[MAX_SPELLMOD];
+        int32 m_SpellModRemoveCount;
         EnchantDurationList m_enchantDuration;
         ItemDurationList m_itemDuration;
         ItemDurationList m_itemSoulboundTradeable;
@@ -2661,7 +2687,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         uint32 m_DetectInvTimer;
 
         // Temporary removed pet cache
-        PetNumberList m_temporaryUnsummonedPetNumber;
+        uint32 m_temporaryUnsummonedPetNumber;
 
         AchievementMgr m_achievementMgr;
         ReputationMgr  m_reputationMgr;
@@ -2692,28 +2718,38 @@ template <class T> T Player::ApplySpellMod(uint32 spellId, SpellModOp op, T &bas
     if (!spellInfo) return 0;
     int32 totalpct = 0;
     int32 totalflat = 0;
-    for (AuraList::iterator itr = m_spellMods[op].begin(); itr != m_spellMods[op].end(); ++itr)
+    for (SpellModList::iterator itr = m_spellMods[op].begin(); itr != m_spellMods[op].end(); ++itr)
     {
-        Aura *aura = *itr;
+        SpellModifier *mod = *itr;
 
-        Modifier const* mod = aura->GetModifier();
-
-        if (!aura->isAffectedOnSpell(spellInfo))
+        if(!IsAffectedBySpellmod(spellInfo,mod,spell))
             continue;
-
-        if (mod->m_auraname == SPELL_AURA_ADD_FLAT_MODIFIER)
-            totalflat += mod->m_amount;
-        else
+        if (mod->type == SPELLMOD_FLAT)
+            totalflat += mod->value;
+        else if (mod->type == SPELLMOD_PCT)
         {
             // skip percent mods for null basevalue (most important for spell mods with charges )
-            if (basevalue == T(0))
+            if(basevalue == T(0))
                 continue;
 
             // special case (skip >10sec spell casts for instant cast setting)
-            if (mod->m_miscvalue == SPELLMOD_CASTING_TIME  && basevalue >= T(10*IN_MILLISECONDS) && mod->m_amount <= -100)
+            if( mod->op==SPELLMOD_CASTING_TIME  && basevalue >= T(10*IN_MILLISECONDS) && mod->value <= -100)
                 continue;
 
-            totalpct += mod->m_amount;
+            totalpct += mod->value;
+        }
+
+        if (mod->charges > 0)
+        {
+            --mod->charges;
+            if (mod->charges == 0)
+            {
+                mod->charges = -1;
+                mod->lastAffected = spell;
+                if(!mod->lastAffected)
+                    mod->lastAffected = FindCurrentSpellBySpellId(spellId);
+                ++m_SpellModRemoveCount;
+            }
         }
     }
 

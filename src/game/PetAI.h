@@ -47,7 +47,6 @@ class MANGOS_DLL_DECL PetAI : public CreatureAI
         void _stopAttack(void);
 
         void UpdateAllies();
-        bool CanAutoCast(Unit* target, SpellEntry const* spellInfo);
 
         TimeTracker i_tracker;
         bool inCombat;

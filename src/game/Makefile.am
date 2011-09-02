@@ -247,7 +247,6 @@ libmangosgame_a_SOURCES = \
 	Spell.cpp \
 	SpellEffects.cpp \
 	Spell.h \
-	SpellClassMask.h
 	SkillDiscovery.cpp \
 	SkillDiscovery.h \
 	SkillExtraItems.cpp \

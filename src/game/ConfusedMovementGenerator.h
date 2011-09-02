@@ -20,7 +20,8 @@
 #define MANGOS_CONFUSEDMOVEMENTGENERATOR_H
 
 #include "MovementGenerator.h"
-#include "Timer.h"
+#include "DestinationHolder.h"
+#include "Traveller.h"
 
 #define MAX_CONF_WAYPOINTS 24
 
@@ -42,6 +43,7 @@ class MANGOS_DLL_SPEC ConfusedMovementGenerator
         void _InitSpecific(T &, bool &, bool &);
         TimeTracker i_nextMoveTime;
         float i_waypoints[MAX_CONF_WAYPOINTS+1][3];
+        DestinationHolder< Traveller<T> > i_destinationHolder;
         uint32 i_nextMove;
 };
 #endif

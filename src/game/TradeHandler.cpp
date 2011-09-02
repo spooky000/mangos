@@ -574,12 +574,6 @@ void WorldSession::HandleInitiateTradeOpcode(WorldPacket& recvPacket)
         return;
     }
 
-    if (GetPlayer().isTrialAccount())
-    {
-        SendTradeStatus(TRADE_STATUS_TRIAL_ACCOUNT);
-        return;
-    }
-
     Player* pOther = ObjectAccessor::FindPlayer( otherGuid );
 
     if (!pOther)
@@ -633,12 +627,6 @@ void WorldSession::HandleInitiateTradeOpcode(WorldPacket& recvPacket)
     if (!pOther->IsWithinDistInMap(_player,10.0f,false))
     {
         SendTradeStatus(TRADE_STATUS_TARGET_TO_FAR);
-        return;
-    }
-
-    if (pOther.isTrialAccount())
-    {
-        SendTradeStatus(TRADE_STATUS_TRIAL_ACCOUNT);
         return;
     }
 

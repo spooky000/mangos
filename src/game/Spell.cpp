@@ -362,7 +362,7 @@ Spell::Spell( Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid o
     for(int i = 0; i < MAX_EFFECT_INDEX; ++i)
         m_currentBasePoints[i] = m_spellInfo->CalculateSimpleValue(SpellEffectIndex(i));
 
-    m_spellState = SPELL_STATE_PREPARING;
+    m_spellState = SPELL_STATE_NULL;
 
     m_castPositionX = m_castPositionY = m_castPositionZ = 0;
     m_TriggerSpells.clear();
@@ -393,17 +393,12 @@ Spell::Spell( Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid o
     // determine reflection
     m_canReflect = false;
 
-
     // AoE spells, spells with non-magic DmgClass or SchoolMask or with SPELL_ATTR_EX2_CANT_REFLECTED cannot be reflected
     if (m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC &&
         m_spellInfo->SchoolMask != SPELL_SCHOOL_MASK_NORMAL &&
         !(m_spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER && m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000000000000008)) &&
         !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_CANT_REFLECTED) &&                // Thunderstorm should be reflectable
         (!IsAreaOfEffectSpell(m_spellInfo) || (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN && m_spellInfo->SpellFamilyFlags & UI64LIT(0x00200000000000))))
-
-    m_spellFlags = SPELL_FLAG_NORMAL;
-
-    if(m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC && !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_CANT_REFLECTED))
     {
         for(int j = 0; j < MAX_EFFECT_INDEX; ++j)
         {
@@ -712,38 +707,44 @@ void Spell::prepareDataForTriggerSystem()
         {
             case SPELLFAMILY_MAGE:
                 // Arcane Missiles / Blizzard triggers need do it
-                if (m_spellInfo->SpellFamilyFlags.test<CF_MAGE_BLIZZARD, CF_MAGE_ARCANE_MISSILES2>() || m_spellInfo->SpellIconID == 212)
+                if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0000000000200080)))
                     m_canTrigger = true;
                 // Clearcasting trigger need do it
+                else if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0000000200000000)))
+                    m_canTrigger = true;
                 // Replenish Mana, item spell with triggered cases (Mana Agate, etc mana gems)
+                else if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0000010000000000)))
+                    m_canTrigger = true;
                 // Fingers of Frost: triggered by Frost/Ice Armor
+                else if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000000000100000))
+                    m_canTrigger = true;
                 // Living Bomb - can trigger Hot Streak
-                else if (m_spellInfo->SpellFamilyFlags.test<CF_MAGE_CLEARCASTING, CF_MAGE_REPLENISH_MANA, CF_MAGE_CHILLED, CF_MAGE_LIVING_BOMB_AOE>())
+                else if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x1000000000000))
                     m_canTrigger = true;
                 break;
             case SPELLFAMILY_WARLOCK:
                 // For Hellfire Effect / Rain of Fire / Seed of Corruption triggers need do it
-                if (m_spellInfo->SpellFamilyFlags.test<CF_WARLOCK_RAIN_OF_FIRE, CF_WARLOCK_HELLFIRE, CF_WARLOCK_SEED_OF_CORRUPTION2>())
+                if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0000800000000060)))
                     m_canTrigger = true;
                 break;
             case SPELLFAMILY_PRIEST:
                 // For Penance,Mind Sear,Mind Flay heal/damage triggers need do it
-                if (m_spellInfo->SpellFamilyFlags.test<CF_PRIEST_MIND_FLAY1, CF_PRIEST_PENANCE_DMG, CF_PRIEST_PENANCE_HEAL, CF_PRIEST_IMP_DEVOURING_PLAGUE, CF_PRIEST_MIND_FLAY2>())
+                if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0001800000800000), 0x00000040))
                     m_canTrigger = true;
                 break;
             case SPELLFAMILY_ROGUE:
                 // For poisons need do it
-                if (m_spellInfo->SpellFamilyFlags.test<CF_ROGUE_INSTANT_POISON, CF_ROGUE_CRIPPLING_POISON, CF_ROGUE_MIND_NUMBING_POISON, CF_ROGUE_DEADLY_POISON, CF_ROGUE_WOUND_POISON, CF_ROGUE_ANESTHETIC_POISON>())
+                if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x000000101001E000)))
                     m_canTrigger = true;
                 break;
             case SPELLFAMILY_HUNTER:
                 // Hunter Rapid Killing/Explosive Trap Effect/Immolation Trap Effect/Frost Trap Aura/Snake Trap Effect/Explosive Shot
-                if (m_spellInfo->SpellFamilyFlags.test<CF_HUNTER_FIRE_TRAP_EFFECTS, CF_HUNTER_FROST_TRAP_EFFECTS, CF_HUNTER_SNAKE_TRAP_EFFECT, CF_HUNTER_RAPID_KILLING, CF_HUNTER_EXPLOSIVE_SHOT2>())
+                if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0100200000000214), 0x00000200))
                     m_canTrigger = true;
                 break;
             case SPELLFAMILY_PALADIN:
                 // For Judgements (all) / Holy Shock triggers need do it
-                if (m_spellInfo->SpellFamilyFlags.test<CF_PALADIN_JUDGEMENT_OF_RIGHT, CF_PALADIN_JUDGEMENT_OF_WISDOM_LIGHT, CF_PALADIN_JUDGEMENT_OF_JUSTICE, CF_PALADIN_HOLY_SHOCK1, CF_PALADIN_JUDGEMENT_ACTIVATE, CF_PALADIN_JUDGEMENT_OF_LIGHT, CF_PALADIN_JUDGEMENT_OF_BLOOD_MARTYR, CF_PALADIN_HOLY_SHOCK>())
+                if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0001000900B80400)))
                     m_canTrigger = true;
                 break;
             case SPELLFAMILY_WARRIOR:
@@ -806,7 +807,7 @@ void Spell::prepareDataForTriggerSystem()
 
     // Hunter traps spells: Immolation Trap Effect, Frost Trap (triggering spell!!),
     // Freezing Trap Effect(+ Freezing Arrow Effect), Explosive Trap Effect, Snake Trap Effect
-    if (m_spellInfo->IsFitToFamily<SPELLFAMILY_HUNTER, CF_HUNTER_FREEZING_TRAP_EFFECT, CF_HUNTER_MISC_TRAPS, CF_HUNTER_SNAKE_TRAP_EFFECT, CF_HUNTER_EXPLOSIVE_TRAP_EFFECT, CF_HUNTER_IMMOLATION_TRAP, CF_HUNTER_FROST_TRAP>())
+    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER && (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0000200000002008), 0x00064000)))
         m_procAttacker |= PROC_FLAG_ON_TRAP_ACTIVATION;
 }
 
@@ -825,9 +826,6 @@ void Spell::AddUnitTarget(Unit* pVictim, SpellEffectIndex effIndex)
 
     // Check for effect immune skip if immuned
     bool immuned = pVictim->IsImmuneToSpellEffect(m_spellInfo, effIndex);
-
-    if (pVictim->GetTypeId() == TYPEID_UNIT && ((Creature*)pVictim)->IsTotem() && (m_spellFlags & SPELL_FLAG_REDIRECTED))
-        immuned = false;
 
     ObjectGuid targetGUID = pVictim->GetObjectGuid();
 
@@ -888,8 +886,6 @@ void Spell::AddUnitTarget(Unit* pVictim, SpellEffectIndex effIndex)
 
         // Increase time interval for reflected spells by 1.5
         target.timeDelay += target.timeDelay >> 1;
-
-        m_spellFlags |= SPELL_FLAG_REFLECTED;
     }
     else
         target.reflectResult = SPELL_MISS_NONE;
@@ -1068,7 +1064,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
     {
         if (target->reflectResult == SPELL_MISS_NONE)       // If reflected spell hit caster -> do all effect on him
         {
-            DoSpellHitOnUnit(m_caster, mask);
+            DoSpellHitOnUnit(m_caster, mask, true);
             unitTarget = m_caster;
         }
     }
@@ -1156,14 +1152,14 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
         // Haunt (NOTE: for avoid use additional field damage stored in dummy value (replace unused 100%)
         // apply before deal damage because aura can be removed at target kill
         if (m_spellInfo->SpellFamilyName == SPELLFAMILY_WARLOCK && m_spellInfo->SpellIconID == 3172 &&
-            m_spellInfo->SpellFamilyFlags.test<CF_WARLOCK_HAUNT>())
+            (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0004000000000000)))
             if(Aura* dummy = unitTarget->GetDummyAura(m_spellInfo->Id))
                 dummy->GetModifier()->m_amount = damageInfo.damage;
 
         caster->DealSpellDamage(&damageInfo, true);
 
         // Scourge Strike, here because needs to use final damage in second part of the spell
-        if (m_spellInfo->IsFitToFamily<SPELLFAMILY_DEATHKNIGHT, CF_DEATHKNIGHT_SCOURGE_STRIKE>())
+        if (m_spellInfo->SpellFamilyName == SPELLFAMILY_DEATHKNIGHT && m_spellInfo->SpellFamilyFlags & UI64LIT(0x0800000000000000))
         {
             uint32 count = 0;
             Unit::SpellAuraHolderMap const& auras = unitTarget->GetSpellAuraHolderMap();
@@ -1216,7 +1212,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
         ((Creature*)m_caster)->AI()->SpellHitTarget(unit, m_spellInfo);
 }
 
-void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
+void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask, bool isReflected)
 {
     if (!unit || !effectMask && !damage)
         return;
@@ -1405,7 +1401,7 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
             if (duration > 0)
             {
                 int32 limitduration = GetDiminishingReturnsLimitDuration(m_diminishGroup, m_spellInfo);
-                unit->ApplyDiminishingToDuration(m_diminishGroup, duration, m_caster, m_diminishLevel, limitduration, m_spellFlags & SPELL_FLAG_REFLECTED);
+                unit->ApplyDiminishingToDuration(m_diminishGroup, duration, m_caster, m_diminishLevel, limitduration, isReflected);
 
                 // Fully diminished
                 if (duration == 0)
@@ -1686,57 +1682,48 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 38794:                                 // Murmur's Touch (h)
                 case 50988:                                 // Glare of the Tribunal (Halls of Stone)
                 case 59870:                                 // Glare of the Tribunal (h) (Halls of Stone)
-                case 62016:                                 // Thorim charge orb
-                case 62042:                                 // Stormhammer
-                case 62488:                                 // Activate Construct (Ulduar - Ignis encounter)
-                case 63018:                                 // Searing Light (10 man)
-                case 63024:                                 // Gravity Bomb (10 man)
-                case 63387:                                 // Rapid Burst
-                case 63713:                                 // Dominate Mind (Yogg-Saron)
-                case 63795:                                 // Psychosis (Yogg-Saron)
-                case 63830:                                 // Malady of the Mind (Yogg-Saron)
-                case 63881:                                 // Malady of the Mind Jump(Yogg-Saron)
-                case 64174:                                 // Hodirs Protective Gaze (Yogg-saron)
-                case 64218:                                 // Overcharge
-                case 64234:                                 // Gravity Bomb (25 man)
-                case 64465:                                 // Shadow Beacon
-                case 64531:                                 // Rapid Burst
-                case 65121:                                 // Searing Light (25 man)
-                case 65301:                                 // Psychosis (Yogg-Saron)
-                case 65950:                                 // Touch of Light
+                case 68950:                                 // Fear (ICC: Forge of Souls)
                 case 66001:                                 // Touch of Darkness
-                case 66152:                                 // Bullet Foced Cast (Trial of the Crusader, ->
-                case 66153:
-                case 66336:                                 // Mistress' Kiss (Trial of the Crusader, ->
-                case 66339:                                 // Summon Scarab (Trial of the Crusader, Anub'arak encounter)
-                case 67077:                                 // -> Lord Jaraxxus encounter, 10 and 10 heroic)
-                case 67281:                                 // Touch of Darkness
+                case 67281:
                 case 67282:
                 case 67283:
-                case 67296:                                 // Touch of Light
+                case 65950:                                 // Touch of Light
+                case 67296:
                 case 67297:
                 case 67298:
-                case 68950:                                 // Fear (ICC: Forge of Souls)
+                case 62488:                                 // Activate Construct (Ulduar - Ignis encounter)
+                case 63024:                                 // Gravity Bomb (10 man)
+                case 64234:                                 // Gravity Bomb (25 man)
+                case 63018:                                 // Searing Light (10 man)
+                case 65121:                                 // Searing Light (25 man)
+                case 63713:                                 // Dominate Mind (Yogg-Saron)
+                case 63830:                                 // Malady of the Mind (Yogg-Saron)
                 case 71340:                                 // Pact of darkfallen (hack for script work)
+                case 63387:                                 // Rapid Burst
+                case 64531:                                 // Rapid Burst
+                case 62042:                                 // Stormhammer
+                case 64218:                                 // Overcharge
+                case 65301:                                 // Psychosis (Yogg-Saron)
+                case 63795:                                 // Psychosis (Yogg-Saron)
+                case 64465:                                 // Shadow Beacon
+                case 62016:                                 // Thorim charge orb
                     unMaxTargets = 1;
                     break;
                 case 28542:                                 // Life Drain
-                case 63476:                                 // Icicle (Hodir 10man)
-                case 63802:                                 // Brain Link (Yogg-Saron)
                 case 66013:                                 // Penetrating Cold (10 man)
-                case 66332:                                 // Nerubian Burrower (Trial of the Crusader, ->
-                case 67755:                                 // -> Anub'arak encounter, 10 and 10 heroic)
                 case 68509:                                 // Penetrating Cold (10 man heroic)
                 case 69278:                                 // Gas spore - 10
+                case 63476:                                 // Icicle (Hodir 10man)
+                case 63802:                                 // Brain Link (Yogg-Saron)
                     unMaxTargets = 2;
                     break;
                 case 28796:                                 // Poison Bolt Volley
                 case 29213:                                 // Curse of the Plaguebringer
                 case 31298:                                 // Sleep
-                case 51904:                                 // Limiting the count of Summoned Ghouls
-                case 54522:                                 // Summon Ghouls On Scarlet Crusade
                 case 60936:                                 // Surge of Power (25 man)
+                case 51904:                                 // Limiting the count of Summoned Ghouls
                 case 62477:                                 // Icicle (Hodir 25man)
+                case 54522:
                     unMaxTargets = 3;
                     break;
                 case 61916:                                 // Lightning Whirl (10 man)
@@ -1745,16 +1732,12 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 63482:                                 // Lightning Whirl (25 man)
                     unMaxTargets = urand(3,6);
                     break;
-                case 67756:                                 // Nerubian Burrower (Trial of the Crusader, ->
-                case 67757:                                 // -> Anub'arak encounter, 25 and 25 heroic)
                 case 71221:                                 // Gas spore - 25
                     unMaxTargets = 4;
                     break;
                 case 30843:                                 // Enfeeble TODO: exclude top threat target from target selection
                 case 42005:                                 // Bloodboil TODO: need to be 5 targets(players) furthest away from caster
                 case 55665:                                 // Life Drain (h)
-                case 67076:                                 // Mistress' Kiss (Trial of the Crusader, ->
-                case 67078:                                 // -> Lord Jaraxxus encounter, 25 and 25 heroic)
                 case 67700:                                 // Penetrating Cold (25 man)
                 case 68510:                                 // Penetrating Cold (25 man, heroic)
                     unMaxTargets = 5;
@@ -1789,19 +1772,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     if (Unit* realCaster = GetAffectiveCaster())
                         radius = realCaster->GetFloatValue(OBJECT_FIELD_SCALE_X) * 6;
                     break;
-                case 66881:                                 // Slime Pool (Acidmaw & Dreadscale encounter)
-                case 67638:                                 // (Trial of the Crusader, all difficulties)
-                case 67639:                                 // ----- // -----
-                case 67640:                                 // ----- // -----
-                    if (m_caster->HasAura(66882))
-                    {
-                        if (Aura* pAura = m_caster->GetAura(66882, EFFECT_INDEX_0))
-                            radius = 0.5*(60-(pAura->GetAuraDuration()/IN_MILLISECONDS));
-                    }
-                    break;
-                case 67732:                                 // Destroy all Frost Patches (Trial of the Crusader, Anub'arak)
-                    radius = 9.0f;
-                    break;
                 default:
                     break;
             }
@@ -1824,7 +1794,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
         case SPELLFAMILY_DRUID:
         {
             // Starfall
-            if (m_spellInfo->SpellFamilyFlags.test<CF_DRUID_STARFALL2>())
+            if (m_spellInfo->IsFitToFamilyMask(UI64LIT(0x0000000000000000), 0x00000100))
                 unMaxTargets = 2;
             break;
         }
@@ -2044,7 +2014,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 if(Unit* pUnitTarget = m_caster->SelectMagnetTarget(m_targets.getUnitTarget(), this, effIndex))
                 {
                     m_targets.setUnitTarget(pUnitTarget);
-                    m_spellFlags |= SPELL_FLAG_REDIRECTED;
                     targetUnitMap.push_back(pUnitTarget);
                 }
             }
@@ -2133,10 +2102,8 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     }
                 }
             }
-            // Brain Link (Yogg saron)
             // Frozen blows (Hodir)
-            // Sif Frostbolt Volley (Thorim)
-            else if(m_spellInfo->Id == 64545 || m_spellInfo->Id == 64544 || m_spellInfo->Id == 63802 || m_spellInfo->Id == 62580 || m_spellInfo->Id == 62604)
+            else if(m_spellInfo->Id == 64545 || m_spellInfo->Id == 64544)
             {
                 for (UnitList::iterator itr = targetUnitMap.begin(), next; itr != targetUnitMap.end(); itr = next)
                 {
@@ -2438,11 +2405,12 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
                     break;
             }
-            if (m_spellInfo->Id == 63278 ||                                                 // Mark of the Faceless
-                m_spellInfo->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_MIND_SEAR1>() ||   // Mind Sear
-                m_spellInfo->IsFitToFamily<SPELLFAMILY_DRUID, CF_DRUID_STARFALL1>())        // Starfall
+            // Mark of the Faceless         Mind Sear                   Starfall
+            if (m_spellInfo->Id == 63278 || m_spellInfo->Id == 49821 || m_spellInfo->Id == 50286)
+            {
                 if(Unit* currentTarget = m_targets.getUnitTarget())
                     targetUnitMap.remove(currentTarget);
+            }
             break;
         }
         case TARGET_DUELVSPLAYER_COORDINATES:
@@ -2742,7 +2710,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     if(Unit* pUnitTarget = m_caster->SelectMagnetTarget(m_targets.getUnitTarget(), this, effIndex))
                     {
                         m_targets.setUnitTarget(pUnitTarget);
-                        m_spellFlags |= SPELL_FLAG_REDIRECTED;
                         targetUnitMap.push_back(pUnitTarget);
                     }
                 }
@@ -2773,7 +2740,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
             if(Unit* pUnitTarget = m_caster->SelectMagnetTarget(m_targets.getUnitTarget(), this, effIndex))
             {
                 m_targets.setUnitTarget(pUnitTarget);
-                m_spellFlags |= SPELL_FLAG_REDIRECTED;
                 targetUnitMap.push_back(pUnitTarget);
             }
             break;
@@ -3447,18 +3413,13 @@ void Spell::cancel()
 
         case SPELL_STATE_CASTING:
         {
-            for(TargetList::iterator ihit = m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
+            for(TargetList::const_iterator ihit = m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
             {
                 if (ihit->missCondition == SPELL_MISS_NONE)
                 {
                     Unit* unit = m_caster->GetObjectGuid() == (*ihit).targetGUID ? m_caster : ObjectAccessor::GetUnit(*m_caster, ihit->targetGUID);
                     if (unit && unit->isAlive())
                         unit->RemoveAurasByCasterSpell(m_spellInfo->Id, m_caster->GetObjectGuid());
-
-                    // prevent other effects applying if spell is already interrupted
-                    // i.e. if effects have different targets and it was interrupted on one of them when 
-                    // haven't yet applied to another
-                    ihit->processed = true;
                 }
             }
 
@@ -3589,7 +3550,7 @@ void Spell::cast(bool skipCheck)
         case SPELLFAMILY_MAGE:
         {
             // Ice Block
-            if (m_spellInfo->SpellFamilyFlags.test<CF_MAGE_ICE_BLOCK>())
+            if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000008000000000))
                 AddPrecastSpell(41425);                     // Hypothermia
             // Fingers of Frost
             else if (m_spellInfo->Id == 44544)
@@ -3599,7 +3560,7 @@ void Spell::cast(bool skipCheck)
         case SPELLFAMILY_WARRIOR:
         {
             // Shield Slam
-            if (m_spellInfo->SpellFamilyFlags.test<CF_WARRIOR_SHIELD_SLAM>() && m_spellInfo->Category==1209)
+            if ((m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000020000000000)) && m_spellInfo->Category==1209)
             {
                 if (m_caster->HasAura(58375))               // Glyph of Blocking
                     AddTriggeredSpell(58374);               // Glyph of Blocking
@@ -3616,10 +3577,10 @@ void Spell::cast(bool skipCheck)
         {
             // Power Word: Shield
             if (m_spellInfo->Mechanic == MECHANIC_SHIELD &&
-                m_spellInfo->SpellFamilyFlags.test<CF_PRIEST_POWER_WORD_SHIELD>())
+                (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000000000000001)))
                 AddPrecastSpell(6788);                      // Weakened Soul
             // Prayer of Mending (jump animation), we need formal caster instead original for correct animation
-            else if (m_spellInfo->SpellFamilyFlags.test<CF_PRIEST_PRAYER_OF_MENDING>())
+            else if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000002000000000))
                 AddTriggeredSpell(41637);
 
             switch(m_spellInfo->Id)
@@ -3686,13 +3647,13 @@ void Spell::cast(bool skipCheck)
                     AddPrecastSpell(67485);                 // Hand of Rekoning (no typos in name ;) )
             }
             // Divine Shield, Divine Protection or Hand of Protection
-            else if (m_spellInfo->SpellFamilyFlags.test<CF_PALADIN_HAND_OF_PROTECTION, CF_PALADIN_DIVINE_SHIELD>())
+            else if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000000000400080))
             {
                 AddPrecastSpell(25771);                     // Forbearance
                 AddPrecastSpell(61987);                     // Avenging Wrath Marker
             }
             // Lay on Hands
-            else if (m_spellInfo->SpellFamilyFlags.test<CF_PALADIN_LAY_ON_HANDS>())
+            else if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000000000008000))
             {
                 // only for self cast
                 if (m_caster == m_targets.getUnitTarget())
@@ -3703,7 +3664,7 @@ void Spell::cast(bool skipCheck)
 
             }
             // Avenging Wrath
-            else if (m_spellInfo->SpellFamilyFlags.test<CF_PALADIN_AVENGING_WRATH>())
+            else if (m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000200000000000))
                 AddPrecastSpell(61987);                     // Avenging Wrath Marker
             break;
         }
@@ -3719,7 +3680,7 @@ void Spell::cast(bool skipCheck)
             else if (m_spellInfo->Id == 58875)
                 AddPrecastSpell(58876);
             // Totem of Wrath
-            else if (m_spellInfo->Effect[EFFECT_INDEX_0]==SPELL_EFFECT_APPLY_AREA_AURA_RAID && m_spellInfo->SpellFamilyFlags.test<CF_SHAMAN_TOTEM_OF_WRATH>())
+            else if (m_spellInfo->Effect[EFFECT_INDEX_0]==SPELL_EFFECT_APPLY_AREA_AURA_RAID && m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000000004000000))
                 // only for main totem spell cast
                 AddTriggeredSpell(30708);                   // Totem of Wrath
             break;
@@ -3774,10 +3735,6 @@ void Spell::cast(bool skipCheck)
 
     InitializeDamageMultipliers();
 
-    Unit *procTarget = m_targets.getUnitTarget();
-    if (!procTarget)
-        procTarget = m_caster;
-
     // Okay, everything is prepared. Now we need to distinguish between immediate and evented delayed spells
     if (m_spellInfo->speed > 0.0f)
     {
@@ -3794,17 +3751,9 @@ void Spell::cast(bool skipCheck)
         m_immediateHandled = false;
         m_spellState = SPELL_STATE_DELAYED;
         SetDelayStart(0);
-
-        // on spell cast end proc, 
-        // critical hit related part is currently done on hit so proc there, 
-        // 0 damage since any damage based procs should be on hit
-        // 0 victim proc since there is no victim proc dependent on successfull cast for caster
-        m_caster->ProcDamageAndSpell(procTarget, m_procAttacker, 0, PROC_EX_CAST_END, 0, m_attackType, m_spellInfo);
     }
     else
     {
-        m_caster->ProcDamageAndSpell(procTarget, m_procAttacker, 0, PROC_EX_CAST_END, 0, m_attackType, m_spellInfo);
-
         // Immediate spell, no big deal
         handle_immediate();
     }
@@ -4099,17 +4048,21 @@ void Spell::update(uint32 difftime)
 
 void Spell::finish(bool ok)
 {
-    if (!m_caster)
+    if(!m_caster)
         return;
 
-    if (m_spellState == SPELL_STATE_FINISHED)
+    if(m_spellState == SPELL_STATE_FINISHED)
         return;
 
     m_spellState = SPELL_STATE_FINISHED;
 
     // other code related only to successfully finished spells
-    if (!ok)
+    if(!ok)
         return;
+
+    // remove spell mods
+    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+        ((Player*)m_caster)->RemoveSpellMods(this);
 
     // handle SPELL_AURA_ADD_TARGET_TRIGGER auras
     Unit::AuraList const& targetTriggers = m_caster->GetAurasByType(SPELL_AURA_ADD_TARGET_TRIGGER);
@@ -5277,7 +5230,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                 return SPELL_FAILED_CASTER_AURASTATE;
         }
 
-        if(IsDispelSpell(m_spellInfo) && GetSpellDuration(m_spellInfo) && target->IsFriendlyTo(m_caster))
+        if(IsDispelSpell(m_spellInfo) && target->IsFriendlyTo(m_caster))
         {
             bool foundNeg = false;
             Unit::SpellAuraHolderMap const& auras = target->GetSpellAuraHolderMap();
@@ -5295,11 +5248,7 @@ SpellCastResult Spell::CheckCast(bool strict)
         }
 
         // totem immunity for channeled spells(needs to be before spell cast)
-        // spell attribs for player channeled spells
-        if ((m_spellInfo->AttributesEx & SPELL_ATTR_EX_CHANNEL_TRACKING_TARGET)
-            && (m_spellInfo->AttributesEx5 & SPELL_ATTR_EX5_AFFECTED_BY_HASTE)
-            && target->GetTypeId() == TYPEID_UNIT 
-            && ((Creature*)target)->IsTotem())
+        if (IsChanneledSpell(m_spellInfo) && target->GetTypeId() == TYPEID_UNIT && ((Creature*)target)->IsTotem())
             return SPELL_FAILED_IMMUNE;
 
         bool non_caster_target = target != m_caster && !IsSpellWithCasterSourceTargetsOnly(m_spellInfo);
@@ -5362,7 +5311,7 @@ SpellCastResult Spell::CheckCast(bool strict)
 
             // Lay on Hands (self cast)
             if (m_spellInfo->SpellFamilyName == SPELLFAMILY_PALADIN &&
-                m_spellInfo->SpellFamilyFlags.test<CF_PALADIN_LAY_ON_HANDS>())
+                m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000000000008000))
             {
                 if (target->HasAura(25771))                 // Forbearance
                     return SPELL_FAILED_CASTER_AURASTATE;
@@ -5477,8 +5426,8 @@ SpellCastResult Spell::CheckCast(bool strict)
             // Exclusion for Pounce:  Facing Limitation was removed in 2.0.1, but it still uses the same, old Ex-Flags
             // Exclusion for Mutilate:Facing Limitation was removed in 2.0.1 and 3.0.3, but they still use the same, old Ex-Flags
             // Exclusion for Throw: Facing limitation was added in 3.2.x, but that shouldn't be
-            if (!m_spellInfo->IsFitToFamily<SPELLFAMILY_DRUID, CF_DRUID_POUNCE>() &&
-                !m_spellInfo->IsFitToFamily<SPELLFAMILY_ROGUE, CF_ROGUE_MUTILATE>() &&
+            if (!m_spellInfo->IsFitToFamily(SPELLFAMILY_DRUID, UI64LIT(0x0000000000020000)) &&
+                !m_spellInfo->IsFitToFamily(SPELLFAMILY_ROGUE, UI64LIT(0x0020000000000000)) &&
                 m_spellInfo->Id != 2764)
             {
                 SendInterrupted(2);
@@ -5762,7 +5711,7 @@ SpellCastResult Spell::CheckCast(bool strict)
             case SPELL_EFFECT_SCHOOL_DAMAGE:
             {
                 // Hammer of Wrath
-                if (m_spellInfo->IsFitToFamily<SPELLFAMILY_PALADIN, CF_PALADIN_HAMMER_OF_WRATH>())
+                if(m_spellInfo->SpellVisual[0] == 7250)
                 {
                     if (!m_targets.getUnitTarget())
                         return SPELL_FAILED_BAD_IMPLICIT_TARGETS;
@@ -6289,23 +6238,6 @@ SpellCastResult Spell::CheckCast(bool strict)
 
                 break;
             }
-            case SPELL_AURA_MIRROR_IMAGE:
-            {
-                Unit* pTarget = m_targets.getUnitTarget();
-
-                // In case of TARGET_SCRIPT, we have already added a target. Use it here (and find a better solution)
-                if (m_UniqueTargetInfo.size() == 1)
-                    pTarget = m_caster->GetMap()->GetAnyTypeCreature(m_UniqueTargetInfo.front().targetGUID);
-
-                if (!pTarget)
-                    return SPELL_FAILED_BAD_TARGETS;
-
-                // It is assumed that target can not be cloned if already cloned by same or other clone auras
-                if (pTarget->HasAuraType(SPELL_AURA_MIRROR_IMAGE))
-                    return SPELL_FAILED_BAD_TARGETS;
-
-                break;
-            }
             default:
                 break;
         }
@@ -6678,9 +6610,6 @@ SpellCastResult Spell::CheckRange(bool strict)
                 float base = ATTACK_DISTANCE;
                 if (Player* modOwner = m_caster->GetSpellModOwner())
                     range_mod += modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RANGE, base, this);
-
-                /*if(target->GetTypeId() == TYPEID_PLAYER && ((Player*)target)->isMoving())
-                    range_mod += 1.0f;*/
 
                 // with additional 5 dist for non stricted case (some melee spells have delay in apply
                 return m_caster->CanReachWithMeleeAttack(target, range_mod) ? SPELL_CAST_OK : SPELL_FAILED_OUT_OF_RANGE;
@@ -7533,7 +7462,7 @@ bool Spell::CheckTarget( Unit* target, SpellEffectIndex eff )
             // player far away, maybe his corpse near?
             if(target != m_caster && !target->IsWithinLOSInMap(m_caster))
             {
-                if (!m_targets.getCorpseTargetGuid())
+                if (m_targets.getCorpseTargetGuid())
                     return false;
 
                 Corpse *corpse = m_caster->GetMap()->GetCorpse(m_targets.getCorpseTargetGuid());
@@ -8125,13 +8054,13 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
 
             break;
         }
-        case 48018: // Demonic Circle: Summon
-        case 60854: // Demonic Circle: Clear
+        case 48018:
+        case 60854:
         {
             targetUnitMap.push_back(m_caster);
             break;
         }
-        case 48743: // Death Pact
+        case 48743:
         {
             if (i != EFFECT_INDEX_1)
                 return false;
@@ -8152,7 +8081,7 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
 
                     for (GuardianPetList::const_iterator itr = petList->begin(); itr != petList->end(); ++itr)
                         if (Unit* ghoul = m_caster->GetMap()->GetUnit(*itr))
-                            if (ghoul->GetEntry() == 24207 || ghoul->GetEntry() == 26125)
+                            if (ghoul->GetEntry() == 24207)
                                 targetUnitMap.push_back(ghoul);
 
                     if (targetUnitMap.size() > 1)
@@ -8246,95 +8175,9 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
                 targetUnitMap.push_back((Unit*)m_caster);
             break;
         }
-        case 62589: // Nature's Fury (10 man)
-        case 63571: // Nature's Fury (25 man)
-        {
-            FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
-            targetUnitMap.remove(m_caster); // exclude caster
-            break;
-        }
         case 65045: // Flame of demolisher
         {
             FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
-            break;
-        }
-        case 65919: // Anub'arak Cast Check Ice Spell (Trial of the Crusader - Anub'arak)
-        case 67858:
-        case 67859:
-        case 67860:
-        {
-            m_caster->CastSpell(m_caster, 66181, true);
-            m_targets.setDestination(m_caster->GetPositionX(), m_caster->GetPositionY(), m_caster->GetPositionZ());
-            SetTargetMap(SpellEffectIndex(i), m_spellInfo->EffectImplicitTargetB[i], targetUnitMap);
-            break;
-        }
-        case 67470: // Pursuing Spikes (Check Aura and Summon Spikes) (Trial Of The Crusader - Anub'arak)
-        {
-            UnitList tmpUnitMap;
-            bool m_bOneTargetHaveAura = false;
-
-            FillAreaTargets(tmpUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
-            if (!tmpUnitMap.empty())
-            {
-                for (UnitList::const_iterator itr = tmpUnitMap.begin(); itr != tmpUnitMap.end(); ++itr)
-                {
-                    if ((*itr)->HasAura(67574))
-                    {
-                        m_bOneTargetHaveAura = true;
-                        break;
-                    }
-                    else
-                    {
-                        if ((*itr)->GetTypeId() == TYPEID_PLAYER)
-                            targetUnitMap.push_back(*itr);
-                    }
-                }
-                if (!m_bOneTargetHaveAura && !targetUnitMap.empty())
-                {
-                    uint32 t = 0;
-                    UnitList::iterator iter = targetUnitMap.begin();
-                    while (iter != targetUnitMap.end() && (*iter)->IsWithinDist(m_caster, radius))
-                    {
-                        ++t;
-                        ++iter;
-                    }
-
-                    iter = targetUnitMap.begin();
-                    std::advance(iter, urand(0, t-1));
-                    if (*iter)
-                        (*iter)->CastSpell((*iter), 67574, true);
-                }
-            }
-            break;
-        }
-        case 68921: // Soulstorm (Forge of Souls - Bronjahm)
-        case 69049:
-        {
-            UnitList tmpUnitMap;
-            FillAreaTargets(tmpUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
-            if (!tmpUnitMap.empty())
-            {
-                for (UnitList::const_iterator itr = tmpUnitMap.begin(); itr != tmpUnitMap.end(); ++itr)
-                {
-                    if (*itr && !(*itr)->IsWithinDistInMap(m_caster, 10.0f))
-                        targetUnitMap.push_back(*itr);
-                }
-            }
-            break;
-        }
-        case 66862: // Radiance (Trial of the Champion - Eadric the Pure)
-        case 67681:
-        {
-            UnitList tmpUnitMap;
-            FillAreaTargets(tmpUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
-            if (!tmpUnitMap.empty())
-            {
-                for (UnitList::const_iterator itr = tmpUnitMap.begin(); itr != tmpUnitMap.end(); ++itr)
-                {
-                    if (*itr && (*itr)->isInFrontInMap(m_caster, DEFAULT_VISIBILITY_DISTANCE) && (*itr)->IsWithinLOSInMap(m_caster))
-                        targetUnitMap.push_back(*itr);
-                }
-            }
             break;
         }
         case 72378: // Blood Nova

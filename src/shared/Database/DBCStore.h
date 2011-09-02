@@ -138,7 +138,8 @@ class DBCStorage
                             uint32 id = fields[sql->sqlIndexPos].GetUInt32();
                             if (indexTable[id])
                             {
-                                sLog.outDetail("Index %d already exists in dbc!. replacing on '%s' data field!", id, sql->sqlTableName.c_str());
+                                sLog.outError("Index %d already exists in dbc:'%s'", id, sql->sqlTableName.c_str());
+                                return false;
                             }
                             indexTable[id]=(T*)&sqlDataTable[offset];
                         }

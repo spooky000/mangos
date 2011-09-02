@@ -66,13 +66,6 @@ enum SpellCastFlags
     CAST_FLAG_IMMUNITY          = 0x04000000                // spell cast school imminity info
 };
 
-enum SpellFlags
-{
-    SPELL_FLAG_NORMAL       = 0x00,
-    SPELL_FLAG_REFLECTED    = 0x01,     // reflected spell
-    SPELL_FLAG_REDIRECTED   = 0x02      // redirected spell
-};
-
 enum SpellNotifyPushType
 {
     PUSH_IN_FRONT,
@@ -210,10 +203,12 @@ inline ByteBuffer& operator>> (ByteBuffer& buf, SpellCastTargetsReader const& ta
 
 enum SpellState
 {
-    SPELL_STATE_PREPARING = 0,                              // cast time delay period, non channeled spell
-    SPELL_STATE_CASTING   = 1,                              // channeled time period spell casting state
-    SPELL_STATE_FINISHED  = 2,                              // cast finished to success or fail
-    SPELL_STATE_DELAYED   = 3                               // spell casted but need time to hit target(s)
+    SPELL_STATE_NULL      = 0,
+    SPELL_STATE_PREPARING = 1,
+    SPELL_STATE_CASTING   = 2,
+    SPELL_STATE_FINISHED  = 3,
+    SPELL_STATE_IDLE      = 4,
+    SPELL_STATE_DELAYED   = 5
 };
 
 enum SpellTargets
@@ -349,7 +344,6 @@ class Spell
         void EffectQuestFail(SpellEffectIndex eff_idx);
         void EffectQuestStart(SpellEffectIndex eff_idx);
         void EffectActivateRune(SpellEffectIndex eff_idx);
-        void EffectSuspendGravity(SpellEffectIndex eff_idx);
 
         void EffectTeachTaxiNode(SpellEffectIndex eff_idx);
         void EffectWMODamage(SpellEffectIndex eff_idx);
@@ -360,9 +354,6 @@ class Spell
         void EffectSpecCount(SpellEffectIndex eff_idx);
         void EffectActivateSpec(SpellEffectIndex eff_idx);
         void EffectCancelAura(SpellEffectIndex eff_idx);
-
-        void EffectFriendSummon(SpellEffectIndex eff_idx);
-        void EffectServerSide(SpellEffectIndex eff_idx);
 
         Spell(Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid originalCasterGUID = ObjectGuid(), SpellEntry const* triggeredBy = NULL);
         ~Spell();
@@ -419,7 +410,7 @@ class Spell
 
         typedef std::list<Unit*> UnitList;
         void FillTargetMap();
-        bool FillCustomTargetMap(SpellEffectIndex effIndex, UnitList &targetUnitMap);
+        bool FillCustomTargetMap(SpellEffectIndex effIndex, UnitList &targetUnitMap); 
         void SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList &targetUnitMap);
 
         void FillAreaTargets(UnitList &targetUnitMap, float radius, SpellNotifyPushType pushType, SpellTargets spellTargets, WorldObject* originalCaster = NULL);
@@ -536,7 +527,6 @@ class Spell
         int32 m_casttime;                                   // Calculated spell cast time initialized only in Spell::prepare
         int32 m_duration;
         bool m_canReflect;                                  // can reflect this spell?
-        uint8 m_spellFlags;                                 // for spells whose target was changed in cast i.e. due to reflect
         bool m_autoRepeat;
         uint8 m_runesState;
 
@@ -560,7 +550,7 @@ class Spell
         bool m_executedCurrently;                           // mark as executed to prevent deleted and access by dead pointers
         bool m_needSpellLog;                                // need to send spell log?
         uint8 m_applyMultiplierMask;                        // by effect: damage multiplier needed?
-        float m_damageMultipliers[MAX_EFFECT_INDEX];        // by effect: damage multiplier
+        float m_damageMultipliers[3];                       // by effect: damage multiplier
 
         // Current targets, to be used in SpellEffects (MUST BE USED ONLY IN SPELL EFFECTS)
         Unit* unitTarget;
@@ -619,6 +609,7 @@ class Spell
         {
             Item  *item;
             uint8 effectMask;
+            bool   processed:1;
         };
 
         typedef std::list<TargetInfo>     TargetList;
@@ -638,7 +629,7 @@ class Spell
         void HandleDelayedSpellLaunch(TargetInfo *target);
         void InitializeDamageMultipliers();
         void ResetEffectDamageAndHeal();
-        void DoSpellHitOnUnit(Unit *unit, uint32 effectMask);
+        void DoSpellHitOnUnit(Unit *unit, uint32 effectMask, bool isReflected = false);
         void DoAllEffectOnTarget(GOTargetInfo *target);
         void DoAllEffectOnTarget(ItemTargetInfo *target);
         bool IsAliveUnitPresentInTargetList();

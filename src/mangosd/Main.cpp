@@ -27,7 +27,6 @@
 #include "Log.h"
 #include "Master.h"
 #include "SystemConfig.h"
-#include "AuctionHouseBot/AuctionHouseBot.h"
 #include "revision.h"
 #include "revision_nr.h"
 #include <openssl/opensslv.h>
@@ -63,7 +62,6 @@ void usage(const char *prog)
     sLog.outString("Usage: \n %s [<options>]\n"
         "    -v, --version            print version and exist\n\r"
         "    -c config_file           use config_file as configuration file\n\r"
-        "    -a, --ahbot config_file  use config_file as ahbot configuration file\n\r"
         #ifdef WIN32
         "    Running as service functions:\n\r"
         "    -s run                   run as service\n\r"
@@ -84,11 +82,10 @@ extern int main(int argc, char **argv)
     char const* cfg_file = _MANGOSD_CONFIG;
 
 
-    char const *options = ":a:c:s:";
+    char const *options = ":c:s:";
 
     ACE_Get_Opt cmd_opts(argc, argv, options);
-    cmd_opts.long_option("version", 'v', ACE_Get_Opt::NO_ARG);
-    cmd_opts.long_option("ahbot", 'a', ACE_Get_Opt::ARG_REQUIRED);
+    cmd_opts.long_option("version", 'v');
 
     char serviceDaemonMode = '\0';
 
@@ -97,9 +94,6 @@ extern int main(int argc, char **argv)
     {
         switch (option)
         {
-            case 'a':
-                sAuctionBotConfig.SetConfigFileName(cmd_opts.opt_arg());
-                break;
             case 'c':
                 cfg_file = cmd_opts.opt_arg();
                 break;

@@ -61,7 +61,6 @@
 #include "WaypointManager.h"
 #include "GMTicketMgr.h"
 #include "Util.h"
-#include "AuctionHouseBot/AuctionHouseBot.h"
 #include "CharacterDatabaseCleaner.h"
 #include "LFGMgr.h"
 
@@ -786,8 +785,6 @@ void World::LoadConfigSettings(bool reload)
 
     setConfig(CONFIG_BOOL_PET_UNSUMMON_AT_MOUNT,      "PetUnsummonAtMount", true);
 
-    setConfig(CONFIG_BOOL_PET_SAVE_ALL,      "PetSaveAllInDB", false);
-
     setConfig(CONFIG_BOOL_RAID_FLAGS_UNIQUE,      "RaidFlags.Unique", false);
 
     m_relocation_ai_notify_delay = sConfig.GetIntDefault("Visibility.AIRelocationNotifyDelay", 1000u);
@@ -1358,9 +1355,6 @@ void World::SetInitialWorldSettings()
     m_timers[WUPDATE_CORPSES].SetInterval(20*MINUTE*IN_MILLISECONDS);
     m_timers[WUPDATE_DELETECHARS].SetInterval(DAY*IN_MILLISECONDS); // check for chars to delete every day
 
-    // for AhBot
-    m_timers[WUPDATE_AHBOT].SetInterval(20*IN_MILLISECONDS); // every 20 sec
-
     //to set mailtimer to return mails every day between 4 and 5 am
     //mailtimer is increased when updating auctions
     //one second is 1000 -(tested on win system)
@@ -1407,9 +1401,6 @@ void World::SetInitialWorldSettings()
 
     // Delete all characters which have been deleted X days before
     Player::DeleteOldCharacters();
-
-    sLog.outString("Initialize AuctionHouseBot...");
-    sAuctionBot.Initialize();
 
     sLog.outString( "WORLD: World initialized" );
 
@@ -1511,13 +1502,6 @@ void World::Update(uint32 diff)
 
         ///- Handle expired auctions
         sAuctionMgr.Update();
-    }
-
-    /// <li> Handle AHBot operations
-    if (m_timers[WUPDATE_AHBOT].Passed())
-    {
-        sAuctionBot.Update();
-        m_timers[WUPDATE_AHBOT].Reset();
     }
 
     /// <li> Handle session updates

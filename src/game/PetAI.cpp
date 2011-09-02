@@ -59,10 +59,9 @@ void PetAI::MoveInLineOfSight(Unit *u)
         float attackRadius = m_creature->GetAttackDistance(u);
         if(m_creature->IsWithinDistInMap(u, attackRadius) && m_creature->GetDistanceZ(u) <= CREATURE_Z_ATTACK_RANGE)
         {
-            if (!m_creature->hasUnitState(UNIT_STAT_CAN_NOT_REACT) && m_creature->IsWithinLOSInMap(u))
+            if(m_creature->IsWithinLOSInMap(u))
             {
                 AttackStart(u);
-                u->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
             }
         }
     }
@@ -100,9 +99,6 @@ bool PetAI::_needToStop() const
 {
     // This is needed for charmed creatures, as once their target was reset other effects can trigger threat
     if(m_creature->isCharmed() && m_creature->getVictim() == m_creature->GetCharmer())
-        return true;
-
-    if(m_creature->getVictim() == m_creature->GetCharmerOrOwner())
         return true;
 
     if (!m_creature->getVictim()->isVisibleForOrDetect(m_creature, m_creature, false))
@@ -208,7 +204,7 @@ void PetAI::UpdateAI(const uint32 diff)
     // Autocast (casted only in combat or persistent spells in any state)
     if (!m_creature->IsNonMeleeSpellCasted(false) && !m_creature->GetObjectGuid().IsVehicle())
     {
-        typedef std::vector<std::pair<ObjectGuid, uint32> > TargetSpellList;
+        typedef std::vector<std::pair<Unit*, Spell*> > TargetSpellList;
         TargetSpellList targetSpellStore;
 
         for (uint8 i = 0; i < m_creature->GetPetAutoSpellSize(); ++i)
@@ -254,13 +250,16 @@ void PetAI::UpdateAI(const uint32 diff)
                     continue;
             }
 
-            if (inCombat && m_creature->getVictim() && !m_creature->hasUnitState(UNIT_STAT_FOLLOW) && CanAutoCast(m_creature->getVictim(), spellInfo))
+            Spell *spell = new Spell(m_creature, spellInfo, false);
+
+            if (inCombat && !m_creature->hasUnitState(UNIT_STAT_FOLLOW) && spell->CanAutoCast(m_creature->getVictim()))
             {
-                targetSpellStore.push_back(std::make_pair<ObjectGuid, uint32>(m_creature->getVictim()->GetObjectGuid(), spellInfo->Id));
+                targetSpellStore.push_back(std::make_pair<Unit*, Spell*>(m_creature->getVictim(), spell));
                 continue;
             }
             else
             {
+                bool spellUsed = false;
                 for (AllySet::const_iterator tar = m_AllySet.begin(); tar != m_AllySet.end(); ++tar)
                 {
                     Unit* Target = m_creature->GetMap()->GetUnit(*tar);
@@ -269,12 +268,15 @@ void PetAI::UpdateAI(const uint32 diff)
                     if (!Target)
                         continue;
 
-                    if (CanAutoCast(Target, spellInfo))
+                    if (spell->CanAutoCast(Target))
                     {
-                        targetSpellStore.push_back(std::make_pair<ObjectGuid, uint32>(Target->GetObjectGuid(), spellInfo->Id));
+                        targetSpellStore.push_back(std::make_pair<Unit*, Spell*>(Target, spell));
+                        spellUsed = true;
                         break;
                     }
                 }
+                if (!spellUsed)
+                    delete spell;
             }
         }
 
@@ -283,17 +285,32 @@ void PetAI::UpdateAI(const uint32 diff)
         {
             uint32 index = urand(0, targetSpellStore.size() - 1);
 
-            uint32 spellId         = targetSpellStore[index].second;
-            ObjectGuid  targetGuid = targetSpellStore[index].first;
-            if (Unit* target = m_creature->GetMap()->GetUnit(targetGuid))
-            {
-                m_creature->DoPetCastSpell(target, spellId);
-            }
+            Spell* spell  = targetSpellStore[index].second;
+            Unit*  target = targetSpellStore[index].first;
 
             targetSpellStore.erase(targetSpellStore.begin() + index);
+
+            SpellCastTargets targets;
+            targets.setUnitTarget( target );
+
+            if (!m_creature->HasInArc(M_PI_F, target))
+            {
+                m_creature->SetInFront(target);
+                if (target->GetTypeId() == TYPEID_PLAYER)
+                    m_creature->SendCreateUpdateToPlayer((Player*)target);
+
+                if (owner && owner->GetTypeId() == TYPEID_PLAYER)
+                    m_creature->SendCreateUpdateToPlayer( (Player*)owner );
+            }
+
+            m_creature->AddCreatureSpellCooldown(spell->m_spellInfo->Id);
+
+            spell->prepare(&targets);
         }
 
-        targetSpellStore.clear();
+        // deleted cached Spell objects
+        for(TargetSpellList::const_iterator itr = targetSpellStore.begin(); itr != targetSpellStore.end(); ++itr)
+            delete itr->second;
     }
 }
 
@@ -348,13 +365,4 @@ void PetAI::AttackedBy(Unit *attacker)
     if(!m_creature->getVictim() && m_creature->GetCharmInfo() && !m_creature->GetCharmInfo()->HasReactState(REACT_PASSIVE) &&
         (!m_creature->GetCharmInfo()->HasCommandState(COMMAND_STAY) || m_creature->CanReachWithMeleeAttack(attacker)))
         AttackStart(attacker);
-}
-
-bool PetAI::CanAutoCast(Unit* target, SpellEntry const* spellInfo)
-{
-    if (!spellInfo || !target)
-        return false;
-
-    Spell spell = Spell(m_creature, spellInfo, false);
-    return spell.CanAutoCast(target);
 }

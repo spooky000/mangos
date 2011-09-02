@@ -26,13 +26,12 @@
 
 void LFGPlayerState::Clear()
 {
-    LFGMgr::WriteGuard Guard(sLFGMgr.GetLock());
     rolesMask = LFG_ROLE_MASK_NONE;
     update = true;
     m_state = LFG_STATE_NONE;
-    AddFlags( LFG_MEMBER_FLAG_NONE |
+    AddFlags( LFG_MEMBER_FLAG_NONE | 
               LFG_MEMBER_FLAG_CHARINFO |
-              LFG_MEMBER_FLAG_COMMENT |
+              LFG_MEMBER_FLAG_COMMENT | 
               LFG_MEMBER_FLAG_GROUPLEADER |
               LFG_MEMBER_FLAG_GROUPGUID |
               LFG_MEMBER_FLAG_AREA  |
@@ -82,22 +81,12 @@ LFGRoleMask LFGPlayerState::GetRoles()
     return rolesMask;
 };
 
-void LFGPlayerState::SetDungeons(LFGDungeonSet* dungeons)
+LFGType LFGPlayerState::GetDungeonType()
 {
-    LFGMgr::WriteGuard Guard(sLFGMgr.GetLock());
-    m_DungeonsList = *dungeons;
-};
+    if (!GetDungeons() || GetDungeons()->empty())
+        return LFG_TYPE_NONE;
 
-void LFGPlayerState::RemoveDungeon(LFGDungeonEntry const* dungeon)
-{
-    LFGMgr::WriteGuard Guard(sLFGMgr.GetLock());
-    m_DungeonsList.erase(dungeon);
-};
-
-void LFGPlayerState::AddDungeon(LFGDungeonEntry const* dungeon)
-{
-    LFGMgr::WriteGuard Guard(sLFGMgr.GetLock());
-    m_DungeonsList.insert(dungeon);
+    return LFGType((*GetDungeons()->begin())->type);
 };
 
 void LFGPlayerState::SetJoined()
@@ -128,7 +117,6 @@ void LFGPlayerState::SetComment(std::string comment)
 
 LFGType LFGPlayerState::GetType()
 {
-    LFGMgr::ReadGuard Guard(sLFGMgr.GetLock());
     if (m_DungeonsList.empty())
         return LFG_TYPE_NONE;
     else
@@ -137,7 +125,6 @@ LFGType LFGPlayerState::GetType()
 
 void LFGGroupState::Clear()
 {
-    LFGMgr::WriteGuard Guard(sLFGMgr.GetLock());
     queued = false;
     update = true;
     m_status = LFG_STATUS_NOT_SAVED;
@@ -160,7 +147,6 @@ void LFGGroupState::Clear()
 
 LFGType LFGGroupState::GetType()
 {
-    LFGMgr::ReadGuard Guard(sLFGMgr.GetLock());
     if (m_DungeonsList.empty())
         return LFG_TYPE_NONE;
     else
@@ -197,22 +183,12 @@ bool LFGGroupState::IsRoleCheckActive()
     return false;
 }
 
-void LFGGroupState::SetDungeons(LFGDungeonSet* dungeons)
+LFGType LFGGroupState::GetDungeonType()
 {
-    LFGMgr::WriteGuard Guard(sLFGMgr.GetLock());
-    m_DungeonsList = *dungeons;
-};
+    if (!GetDungeons() || GetDungeons()->empty())
+        return LFG_TYPE_NONE;
 
-void LFGGroupState::RemoveDungeon(LFGDungeonEntry const* dungeon)
-{
-    LFGMgr::WriteGuard Guard(sLFGMgr.GetLock());
-    m_DungeonsList.erase(dungeon);
-};
-
-void LFGGroupState::AddDungeon(LFGDungeonEntry const* dungeon)
-{
-    LFGMgr::WriteGuard Guard(sLFGMgr.GetLock());
-    m_DungeonsList.insert(dungeon);
+    return LFGType((*GetDungeons()->begin())->type);
 };
 
 bool LFGGroupState::IsBootActive()
