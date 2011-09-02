@@ -537,6 +537,7 @@ enum PlayerExtraFlags
 
     // other states
     PLAYER_EXTRA_PVP_DEATH          = 0x0100                // store PvP death status until corpse creating.
+    PLAYER_EXTRA_TRIAL_ACCOUNT      = 0x0100,
 };
 
 // 2^n values
@@ -1103,6 +1104,8 @@ class MANGOS_DLL_SPEC Player : public Unit
             else if( state > 0)
                 m_ExtraFlags |= PLAYER_EXTRA_AUCTION_NEUTRAL;
         }
+
+        bool isTrialAccount() const { return m_ExtraFlags & PLAYER_EXTRA_TRIAL_ACCOUNT; }
 
 
         void GiveXP(uint32 xp, Unit* victim);
@@ -2692,7 +2695,7 @@ template <class T> T Player::ApplySpellMod(uint32 spellId, SpellModOp op, T &bas
     for (AuraList::iterator itr = m_spellMods[op].begin(); itr != m_spellMods[op].end(); ++itr)
     {
         Aura *aura = *itr;
-        
+
         Modifier const* mod = aura->GetModifier();
 
         if (!aura->isAffectedOnSpell(spellInfo))

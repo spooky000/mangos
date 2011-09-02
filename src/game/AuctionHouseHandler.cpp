@@ -263,7 +263,13 @@ void WorldSession::HandleAuctionSellItem(WorldPacket & recv_data)
     recv_data >> etime;
 
     if (!bid || !etime)
-        return;                                             // check for cheaters
+        return;
+
+    if (GetPlayer().isTrialAccount())
+    {
+        SendAuctionCommandResult(null, AUCTION_STARTED, AUCTION_ERR_RESTRICTED_ACCOUNT);
+        return;
+    }                                     // check for cheaters
 
     Player *pl = GetPlayer();
 
@@ -392,6 +398,12 @@ void WorldSession::HandleAuctionPlaceBid(WorldPacket & recv_data)
 
     // always return pointer
     AuctionHouseObject* auctionHouse = sAuctionMgr.GetAuctionsMap(auctionHouseEntry);
+
+    if (GetPlayer().isTrialAccount())
+    {
+        SendAuctionCommandResult(null, AUCTION_BID_PLACED, AUCTION_ERR_RESTRICTED_ACCOUNT);
+        return;
+    }
 
     // remove fake death
     if (GetPlayer()->hasUnitState(UNIT_STAT_DIED))
