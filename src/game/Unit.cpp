@@ -10562,10 +10562,6 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
     {
         case ACT_COMMAND:                                   //0x07
         {
-        // Maybe exists some flag that disable it at client side
-            if (petGuid.IsVehicle())
-                return;
-
             switch(spellid)
             {
                 case COMMAND_STAY:                          //flat=1792  //STAY
