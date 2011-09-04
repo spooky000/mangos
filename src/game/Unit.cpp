@@ -11830,18 +11830,18 @@ void Unit::MonsterMoveWithSpeed(float x, float y, float z, float speed)
     init.Launch();
 }
 
-void Unit::MonsterMoveJump(float x, float y, float z, float o, float speed, float height)
+void Unit::MonsterMoveJump(float x, float y, float z, float o, float speed, float height, bool isKnockBack)
 {
     MaNGOS::NormalizeMapCoord(x);
     MaNGOS::NormalizeMapCoord(y);
 
-    if (GetTypeId() != TYPEID_PLAYER)
+    if (isKnockBack && GetTypeId() != TYPEID_PLAYER)
     {
         // Interrupt spells cause of movement
         InterruptNonMeleeSpells(false);
     }
 
-    GetMotionMaster()->MoveJump(x, y, z, speed, height, 0);
+    GetMotionMaster()->MoveJump(x, y, z, speed, height, 0, isKnockBack);
 }
 
 struct SetPvPHelper
