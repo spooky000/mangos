@@ -239,6 +239,20 @@ struct CreatureModelRace
     uint32 modelid_racial;                                  // Explicit modelid. Used if creature_template entry is not defined
 };
 
+struct CreatureSpellEntry
+{
+    CreatureSpellEntry() : spell(0), flags(0), disabled(0) {};
+
+    uint32 spell;
+    int32  flags;
+    bool   disabled;
+};
+
+#define MAX_CREATURE_SPELL_LISTS 8
+
+typedef std::map<uint8 /* index */,     CreatureSpellEntry> CreatureSpellsList;
+typedef std::map<uint32 /*creature_id*/,CreatureSpellsList> CreatureSpellStorage;
+
 // GCC have alternative #pragma pack() syntax and old gcc version not support pack(pop), also any gcc version not support it at some platform
 #if defined( __GNUC__ )
 #pragma pack()
@@ -529,7 +543,7 @@ class MANGOS_DLL_SPEC Creature : public Unit
         bool HasSpellCooldown(uint32 spell_id) const;
         bool HasCategoryCooldown(uint32 spell_id) const;
 
-        bool HasSpell(uint32 spellID) const;
+        bool HasSpell(uint32 spellID);
 
         bool UpdateEntry(uint32 entry, Team team = ALLIANCE, const CreatureData* data = NULL, GameEventCreatureData const* eventData = NULL, bool preserveHPAndPower = true);
 
@@ -587,7 +601,9 @@ class MANGOS_DLL_SPEC Creature : public Unit
         SpellEntry const *ReachWithSpellAttack(Unit *pVictim);
         SpellEntry const *ReachWithSpellCure(Unit *pVictim);
 
-        uint32 m_spells[CREATURE_MAX_SPELLS];
+        uint32 GetSpell(uint8 index, uint8 activeState = 0);
+        uint8  GetSpellMaxIndex(uint8 activeState = 0);
+
         CreatureSpellCooldowns m_CreatureSpellCooldowns;
         CreatureSpellCooldowns m_CreatureCategoryCooldowns;
 
@@ -719,6 +735,7 @@ class MANGOS_DLL_SPEC Creature : public Unit
 
         Position m_summonPos;
 
+        CreatureSpellsList m_spellOverride;
     private:
         GridReference<Creature> m_gridRef;
         CreatureInfo const* m_creatureInfo;                 // in difficulty mode > 0 can different from ObjMgr::GetCreatureTemplate(GetEntry())
