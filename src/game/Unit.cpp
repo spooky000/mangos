@@ -717,6 +717,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
                 break;
             }
             case RANGED_ATTACK:
+            default:
                 break;
         }
     }
@@ -3670,6 +3671,7 @@ uint32 Unit::GetWeaponSkillValue (WeaponAttackType attType, Unit const* target) 
             case BASE_ATTACK:   value+=uint32(((Player*)this)->GetRatingBonusValue(CR_WEAPON_SKILL_MAINHAND));break;
             case OFF_ATTACK:    value+=uint32(((Player*)this)->GetRatingBonusValue(CR_WEAPON_SKILL_OFFHAND));break;
             case RANGED_ATTACK: value+=uint32(((Player*)this)->GetRatingBonusValue(CR_WEAPON_SKILL_RANGED));break;
+            default: break;
         }
     }
     else
@@ -10361,26 +10363,26 @@ void CharmInfo::InitPossessCreateSpells()
 {
     InitEmptyActionBar();                                   //charm action bar
 
-    if(m_unit->GetTypeId() == TYPEID_PLAYER)                //possessed players don't have spells, keep the action bar empty
+    if (m_unit->GetTypeId() == TYPEID_PLAYER)                //possessed players don't have spells, keep the action bar empty
         return;
 
-    for(uint32 x = 0; x < CREATURE_MAX_SPELLS; ++x)
+    for(uint32 x = 0; x <= ((Creature*)m_unit)->GetSpellMaxIndex(); ++x)
     {
-        if (IsPassiveSpell(((Creature*)m_unit)->m_spells[x]))
-            m_unit->CastSpell(m_unit, ((Creature*)m_unit)->m_spells[x], true);
+        if (IsPassiveSpell(((Creature*)m_unit)->GetSpell(x)))
+            m_unit->CastSpell(m_unit, ((Creature*)m_unit)->GetSpell(x), true);
         else
-            AddSpellToActionBar(((Creature*)m_unit)->m_spells[x], ACT_PASSIVE);
+            AddSpellToActionBar(((Creature*)m_unit)->GetSpell(x), ACT_PASSIVE);
     }
 }
 
-void CharmInfo::InitVehicleCreateSpells()
+void CharmInfo::InitVehicleCreateSpells(uint8 seatId)
 {
     for (uint32 x = ACTION_BAR_INDEX_START; x < ACTION_BAR_INDEX_END; ++x)
         SetActionBar(x, 0, ActiveStates(0x8 + x));
 
-    for (uint32 x = 0; x < CREATURE_MAX_SPELLS; ++x)
+    for (uint32 x = 0; x <= ((Creature*)m_unit)->GetSpellMaxIndex(seatId); ++x)
     {
-        uint32 spellId = ((Creature*)m_unit)->m_spells[x];
+        uint32 spellId = ((Creature*)m_unit)->GetSpell(x,seatId);
 
         if (!spellId)
             continue;
@@ -10402,9 +10404,9 @@ void CharmInfo::InitCharmCreateSpells()
 
     InitPetActionBar();
 
-    for(uint32 x = 0; x < CREATURE_MAX_SPELLS; ++x)
+    for(uint32 x = 0; x <= ((Creature*)m_unit)->GetSpellMaxIndex(); ++x)
     {
-        uint32 spellId = ((Creature*)m_unit)->m_spells[x];
+        uint32 spellId = ((Creature*)m_unit)->GetSpell(x);
 
         if(!spellId)
         {
@@ -10562,10 +10564,6 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
     {
         case ACT_COMMAND:                                   //0x07
         {
-        // Maybe exists some flag that disable it at client side
-            if (petGuid.IsVehicle())
-                return;
-
             switch(spellid)
             {
                 case COMMAND_STAY:                          //flat=1792  //STAY
@@ -11832,18 +11830,18 @@ void Unit::MonsterMoveWithSpeed(float x, float y, float z, float speed)
     init.Launch();
 }
 
-void Unit::MonsterMoveJump(float x, float y, float z, float o, float speed, float height)
+void Unit::MonsterMoveJump(float x, float y, float z, float o, float speed, float height, bool isKnockBack)
 {
     MaNGOS::NormalizeMapCoord(x);
     MaNGOS::NormalizeMapCoord(y);
 
-    if (GetTypeId() != TYPEID_PLAYER)
+    if (isKnockBack && GetTypeId() != TYPEID_PLAYER)
     {
         // Interrupt spells cause of movement
         InterruptNonMeleeSpells(false);
     }
 
-    GetMotionMaster()->MoveJump(x, y, z, speed, height, 0);
+    GetMotionMaster()->MoveJump(x, y, z, speed, height, 0, isKnockBack);
 }
 
 struct SetPvPHelper
