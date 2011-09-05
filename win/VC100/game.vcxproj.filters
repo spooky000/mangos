@@ -234,6 +234,9 @@
     <ClCompile Include="..\..\src\game\Spell.cpp">
       <Filter>World/Handlers</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\game\SpellClassMask.h">
+      <Filter>World/Handlers</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\game\SpellAuras.cpp">
       <Filter>World/Handlers</Filter>
     </ClCompile>
@@ -472,6 +475,9 @@
     <ClCompile Include="..\..\src\game\UnitAuraProcHandler.cpp">
       <Filter>World/Handlers</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\game\VehicleHandler.cpp" >
+      <Filter>Object</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\game\AuctionHouseBot\AuctionHouseBot.cpp">
       <Filter>AhBot</Filter>
     </ClCompile>
@@ -658,6 +664,9 @@
       <Filter>World/Handlers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\game\Spell.h">
+      <Filter>World/Handlers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\SpellClassMask.h">
       <Filter>World/Handlers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\game\SpellAuraDefines.h">
