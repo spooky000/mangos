@@ -5877,7 +5877,7 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
                             target->SetDeathState(JUST_DIED);
                         }
                     }
-                    break
+                    break;
                 }
                 case 59807:                             // Corpse Explode (Trollgore - Drak'Tharon Keep Hero)
                 {
