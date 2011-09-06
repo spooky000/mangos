@@ -1259,6 +1259,7 @@ void Unit::CastCustomSpell(Unit* Victim, SpellEntry const *spellInfo, int32 cons
     if (triggeredByAura)
     {
         if(!originalCaster)
+        {
             if (triggeredByAura->GetHolder())
             {
                 originalCaster = triggeredByAura->GetCasterGuid();
@@ -1269,6 +1270,7 @@ void Unit::CastCustomSpell(Unit* Victim, SpellEntry const *spellInfo, int32 cons
                 sLog.outError("CastCustomSpell: spell %d by caster: %s triggered by aura without original caster and spellholder (CRUSH THERE!)", spellInfo->Id, GetObjectGuid().GetString().c_str());
                 return;
             }
+        }
     }
 
     Spell *spell = new Spell(this, spellInfo, triggered, originalCaster, triggeredBy);
@@ -11725,7 +11727,6 @@ void Unit::AddPetAura(PetAura const* petSpell)
                     _pet->CastPetAura(petSpell);
         }
     }
-
 }
 
 void Unit::RemovePetAura(PetAura const* petSpell)
@@ -12389,16 +12390,16 @@ ObjectGuid const& Unit::GetCreatorGuid() const
                 return ((TemporarySummon*)this)->GetSummonerGuid();
             }
             else
-                return ObjectGuid();
+                return ObjectGuid::Null;
 
         case HIGHGUID_PET:
             return GetGuidValue(UNIT_FIELD_CREATEDBY);
 
         case HIGHGUID_PLAYER:
-            return ObjectGuid();
+            return ObjectGuid::Null;
 
         default:
-            return ObjectGuid();
+            return ObjectGuid::Null;
     }
 }
 

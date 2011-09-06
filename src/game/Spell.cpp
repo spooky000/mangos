@@ -2818,19 +2818,19 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     Player* Target = itr->getSource();
 
                     // IsHostileTo check duel and controlled by enemy
-                    if(Target && Target->GetSubGroup() == subgroup && !m_caster->IsHostileTo(Target))
+                    if (Target && Target->GetSubGroup() == subgroup && !m_caster->IsHostileTo(Target))
                     {
-                        if( pTarget->IsWithinDistInMap(Target, radius) )
+                        if ( pTarget->IsWithinDistInMap(Target, radius) )
                             targetUnitMap.push_back(Target);
 
-                        if(Pet* pet = Target->GetPet())
+                        if (Target->GetPet())
                         {
                             GroupPetList m_groupPets = Target->GetPets();
                             if (!m_groupPets.empty())
                             {
                                 for (GroupPetList::const_iterator itr = m_groupPets.begin(); itr != m_groupPets.end(); ++itr)
                                     if (Pet* _pet = Target->GetMap()->GetPet(*itr))
-                                        if( pTarget->IsWithinDistInMap(_pet, radius) )
+                                        if ( pTarget->IsWithinDistInMap(_pet, radius) )
                                             targetUnitMap.push_back(_pet);
                             }
                         }
@@ -6379,7 +6379,7 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
                 if(!target)
                 {
                     return SPELL_FAILED_BAD_IMPLICIT_TARGETS;
-                    DEBUG_LOG("Charmed creature attempt to cast spell %d, but no required target",m_spellInfo->Id);
+                    DEBUG_LOG("Charmed creature attempt to cast spell %u, but no required target",m_spellInfo->Id);
                 }
                 break;
             }
@@ -6401,33 +6401,53 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
             {
                 if(m_caster->IsHostileTo(_target))
                 {
-                    DEBUG_LOG("Charmed creature attempt to cast positive spell %d, but target (guid %u) is hostile",m_spellInfo->Id, target->GetObjectGuid().GetRawValue());
+                    DEBUG_LOG("Charmed creature attempt to cast positive spell %u, but target (guid %s) is hostile",m_spellInfo->Id, target->GetObjectGuid().GetString().c_str());
                     return SPELL_FAILED_BAD_TARGETS;
                 }
             }
             else if (!_target->isTargetableForAttack() || (!_target->isVisibleForOrDetect(m_caster,m_caster,true) && !m_IsTriggeredSpell))
             {
-                DEBUG_LOG("Charmed creature attempt to cast spell %d, but target (guid %u) is not targetable or not detectable",m_spellInfo->Id,target->GetObjectGuid().GetRawValue());
+                DEBUG_LOG("Charmed creature attempt to cast spell %u, but target (guid %s) is not targetable or not detectable",m_spellInfo->Id,target->GetObjectGuid().GetString().c_str());
                 return SPELL_FAILED_BAD_TARGETS;            // guessed error
+            }
+            else
+            {
+                bool dualEffect = false;
+                for(int j = 0; j < MAX_EFFECT_INDEX; ++j)
+                {
+                                                            // This effects is positive AND negative. Need for vehicles cast.
+                    dualEffect |= (m_spellInfo->EffectImplicitTargetA[j] == TARGET_DUELVSPLAYER
+                                   || m_spellInfo->EffectImplicitTargetA[j] == TARGET_IN_FRONT_OF_CASTER_30
+                                   || m_spellInfo->EffectImplicitTargetA[j] == TARGET_MASTER
+                                   || m_spellInfo->EffectImplicitTargetA[j] == TARGET_IN_FRONT_OF_CASTER
+                                   || m_spellInfo->EffectImplicitTargetA[j] == TARGET_EFFECT_SELECT
+                                   || m_spellInfo->EffectImplicitTargetA[j] == TARGET_CASTER_COORDINATES);
+                }
+                if (!dualEffect && m_caster->getVictim() && (!IsPositiveSpell(m_spellInfo->Id) || IsDispelSpell(m_spellInfo)))
+                {
+                    if (!m_caster->IsHostileTo(_target) && (m_caster->GetCharmerOrOwner() && m_caster->GetCharmerOrOwner()->IsFriendlyTo(_target)))
+                    {
+                        DEBUG_LOG("Charmed creature attempt to cast negative spell %u, but target (guid %s) is friendly",m_spellInfo->Id, target->GetObjectGuid().GetString().c_str());
+                        return SPELL_FAILED_BAD_TARGETS;
+                    }
+                }
+                else if (!m_caster->GetVehicleKit() && m_caster->IsFriendlyTo(_target) && !(!m_caster->GetCharmerOrOwner() || !m_caster->GetCharmerOrOwner()->IsFriendlyTo(_target))
+                     && !dualEffect && !IsDispelSpell(m_spellInfo))
+                {
+                    DEBUG_LOG("Charmed creature attempt to cast spell %u, but target (guid %s) is not valid",m_spellInfo->Id,_target->GetObjectGuid().GetString().c_str());
+                    return SPELL_FAILED_BAD_TARGETS;
+                }
+
+                if (m_caster->GetObjectGuid() == _target->GetObjectGuid() && dualEffect && !IsPositiveSpell(m_spellInfo->Id))
+                {
+                    DEBUG_LOG("Charmed creature %s attempt to cast negative spell %u on self",_target->GetObjectGuid().GetString().c_str(), m_spellInfo->Id);
+//                    return SPELL_FAILED_BAD_TARGETS;
+                }
             }
         }
                                                             //cooldown
         if(((Creature*)m_caster)->HasSpellCooldown(m_spellInfo->Id))
             return SPELL_FAILED_NOT_READY;
-    }
-
-    // check spell focus object
-    if(m_spellInfo->RequiresSpellFocus)
-    {
-        GameObject* ok = NULL;
-        MaNGOS::GameObjectFocusCheck go_check(m_caster,m_spellInfo->RequiresSpellFocus);
-        MaNGOS::GameObjectSearcher<MaNGOS::GameObjectFocusCheck> checker(ok, go_check);
-        Cell::VisitGridObjects(m_caster, checker, m_caster->GetMap()->GetVisibilityDistance());
-
-        if(!ok)
-            return SPELL_FAILED_REQUIRES_SPELL_FOCUS;
-
-        focusObject = ok;                                   // game object found in range
     }
 
     return CheckCast(true);

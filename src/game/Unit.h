@@ -1721,7 +1721,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         int32 m_baseSpellCritChance;
 
         float m_threatModifier[MAX_SPELL_SCHOOL];
-        float m_modAttackSpeedPct[MAX_ATTACK + 2];
+        float m_modAttackSpeedPct[MAX_ATTACK_MOD];
         float m_modSpellSpeedPctNeg;
         float m_modSpellSpeedPctPos;
 
@@ -1893,6 +1893,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         uint32 SpellCriticalHealingBonus(SpellEntry const *spellProto, uint32 damage, Unit *pVictim);
 
         bool IsTriggeredAtSpellProcEvent(Unit *pVictim, SpellAuraHolder* holder, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, SpellProcEventEntry const*& spellProcEvent );
+        bool IsTriggeredAtCustomProcEvent(Unit *pVictim, SpellAuraHolder* holder, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, SpellProcEventEntry const*& spellProcEvent );
         // Aura proc handlers
         SpellAuraProcResult HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
         SpellAuraProcResult HandleHasteAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
@@ -1926,6 +1927,9 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
             // this aura type can't proc
             return SPELL_AURA_PROC_CANT_TRIGGER;
         }
+
+        SpellAuraProcResult HandleDamageShieldAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
+        SpellAuraProcResult HandleDropChargeByDamageProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
 
         void SetLastManaUse()
         {

@@ -380,6 +380,9 @@ void DungeonResetScheduler::LoadResetTimes()
 {
     time_t now = time(NULL);
 
+    // time_t today = (now / DAY) * DAY;
+    // time_t oldest_reset_time = now;
+
     // NOTE: Use DirectPExecute for tables that will be queried later
 
     // get the current reset times for normal instances (these may need to be updated)
@@ -505,6 +508,8 @@ void DungeonResetScheduler::LoadResetTimes()
         if (!mapEntry || !mapEntry->IsDungeon())
             continue;
 
+        //time_t period = GetMaxResetTimeFor(mapDiff);
+
         time_t t = GetResetTimeFor(mapid,difficulty);
 
         if(!t || t < now)
@@ -576,6 +581,8 @@ void DungeonResetScheduler::Update()
         {
             // global reset/warning for a certain map
             time_t resetTime = GetResetTimeFor(event.mapid,event.difficulty);
+
+            //MapDifficultyEntry const* mapDiff = GetMapDifficultyData(event.mapid,event.difficulty);
 
             m_InstanceSaves._ResetOrWarnAll(event.mapid, event.difficulty, event.type != RESET_EVENT_INFORM_LAST, resetTime);
             if(event.type != RESET_EVENT_INFORM_LAST)

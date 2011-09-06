@@ -122,6 +122,7 @@ void MapManager::LoadTransports()
 
     sLog.outString();
     sLog.outString( ">> Loaded %u transports", count );
+    sLog.outString( ">> Loaded " SIZEFMTD " transports with mapID's", m_mapOnTransportGO.size() );
 
     // check transport data DB integrity
     result = WorldDatabase.Query("SELECT gameobject.guid,gameobject.id,transports.name FROM gameobject,transports WHERE gameobject.id = transports.entry");

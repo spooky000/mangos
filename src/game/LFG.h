@@ -247,6 +247,40 @@ struct LFGPlayerState
     void           AddFlags(uint32 flags)    { m_flags = m_flags | flags;};
     void           RemoveFlags(uint32 flags) { m_flags = m_flags & ~flags;};
 
+protected:
+    LFGStateStructure()
+        : m_type(LFG_TYPE_NONE), m_flags(0), update(false), m_state(LFG_STATE_NONE), m_proposal(NULL) {};
+    LFGType          m_type;
+    uint32           m_flags;
+    bool             update;
+    LFGState         m_state;
+    LFGDungeonSet    m_DungeonsList;                   // Dungeons the player have applied for
+    LFGLockStatusMap m_LockMap;                        // Dungeons lock map
+    LFGProposal*     m_proposal;
+
+};
+
+
+struct LFGPlayerState : public LFGStateStructure
+{
+public:
+    explicit LFGPlayerState(Player* player) : m_player(player)
+    {
+        Clear();
+    };
+    ~LFGPlayerState() {};
+
+    void Clear();
+    LFGLockStatusMap const* GetLockMap();
+    std::string    GetComment()    { return m_comment; };
+    void           SetComment(std::string comment);
+
+    LFGRoleMask    GetRoles();
+    void           SetRoles(uint8 roles);
+    void           AddRole(LFGRoles role) { rolesMask = LFGRoleMask( rolesMask | (1 << role)); };
+    void           RemoveRole(LFGRoles role) { rolesMask = LFGRoleMask( rolesMask & ~(1 << role)); };
+    bool           IsSingleRole();
+
     void           SetJoined();
     time_t         GetJoinTime() { return m_jointime;};
 
@@ -257,19 +291,13 @@ struct LFGPlayerState
     LFGAnswer      GetAnswer() { return accept;};
 
 
-    private:
-    LFGRoleMask   rolesMask;
-    uint32        m_flags;
-    bool          update;
-    bool          m_teleported;
-    Player*       m_player;
-    LFGState      m_state;
-    time_t        m_jointime;
-    LFGDungeonSet m_DungeonsList;                   // Dungeons the player have applied for
-    LFGLockStatusMap m_LockMap;                     // Dungeons lock map
-    std::string   m_comment;
-    LFGAnswer     accept;                           ///< Accept status (-1 not answer | 0 Not agree | 1 agree)
-    LFGProposal*  m_proposal;
+private:
+    LFGRoleMask    rolesMask;
+    bool           m_teleported;
+    Player*        m_player;
+    time_t         m_jointime;
+    std::string    m_comment;
+    LFGAnswer      accept;                           ///< Accept status (-1 not answer | 0 Not agree | 1 agree)
 };
 
 typedef std::map<ObjectGuid, LFGAnswer> LFGAnswerMap;

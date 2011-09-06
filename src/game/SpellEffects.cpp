@@ -5379,7 +5379,7 @@ void Spell::SendLoot(ObjectGuid guid, LootType loottype, LockType lockType)
                 sLog.outError("Spell::SendLoot unhandled locktype %u for GameObject trap (entry %u) for spell %u.", lockType, gameObjTarget->GetEntry(), m_spellInfo->Id);
                 return;
             default:
-                sLog.outError("Spell::SendLoot unhandled GameObject type %u (entry %u).", gameObjTarget->GetGoType(), gameObjTarget->GetEntry(), m_spellInfo->Id);
+                sLog.outError("Spell::SendLoot unhandled GameObject type %u (entry %u) for spell %u.", gameObjTarget->GetGoType(), gameObjTarget->GetEntry(), m_spellInfo->Id);
                 return;
         }
     }
@@ -6962,7 +6962,7 @@ void Spell::EffectWeaponDmg(SpellEffectIndex eff_idx)
                 // and no need to cast over max stack amount
                 if (!sunder || sunder->GetStackAmount() < sunder->GetSpellProto()->StackAmount)
                     m_caster->CastSpell(unitTarget, 58567, true);
-                    if (Aura *aura = m_caster->GetDummyAura(58388))
+                    if (m_caster->GetDummyAura(58388))
                         m_caster->CastSpell (unitTarget, 58567, true);
             }
             break;

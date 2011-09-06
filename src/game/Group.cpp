@@ -1406,7 +1406,7 @@ void Group::SetGroupUniqueFlag(ObjectGuid guid, GroupFlagsAssignment assignment,
                 mask = GROUP_ASSISTANT;
             break;
         default:
-                sLog.outError("Group::SetGroupUniqueFlag unknown assignment % on player %u", assignment, guid.GetCounter());
+                sLog.outError("Group::SetGroupUniqueFlag unknown assignment %u on player %u", assignment, guid.GetCounter());
             return;
     };
 
