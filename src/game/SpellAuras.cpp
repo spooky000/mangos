@@ -9668,7 +9668,7 @@ m_permanent(false), m_isRemovedOnShapeLost(true), m_deleted(false), m_in_use(0)
     }
 
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
-        m_auras[i] = NULL;
+        RemoveAura(SpellEffectIndex(i));
 }
 
 void SpellAuraHolder::AddAura(Aura *aura, SpellEffectIndex index)
@@ -9679,7 +9679,7 @@ void SpellAuraHolder::AddAura(Aura *aura, SpellEffectIndex index)
 
 void SpellAuraHolder::RemoveAura(SpellEffectIndex index)
 {
-    m_auras[index] = NULL;
+    m_auras[index] = (Aura*)NULL;
     m_auraFlags &= ~(1 << index);
 }
 
