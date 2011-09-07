@@ -3588,6 +3588,8 @@ void Spell::cast(bool skipCheck)
                 AddTriggeredSpell(62148);                   // visual effect
             else if(m_spellInfo->Id == 42292)               // PvP trinket
                 AddTriggeredSpell(72752);                   // Will of the Forsaken Cooldown
+            else if (m_spellInfo->Id == 58672)             // Impale, damage and loose threat effect (Vault of Archavon, Archavon the Stone Watcher)
+                AddPrecastSpell(m_caster->GetMap()->IsRegularDifficulty() ? 58666 : 60882);
 
             switch(m_spellInfo->Id)
             {
