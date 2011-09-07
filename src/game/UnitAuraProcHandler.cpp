@@ -1244,6 +1244,23 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     basepoints[0] = damage * 15 / 100;
                     break;
                 }
+                case 74396:
+                {
+                    // Remove only single aura from stack
+                    SpellAuraHolder* holder = triggeredByAura->GetHolder();
+                    if (holder && !holder->IsDeleted())
+                    {
+                        if (holder->ModStackAmount(-1))
+                        {
+                            RemoveSpellAuraHolder(holder);
+                            RemoveAurasDueToSpell(44544);
+                        }
+                        return SPELL_AURA_PROC_OK;
+                    }
+                    else
+                        return SPELL_AURA_PROC_FAILED;
+                    break;
+                }
             }
             break;
         }
@@ -3402,6 +3419,23 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 // spell applied only to permanent immunes to stun targets (bosses)
                 if (pVictim->GetTypeId() != TYPEID_UNIT ||
                     (((Creature*)pVictim)->GetCreatureInfo()->MechanicImmuneMask & (1 << (MECHANIC_STUN - 1))) == 0)
+                    return SPELL_AURA_PROC_FAILED;
+            }
+            // Missile Barrage
+            else if (auraSpellInfo->SpellIconID == 3261)
+            {
+                // proc chance for spells other than Arcane Blast is always 2 times lower, so we have to roll for 50% now
+                if (procSpell->SpellIconID != 2294 && !roll_chance_i(50))
+                    return SPELL_AURA_PROC_FAILED;
+
+                if (HasAura(44401) || HasAura(57761))
+                    return SPELL_AURA_PROC_FAILED;
+            }
+            // Fingers of Frost 
+            else if (auraSpellInfo->SpellIconID == 2947)
+            {
+                // proc chance for spells in basepoints
+                if (!roll_chance_i(triggerAmount))
                     return SPELL_AURA_PROC_FAILED;
             }
             break;

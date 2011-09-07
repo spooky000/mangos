@@ -2523,13 +2523,6 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                 }
                 break;
             }
-            case SPELLFAMILY_MAGE:
-            {
-                // Fingers of Frost stacks set to max at apply
-                if (GetId() == 74396)
-                    GetHolder()->SetAuraCharges(GetSpellProto()->StackAmount);
-                break;
-            }
             case SPELLFAMILY_HUNTER:
             {
                 switch(GetId())
@@ -9705,6 +9698,7 @@ m_permanent(false), m_isRemovedOnShapeLost(true), m_deleted(false), m_in_use(0)
         case 63050:                                         // Sanity (Yogg-Saron)
         case 64455:                                         // Feral Essence
         case 71564:                                         // Deadly Precision
+        case 74396:                                         // Fingers of Frost
             m_stackAmount = m_spellProto->StackAmount;
             break;
     }
@@ -10353,14 +10347,6 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                         cast_at_remove = true;
                         spellId1 = 70753;                   // Pushing the Limit
                     }
-                    else
-                        return;
-                    break;
-                }
-                case 74396:                                 // Fingers of Frost (remove main aura)
-                {
-                    if (!apply)
-                        spellId1 = 44544;
                     else
                         return;
                     break;
