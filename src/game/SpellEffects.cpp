@@ -4302,6 +4302,16 @@ void Spell::EffectForceCast(SpellEffectIndex eff_idx)
         return;
     }
 
+    // if triggered spell has SPELL_AURA_CONTROL_VEHICLE, it must be casted on caster
+    for (uint32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+    {
+        if (spellInfo->EffectApplyAuraName[i] == SPELL_AURA_CONTROL_VEHICLE)
+        {
+            unitTarget->CastSpell(m_caster, spellInfo, true, NULL, NULL, NULL, m_spellInfo);
+            return;
+        }
+    }
+
     unitTarget->CastSpell(unitTarget, spellInfo, true, NULL, NULL, m_originalCasterGUID, m_spellInfo);
 }
 
