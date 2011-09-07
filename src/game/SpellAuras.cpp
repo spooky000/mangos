@@ -11220,7 +11220,8 @@ void SpellAuraHolder::Update(uint32 diff)
         Unit* caster = GetCaster();
         if(!caster)
         {
-            m_target->RemoveAurasByCasterSpell(GetId(), GetCasterGuid());
+            if (m_target)
+                m_target->RemoveAurasByCasterSpell(GetId(), GetCasterGuid());
             return;
         }
 
