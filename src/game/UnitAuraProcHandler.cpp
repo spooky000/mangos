@@ -1733,11 +1733,12 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 // Glyph of Rejuvenation
                 case 54754:
                 {
-                    // less 50% health
-                    if (pVictim->GetMaxHealth() < 2 * pVictim->GetHealth())
+                   if (!pVictim || pVictim->GetHealthPercent() >= 50.0f)
                         return SPELL_AURA_PROC_FAILED;
-                    basepoints[0] = triggerAmount * damage / 100;
+
+                    target = pVictim;
                     triggered_spell_id = 54755;
+                    basepoints[0] = int32(damage * triggerAmount  / 100);
                     break;
                 }
                 // Glyph of Shred
