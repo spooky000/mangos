@@ -3886,7 +3886,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     }
 
                     // non-standard cast requirement check
-                    if (!friendTarget || friendTarget->getAttackers().empty())
+                    if (!friendTarget || !friendTarget->IsInCombat())
                     {
                         ((Player*)m_caster)->RemoveSpellCooldown(m_spellInfo->Id,true);
                         SendCastResult(SPELL_FAILED_TARGET_AFFECTING_COMBAT);
@@ -3899,15 +3899,18 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                         ihit->effectMask &= ~(1<<1);
 
                     // not empty (checked), copy
-                    Unit::AttackerSet attackers = friendTarget->getAttackers();
-
-                    // selected from list 3
-                    for(uint32 i = 0; i < std::min(size_t(3),attackers.size()); ++i)
+                    ObjectGuidSet attackers = friendTarget->GetMap()->GetAttackersFor(friendTarget->GetObjectGuid());
+                    if (!attackers.empty())
                     {
-                        Unit::AttackerSet::iterator aItr = attackers.begin();
-                        std::advance(aItr, rand() % attackers.size());
-                        AddUnitTarget((*aItr), EFFECT_INDEX_1);
-                        attackers.erase(aItr);
+                        // selected from list 3
+                        for(uint32 i = 0; i < std::min(size_t(3), attackers.size()); ++i)
+                        {
+                            ObjectGuidSet::iterator aItr = attackers.begin();
+                            std::advance(aItr, rand() % attackers.size());
+                            if (Unit* nTarget = friendTarget->GetMap()->GetUnit(*aItr))
+                                AddUnitTarget(nTarget, EFFECT_INDEX_1);
+                            attackers.erase(aItr);
+                        }
                     }
 
                     // now let next effect cast spell at each target.
@@ -4301,14 +4304,14 @@ void Spell::EffectForceCast(SpellEffectIndex eff_idx)
     }
 
     // if triggered spell has SPELL_AURA_CONTROL_VEHICLE, it must be casted on caster
-    for (uint32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+    /*for (uint32 i = 0; i < MAX_EFFECT_INDEX; ++i)
     {
         if (spellInfo->EffectApplyAuraName[i] == SPELL_AURA_CONTROL_VEHICLE)
         {
             unitTarget->CastSpell(m_caster, spellInfo, true, NULL, NULL, NULL, m_spellInfo);
             return;
         }
-    }
+    }*/
 
     unitTarget->CastSpell(unitTarget, spellInfo, true, NULL, NULL, m_originalCasterGUID, m_spellInfo);
 }

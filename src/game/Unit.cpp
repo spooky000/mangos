@@ -257,7 +257,7 @@ Unit::Unit() :
     for (int i = 0; i < MAX_STATS; ++i)
         m_createStats[i] = 0.0f;
 
-    m_attacking = NULL;
+    m_attackingGuid.Clear();
     m_modMeleeHitChance = 0.0f;
     m_modRangedHitChance = 0.0f;
     m_modSpellHitChance = 0.0f;
@@ -300,10 +300,11 @@ Unit::~Unit()
         }
     }
 
+    CleanupDeletedAuras();
+
     delete m_charmInfo;
     delete m_vehicleInfo;
     delete movespline;
-    CleanupDeletedAuras();
 
     // those should be already removed at "RemoveFromWorld()" call
     MANGOS_ASSERT(m_gameObj.size() == 0);
@@ -337,7 +338,10 @@ void Unit::Update( uint32 update_diff, uint32 p_time )
 
     _UpdateSpells( update_diff );
 
-    CleanupDeletedAuras();
+    {
+        MAPLOCK_WRITE(this,MAP_LOCK_TYPE_AURAS);
+        CleanupDeletedAuras();
+    }
 
     if (m_lastManaUseTimer)
     {
@@ -1198,6 +1202,12 @@ void Unit::CastSpell(Unit* Victim, SpellEntry const *spellInfo, bool triggered, 
             sLog.outError("CastSpell: unknown spell by caster: %s triggered by aura %u (eff %u)", GetGuidStr().c_str(), triggeredByAura->GetId(), triggeredByAura->GetEffIndex());
         else
             sLog.outError("CastSpell: unknown spell by caster: %s", GetGuidStr().c_str());
+        return;
+    }
+
+    if(!Victim)
+    {
+        sLog.outError("CastSpell: cast spell %u by caster %s failed - victim is NULL", spellInfo->Id, GetGuidStr().c_str());
         return;
     }
 
@@ -3703,7 +3713,10 @@ void Unit::_UpdateSpells( uint32 time )
         SpellAuraHolder* i_holder = m_spellAuraHoldersUpdateIterator->second;
         ++m_spellAuraHoldersUpdateIterator;                            // need shift to next for allow update if need into aura update
         if (i_holder && !i_holder->IsDeleted() && !i_holder->IsEmptyHolder() && !i_holder->IsInUse())
+        {
+            MAPLOCK_READ(this,MAP_LOCK_TYPE_AURAS);
             i_holder->UpdateHolder(time);
+        }
     }
 
     // remove expired auras
@@ -6154,18 +6167,14 @@ bool Unit::Attack(Unit *victim, bool meleeAttack)
     if(!isAlive() || !victim->IsInWorld() || !victim->isAlive())
         return false;
 
-    // player cannot attack while mounted or in vehicle
-    if(GetTypeId()==TYPEID_PLAYER && (IsMounted() || GetVehicle()))
-    {
-        if (!(GetVehicle() && GetVehicle()->GetSeatInfo(this) &&
-            GetVehicle()->GetSeatInfo(this)->m_flags & (SEAT_FLAG_CAN_CAST | SEAT_FLAG_CAN_ATTACK)))
-        {
-                return false;
-        }
-    }
+    // player cannot attack while mounted or in vehicle (exclude special vehicles)if
+    if (GetTypeId()==TYPEID_PLAYER && (IsMounted() ||
+        (GetVehicle() && (!GetVehicle()->GetSeatInfo(this) ||
+        !(GetVehicle()->GetSeatInfo(this)->m_flags & (SEAT_FLAG_CAN_CAST | SEAT_FLAG_CAN_ATTACK))))))
+        return false;
 
     // nobody can attack GM in GM-mode
-    if(victim->GetTypeId()==TYPEID_PLAYER)
+    if (victim->GetTypeId()==TYPEID_PLAYER)
     {
         if(((Player*)victim)->isGameMaster())
             return false;
@@ -6177,16 +6186,16 @@ bool Unit::Attack(Unit *victim, bool meleeAttack)
     }
 
     // remove SPELL_AURA_MOD_UNATTACKABLE at attack (in case non-interruptible spells stun aura applied also that not let attack)
-    if(HasAuraType(SPELL_AURA_MOD_UNATTACKABLE))
+    if (HasAuraType(SPELL_AURA_MOD_UNATTACKABLE))
         RemoveSpellsCausingAura(SPELL_AURA_MOD_UNATTACKABLE);
 
     // in fighting already
-    if (m_attacking)
+    if (m_attackingGuid)
     {
-        if (m_attacking == victim)
+        if (m_attackingGuid == victim->GetObjectGuid())
         {
             // switch to melee attack from ranged/magic
-            if( meleeAttack && !hasUnitState(UNIT_STAT_MELEE_ATTACKING) )
+            if ( meleeAttack && !hasUnitState(UNIT_STAT_MELEE_ATTACKING) )
             {
                 addUnitState(UNIT_STAT_MELEE_ATTACKING);
                 SendMeleeAttackStart(victim);
@@ -6202,18 +6211,19 @@ bool Unit::Attack(Unit *victim, bool meleeAttack)
     else
     {
         // set position before any AI calls/assistance
-        if(GetTypeId()==TYPEID_UNIT)
+        if (GetTypeId()==TYPEID_UNIT)
             ((Creature*)this)->SetCombatStartPosition(GetPositionX(), GetPositionY(), GetPositionZ());
     }
 
     // Set our target
     SetTargetGuid(victim->GetObjectGuid());
 
-    if(meleeAttack)
+    if (meleeAttack)
         addUnitState(UNIT_STAT_MELEE_ATTACKING);
 
-    m_attacking = victim;
-    m_attacking->_addAttacker(this);
+    m_attackingGuid = victim->GetObjectGuid();
+
+    GetMap()->AddAttackerFor(m_attackingGuid,GetObjectGuid());
 
     if (GetTypeId() == TYPEID_UNIT)
     {
@@ -6222,10 +6232,10 @@ bool Unit::Attack(Unit *victim, bool meleeAttack)
     }
 
     // delay offhand weapon attack to next attack time
-    if(haveOffhandWeapon())
+    if (haveOffhandWeapon())
         resetAttackTimer(OFF_ATTACK);
 
-    if(meleeAttack)
+    if (meleeAttack)
         SendMeleeAttackStart(victim);
 
     return true;
@@ -6252,13 +6262,12 @@ void Unit::AttackedBy(Unit *attacker)
 
 bool Unit::AttackStop(bool targetSwitch /*=false*/)
 {
-    if (!m_attacking)
+    if (!m_attackingGuid || !GetMap())
         return false;
 
-    Unit* victim = m_attacking;
-
-    m_attacking->_removeAttacker(this);
-    m_attacking = NULL;
+    Unit* victim = GetMap()->GetUnit(m_attackingGuid);
+    GetMap()->RemoveAttackerFor(m_attackingGuid,GetObjectGuid());
+    m_attackingGuid.Clear();
 
     // Clear our target
     SetTargetGuid(ObjectGuid());
@@ -6850,12 +6859,17 @@ int32 Unit::SpellBonusWithCoeffs(SpellEntry const *spellProto, int32 total, int3
  */
 uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, uint32 pdamage, DamageEffectType damagetype, uint32 stack)
 {
-    if(!spellProto || !pVictim || damagetype==DIRECT_DAMAGE || spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_DMG_MODS)
+    if(!spellProto || !pVictim || !pVictim->GetMap() || damagetype==DIRECT_DAMAGE || spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_DMG_MODS)
         return pdamage;
 
     // conflagrate gets damage mods from previously calculated immolate aura damage tick
     if (spellProto->IsFitToFamily<SPELLFAMILY_WARLOCK, CF_WARLOCK_CONFLAGRATE>())
         return pdamage;
+
+    if (!IsInWorld() || !GetMap())
+        return pdamage;
+
+    MAPLOCK_READ(this,MAP_LOCK_TYPE_AURAS);
 
     // For totems get damage bonus from owner (statue isn't totem in fact)
     if ( GetTypeId()==TYPEID_UNIT && ((Creature*)this)->IsTotem() && ((Totem*)this)->GetTotemType()!=TOTEM_STATUE)
@@ -6874,7 +6888,7 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
     float nonStackingPos = 0.0f;
     float nonStackingNeg = 0.0f;
 
-    AuraList const mModDamagePercentDone = GetAurasByType(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
+    AuraList const& mModDamagePercentDone = GetAurasByType(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
     for(AuraList::const_iterator i = mModDamagePercentDone.begin(); i != mModDamagePercentDone.end(); ++i)
     {
         if (!*i)
@@ -6940,7 +6954,12 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
 
     // done scripted mod (take it from owner)
     Unit *owner = GetOwner();
-    if (!owner) owner = this;
+    if (!owner) 
+        owner = this;
+
+    MAPLOCK_READ1(owner,MAP_LOCK_TYPE_AURAS);
+    MAPLOCK_READ2(pVictim,MAP_LOCK_TYPE_AURAS);
+
     AuraList const& mOverrideClassScript= owner->GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
     for(AuraList::const_iterator i = mOverrideClassScript.begin(); i != mOverrideClassScript.end(); ++i)
     {
@@ -7272,7 +7291,7 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
  */
 uint32 Unit::SpellDamageBonusTaken(Unit *pCaster, SpellEntry const *spellProto, uint32 pdamage, DamageEffectType damagetype, uint32 stack)
 {
-    if(!spellProto || !pCaster || damagetype==DIRECT_DAMAGE )
+    if(!spellProto || !pCaster || !IsInWorld() || !GetMap() || damagetype==DIRECT_DAMAGE )
         return pdamage;
 
     uint32 schoolMask = spellProto->SchoolMask;
@@ -7280,6 +7299,8 @@ uint32 Unit::SpellDamageBonusTaken(Unit *pCaster, SpellEntry const *spellProto, 
     // Taken total percent damage auras
     float TakenTotalMod = 1.0f;
     int32 TakenTotal = 0;
+
+    MAPLOCK_READ(this,MAP_LOCK_TYPE_AURAS);
 
     // ..taken
     TakenTotalMod *= GetTotalAuraMultiplierByMiscMask(SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN, schoolMask);
@@ -8063,6 +8084,12 @@ uint32 Unit::MeleeDamageBonusDone(Unit *pVictim, uint32 pdamage,WeaponAttackType
     if (!pVictim || pdamage == 0 || (spellProto && spellProto->AttributesEx6 & SPELL_ATTR_EX6_NO_DMG_MODS))
         return pdamage;
 
+    if (!pVictim->IsInWorld() || !pVictim->GetMap() || !GetMap())
+        return pdamage;
+
+    MAPLOCK_READ(this,MAP_LOCK_TYPE_AURAS);
+    MAPLOCK_READ1(pVictim,MAP_LOCK_TYPE_AURAS);
+
     // differentiate for weapon damage based spells
     bool isWeaponDamageBasedSpell = !(spellProto && (damagetype == DOT || IsSpellHaveEffect(spellProto, SPELL_EFFECT_SCHOOL_DAMAGE)));
     Item*  pWeapon          = GetTypeId() == TYPEID_PLAYER ? ((Player*)this)->GetWeaponForAttack(attType,true,false) : NULL;
@@ -8118,7 +8145,7 @@ uint32 Unit::MeleeDamageBonusDone(Unit *pVictim, uint32 pdamage,WeaponAttackType
     // ..done pct, already included in weapon damage based spells
     if(!isWeaponDamageBasedSpell)
     {
-        AuraList const& mModDamagePercentDone = GetAurasByType(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
+        AuraList const mModDamagePercentDone = GetAurasByType(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
         for(AuraList::const_iterator i = mModDamagePercentDone.begin(); i != mModDamagePercentDone.end(); ++i)
         {
             if (!(*i)->GetHolder() || (*i)->GetHolder()->IsDeleted())
@@ -8930,7 +8957,7 @@ bool Unit::isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, boo
     // Special cases
 
     // If is attacked then stealth is lost, some creature can use stealth too
-    if( !getAttackers().empty() )
+    if (IsInCombat())
         return true;
 
     // If there is collision rogue is seen regardless of level difference
@@ -9588,9 +9615,6 @@ bool Unit::SelectHostileTarget()
 
     if (InstanceData* mapInstance = GetInstanceData())
         mapInstance->OnCreatureEvade((Creature*)this);
-
-    if (m_isCreatureLinkingTrigger)
-        GetMap()->GetCreatureLinkingHolder()->DoCreatureLinkingEvent(LINKING_EVENT_EVADE, (Creature*)this);
 
     return false;
 }
@@ -10330,7 +10354,7 @@ void Unit::RemoveFromWorld()
         UnsummonAllTotems();
         RemoveAllGameObjects();
         RemoveAllDynObjects();
-        CleanupDeletedAuras();
+        // CleanupDeletedAuras();
         GetViewPoint().Event_RemovedFromWorld();
     }
 
@@ -12510,6 +12534,11 @@ uint32 Unit::CalculateSpellDurationWithHaste(SpellEntry const* spellProto, uint3
     uint32 duration = ceil(float(oldduration) * GetFloatValue(UNIT_MOD_CAST_SPEED));
 
     return duration;
+}
+
+bool Unit::IsCombatStationary()
+{
+    return GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE || isInRoots();
 }
 
 void Unit::UpdateSplineMovement(uint32 t_diff)

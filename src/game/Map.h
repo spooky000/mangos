@@ -29,6 +29,7 @@
 #include "GridDefines.h"
 #include "Cell.h"
 #include "Object.h"
+#include "ObjectGuid.h"
 #include "Timer.h"
 #include "SharedDefines.h"
 #include "GridMap.h"
@@ -82,6 +83,13 @@ enum LevelRequirementVsMode
     LEVELREQUIREMENT_HEROIC = 70
 };
 
+enum MapLockType
+{
+    MAP_LOCK_TYPE_DEFAULT,
+    MAP_LOCK_TYPE_AURAS,
+    MAP_LOCK_TYPE_MAX,
+};
+
 #if defined( __GNUC__ )
 #pragma pack()
 #else
@@ -89,6 +97,8 @@ enum LevelRequirementVsMode
 #endif
 
 #define MIN_UNLOAD_DELAY      1                             // immediate unload
+
+typedef std::map<ObjectGuid,ObjectGuidSet>  AttackersMap;
 
 class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
 {
@@ -116,7 +126,7 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         template<class T> void Add(T *);
         template<class T> void Remove(T *, bool);
 
-        static void DeleteFromWorld(Player* player);        // player object will deleted at call
+        void DeleteFromWorld(Player* player);                   // player object will deleted at call
 
         virtual void Update(const uint32&);
 
@@ -259,6 +269,20 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         void MonsterYellToMap(CreatureInfo const* cinfo, int32 textId, uint32 language, Unit* target, uint32 senderLowGuid = 0);
         void PlayDirectSoundToMap(uint32 soundId);
 
+        // Attacker per-map storage operations
+        void AddAttackerFor(ObjectGuid targetGuid, ObjectGuid attackerGuid);
+        void RemoveAttackerFor(ObjectGuid targetGuid, ObjectGuid attackerGuid);
+        void RemoveAllAttackersFor(ObjectGuid targetGuid);
+        ObjectGuidSet GetAttackersFor(ObjectGuid targetGuid);
+        void CreateAttackersStorageFor(ObjectGuid targetGuid);
+        void RemoveAttackersStorageFor(ObjectGuid targetGuid);
+
+        // multithread locking
+        typedef   ACE_RW_Thread_Mutex          LockType;
+        typedef   ACE_Read_Guard<LockType>     ReadGuard;
+        typedef   ACE_Write_Guard<LockType>    WriteGuard;
+        LockType& GetLock(MapLockType _locktype = MAP_LOCK_TYPE_DEFAULT) { return i_lock[_locktype]; }
+
     private:
         void LoadMapAndVMap(int gx, int gy);
 
@@ -347,6 +371,9 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
 
         template<class T>
             void RemoveFromGrid(T*, NGridType *, Cell const&);
+
+        LockType            i_lock[MAP_LOCK_TYPE_MAX];
+        AttackersMap        m_attackersMap;
 };
 
 class MANGOS_DLL_SPEC WorldMap : public Map

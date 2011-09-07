@@ -1151,7 +1151,6 @@ class  VehicleKit;
 class MANGOS_DLL_SPEC Unit : public WorldObject
 {
     public:
-        typedef std::set<ObjectGuid> AttackerSet;
         typedef std::multimap< uint32, SpellAuraHolder*> SpellAuraHolderMap;
         typedef std::pair<SpellAuraHolderMap::iterator, SpellAuraHolderMap::iterator> SpellAuraHolderBounds;
         typedef std::pair<SpellAuraHolderMap::const_iterator, SpellAuraHolderMap::const_iterator> SpellAuraHolderConstBounds;
@@ -1214,7 +1213,6 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void CastStop(uint32 except_spellid = 0);
         bool AttackStop(bool targetSwitch = false);
         void RemoveAllAttackers();
-        AttackerSet const& getAttackers() const { return m_attackers; }
         bool isAttackingPlayer() const;
         Unit* getVictim() const { return (IsInWorld() && GetMap()) ? GetMap()->GetUnit(m_attackingGuid) : NULL; }
         void CombatStop(bool includingCast = false);
@@ -1413,6 +1411,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void SetInCombatWith(Unit* enemy);
         void ClearInCombat();
         uint32 GetCombatTimer() const { return m_CombatTimer; }
+        virtual bool IsCombatStationary();
 
         SpellAuraHolderBounds GetSpellAuraHolderBounds(uint32 spell_id)
         {
