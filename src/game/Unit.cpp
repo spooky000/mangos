@@ -12541,6 +12541,71 @@ bool Unit::IsCombatStationary()
     return GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE || isInRoots();
 }
 
+bool Unit::HasMorePoweredBuff(uint32 spellId)
+{
+    SpellEntry const* spellInfo = sSpellStore.LookupEntry(spellId);
+
+    if (!spellInfo || !(spellInfo->AttributesEx7 & SPELL_ATTR_EX7_REPLACEABLE_AURA))
+        return false;
+
+    for (uint8 i = 0; i < MAX_EFFECT_INDEX; ++i)
+    {
+        if ( spellInfo->Effect[i] != SPELL_EFFECT_APPLY_AURA  &&
+             spellInfo->Effect[i] != SPELL_EFFECT_APPLY_AREA_AURA_PARTY &&
+             spellInfo->Effect[i] != SPELL_EFFECT_APPLY_AREA_AURA_RAID
+            )
+            continue;
+
+        AuraType auraType = AuraType(spellInfo->EffectApplyAuraName[SpellEffectIndex(i)]);
+        if (!auraType || auraType >= TOTAL_AURAS)
+            continue;
+
+        AuraList const& auras = GetAurasByType(auraType);
+
+        if (auras.empty())
+            continue;
+
+        for (AuraList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
+        {
+            Aura* aura = *itr;
+            if (!aura || !aura->GetHolder() || aura->GetHolder()->IsDeleted())
+                continue;
+
+            uint32 foundSpellId = aura->GetId();
+
+            if (!foundSpellId || foundSpellId == spellId)
+                continue;
+
+            SpellEntry const* foundSpellInfo = sSpellStore.LookupEntry(foundSpellId);;
+
+            if (!foundSpellInfo)
+                continue;
+
+            if (!(foundSpellInfo->AttributesEx7 & SPELL_ATTR_EX7_REPLACEABLE_AURA))
+                continue;
+
+            for (uint8 j = 0; j < MAX_EFFECT_INDEX; ++j)
+            {
+                if (foundSpellInfo->Effect[j] != spellInfo->Effect[i])
+                    continue;
+
+                if (foundSpellInfo->EffectApplyAuraName[j] != spellInfo->EffectApplyAuraName[i])
+                    continue;
+
+                if (foundSpellInfo->EffectMiscValue[j] != spellInfo->EffectMiscValue[i])
+                    continue;
+
+                if (spellInfo->CalculateSimpleValue(SpellEffectIndex(i)) < foundSpellInfo->CalculateSimpleValue(SpellEffectIndex(j)))
+                    return true;
+                else
+                    return false;
+            }
+        }
+    }
+
+    return false;
+}
+
 void Unit::UpdateSplineMovement(uint32 t_diff)
 {
     enum{

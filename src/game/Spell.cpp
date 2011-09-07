@@ -5504,9 +5504,14 @@ SpellCastResult Spell::CheckCast(bool strict)
             }
         }
 
-        if(IsPositiveSpell(m_spellInfo->Id))
-            if(target->IsImmuneToSpell(m_spellInfo))
+        if (IsPositiveSpell(m_spellInfo->Id))
+        {
+            if (target->IsImmuneToSpell(m_spellInfo))
                 return SPELL_FAILED_TARGET_AURASTATE;
+
+            if (target->HasMorePoweredBuff(m_spellInfo->Id))
+                return m_IsTriggeredSpell ? SPELL_FAILED_DONT_REPORT : SPELL_FAILED_AURA_BOUNCED;
+        }
 
         //Must be behind the target.
         if( m_spellInfo->AttributesEx2 == 0x100000 && (m_spellInfo->AttributesEx & 0x200) == 0x200 && target->HasInArc(M_PI_F, m_caster) )
