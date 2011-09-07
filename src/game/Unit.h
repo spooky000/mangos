@@ -117,8 +117,8 @@ enum SpellModOp
     SPELLMOD_FREQUENCY_OF_SUCCESS   = 26,                   // Only used with SPELL_AURA_ADD_PCT_MODIFIER and affects used on proc spells
     SPELLMOD_MULTIPLE_VALUE         = 27,
     SPELLMOD_RESIST_DISPEL_CHANCE   = 28,
-    SPELLMOD_CRIT_DAMAGE_BONUS_2    = 29, //one not used spell
-    SPELLMOD_SPELL_COST_REFUND_ON_FAIL = 30
+    SPELLMOD_CRIT_DAMAGE_BONUS_2    = 29,                    // used by single test spell 45365
+    SPELLMOD_COST_ON_HIT_FAIL       = 30
 };
 
 #define MAX_SPELLMOD 32
