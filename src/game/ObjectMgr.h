@@ -541,7 +541,7 @@ class ObjectMgr
 
         typedef UNORDERED_MAP<uint32, Item*> ItemMap;
 
-        typedef UNORDERED_MAP<ObjectGuid, Group*> GroupMap;
+        typedef UNORDERED_MAP<uint32, Group*> GroupMap;
 
         typedef UNORDERED_MAP<uint32, ArenaTeam*> ArenaTeamMap;
 
@@ -730,15 +730,6 @@ class ObjectMgr
                 return &itr->second;
             return NULL;
         }
-
-        DungeonEncounterList const* GetDungeonEncounterList(uint32 mapId, Difficulty difficulty)
-        {
-            UNORDERED_MAP<uint32, DungeonEncounterList>::const_iterator itr = mDungeonEncounters.find(MAKE_PAIR32(mapId, difficulty));
-            if (itr != mDungeonEncounters.end())
-                return &itr->second;
-            return NULL;
-        }
-
 
         void LoadArenaTeams();
         void LoadGroups();
@@ -1155,6 +1146,11 @@ class ObjectMgr
             return m_DungeonEncounters.equal_range(creditEntry);
         }
 
+        DungeonEncounterMap const* GetDungeonEncounters()
+        {
+            return &m_DungeonEncounters;
+        }
+
         GossipMenusMapBounds GetGossipMenusMapBounds(uint32 uiMenuId) const
         {
             return m_mGossipMenusMap.equal_range(uiMenuId);
@@ -1329,7 +1325,7 @@ class ObjectMgr
         MangosStringLocaleMap mMangosStringLocaleMap;
         GossipMenuItemsLocaleMap mGossipMenuItemsLocaleMap;
         PointOfInterestLocaleMap mPointOfInterestLocaleMap;
-        DungeonEncounterMap mDungeonEncounters;
+        DungeonEncounterMap m_DungeonEncounters;
 
         // Storage for Conditions. First element (index 0) is reserved for zero-condition (nothing required)
         typedef std::vector<PlayerCondition> ConditionStore;
