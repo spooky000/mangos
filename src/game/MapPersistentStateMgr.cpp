@@ -251,7 +251,7 @@ void DungeonPersistentState::SaveToDB()
         }
     }
 
-    CharacterDatabase.PExecute("REPLACE INTO instance VALUES ('%u', '%u', '"UI64FMTD"', '%u', '%u', '%s')", GetInstanceId(), GetMapId(), (uint64)GetResetTime(), GetDifficulty(), GetCompletedEncountersMask(), data.c_str());
+    CharacterDatabase.PExecute("INSERT INTO instance VALUES ('%u', '%u', '"UI64FMTD"', '%u', '%u', '%s')", GetInstanceId(), GetMapId(), (uint64)GetResetTimeForDB(), GetDifficulty(), GetCompletedEncountersMask(), data.c_str());
 }
 
 void DungeonPersistentState::DeleteRespawnTimes()
@@ -331,6 +331,31 @@ bool DungeonPersistentState::IsCompleted()
             return false;
     }
     return true;
+}
+
+void DungeonPersistentState::UpdateEncounterState(EncounterCreditType type, uint32 creditEntry)
+{
+    DungeonEncounterMapBounds bounds = sObjectMgr.GetDungeonEncounterBounds(creditEntry);
+
+    for (DungeonEncounterMap::const_iterator iter = bounds.first; iter != bounds.second; ++iter)
+    {
+        DungeonEncounterEntry const* dbcEntry = iter->second->dbcEntry;
+
+        if (iter->second->creditType == type && dbcEntry->Difficulty == GetDifficulty() && dbcEntry->mapId == GetMapId())
+        {
+            m_completedEncountersMask |= 1 << dbcEntry->encounterIndex;
+
+            CharacterDatabase.PExecute("UPDATE instance SET encountersMask = '%u' WHERE id = '%u'", m_completedEncountersMask, GetInstanceId());
+
+            DEBUG_LOG("DungeonPersistentState: Dungeon %s (Id %u) completed encounter %s", GetMap()->GetMapName(), GetInstanceId(), dbcEntry->encounterName[sWorld.GetDefaultDbcLocale()]);
+            if (uint32 dungeonId = iter->second->lastEncounterDungeon)
+            {
+                DEBUG_LOG("DungeonPersistentState:: Dungeon %s (Id %u) completed last encounter %s", GetMap()->GetMapName(), GetInstanceId(), dbcEntry->encounterName[sWorld.GetDefaultDbcLocale()]);
+                // Place LFG reward here
+            }
+            return;
+        }
+    }
 }
 
 //== BattleGroundPersistentState functions =================
@@ -639,7 +664,7 @@ MapPersistentStateManager::~MapPersistentStateManager()
 - adding instance into manager
 - called from DungeonMap::Add, _LoadBoundInstances, LoadGroups
 */
-MapPersistentState* MapPersistentStateManager::AddPersistentState(MapEntry const* mapEntry, uint32 instanceId, Difficulty difficulty, time_t resetTime, bool canReset, bool load /*=false*/, bool initPools /*= true*/, uint32 completedEncountersMask /*0*/)
+MapPersistentState* MapPersistentStateManager::AddPersistentState(MapEntry const* mapEntry, uint32 instanceId, Difficulty difficulty, time_t resetTime, bool canReset, bool load /*=false*/, bool initPools /*= true*/, uint32 completedEncountersMask /*= 0*/)
 {
     if (MapPersistentState *old_save = GetPersistentState(mapEntry->MapID, instanceId))
         return old_save;
@@ -666,7 +691,7 @@ MapPersistentState* MapPersistentStateManager::AddPersistentState(MapEntry const
     MapPersistentState *state;
     if (mapEntry->IsDungeon())
     {
-        DungeonPersistentState* dungeonState = new DungeonPersistentState(mapEntry->MapID, instanceId, difficulty, resetTime, canReset, completedEncountersMask);
+        DungeonPersistentState* dungeonState = new DungeonPersistentState(mapEntry->MapID, instanceId, difficulty, completedEncountersMask, resetTime, canReset);
         if (!load)
             dungeonState->SaveToDB();
         state = dungeonState;
@@ -1015,7 +1040,7 @@ void MapPersistentStateManager::LoadCreatureRespawnTimes()
 
         time_t resetTime = (time_t)fields[5].GetUInt64();
 
-        uint32 completedEncounters   = fields[6].GetUInt32();
+        uint32 completedEncounters = fields[6].GetUInt32();
 
         CreatureData const* data = sObjectMgr.GetCreatureData(loguid);
         if (!data)
@@ -1082,7 +1107,7 @@ void MapPersistentStateManager::LoadGameobjectRespawnTimes()
 
         time_t resetTime = (time_t)fields[5].GetUInt64();
 
-        uint32 completedEncounters   = fields[6].GetUInt32();
+        uint32 completedEncounters = fields[6].GetUInt32();
 
         GameObjectData const* data = sObjectMgr.GetGOData(loguid);
         if (!data)
