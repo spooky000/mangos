@@ -6121,6 +6121,30 @@ bool Unit::IsNeutralToAll() const
     return my_faction->IsNeutralToAll();
 }
 
+Unit* Unit::getAttackerForHelper()
+{
+    if (getVictim())
+        return getVictim();
+
+    if (!IsInCombat())
+        return NULL;
+
+    ObjectGuidSet attackers = GetMap()->GetAttackersFor(GetObjectGuid());
+    if (!attackers.empty())
+    {
+        for(ObjectGuidSet::const_iterator itr = attackers.begin(); itr != attackers.end();)
+        {
+            ObjectGuid guid = *itr++;
+            Unit* attacker = GetMap()->GetUnit(guid);
+            if (!attacker || !attacker->isAlive())
+                GetMap()->RemoveAttackerFor(GetObjectGuid(),guid);
+            else
+                return attacker;
+        }
+    }
+    return NULL;
+}
+
 bool Unit::Attack(Unit *victim, bool meleeAttack)
 {
     if(!victim || victim == this)
@@ -6207,6 +6231,25 @@ bool Unit::Attack(Unit *victim, bool meleeAttack)
     return true;
 }
 
+void Unit::AttackedBy(Unit *attacker)
+{
+    // trigger AI reaction
+    if (GetTypeId() == TYPEID_UNIT && ((Creature*)this)->AI())
+        ((Creature*)this)->AI()->AttackedBy(attacker);
+
+    // trigger pet AI reaction
+    if (attacker->IsHostileTo(this))
+    {
+        GroupPetList m_groupPets = GetPets();
+        if (!m_groupPets.empty())
+        {
+            for (GroupPetList::const_iterator itr = m_groupPets.begin(); itr != m_groupPets.end(); ++itr)
+                if (Pet* _pet = GetMap()->GetPet(*itr))
+                    _pet->AttackedBy(attacker);
+        }
+    }
+}
+
 bool Unit::AttackStop(bool targetSwitch /*=false*/)
 {
     if (!m_attacking)
@@ -6289,15 +6332,21 @@ bool Unit::isAttackingPlayer() const
 
 void Unit::RemoveAllAttackers()
 {
-    while (!m_attackers.empty())
+    if (!GetMap())
+        return;
+
+    ObjectGuidSet attackers = GetMap()->GetAttackersFor(GetObjectGuid());
+
+    for (ObjectGuidSet::const_iterator itr = attackers.begin(); itr != attackers.end(); ++itr)
     {
-        AttackerSet::iterator iter = m_attackers.begin();
-        if(!(*iter)->AttackStop())
+        Unit* attacker = GetMap()->GetUnit(*itr);
+        if(!attacker || !attacker->AttackStop())
         {
             sLog.outError("WORLD: Unit has an attacker that isn't attacking it!");
-            m_attackers.erase(iter);
+            GetMap()->RemoveAttackerFor(GetObjectGuid(),*itr);
         }
     }
+    GetMap()->RemoveAllAttackersFor(GetObjectGuid());
 }
 
 bool Unit::HasAuraStateForCaster(AuraState flag, ObjectGuid casterGuid) const
@@ -9477,6 +9526,7 @@ bool Unit::SelectHostileTarget()
         return false;
 
     Unit* target = NULL;
+    Unit* oldTarget = getVictim();
 
     // First checking if we have some taunt on us
     const AuraList& tauntAuras = GetAurasByType(SPELL_AURA_MOD_TAUNT);
@@ -9484,26 +9534,17 @@ bool Unit::SelectHostileTarget()
     {
         Unit* caster;
 
-        // The last taunt aura caster is alive an we are happy to attack him
-        if ((caster = tauntAuras.back()->GetCaster()) && caster->isAlive())
-            return true;
-        else if (tauntAuras.size() > 1)
+        // Find first available taunter target
+        // Auras are pushed_back, last caster will be on the end
+        for (AuraList::const_reverse_iterator aura = tauntAuras.rbegin(); aura != tauntAuras.rend(); ++aura)
         {
-            // We do not have last taunt aura caster but we have more taunt auras,
-            // so find first available target
-
-            // Auras are pushed_back, last caster will be on the end
-            AuraList::const_iterator aura = --tauntAuras.end();
-            do
+            if ((caster = (*aura)->GetCaster()) && caster->IsInMap(this) &&
+                caster->isTargetableForAttack() && caster->isInAccessablePlaceFor((Creature*)this) &&
+                (!IsCombatStationary() || CanReachWithMeleeAttack(caster)))
             {
-                --aura;
-                if ((caster = (*aura)->GetCaster()) && caster->IsInMap(this) &&
-                    caster->isTargetableForAttack() && caster->isInAccessablePlaceFor((Creature*)this))
-                {
-                    target = caster;
-                    break;
-                }
-            }while (aura != tauntAuras.begin());
+                target = caster;
+                break;
+            }
         }
     }
 
@@ -9516,7 +9557,8 @@ bool Unit::SelectHostileTarget()
         if (!hasUnitState(UNIT_STAT_STUNNED | UNIT_STAT_DIED))
         {
             SetInFront(target);
-            ((Creature*)this)->AI()->AttackStart(target);
+            if (oldTarget != target)
+                ((Creature*)this)->AI()->AttackStart(target);
         }
         return true;
     }
@@ -9531,9 +9573,12 @@ bool Unit::SelectHostileTarget()
     // Note: creature not have targeted movement generator but have attacker in this case
     if (GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE)
     {
-        for(AttackerSet::const_iterator itr = m_attackers.begin(); itr != m_attackers.end(); ++itr)
+        ObjectGuidSet attackers = GetMap()->GetAttackersFor(GetObjectGuid());
+
+        for (ObjectGuidSet::const_iterator itr = attackers.begin(); itr != attackers.end(); ++itr)
         {
-            if ((*itr)->IsInMap(this) && (*itr)->isTargetableForAttack() && (*itr)->isInAccessablePlaceFor((Creature*)this))
+            Unit* attacker = GetMap()->GetUnit(*itr);
+            if (attacker && attacker->IsInMap(this) && attacker->isTargetableForAttack() && attacker->isInAccessablePlaceFor((Creature*)this))
                 return false;
         }
     }
@@ -9543,6 +9588,9 @@ bool Unit::SelectHostileTarget()
 
     if (InstanceData* mapInstance = GetInstanceData())
         mapInstance->OnCreatureEvade((Creature*)this);
+
+    if (m_isCreatureLinkingTrigger)
+        GetMap()->GetCreatureLinkingHolder()->DoCreatureLinkingEvent(LINKING_EVENT_EVADE, (Creature*)this);
 
     return false;
 }
@@ -12150,6 +12198,9 @@ struct StopAttackFactionHelper
 
 void Unit::StopAttackFaction(uint32 faction_id)
 {
+    if (!GetMap())
+        return;
+
     if (Unit* victim = getVictim())
     {
         if (victim->getFactionTemplateEntry()->faction==faction_id)
@@ -12164,16 +12215,19 @@ void Unit::StopAttackFaction(uint32 faction_id)
         }
     }
 
-    AttackerSet const& attackers = getAttackers();
-    for(AttackerSet::const_iterator itr = attackers.begin(); itr != attackers.end();)
+    ObjectGuidSet attackers = GetMap()->GetAttackersFor(GetObjectGuid());
+
+    for (ObjectGuidSet::iterator itr = attackers.begin(); itr != attackers.end(); ++itr)
     {
-        if ((*itr)->getFactionTemplateEntry()->faction==faction_id)
+        Unit* attacker = GetMap()->GetUnit(*itr);
+
+        if (attacker)
         {
-            (*itr)->AttackStop();
-            itr = attackers.begin();
+            if (attacker->getFactionTemplateEntry()->faction == faction_id)
+                attacker->AttackStop();
         }
         else
-            ++itr;
+            GetMap()->RemoveAttackerFor(GetObjectGuid(),*itr);
     }
 
     getHostileRefManager().deleteReferencesForFaction(faction_id);
