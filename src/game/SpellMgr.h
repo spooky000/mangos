@@ -537,6 +537,8 @@ inline uint32 GetDispellMask(DispelType dispel)
         return (1 << dispel);
 }
 
+bool IsSpellAffectedBySpellMods(SpellEntry const* spellInfo);
+
 // Diminishing Returns interaction with spells
 DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto, bool triggered);
 bool IsDiminishingReturnsGroupDurationLimited(DiminishingGroup group);

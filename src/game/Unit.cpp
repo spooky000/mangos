@@ -9600,7 +9600,9 @@ int32 Unit::CalculateSpellDamage(Unit const* target, SpellEntry const* spellProt
     if(spellProto->Id == 29444 && effect_index == EFFECT_INDEX_1)
         value += spellProto->EffectRealPointsPerLevel[EFFECT_INDEX_1];
 
-    if (Player* modOwner = GetSpellModOwner())
+    Player* modOwner = GetSpellModOwner();
+
+    if (modOwner && IsSpellAffectedBySpellMods(spellProto))
     {
         modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_ALL_EFFECTS, value);
 
