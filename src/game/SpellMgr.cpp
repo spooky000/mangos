@@ -704,14 +704,29 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
         case 43017:                                         // Amplify Magic - Rank 7
         case 12042:                                         // Arcane Power
             return true;
+        case 37675:                                         // Chaos Blast
         case 39288:                                         // Kargath's Executioner
         case 39289:                                         // Kargath's Executioner
         case 39290:                                         // Kargath's Executioner
+        case 42786:                                         // Echo Of Ymiron
+        case 55126:                                         // Sladran Snake Trap
+        case 56266:                                         // Vortex
+        case 57508:                                         // Volazj Insanity Phase 1
+        case 57509:                                         // Volazj Insanity Phase 2
+        case 57510:                                         // Volazj Insanity Phase 3
+        case 57511:                                         // Volazj Insanity Phase 4
+        case 57512:                                         // Volazj Insanity Phase 5
         case 62470:                                         // Deafening Thunder
-        case 63138:                                         // Sara's Fervor
         case 63134:                                         // Sara's Blessing
+        case 63138:                                         // Sara's Fervor
         case 63355:                                         // Crunch Armor
         case 64002:                                         // Crunch Armor
+        case 66406:                                         // Snobolled! (Trial of the Crusader, Gormok the Impaler encounter)
+        case 71010:                                         // Web Wrap (Icecrown Citadel, trash mob Nerub'ar Broodkeeper)
+        case 72219:                                         // Gastric Bloat 10 N
+        case 72551:                                         // Gastric Bloat 10 H
+        case 72552:                                         // Gastric Bloat 25 N
+        case 72553:                                         // Gastric Bloat 25 H
             return false;
         default:
             break;
