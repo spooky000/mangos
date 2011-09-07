@@ -2248,6 +2248,12 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         // Pet will be following owner, this makes him stop
                         target->addUnitState(UNIT_STAT_STUNNED);
                         return;
+                    case 52921:                             // Arc Lightning (Halls of Lighning: Loken)
+                        target->CastSpell(target, 52924, false);
+                        return;
+                    case 54236:                             // Death Touch - Lich King kill Overlord Drakuru
+                        target->CastSpell(target, 54248, false);    // Cast Drakuru Death
+                        return;
                     case 54852:                             // Cosmetic - Stun (Permanent)
                         target->addUnitState(UNIT_STAT_STUNNED);
                         return;
