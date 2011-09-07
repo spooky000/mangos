@@ -6739,8 +6739,8 @@ SpellCastResult Spell::CheckRange(bool strict)
                 if (Player* modOwner = m_caster->GetSpellModOwner())
                     range_mod += modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RANGE, base, this);
 
-                /*if(target->GetTypeId() == TYPEID_PLAYER && ((Player*)target)->isMoving())
-                    range_mod += 1.0f;*/
+                if(target->GetTypeId() == TYPEID_PLAYER && ((Player*)target)->isMoving())
+                    range_mod += 1.0f;
 
                 // with additional 5 dist for non stricted case (some melee spells have delay in apply
                 return m_caster->CanReachWithMeleeAttack(target, range_mod) ? SPELL_CAST_OK : SPELL_FAILED_OUT_OF_RANGE;
