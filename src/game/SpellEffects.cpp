@@ -10529,7 +10529,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         float ox, oy, oz;
         unitTarget->GetPosition(ox, oy, oz);
         float fx, fy, fz;
-        fz = oz + 0.2f;
+        fz = oz + 0.05f;
         fx = unitTarget->GetPositionX() + distance * cos(unitTarget->GetOrientation());
         fy = unitTarget->GetPositionY() + distance * sin(unitTarget->GetOrientation());
 
