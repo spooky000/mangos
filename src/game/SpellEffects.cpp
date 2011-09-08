@@ -768,9 +768,7 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         if (unitTarget->HasAuraState(AURA_STATE_HEALTHLESS_35_PERCENT))
                             damage += int32(damage / 100 * pAura->GetModifier()->m_amount);
 
-                    // Calculate damage reflected back to caster (normally it takes unmodified by SP value)
-                    int32 back_damage = m_caster->SpellDamageBonusDone(unitTarget,m_spellInfo,uint32(damage),SPELL_DIRECT_DAMAGE);
-                    m_caster->CastCustomSpell(m_caster, 32409, &back_damage, 0, 0, true);
+                    m_caster->CastCustomSpell(m_caster, 32409, &damage, 0, 0, true);
                 }
                 // Improved Mind Blast (Mind Blast in shadow form bonus)
                 else if (m_caster->GetShapeshiftForm() == FORM_SHADOW && m_spellInfo->SpellFamilyFlags.test<CF_PRIEST_MIND_BLAST>())
