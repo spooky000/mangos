@@ -172,7 +172,7 @@ AuctionHouseBot.Bind.Use = 1
 AuctionHouseBot.Bind.Quest = 0
 AuctionHouseBot.LockBox.Enabled = 0
 
-AuctionHouseBot.ItemsPerCycle.Boost = 75
+AuctionHouseBot.ItemsPerCycle.Boost = 20
 AuctionHouseBot.ItemsPerCycle.Normal = 20
 AuctionHouseBot.BuyPrice.Seller = 1
 AuctionHouseBot.Alliance.Price.Ratio = 200

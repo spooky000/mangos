@@ -425,9 +425,6 @@ m_isPersistent(false), m_in_use(0), m_spellAuraHolder(holder)
 
     SetModifier(AuraType(spellproto->EffectApplyAuraName[eff]), damage, spellproto->EffectAmplitude[eff], spellproto->EffectMiscValue[eff]);
 
-    if (int32 amount = CalculateCrowdControlAuraAmount(caster))
-        m_modifier.m_amount = amount;
-
     Player* modOwner = caster ? caster->GetSpellModOwner() : NULL;
 
     // Apply periodic time mod
@@ -5940,112 +5937,53 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
 
                     break;
                 }
-                case 63050:                                 // Sanity (Yogg Saron - Ulduar)
+                case 69008:                                 // Soulstorm (OOC aura)
+                case 68870:                                 // Soulstorm
                 {
-                    // here is the special handling of Sanity
-                    Unit *caster = GetCaster();
-                    if (!caster)
-                    {
-                        target->RemoveAurasDueToSpell(63050);
-                        return;
-                    }
-                    if (!caster->isAlive())
-                    {
-                        target->RemoveAurasDueToSpell(63050);
-                        return;
-                    }
-
-                    uint32 stacks = GetHolder()->GetStackAmount();
-
-                    if ((stacks < 30) && !(target->HasAura(63752)))
-                        target->CastSpell(target, 63752, true);
-
-                    if ((stacks > 30) && (target->HasAura(63752)))
-                        target->RemoveAurasDueToSpell(63752);
-
-                    if (target->HasAura(64169))             // sanity well Aura
-                        GetHolder()->ModStackAmount(20);
-
+                    uint32 triggerSpells[8] = {68898, 68904, 68886, 68905, 68896, 68906, 68897, 68907};
+                    target->CastSpell(target, triggerSpells[GetAuraTicks() % 8], true);
                     return;
                 }
-                case 63276:                                 // Mark of the Faceless (General Vezax - Ulduar)
+                case 67574:                                // Trial Of Crusader (Spike Aggro Aura - Anub'arak)
                 {
-                    Unit *caster = GetCaster();
-                    if (caster && target)
-                        caster->CastCustomSpell(target, 63278, 0, &(spell->EffectBasePoints[0]), 0, false, 0, 0, caster->GetObjectGuid() , spell);
+                    if (!target->GetMap()->Instanceable())
+                        return;
+
+                    if (InstanceData* data = target->GetInstanceData())
+                    {
+                        if (Creature* pSpike = target->GetMap()->GetCreature(data->GetData64(34660)))
+                            pSpike->AddThreat(target, 1000000.0f);
+                    }
                     return;
                 }
-                case 63802:                                 // Brain Link (Ulduar - Yogg Saron)
+                case 66118:                                 // Leeching Swarm 10 man
+                case 68646:
                 {
-                    Unit* caster = GetCaster();
-
-                    if (!caster || !target)
-                        return;
-                    // only at Player because of perfermonce
-                    if (target->GetTypeId() != TYPEID_PLAYER)
-                        return;
-                    
-                    // only in instance because of perfermonce
-                    if (!(caster->GetMap()->IsDungeon()) || !(target->GetMap()->IsDungeon()))
-                        return;
-
-                    Map::PlayerList const &PlayerList = target->GetMap()->GetPlayers();
-                    if (PlayerList.isEmpty())
-                        return;
-                    // search for partner
-                    for (Map::PlayerList::const_iterator itr = PlayerList.begin(); itr != PlayerList.end(); ++itr)
-                    {
-                        if (!itr->getSource()->HasAura(63802))
-                            continue;
-                        // no self partnership xD
-                        if (itr->getSource()->GetObjectGuid() == target->GetObjectGuid())
-                            continue;
-
-                        if (target->GetDistance2d(itr->getSource()) > 20)
-                            target->CastSpell(itr->getSource(), 63803, true, 0, 0, target->GetObjectGuid()); // damage spell
-                        else
-                            target->CastSpell(itr->getSource(), 63804, true, 0, 0, target->GetObjectGuid()); // optic spell
-                        return;
-                    }
-                    break;
+                    int32 damage = (m_modifier.m_amount * target->GetHealth()) / 100;
+                    if (damage < 250)
+                        damage = 250;
+                    int32 heal = damage * 68 / 100;
+                    target->CastCustomSpell(target, 66240, &damage, NULL, NULL, true, NULL, this);
+                    if (Unit* caster = GetCaster())
+                        target->CastCustomSpell(caster, 66125, &heal, NULL, NULL, true, NULL, this);
+                    return;
                 }
-                case 64161:                                 // Empowered (Ulduar - Yogg Saron)
+                case 67630:                                 // Leeching Swarm 25 man
+                case 68647:
                 {
-                    uint8 stacks = 0;
-                    float healthpct = target->GetHealthPercent();
-                    if (healthpct > 90.0f)
-                        stacks = 9;
-                    else if (healthpct > 80.0f)
-                        stacks = 8;
-                    else if (healthpct > 70.0f)
-                        stacks = 7;
-                    else if (healthpct > 60.0f)
-                        stacks = 6;
-                    else if (healthpct > 50.0f)
-                        stacks = 5;
-                    else if (healthpct > 40.0f)
-                        stacks = 4;
-                    else if (healthpct > 30.0f)
-                        stacks = 3;
-                    else if (healthpct > 20.0f)
-                        stacks = 2;
-                    else if (healthpct > 10.0f)
-                        stacks = 1;
-                    else
-                    {
-                        target->CastSpell(target, 64162, true); // ready for thorim Kill
-                        target->RemoveAurasDueToSpell(65294);
-                        return;
-                    }
-                    
-                    if (SpellAuraHolder *holder = target->GetSpellAuraHolder(65294))
-                    {
-                        holder->SetStackAmount(stacks);
-                    }
-                    else
-                    {
-                        target->CastSpell(target, 65294, true);
-                    }
+                    int32 damage = (m_modifier.m_amount * target->GetHealth()) / 100;
+                    if (damage < 250)
+                        damage = 250;
+                    int32 heal = damage * 155 / 100;
+                    target->CastCustomSpell(target, 66240, &damage, NULL, NULL, true, NULL, this);
+                    if (Unit* caster = GetCaster())
+                        target->CastCustomSpell(caster, 66125, &heal, NULL, NULL, true, NULL, this);
+                    return;
+                }
+                case 70069:                                   // Ooze Flood Periodic Trigger (Rotface)
+                {
+                    if (target)
+                        target->CastSpell(target, spell->CalculateSimpleValue(GetEffIndex()), true);
                     return;
                 }
             }
@@ -9029,6 +8967,114 @@ void Aura::PeriodicDummyTick()
                     }
                     return;
                 }
+				case 63050:                                 // Sanity (Yogg Saron - Ulduar)
+                {
+                    // here is the special handling of Sanity
+                    Unit *caster = GetCaster();
+                    if (!caster)
+                    {
+                        target->RemoveAurasDueToSpell(63050);
+                        return;
+                    }
+                    if (!caster->isAlive())
+                    {
+                        target->RemoveAurasDueToSpell(63050);
+                        return;
+                    }
+
+                    uint32 stacks = GetHolder()->GetStackAmount();
+
+                    if ((stacks < 30) && !(target->HasAura(63752)))
+                        target->CastSpell(target, 63752, true);
+
+                    if ((stacks > 30) && (target->HasAura(63752)))
+                        target->RemoveAurasDueToSpell(63752);
+
+                    if (target->HasAura(64169))             // sanity well Aura
+                        GetHolder()->ModStackAmount(20);
+
+                    return;
+                }
+                case 63276:                                 // Mark of the Faceless (General Vezax - Ulduar)
+                {
+                    Unit *caster = GetCaster();
+                    if (caster && target)
+                        caster->CastCustomSpell(target, 63278, 0, &(spell->EffectBasePoints[0]), 0, false, 0, 0, caster->GetObjectGuid() , spell);
+                    return;
+                }
+                case 63802:                                 // Brain Link (Ulduar - Yogg Saron)
+                {
+                    Unit* caster = GetCaster();
+
+                    if (!caster || !target)
+                        return;
+                    // only at Player because of perfermonce
+                    if (target->GetTypeId() != TYPEID_PLAYER)
+                        return;
+                    
+                    // only in instance because of perfermonce
+                    if (!(caster->GetMap()->IsDungeon()) || !(target->GetMap()->IsDungeon()))
+                        return;
+
+                    Map::PlayerList const &PlayerList = target->GetMap()->GetPlayers();
+                    if (PlayerList.isEmpty())
+                        return;
+                    // search for partner
+                    for (Map::PlayerList::const_iterator itr = PlayerList.begin(); itr != PlayerList.end(); ++itr)
+                    {
+                        if (!itr->getSource()->HasAura(63802))
+                            continue;
+                        // no self partnership xD
+                        if (itr->getSource()->GetObjectGuid() == target->GetObjectGuid())
+                            continue;
+
+                        if (target->GetDistance2d(itr->getSource()) > 20)
+                            target->CastSpell(itr->getSource(), 63803, true, 0, 0, target->GetObjectGuid()); // damage spell
+                        else
+                            target->CastSpell(itr->getSource(), 63804, true, 0, 0, target->GetObjectGuid()); // optic spell
+                        return;
+                    }
+                    break;
+                }
+                case 64161:                                 // Empowered (Ulduar - Yogg Saron)
+                {
+                    uint8 stacks = 0;
+                    float healthpct = target->GetHealthPercent();
+                    if (healthpct > 90.0f)
+                        stacks = 9;
+                    else if (healthpct > 80.0f)
+                        stacks = 8;
+                    else if (healthpct > 70.0f)
+                        stacks = 7;
+                    else if (healthpct > 60.0f)
+                        stacks = 6;
+                    else if (healthpct > 50.0f)
+                        stacks = 5;
+                    else if (healthpct > 40.0f)
+                        stacks = 4;
+                    else if (healthpct > 30.0f)
+                        stacks = 3;
+                    else if (healthpct > 20.0f)
+                        stacks = 2;
+                    else if (healthpct > 10.0f)
+                        stacks = 1;
+                    else
+                    {
+                        target->CastSpell(target, 64162, true); // ready for thorim Kill
+                        target->RemoveAurasDueToSpell(65294);
+                        return;
+                    }
+                    
+                    if (SpellAuraHolder *holder = target->GetSpellAuraHolder(65294))
+                    {
+                        holder->SetStackAmount(stacks);
+                    }
+                    else
+                    {
+                        target->CastSpell(target, 65294, true);
+                    }
+                    return;
+                }
                 /* Feanor: CHECK LATER
                 case 62566:                                 // Healthy Spore Summon Periodic
                 {
@@ -10251,6 +10297,15 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                     }
                     break;
                 }
+                case 69674:                                 // Mutated Infection
+                {
+                    if (!apply)
+                    {
+                        cast_at_remove = true;
+                        spellId1 = GetSpellProto() ? GetSpellProto()->CalculateSimpleValue(EFFECT_INDEX_2) : 0;
+                    }
+                    break;
+                }
                 case 71905:                                 // Soul Fragment
                 {
                     if (!apply)
@@ -10260,6 +10315,21 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                     }
                     else
                         return;
+                    break;
+                }
+                case 73034:                                 // Blighted Spores
+                case 73033:
+                case 71222:
+                case 69290:
+                {
+                    if (!apply)
+                    {
+                        if (m_removeMode == AURA_REMOVE_BY_EXPIRE)
+                        {
+                             cast_at_remove = true;
+                             spellId1 = 69291;
+                        }
+                    }
                     break;
                 }
                 default:
@@ -11667,23 +11737,29 @@ void Aura::HandleDamagePercentTaken(bool apply, bool Real)
     }
 }
 
-int32 Aura::CalculateCrowdControlAuraAmount(Unit * caster)
+uint32 Aura::CalculateCrowdControlBreakDamage()
 {
     // Damage cap for CC effects
-    if (!GetSpellProto()->procFlags || !GetTarget())
+    if (!GetTarget())
         return 0;
 
-    if (m_modifier.m_auraname !=SPELL_AURA_MOD_CONFUSE &&
-        m_modifier.m_auraname !=SPELL_AURA_MOD_FEAR &&
-        m_modifier.m_auraname !=SPELL_AURA_MOD_STUN &&
-        m_modifier.m_auraname !=SPELL_AURA_MOD_ROOT &&
-        m_modifier.m_auraname !=SPELL_AURA_TRANSFORM)
+    if (!IsCrowdControlAura(m_modifier.m_auraname))
         return 0;
 
-    int32 damageCap = (int32)(GetTarget()->GetMaxHealth()*0.10f);
+    // The chance to dispel an aura depends on the damage taken with respect to the casters level.
+    // uint32 damageCap = getLevel() > 8 ? 25 * getLevel() - 150 : 50;
+
+    uint32 damageCap = (int32)((float)GetTarget()->GetCreateHealth() * 0.20f);
+
+    if (damageCap < 50)
+        damageCap = 50;
+
+    Unit* caster = GetCaster();
 
     if (!caster)
         return damageCap;
+
+    MAPLOCK_READ(caster,MAP_LOCK_TYPE_AURAS);
 
     // Glyphs increasing damage cap
     Unit::AuraList const& overrideClassScripts = caster->GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
@@ -11694,7 +11770,7 @@ int32 Aura::CalculateCrowdControlAuraAmount(Unit * caster)
             // Glyph of Fear, Glyph of Frost nova and similar auras
             if ((*itr)->GetMiscValue() == 7801)
             {
-                damageCap += (int32)(damageCap*(*itr)->GetModifier()->m_amount/100.0f);
+                damageCap += (int32)(damageCap * (*itr)->GetModifier()->m_amount / 100.0f);
                 break;
             }
         }
