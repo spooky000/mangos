@@ -398,28 +398,26 @@ Spell::Spell( Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid o
     // AoE spells, spells with non-magic DmgClass or SchoolMask or with SPELL_ATTR_EX2_CANT_REFLECTED cannot be reflected
     if (m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC &&
         m_spellInfo->SchoolMask != SPELL_SCHOOL_MASK_NORMAL &&
-        !(m_spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER && m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000000000000008)) &&
+        !(m_spellInfo->SpellFamilyFlags.test<CF_HUNTER_FREEZING_TRAP_EFFECT>) &&        // Hunter freezing trap should be deflected, but not reflected
         !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_CANT_REFLECTED) &&                // Thunderstorm should be reflectable
-        (!IsAreaOfEffectSpell(m_spellInfo) || (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN && m_spellInfo->SpellFamilyFlags & UI64LIT(0x00200000000000))))
-
-        if(m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC && !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_CANT_REFLECTED))
+        (!IsAreaOfEffectSpell(m_spellInfo) || (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN && m_spellInfo->SpellFamilyFlags.test<CF_SHAMAN_THUNDERSTORM>)))
+    {
+        for(int j = 0; j < MAX_EFFECT_INDEX; ++j)
         {
-            for(int j = 0; j < MAX_EFFECT_INDEX; ++j)
-            {
-                if (m_spellInfo->Effect[j] == 0)
-                    continue;
+            if (m_spellInfo->Effect[j] == 0)
+                continue;
 
-                if(IsPositiveTarget(m_spellInfo->EffectImplicitTargetA[j], m_spellInfo->EffectImplicitTargetB[j], m_spellInfo->Id) && !(m_spellInfo->AttributesEx & SPELL_ATTR_EX_NEGATIVE))
-                    continue;
-                else
-                    m_canReflect = true;
+            if (IsPositiveTarget(m_spellInfo->EffectImplicitTargetA[j], m_spellInfo->EffectImplicitTargetB[j], m_spellInfo->Id) && !(m_spellInfo->AttributesEx & SPELL_ATTR_EX_NEGATIVE))
+                continue;
+            else
+                m_canReflect = true;
 
-                if(m_canReflect)
-                    break;
-            }
+            if (m_canReflect)
+                break;
         }
+    }
 
-        CleanupTargetList();
+    CleanupTargetList();
 }
 
 Spell::~Spell()
