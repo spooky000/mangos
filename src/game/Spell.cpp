@@ -2461,8 +2461,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     break;
             }
             if (m_spellInfo->Id == 63278 ||                                                 // Mark of the Faceless
-                m_spellInfo->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_MIND_SEAR1>() ||   // Mind Sear
-                m_spellInfo->IsFitToFamily<SPELLFAMILY_DRUID, CF_DRUID_STARFALL1>())        // Starfall
+                m_spellInfo->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_MIND_SEAR1>())     // Mind Sear
                 if(Unit* currentTarget = m_targets.getUnitTarget())
                     targetUnitMap.remove(currentTarget);
             break;
