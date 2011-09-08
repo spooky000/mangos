@@ -3324,6 +3324,88 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(m_caster, 69956, true);
                     return;
                 }
+                case 70961:                                 // Shattered Bones (Icecrown Citadel, trash mob The Damned)
+                {
+                    m_caster->CastSpell(m_caster, m_spellInfo->CalculateSimpleValue(eff_idx), true);
+                    break;
+                }
+                case 70895:                                 // Dark Transformation (Icecrown Citadel, Lady Deathwhisper encounter)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 70900, true);
+                    break;
+                }
+                case 70896:                                 // Dark Empowerment (Icecrown Citadel, Lady Deathwhisper encounter)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 70901, true);
+                    break;
+                }
+                case 70897:                                 // Dark Martyrdom (Icecrown Citadel, Lady Deathwhisper encounter)
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
+                        return;
+
+                    switch (unitTarget->GetEntry())
+                    {
+                        case 37949:                         // Cult Adherent
+                            unitTarget->CastSpell(unitTarget, 70903, false);
+                            break;
+                        case 37890:                         // Cult Fanatic
+                            unitTarget->CastSpell(unitTarget, 71236, false);
+                            break;
+                    }
+                    break;
+                }
+                case 71307:                                 // Vile Gas (Festergut, Rotface)
+                case 71908:
+                case 72270:
+                case 72271:
+                {
+                    if (unitTarget)
+                        m_caster->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
+                    return;
+                }
+                case 71336:                                 // Pact of the Darkfallen
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 71340, true);
+                    break;
+                }
+                case 71341:                                 // Pact of the Darkfallen
+                {
+                    if (!unitTarget)
+                        return;
+
+                    bool needRemove = true;
+                    for(TargetList::const_iterator ihit = m_UniqueTargetInfo.begin(); ihit != m_UniqueTargetInfo.end(); ++ihit)
+                    {
+                        Unit *unit = m_caster->GetObjectGuid() == ihit->targetGUID ? m_caster : ObjectAccessor::GetUnit(*unitTarget, ihit->targetGUID);
+                        if (unit && unitTarget->GetDistance(unit) > 5.0f)
+                        {
+                            needRemove = false;
+                            break;
+                        }
+                    }
+
+                    if (needRemove)
+                        unitTarget->RemoveAurasDueToSpell(71340);
+                    break;
+                }
+                case 72202:                                 // Blade power
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 72195, true);
+                    break;
+                }
             }
             break;
         }
@@ -9164,6 +9246,85 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                 case 69147:                                 // Coldflame (circle, Lord Marrowgar - Icecrown Citadel)
                 {
                     m_caster->CastSpell(m_caster, m_spellInfo->CalculateSimpleValue(eff_idx), true);
+                    return;
+                }
+                case 69538:                                 // Small Ooze Combine (Rotface)
+                {
+                    if (unitTarget)
+                    {
+                        m_caster->CastSpell(unitTarget, 69889, true); // merge
+                        if (m_caster->GetTypeId() == TYPEID_UNIT)
+                            ((Creature*)m_caster)->ForcedDespawn(200);
+                    }
+                    return;
+                }
+                case 69553:                                 // Large Ooze Combine (Rotface)
+                {
+                    // 2 large Oozes, smaller lives and gets 1 more stack, bigger dies
+                    if (unitTarget)
+                    {
+                        SpellAuraHolder *casterHolder = m_caster->GetSpellAuraHolder(69558);
+                        SpellAuraHolder *targetHolder = unitTarget->GetSpellAuraHolder(69558);
+                        uint32 casterStack = 0;
+                        uint32 targetStack = 0;
+                        Unit *pBigger, *pSmaller;
+
+                        if (casterHolder)
+                            casterStack = casterHolder->GetStackAmount();
+                        if (targetHolder)
+                            targetStack = targetHolder->GetStackAmount();
+
+                        // mark which will live and which will die
+                        pBigger = casterStack <= targetStack ? unitTarget : m_caster;
+                        pSmaller = casterStack <= targetStack ? m_caster : unitTarget;
+
+                        pSmaller->CastSpell(pSmaller, 69558, true); // smaller one grows
+                        if (pBigger->GetTypeId() == TYPEID_UNIT)
+                            ((Creature*)pBigger)->ForcedDespawn(0); // bigger one dies
+                        return;
+                    }
+                    return;
+                }
+                case 69558:                                 // Unstable Ooze (Rotface)
+                {
+                    if (unitTarget)
+                    {
+                        if (SpellAuraHolder *holder= unitTarget->GetSpellAuraHolder(m_spellInfo->Id))
+                        {
+                            if (holder->GetStackAmount() >= 4)
+                                unitTarget->CastSpell(unitTarget, 69839, true); // Unstable Ooze Explosion
+                        }
+                    }
+                    return;
+                }
+                case 69610:                                 // Large Ooze Buff Combine (Rotface)
+                {
+                    // Large Ooze (m_caster) and Little Ooze (unitTarget)
+                    if (unitTarget)
+                    {
+                        m_caster->CastSpell(m_caster, 69558, true);
+                        if (unitTarget->GetTypeId() == TYPEID_UNIT)
+                            ((Creature*)unitTarget)->ForcedDespawn();
+                    }
+                }
+                case 69782:                                 // Ooze Flood (Rotface)
+                {
+                    // targets Puddle Stalker which casts slime AoE
+                    if (unitTarget)
+                        unitTarget->CastSpell(m_caster, m_spellInfo->CalculateSimpleValue(eff_idx), false);
+
+                    return;
+                }
+                case 69795:                                 // Ooze Flood Trigger (Rotface)
+                {
+                    // unclear: different versions of spell in the rest of effects basepoints
+                    m_caster->CastSpell(m_caster, m_spellInfo->CalculateSimpleValue(eff_idx), true);
+                    return;
+                }
+                case 70079:                                 // Ooze Flood Periodic Trigger Cancel (Rotface)
+                {
+                    if (unitTarget)
+                        unitTarget->RemoveAurasDueToSpell(m_spellInfo->CalculateSimpleValue(eff_idx));
                     return;
                 }
                 case 70117:                                 // Ice grip (Sindragosa pull effect)

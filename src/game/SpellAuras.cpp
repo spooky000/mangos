@@ -425,9 +425,6 @@ m_isPersistent(false), m_in_use(0), m_spellAuraHolder(holder)
 
     SetModifier(AuraType(spellproto->EffectApplyAuraName[eff]), damage, spellproto->EffectAmplitude[eff], spellproto->EffectMiscValue[eff]);
 
-    if (int32 amount = CalculateCrowdControlAuraAmount(caster))
-        m_modifier.m_amount = amount;
-
     Player* modOwner = caster ? caster->GetSpellModOwner() : NULL;
 
     // Apply periodic time mod
@@ -6048,6 +6045,55 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
                     }
                     return;
                 }
+                case 69008:                                 // Soulstorm (OOC aura)
+                case 68870:                                 // Soulstorm
+                {
+                    uint32 triggerSpells[8] = {68898, 68904, 68886, 68905, 68896, 68906, 68897, 68907};
+                    target->CastSpell(target, triggerSpells[GetAuraTicks() % 8], true);
+                    return;
+                }
+                case 67574:                                // Trial Of Crusader (Spike Aggro Aura - Anub'arak)
+                {
+                    if (!target->GetMap()->Instanceable())
+                        return;
+
+                    if (InstanceData* data = target->GetInstanceData())
+                    {
+                        if (Creature* pSpike = target->GetMap()->GetCreature(data->GetData64(34660)))
+                            pSpike->AddThreat(target, 1000000.0f);
+                    }
+                    return;
+                }
+                case 66118:                                 // Leeching Swarm 10 man
+                case 68646:
+                {
+                    int32 damage = (m_modifier.m_amount * target->GetHealth()) / 100;
+                    if (damage < 250)
+                        damage = 250;
+                    int32 heal = damage * 68 / 100;
+                    target->CastCustomSpell(target, 66240, &damage, NULL, NULL, true, NULL, this);
+                    if (Unit* caster = GetCaster())
+                        target->CastCustomSpell(caster, 66125, &heal, NULL, NULL, true, NULL, this);
+                    return;
+                }
+                case 67630:                                 // Leeching Swarm 25 man
+                case 68647:
+                {
+                    int32 damage = (m_modifier.m_amount * target->GetHealth()) / 100;
+                    if (damage < 250)
+                        damage = 250;
+                    int32 heal = damage * 155 / 100;
+                    target->CastCustomSpell(target, 66240, &damage, NULL, NULL, true, NULL, this);
+                    if (Unit* caster = GetCaster())
+                        target->CastCustomSpell(caster, 66125, &heal, NULL, NULL, true, NULL, this);
+                    return;
+                }
+                case 70069:                                   // Ooze Flood Periodic Trigger (Rotface)
+                {
+                    if (target)
+                        target->CastSpell(target, spell->CalculateSimpleValue(GetEffIndex()), true);
+                    return;
+                }
             }
         }
         case SPELLFAMILY_WARLOCK:
@@ -10251,6 +10297,15 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                     }
                     break;
                 }
+                case 69674:                                 // Mutated Infection
+                {
+                    if (!apply)
+                    {
+                        cast_at_remove = true;
+                        spellId1 = GetSpellProto() ? GetSpellProto()->CalculateSimpleValue(EFFECT_INDEX_2) : 0;
+                    }
+                    break;
+                }
                 case 71905:                                 // Soul Fragment
                 {
                     if (!apply)
@@ -10260,6 +10315,21 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                     }
                     else
                         return;
+                    break;
+                }
+                case 73034:                                 // Blighted Spores
+                case 73033:
+                case 71222:
+                case 69290:
+                {
+                    if (!apply)
+                    {
+                        if (m_removeMode == AURA_REMOVE_BY_EXPIRE)
+                        {
+                             cast_at_remove = true;
+                             spellId1 = 69291;
+                        }
+                    }
                     break;
                 }
                 default:
