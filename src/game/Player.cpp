@@ -60,6 +60,7 @@
 #include "SocialMgr.h"
 #include "AchievementMgr.h"
 #include "Mail.h"
+#include "SpellAuras.h"
 #include "../mangosd/RASocket.h"
 
 #include <cmath>
@@ -2380,7 +2381,7 @@ struct SetGameMasterOffHelper
 
 void Player::SetGameMaster(bool on)
 {
-    if(on)
+    if (on)
     {
         m_ExtraFlags |= PLAYER_EXTRA_GM_ON;
         setFaction(35);
@@ -2398,13 +2399,13 @@ void Player::SetGameMaster(bool on)
     }
     else
     {
-        // restore phase
-        AuraList const& phases = GetAurasByType(SPELL_AURA_PHASE);
-        SetPhaseMask(!phases.empty() ? phases.front()->GetMiscValue() : PHASEMASK_NORMAL,false);
-
         m_ExtraFlags &= ~ PLAYER_EXTRA_GM_ON;
         setFactionForRace(getRace());
         RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_GM);
+
+        // restore phase
+        AuraList const& phases = GetAurasByType(SPELL_AURA_PHASE);
+        SetPhaseMask(!phases.empty() ? phases.front()->GetMiscValue() : PHASEMASK_NORMAL,false);
 
         CallForAllControlledUnits(SetGameMasterOffHelper(getFaction()), CONTROLLED_PET|CONTROLLED_TOTEMS|CONTROLLED_GUARDIANS|CONTROLLED_CHARM);
 
@@ -16905,36 +16906,51 @@ void Player::LoadPet()
     // just not added to the map
     if (IsInWorld())
     {
-        Pet* pet = new Pet;
-        pet->SetPetCounter(0);
-        if(!pet->LoadPetFromDB(this, 0, 0, true))
+        if (!sWorld.getConfig(CONFIG_BOOL_PET_SAVE_ALL))
         {
-            delete pet;
-            return;
+            Pet* pet = new Pet;
+            pet->SetPetCounter(0);
+            if(!pet->LoadPetFromDB(this, 0, 0, true))
+            {
+                delete pet;
+                return;
+            }
         }
-
-        if (sWorld.getConfig(CONFIG_BOOL_PET_SAVE_ALL))
+        else
         {
-            uint32 pet_entry = pet->GetEntry();
-            uint32 pet_num = pet->GetCharmInfo()->GetPetNumber();
-            QueryResult* result = CharacterDatabase.PQuery("SELECT id FROM character_pet WHERE owner = '%u' AND entry = '%u' AND id != '%u'",
-                GetGUIDLow(), pet_entry, pet_num);
+
+            QueryResult* result = CharacterDatabase.PQuery("SELECT id, PetType, CreatedBySpell FROM character_pet WHERE owner = '%u' AND entry = (SELECT entry FROM character_pet WHERE owner = '%u' AND slot = '%u') ORDER BY slot ASC",
+                GetGUIDLow(), GetGUIDLow(),PET_SAVE_AS_CURRENT);
 
             std::vector<uint32> petnumber;
+            uint32 _PetType = 0;
+            uint32 _CreatedBySpell = 0;
+
             if (result)
             {
                 do
                 {
                     Field* fields = result->Fetch();
                     uint32 petnum = fields[0].GetUInt32();
-                    if (petnum && petnum != pet_num)
+                    if (petnum)
                         petnumber.push_back(petnum);
+                    if (!_PetType)
+                        _PetType = fields[1].GetUInt32();
+                    if (!_CreatedBySpell)
+                        _CreatedBySpell = fields[2].GetUInt32();
                 }
                 while (result->NextRow());
                 delete result;
             }
             else
                 return;
+
+            if (petnumber.empty())
+                return;
+
+            // temporary fix for count of pets (need correct size by spell basepoints)
+            if ((_PetType != SUMMON_PET) || (_CreatedBySpell != 51533 && _CreatedBySpell != 33831))
+                petnumber.resize(1);
 
             if (!petnumber.empty())
             {
@@ -16944,8 +16960,8 @@ void Player::LoadPet()
                         continue;
 
                     Pet* _pet = new Pet;
-                    _pet->SetPetCounter(i+1);
-                    if (!_pet->LoadPetFromDB(this, pet_entry, petnumber[i], true))
+                    _pet->SetPetCounter(petnumber.size() - i - 1);
+                    if (!_pet->LoadPetFromDB(this, 0, petnumber[i], true))
                         delete _pet;
                 }
             }
@@ -19167,6 +19183,49 @@ void Player::AddSpellMod(Aura* aura, bool apply)
     else
         m_spellMods[mod->m_miscvalue].remove(aura);
 }
+
+template <class T> T Player::ApplySpellMod(uint32 spellId, SpellModOp op, T &basevalue, Spell const* spell)
+{
+    SpellEntry const* spellInfo = sSpellStore.LookupEntry(spellId);
+    if (!spellInfo)
+        return 0;
+
+    int32 totalpct = 0;
+    int32 totalflat = 0;
+    for (AuraList::iterator itr = m_spellMods[op].begin(); itr != m_spellMods[op].end(); ++itr)
+    {
+        Aura *aura = *itr;
+
+        Modifier const* mod = aura->GetModifier();
+
+        if (!aura->isAffectedOnSpell(spellInfo))
+            continue;
+
+        if (mod->m_auraname == SPELL_AURA_ADD_FLAT_MODIFIER)
+            totalflat += mod->m_amount;
+        else
+        {
+            // skip percent mods for null basevalue (most important for spell mods with charges )
+            if (basevalue == T(0))
+                continue;
+
+            // special case (skip >10sec spell casts for instant cast setting)
+            if (mod->m_miscvalue == SPELLMOD_CASTING_TIME
+                && basevalue >= T(10*IN_MILLISECONDS) && mod->m_amount <= -100)
+                continue;
+
+            totalpct += mod->m_amount;
+        }
+    }
+
+    float diff = (float)basevalue*(float)totalpct/100.0f + (float)totalflat;
+    basevalue = T((float)basevalue + diff);
+    return T(diff);
+}
+
+template int32 Player::ApplySpellMod<int32>(uint32 spellId, SpellModOp op, int32 &basevalue, Spell const* spell);
+template uint32 Player::ApplySpellMod<uint32>(uint32 spellId, SpellModOp op, uint32 &basevalue, Spell const* spell);
+template float Player::ApplySpellMod<float>(uint32 spellId, SpellModOp op, float &basevalue, Spell const* spell);
 
 // send Proficiency
 void Player::SendProficiency(ItemClass itemClass, uint32 itemSubclassMask)
@@ -22193,6 +22252,9 @@ void Player::AutoStoreLoot(Loot& loot, bool broadcast, uint8 bag, uint8 slot)
     for(uint32 i = 0; i < max_slot; ++i)
     {
         LootItem* lootItem = loot.LootItemInSlot(i,this);
+
+        if (!lootItem)
+            continue;
 
         ItemPosCountVec dest;
         InventoryResult msg = CanStoreNewItem(bag,slot,dest,lootItem->itemid,lootItem->count);

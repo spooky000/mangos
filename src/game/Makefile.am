@@ -116,9 +116,6 @@ libmangosgame_a_SOURCES = \
 	DBCStores.h \
 	DBCStructure.h	\
 	debugcmds.cpp \
-	DestinationHolder.cpp \
-	DestinationHolder.h \
-	DestinationHolderImp.h \
 	DuelHandler.cpp \
 	DynamicObject.cpp \
 	DynamicObject.h \

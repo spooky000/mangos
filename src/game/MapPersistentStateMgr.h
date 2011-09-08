@@ -193,7 +193,7 @@ class DungeonPersistentState : public MapPersistentState
            - any new instance is being generated
            - the first time a player bound to InstanceId logs in
            - when a group bound to the instance is loaded */
-        DungeonPersistentState(uint16 MapId, uint32 InstanceId, Difficulty difficulty, time_t resetTime, bool canReset, uint32 completedEncounters);
+        DungeonPersistentState(uint16 MapId, uint32 InstanceId, Difficulty difficulty, time_t resetTime, bool canReset, uint32 completedEncountersMask);
 
         ~DungeonPersistentState();
 
@@ -216,6 +216,7 @@ class DungeonPersistentState : public MapPersistentState
            for raid/heroic instances this caches the global respawn time for the map */
         time_t GetResetTime() const { return m_resetTime; }
         void SetResetTime(time_t resetTime) { m_resetTime = resetTime; }
+        time_t GetResetTimeForDB() const;
 
         /* instances cannot be reset (except at the global reset time)
            if there are players permanently bound to it
@@ -227,11 +228,13 @@ class DungeonPersistentState : public MapPersistentState
         bool IsExtended() const { return m_isExtended; }
         void SetExtended(bool isExtended) { m_isExtended = isExtended; }
 
-        // DBC encounter state at kill/spellcast update/set/get
-        void UpdateEncounterState(EncounterCreditType type, uint32 creditEntry, Player* player = NULL);
-        bool IsCompleted();
+        // DBC encounter state update at kill/spell cast
+        void UpdateEncounterState(EncounterCreditType type, uint32 creditEntry);
+
+        // mask of completed encounters
         uint32 GetCompletedEncountersMask() { return m_completedEncountersMask; }
 
+        bool IsCompleted();
 
         /* Saved when the instance is generated for the first time */
         void SaveToDB();

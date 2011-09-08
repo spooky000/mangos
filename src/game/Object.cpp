@@ -1381,9 +1381,8 @@ void WorldObject::UpdateAllowedPositionZ(float x, float y, float &z) const
             {
                 bool canSwim = ((Creature const*)this)->CanSwim();
                 float ground_z = z;
-                float max_z = canSwim
-                    ? GetTerrain()->GetWaterOrGroundLevel(x, y, z, &ground_z, !((Unit const*)this)->HasAuraType(SPELL_AURA_WATER_WALK))
-                    : ((ground_z = GetTerrain()->GetHeight(x, y, z, true)));
+                float max_z = GetTerrain()->GetWaterOrGroundLevel(x, y, z, &ground_z, (canSwim && !((Unit const*)this)->HasAuraType(SPELL_AURA_WATER_WALK)));
+
                 if (max_z > INVALID_HEIGHT)
                 {
                     if (max_z != ground_z && z > max_z)
@@ -1620,7 +1619,7 @@ void WorldObject::SetMap(Map * map)
 TerrainInfo const* WorldObject::GetTerrain() const
 {
     MANGOS_ASSERT(m_currMap);
-    return m_currMap->GetTerrain();
+    return m_currMap ? m_currMap->GetTerrain() : NULL;
 }
 
 void WorldObject::AddObjectToRemoveList()

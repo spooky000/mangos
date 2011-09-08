@@ -367,7 +367,7 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_EX3_UNK23                      0x00800000            // 23
 #define SPELL_ATTR_EX3_REQ_OFFHAND                0x01000000            // 24 Req offhand weapon
 #define SPELL_ATTR_EX3_UNK25                      0x02000000            // 25 no cause spell pushback ?
-#define SPELL_ATTR_EX3_UNK26                      0x04000000            // 26
+#define SPELL_ATTR_EX3_CAN_PROC_WITH_TRIGGERED    0x04000000            // 26 auras with this attribute can proc from triggered spell casts (?)
 #define SPELL_ATTR_EX3_UNK27                      0x08000000            // 27
 #define SPELL_ATTR_EX3_UNK28                      0x10000000            // 28
 #define SPELL_ATTR_EX3_UNK29                      0x20000000            // 29 Ignore caster spellbonus?
@@ -1197,6 +1197,7 @@ enum WeaponAttackType
 };
 
 #define MAX_ATTACK  3
+#define MAX_ATTACK_MOD  (MAX_ATTACK + 3)
 
 enum Targets
 {
@@ -3029,7 +3030,6 @@ enum AreaLockStatus
     AREA_LOCKSTATUS_INSTANCE_IS_FULL          = 10,
     AREA_LOCKSTATUS_NOT_ALLOWED               = 11,
 };
-
 
 // we need to stick to 1 version or half of the stuff will work for someone
 // others will not and opposite

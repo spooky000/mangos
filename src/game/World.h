@@ -190,6 +190,7 @@ enum eConfigUInt32Values
     CONFIG_UINT32_NUMTHREADS,
     CONFIG_UINT32_LFG_MAXKICKS,
     CONFIG_UINT32_MIN_LEVEL_FOR_RAID,
+    CONFIG_UINT32_GEAR_CALC_BASE,
     CONFIG_UINT32_VALUE_COUNT
 };
 
@@ -339,6 +340,7 @@ enum eConfigBoolValues
     CONFIG_BOOL_LFR_ENABLE,
     CONFIG_BOOL_LFG_DEBUG_ENABLE,
     CONFIG_BOOL_LFR_EXTEND,
+    CONFIG_BOOL_LFG_ONLYLASTENCOUNTER,
     CONFIG_BOOL_PET_SAVE_ALL,
     CONFIG_BOOL_VALUE_COUNT
 };
@@ -654,7 +656,7 @@ class World
 
         typedef UNORDERED_MAP<uint32, Weather*> WeatherMap;
         WeatherMap m_weathers;
-        
+
         SessionMap m_sessions;
         uint32 m_maxActiveSessionCount;
         uint32 m_maxQueuedSessionCount;

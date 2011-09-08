@@ -129,7 +129,7 @@ World::~World()
 
     m_weathers.clear();
 
-    CliCommandHolder* command;
+    CliCommandHolder* command = NULL;
     while (cliCmdQueue.next(command))
         delete command;
 
@@ -590,6 +590,8 @@ void World::LoadConfigSettings(bool reload)
     setConfig(CONFIG_BOOL_LFG_DEBUG_ENABLE, "LFG.Debug",false);
     setConfig(CONFIG_BOOL_LFR_EXTEND, "LFR.Extend",false);
     setConfigMinMax(CONFIG_UINT32_LFG_MAXKICKS, "LFG.MaxKicks", 5, 1, 10);
+
+    setConfigMinMax(CONFIG_UINT32_GEAR_CALC_BASE, "Player.GSCalculationBase", 190, 1, 384);
 
     setConfigMinMax(CONFIG_UINT32_START_PLAYER_MONEY, "StartPlayerMoney", 0, 0, MAX_MONEY_AMOUNT);
 
@@ -1212,6 +1214,9 @@ void World::SetInitialWorldSettings()
     sAchievementMgr.LoadCompletedAchievements();
     sLog.outString( ">>> Achievements loaded" );
     sLog.outString();
+
+    sLog.outString( "Loading Instance encounters data..." );  // must be after Creature loading
+    sObjectMgr.LoadInstanceEncounters();
 
     sLog.outString( "Loading Npc Text Id..." );
     sObjectMgr.LoadNpcGossips();                            // must be after load Creature and LoadGossipText

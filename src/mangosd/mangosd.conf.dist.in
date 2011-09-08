@@ -970,6 +970,11 @@ TalentsInspecting = 1
 #        in game from other side
 #        Default: 100
 #
+#    Player.GSCalculationBase
+#        default (base) player Gear Score (GS) for calculate additional bonus for vehicles, scaled by GS.
+#        default: 190
+#        range: 1 - 384
+#
 ###################################################################################################################
 
 ThreatRadius = 100
@@ -1006,7 +1011,7 @@ ListenRange.TextEmote = 40
 ListenRange.Yell = 300
 GuidReserveSize.Creature = 100
 GuidReserveSize.GameObject = 100
-
+Player.GSCalculationBase = 190
 
 ###################################################################################################################
 # CHAT SETTINGS
@@ -1645,3 +1650,27 @@ SOAP.Port = 7878
 CharDelete.Method = 0
 CharDelete.MinLevel = 0
 CharDelete.KeepDays = 30
+
+###################################################################################################################
+#    LFG Dungeon finder system
+#
+#    LFR.Enable              = 0
+#        enabling Raid finder
+#    LFG.Enable              = 0
+#        enabling Dungeon finder
+#    LFG.Debug              = 0
+#        enabling Dungeon finder debug mode
+#    LFR.Extend              = 0
+#        enabling Raid finder extended operations (not blizzlike!)
+#    LFG.MaxKicks            = 5
+#        max number of kick from group before group disband
+#    LFG.OnlyLastEncounterForCompleteDungeon = 0
+#        need complete only last encounter for dungeon complete (not blizzlike!)
+#
+###################################################################################################################
+LFR.Enable              = 1
+LFG.Enable              = 1
+LFG.Debug               = 0
+LFR.Extend              = 0
+LFG.MaxKicks            = 5
+LFG.OnlyLastEncounterForCompleteDungeon = 0

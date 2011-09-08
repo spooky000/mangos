@@ -36,6 +36,33 @@
 *   - Cosmetics & avoid hacks.
 */
 
+static uint32 const BG_SA_GateStatus[6] = {3849, 3623, 3620, 3614, 3617, 3638};
+static uint32 const BG_SA_WorldStatusA[3] = {3630, 3627, 3626};
+static uint32 const BG_SA_WorldStatusH[3] = {3631, 3628, 3629};
+static uint32 const BG_IC_TEAM[BG_TEAMS_COUNT] = {84, 83};
+
+// WorldSafeLocs ids for 5 gyd, and for ally, and horde starting location
+static uint32 const BG_SA_GraveyardIdsPhase[3] = {1347, 1346, 1348};
+static uint32 const BG_SA_GraveyardIds[2] = {1349, 1350};
+
+static int32 const GrraveYardWS[3][2]=
+{
+    {3636, 3632},
+    {3635, 3633},
+    {3637, 3634},
+};
+
+static float const BG_SA_START_LOCATIONS[7][4] = {
+    {1804.10f, -168.46f, 60.55f, 2.65f},                    // Pillar 1 - don't used now
+    {1803.71f, 118.61f, 59.83f, 3.56f},                     // Pillar 2 - don't used now
+    {1597.64f, -106.35f, 8.89f, 4.13f},                     // Dock 1
+    {1606.61f, 50.13f, 7.58f, 2.39f},                       // Dock 2
+    {1209.70f, -65.16f, 70.10f, 0.00f},                     // Defenders start loc
+    //Ships
+    {2679.696777f, -826.891235f, 3.712860f, 5.78367f},     //rot2 1 rot3 0.0002f
+    {2574.003662f, 981.261475f, 2.603424f, 0.807696f}
+};
+
 BattleGroundSA::BattleGroundSA()
 {
     m_StartMessageIds[BG_STARTING_EVENT_FIRST]  = LANG_BG_SA_START_TWO_MINUTE;
@@ -162,10 +189,12 @@ void BattleGroundSA::Update(uint32 diff)
 
     if (GetStatus() == STATUS_WAIT_JOIN && !shipsStarted)
         if (Phase == SA_ROUND_ONE) // Round one not started yet
+        {
             if (shipsTimer <= diff)
                 StartShips();
             else
                 shipsTimer -= diff;
+        }
 
     if (GetStatus() == STATUS_IN_PROGRESS) // Battleground already in progress
     {
@@ -215,6 +244,7 @@ void BattleGroundSA::Update(uint32 diff)
     if (GetStatus() == STATUS_WAIT_JOIN && Phase == SA_ROUND_TWO) // Round two, not yet started
     {
         if (!shipsStarted)
+        {
             if (shipsTimer <= diff)
             {
                 SendMessageToAll(LANG_BG_SA_START_ONE_MINUTE, CHAT_MSG_BG_SYSTEM_NEUTRAL, NULL);
@@ -222,6 +252,7 @@ void BattleGroundSA::Update(uint32 diff)
             }
             else
                 shipsTimer -= diff;
+        }
         if (TimeST2Round < diff)
         {
             Phase = 2;
@@ -833,7 +864,7 @@ void BattleGroundSA::SendWarningToAllSA(uint8 gyd, int status, Team team, bool i
                     case 0: SendWarningToAll(LANG_BG_SA_HORDE_EAST_CONQUESTED); break;
                     case 1: SendWarningToAll(LANG_BG_SA_HORDE_WEST_CONQUESTED); break;
                     case 2: SendWarningToAll(LANG_BG_SA_HORDE_SOUTH_CONQUESTED); break;
-                    default: sLog.outError("Error in SA strings: Unknow graveyard %s", gyd); break;
+                    default: sLog.outError("Error in SA strings: Unknow graveyard %u", gyd); break;
                 }
             }
             else
@@ -843,7 +874,7 @@ void BattleGroundSA::SendWarningToAllSA(uint8 gyd, int status, Team team, bool i
                     case 0: SendWarningToAll(LANG_BG_SA_ALLIANCE_EAST_CONQUESTED); break;
                     case 1: SendWarningToAll(LANG_BG_SA_ALLIANCE_WEST_CONQUESTED); break;
                     case 2: SendWarningToAll(LANG_BG_SA_ALLIANCE_SOUTH_CONQUESTED); break;
-                    default: sLog.outError("Error in SA strings: Unknow graveyard %s", gyd); break;
+                    default: sLog.outError("Error in SA strings: Unknow graveyard %u", gyd); break;
                 }
             }
         }
@@ -861,7 +892,7 @@ void BattleGroundSA::SendWarningToAllSA(uint8 gyd, int status, Team team, bool i
                 case BG_SA_GO_GATES_T_RED_SUN: SendWarningToAll(LANG_BG_SA_GATE_RED_SUN_DESTROYED); break;
                 case BG_SA_GO_GATES_T_YELLOW_MOON: SendWarningToAll(LANG_BG_SA_GATE_YELLOW_MOON_DESTROYED); break;
                 default:
-                    sLog.outError("Error in SA strings: Unknow door %s", door); break;
+                    sLog.outError("Error in SA strings: Unknow door %d", door); break;
             }
         }
         else
@@ -875,7 +906,7 @@ void BattleGroundSA::SendWarningToAllSA(uint8 gyd, int status, Team team, bool i
                 case BG_SA_GO_GATES_T_RED_SUN: SendWarningToAll(LANG_BG_SA_GATE_RED_SUN_DAMAGED); break;
                 case BG_SA_GO_GATES_T_YELLOW_MOON: SendWarningToAll(LANG_BG_SA_GATE_YELLOW_MOON_DAMAGED); break;
                 default:
-                    sLog.outError("Error in SA strings: Unknow door %s", door); break;
+                    sLog.outError("Error in SA strings: Unknow door %d", door); break;
             }
         }
     }
@@ -989,4 +1020,18 @@ uint32 BattleGroundSA::GetCorrectFactionSA(uint8 vehicleType) const
         }
     }
     return VEHICLE_FACTION_NEUTRAL;
+}
+
+bool BattleGroundSA::winSAwithAllWalls(Team team)
+{
+   if (GetDefender() != team)
+        return false;
+
+    bool allNotDestroyed = true;
+
+    for (uint32 i = 0; i < BG_SA_GATE_MAX; ++i)
+        if (GateStatus[i] == BG_SA_GO_GATES_DESTROY)
+            allNotDestroyed = false;
+
+    return allNotDestroyed;
 }

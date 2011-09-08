@@ -196,6 +196,9 @@ void Map::RemoveFromGrid(Creature* obj, NGridType *grid, Cell const& cell)
 void Map::DeleteFromWorld(Player* pl)
 {
     sObjectAccessor.RemoveObject(pl);
+
+    WriteGuard Guard(GetLock(MAP_LOCK_TYPE_AURAS));
+
     delete pl;
 }
 
@@ -286,6 +289,7 @@ bool Map::Add(Player *player)
 {
     player->GetMapRef().link(this, player);
     player->SetMap(this);
+    CreateAttackersStorageFor(player->GetObjectGuid());
 
     // update player state for other player and visa-versa
     CellPair p = MaNGOS::ComputeCellPair(player->GetPositionX(), player->GetPositionY());
@@ -320,6 +324,8 @@ Map::Add(T *obj)
     }
 
     obj->SetMap(this);
+    if (obj->GetTypeId() == TYPEID_UNIT)
+        CreateAttackersStorageFor(obj->GetObjectGuid());
 
     Cell cell(p);
     if(obj->isActiveObject())
@@ -574,6 +580,7 @@ void Map::Remove(Player *player, bool remove)
     else
         player->RemoveFromWorld();
 
+    RemoveAttackersStorageFor(player->GetObjectGuid());
     // this may be called during Map::Update
     // after decrement+unlink, ++m_mapRefIter will continue correctly
     // when the first element of the list is being removed
@@ -586,10 +593,10 @@ void Map::Remove(Player *player, bool remove)
     if(p.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || p.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP)
     {
         // invalid coordinates
-        player->ResetMap();
-
         if( remove )
             DeleteFromWorld(player);
+        else
+            player->TeleportToHomebind();
 
         return;
     }
@@ -646,7 +653,9 @@ Map::Remove(T *obj, bool remove)
     UpdateObjectVisibility(obj,cell,p);                     // i think will be better to call this function while object still in grid, this changes nothing but logically is better(as for me)
     RemoveFromGrid(obj,grid,cell);
 
-    obj->ResetMap();
+    if (obj->GetTypeId() == TYPEID_UNIT)
+        RemoveAttackersStorageFor(obj->GetObjectGuid());
+
     if( remove )
     {
         // if option set then object already saved at this moment
@@ -654,6 +663,7 @@ Map::Remove(T *obj, bool remove)
             obj->SaveRespawnTime();
 
         // Note: In case resurrectable corpse and pet its removed from global lists in own destructor
+        WriteGuard Guard(GetLock(MAP_LOCK_TYPE_AURAS));
         delete obj;
     }
 }
@@ -1262,9 +1272,8 @@ bool DungeonMap::CanEnter(Player *player)
         return false;
     }
 
-    // cannot enter while players in the instance are in combat
-    Group *pGroup = player->GetGroup();
-    if(pGroup && pGroup->InCombatToInstance(GetInstanceId()) && player->isAlive() && player->GetMapId() != GetId())
+    // cannot enter while an encounter in the instance is in progress
+    if (!player->isGameMaster() && (player->isAlive() && GetInstanceData() && GetInstanceData()->IsEncounterInProgress()) && player->GetMapId() != GetId())
     {
         player->SendTransferAborted(GetId(), TRANSFER_ABORT_ZONE_IN_COMBAT);
         return false;
@@ -1433,11 +1442,20 @@ bool DungeonMap::Reset(InstanceResetMethod method)
 
     if(HavePlayers())
     {
-        if (method == INSTANCE_RESET_ALL || method == INSTANCE_RESET_CHANGE_DIFFICULTY)
+        if (method == INSTANCE_RESET_ALL)
         {
             // notify the players to leave the instance so it can be reset
             for(MapRefManager::iterator itr = m_mapRefManager.begin(); itr != m_mapRefManager.end(); ++itr)
                 itr->getSource()->SendResetFailedNotify(GetId());
+        }
+        else if (method == INSTANCE_RESET_CHANGE_DIFFICULTY)
+        {
+            // notify the players to leave the instance so it can be reset
+            for(MapRefManager::iterator itr = m_mapRefManager.begin(); itr != m_mapRefManager.end(); ++itr)
+                itr->getSource()->SendResetFailedNotify(GetId());
+
+            m_unloadWhenEmpty = true;
+            m_resetAfterUnload = true;
         }
         else
         {
@@ -1501,7 +1519,10 @@ void DungeonMap::UnloadAll(bool pForce)
     }
 
     if(m_resetAfterUnload == true)
-        GetPersistanceState()->DeleteRespawnTimes();
+    {
+        if (DungeonPersistentState* state = GetPersistanceState())
+            state->DeleteRespawnTimes();
+    }
 
     Map::UnloadAll(pForce);
 }
@@ -3304,8 +3325,8 @@ void Map::SendObjectUpdates()
     WorldPacket packet;                                     // here we allocate a std::vector with a size of 0x10000
     for(UpdateDataMapType::iterator iter = update_players.begin(); iter != update_players.end(); ++iter)
     {
-        iter->second.BuildPacket(&packet);
-        iter->first->GetSession()->SendPacket(&packet);
+        if (iter->second.BuildPacket(&packet))
+            iter->first->GetSession()->SendPacket(&packet);
         packet.clear();                                     // clean the string
     }
 }
@@ -3427,4 +3448,87 @@ void Map::PlayDirectSoundToMap(uint32 soundId)
     Map::PlayerList const& pList = GetPlayers();
     for (PlayerList::const_iterator itr = pList.begin(); itr != pList.end(); ++itr)
         itr->getSource()->SendDirectMessage(&data);
+}
+
+void Map::AddAttackerFor(ObjectGuid targetGuid, ObjectGuid attackerGuid)
+{
+    if (targetGuid.IsEmpty() || attackerGuid.IsEmpty())
+        return;
+
+    WriteGuard Guard(GetLock());
+    AttackersMap::iterator itr = m_attackersMap.find(targetGuid);
+    if (itr != m_attackersMap.end())
+    {
+        itr->second.insert(attackerGuid);
+    }
+    else
+    {
+        CreateAttackersStorageFor(targetGuid);
+        m_attackersMap[targetGuid].insert(attackerGuid);
+    }
+}
+
+void Map::RemoveAttackerFor(ObjectGuid targetGuid, ObjectGuid attackerGuid)
+{
+    if (targetGuid.IsEmpty() || attackerGuid.IsEmpty())
+        return;
+
+    WriteGuard Guard(GetLock());
+    AttackersMap::iterator itr = m_attackersMap.find(targetGuid);
+    if (itr != m_attackersMap.end())
+    {
+        itr->second.erase(attackerGuid);
+    }
+}
+
+void Map::RemoveAllAttackersFor(ObjectGuid targetGuid)
+{
+    if (targetGuid.IsEmpty())
+        return;
+
+    WriteGuard Guard(GetLock());
+    AttackersMap::iterator itr = m_attackersMap.find(targetGuid);
+    if (itr != m_attackersMap.end())
+    {
+        itr->second.clear();
+    }
+}
+
+ObjectGuidSet Map::GetAttackersFor(ObjectGuid targetGuid)
+{
+    if (!targetGuid.IsEmpty())
+    {
+        ReadGuard Guard(GetLock());
+        AttackersMap::const_iterator itr = m_attackersMap.find(targetGuid);
+        if (itr != m_attackersMap.end())
+            return itr->second;
+    }
+
+    return ObjectGuidSet();
+}
+
+void Map::CreateAttackersStorageFor(ObjectGuid targetGuid)
+{
+    if (targetGuid.IsEmpty())
+        return;
+
+    AttackersMap::iterator itr = m_attackersMap.find(targetGuid);
+    if (itr == m_attackersMap.end())
+    {
+        m_attackersMap.insert(std::make_pair(targetGuid,ObjectGuidSet()));
+    }
+
+}
+
+void Map::RemoveAttackersStorageFor(ObjectGuid targetGuid)
+{
+    if (targetGuid.IsEmpty())
+        return;
+
+    WriteGuard Guard(GetLock());
+    AttackersMap::iterator itr = m_attackersMap.find(targetGuid);
+    if (itr != m_attackersMap.end())
+    {
+        m_attackersMap.erase(itr);
+    }
 }
