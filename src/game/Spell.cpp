@@ -6159,8 +6159,8 @@ SpellCastResult Spell::CheckCast(bool strict)
                 float fy = m_caster->GetPositionY() + dis * sin(direction);
 
                 // simple check for avoid falling under map
-                if (!m_caster->GetTerrain()->IsNextZcoordOK(fx, fy, m_caster->GetPositionZ(), 40.0f))
-                    return SPELL_FAILED_TRY_AGAIN;
+                /*if (!m_caster->GetTerrain()->IsNextZcoordOK(fx, fy, m_caster->GetPositionZ(), 40.0f))
+                    return SPELL_FAILED_TRY_AGAIN;*/
 
                 // not allow use this effect at battleground until battleground start
                 if (m_caster->GetTypeId() == TYPEID_PLAYER)
