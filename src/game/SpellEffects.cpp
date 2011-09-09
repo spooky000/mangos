@@ -8880,7 +8880,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!unitTarget || !m_caster)
                         return;
 
-                    unitTarget->CastSpell(m_caster, 62708, true); // Control Vehicle aura
+                    unitTarget->EnterVehicle(m_caster->GetVehicleKit(), 1);
                     m_caster->CastSpell(unitTarget, (m_spellInfo->Id == 62707) ? 62717 : 63477, true); // DoT/Immunity
                     break;
                 }
