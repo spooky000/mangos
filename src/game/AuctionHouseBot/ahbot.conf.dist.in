@@ -160,7 +160,7 @@ AuctionHouseBot.Horde.Items.Amount.Ratio = 100
 AuctionHouseBot.Neutral.Items.Amount.Ratio = 100
 
 AuctionHouseBot.MinTime = 1
-AuctionHouseBot.MaxTime = 72
+AuctionHouseBot.MaxTime = 2
 
 AuctionHouseBot.Items.Vendor = 0
 AuctionHouseBot.Items.Loot = 1
@@ -172,7 +172,7 @@ AuctionHouseBot.Bind.Use = 1
 AuctionHouseBot.Bind.Quest = 0
 AuctionHouseBot.LockBox.Enabled = 0
 
-AuctionHouseBot.ItemsPerCycle.Boost = 20
+AuctionHouseBot.ItemsPerCycle.Boost = 75
 AuctionHouseBot.ItemsPerCycle.Normal = 20
 AuctionHouseBot.BuyPrice.Seller = 1
 AuctionHouseBot.Alliance.Price.Ratio = 200
