@@ -768,9 +768,7 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         if (unitTarget->HasAuraState(AURA_STATE_HEALTHLESS_35_PERCENT))
                             damage += int32(damage / 100 * pAura->GetModifier()->m_amount);
 
-                    // Calculate damage reflected back to caster (normally it takes unmodified by SP value)
-                    int32 back_damage = m_caster->SpellDamageBonusDone(unitTarget,m_spellInfo,uint32(damage),SPELL_DIRECT_DAMAGE);
-                    m_caster->CastCustomSpell(m_caster, 32409, &back_damage, 0, 0, true);
+                    m_caster->CastCustomSpell(m_caster, 32409, &damage, 0, 0, true);
                 }
                 // Improved Mind Blast (Mind Blast in shadow form bonus)
                 else if (m_caster->GetShapeshiftForm() == FORM_SHADOW && m_spellInfo->SpellFamilyFlags.test<CF_PRIEST_MIND_BLAST>())
@@ -10513,31 +10511,38 @@ void Spell::EffectBlock(SpellEffectIndex /*eff_idx*/)
 
 void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
 {
-    if(unitTarget->IsTaxiFlying())
+    if (unitTarget->IsTaxiFlying())
         return;
 
-    if( m_spellInfo->rangeIndex == 1)                       //self range
+    if (m_spellInfo->rangeIndex == 1)                       //self range
     {
-        float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
+        TerrainInfo const* terrain = unitTarget->GetTerrain();
+        if (!terrain)
+            return;
 
-        //For glyph of blink
-        if(m_caster->GetTypeId() == TYPEID_PLAYER)
-            ((Player*)m_caster)->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RADIUS, dis, this);
+        float distance = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
 
-        // before caster
-        float fx, fy, fz;
-        unitTarget->GetClosePoint(fx, fy, fz, unitTarget->GetObjectBoundingRadius(), dis);
+        //Glyph of blink
+        if (m_caster->GetTypeId() == TYPEID_PLAYER)
+            ((Player*)m_caster)->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RADIUS, distance, this);
+
         float ox, oy, oz;
         unitTarget->GetPosition(ox, oy, oz);
+        float fx, fy, fz;
+        fz = oz + 0.05f;
+        fx = unitTarget->GetPositionX() + distance * cos(unitTarget->GetOrientation());
+        fy = unitTarget->GetPositionY() + distance * sin(unitTarget->GetOrientation());
 
-        float fx2, fy2, fz2;                                // getObjectHitPos overwrite last args in any result case
-        if(VMAP::VMapFactory::createOrGetVMapManager()->getObjectHitPos(unitTarget->GetMapId(), ox,oy,oz+0.5f, fx,fy,oz+0.5f,fx2,fy2,fz2, -0.5f))
-        {
-            fx = fx2;
-            fy = fy2;
-            fz = fz2;
-            unitTarget->UpdateAllowedPositionZ(fx, fy, fz);
-        }
+        MaNGOS::NormalizeMapCoord(fx);
+        MaNGOS::NormalizeMapCoord(fy);
+
+        if (terrain->CheckPathAccurate(ox,oy,oz,fx,fy,fz, sWorld.getConfig(CONFIG_BOOL_CHECK_GO_IN_PATH) ? unitTarget : NULL ))
+            DEBUG_LOG("Spell::EffectLeapForward unit %u forwarded on %f",unitTarget->GetObjectGuid().GetCounter(), unitTarget->GetDistance(fx,fy,fz));
+        else
+            DEBUG_LOG("Spell::EffectLeapForward unit %u NOT forwarded on %f, real distance is %f",unitTarget->GetObjectGuid().GetCounter(), distance, unitTarget->GetDistance(fx,fy,fz));
+
+        //Prevent Falling during swap building/outerspace
+        unitTarget->UpdateAllowedPositionZ(fx, fy, fz);
 
         unitTarget->NearTeleportTo(fx, fy, fz, unitTarget->GetOrientation(), unitTarget == m_caster);
     }

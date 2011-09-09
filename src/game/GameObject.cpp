@@ -1689,6 +1689,33 @@ void GameObject::Use(Unit* user)
     spell->prepare(&targets);
 }
 
+bool GameObject::IsInRange(float x, float y, float z, float radius) const
+{
+    GameObjectDisplayInfoEntry const *info = sGameObjectDisplayInfoStore.LookupEntry(GetUInt32Value(GAMEOBJECT_DISPLAYID));
+    if (!info)
+        return IsWithinDist3d(x, y, z, radius);
+
+    float dx = x - GetPositionX();
+    float dy = y - GetPositionY();
+    float dz = z - GetPositionZ();
+    float dist = sqrt(dx*dx + dy*dy);
+
+    if (dist <= CONTACT_DISTANCE)   // prevent division by 0
+        return true;
+
+    float sinA = sin(GetOrientation());
+    float cosA = cos(GetOrientation());
+    float sinB = dx / dist;
+    float cosB = dy / dist;
+
+    dx = dist * (cosA * cosB + sinA * sinB);
+    dy = dist * (cosA * sinB - sinA * cosB);
+
+    return dx < info->maxX + radius && dx > info->minX - radius
+        && dy < info->maxY + radius && dy > info->minY - radius
+        && dz < info->maxZ + radius && dz > info->minZ - radius;
+}
+
 void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage)
 {
     if (GetGoType() != GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING || !m_health)
