@@ -612,6 +612,9 @@ class World
         char const* GetDBVersion() { return m_DBVersion.c_str(); }
         char const* GetCreatureEventAIVersion() { return m_CreatureEventAIVersion.c_str(); }
 
+        typedef UNORDERED_MAP<uint32, WorldSession*> SessionMap;
+        SessionMap GetSessions() { return m_sessions; }
+
         // multithread locking (World locking used only if object map == NULL)
         ObjectLockType& GetLock(MapLockType _locktype = MAP_LOCK_TYPE_DEFAULT) { return i_lock[_locktype]; }
 
