@@ -3454,6 +3454,15 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                     basepoints[0] = pVictim->GetMaxHealth() - pVictim->GetHealth();
                     break;
                 }
+                case 69023:                                 // Mirrored Soul
+                {
+                    int32 basepoints = (int32) (damage * 0.45f);
+                    if (Unit* caster = triggeredByAura->GetCaster())
+                        // Actually this spell should be sent with SMSG_SPELL_START
+                        CastCustomSpell(caster, 69034, &basepoints, NULL, NULL, true, NULL, triggeredByAura, GetObjectGuid());
+
+                    return SPELL_AURA_PROC_OK;
+                }
             }
             break;
         case SPELLFAMILY_MAGE:
