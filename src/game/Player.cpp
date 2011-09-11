@@ -16926,12 +16926,13 @@ void Player::LoadPet()
         else
         {
 
-            QueryResult* result = CharacterDatabase.PQuery("SELECT id, PetType, CreatedBySpell FROM character_pet WHERE owner = '%u' AND entry = (SELECT entry FROM character_pet WHERE owner = '%u' AND slot = '%u') ORDER BY slot ASC",
+            QueryResult* result = CharacterDatabase.PQuery("SELECT id, PetType, CreatedBySpell, savetime FROM character_pet WHERE owner = '%u' AND entry = (SELECT entry FROM character_pet WHERE owner = '%u' AND slot = '%u') ORDER BY slot ASC",
                 GetGUIDLow(), GetGUIDLow(),PET_SAVE_AS_CURRENT);
 
             std::vector<uint32> petnumber;
             uint32 _PetType = 0;
             uint32 _CreatedBySpell = 0;
+            uint64 _saveTime = 0;
 
             if (result)
             {
@@ -16945,6 +16946,8 @@ void Player::LoadPet()
                         _PetType = fields[1].GetUInt32();
                     if (!_CreatedBySpell)
                         _CreatedBySpell = fields[2].GetUInt32();
+                    if (!_saveTime)
+                        _saveTime = fields[3].GetUInt64();
                 }
                 while (result->NextRow());
                 delete result;
@@ -16955,9 +16958,28 @@ void Player::LoadPet()
             if (petnumber.empty())
                 return;
 
-            // temporary fix for count of pets (need correct size by spell basepoints)
-            if ((_PetType != SUMMON_PET) || (_CreatedBySpell != 51533 && _CreatedBySpell != 33831))
-                petnumber.resize(1);
+            if (_CreatedBySpell != 13481 && !HasSpell(_CreatedBySpell))         // Tame Beast
+                return;
+
+            SpellEntry const* spellInfo = sSpellStore.LookupEntry(_CreatedBySpell);
+
+            if (!spellInfo)
+                return;
+
+            uint32 count = 1;
+
+            //                   Feral Spirit             Force of Nature              
+            if (_CreatedBySpell == 51533 || _CreatedBySpell == 33831)
+                count = spellInfo->CalculateSimpleValue(EFFECT_INDEX_0);
+
+            petnumber.resize(count);
+
+            if (GetSpellDuration(spellInfo) > 0)
+                if (uint64(time(NULL)) - GetSpellDuration(spellInfo)/IN_MILLISECONDS > _saveTime)
+                    return;
+
+            if (_CreatedBySpell != 13481 && !HasSpell(_CreatedBySpell))
+                return;
 
             if (!petnumber.empty())
             {
