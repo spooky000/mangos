@@ -1672,8 +1672,24 @@ void Aura::TriggerSpell()
                         break;
 //                    // Ice Tomb
 //                    case 70157: break;
-//                    // Mana Barrier
-//                    case 70842: break;
+                    // Mana Barrier
+                    case 70842:
+                    {
+                        // there should be some spell handling the effect?
+                        uint32 health = triggerTarget->GetHealth();
+                        uint32 amount = triggerTarget->GetMaxHealth() - health;
+                        uint32 mana = triggerTarget->GetPower(POWER_MANA);
+
+                        if (amount > mana)
+                        {
+                            triggerTarget->RemoveAurasDueToSpell(GetId());
+                            amount = mana;
+                        }
+
+                        triggerTarget->SetHealth(health + amount);
+                        triggerTarget->SetPower(POWER_MANA, mana - amount);
+                        break;
+                    }
 //                    // Summon Timer: Suppresser
 //                    case 70912: break;
 //                    // Aura of Darkness
