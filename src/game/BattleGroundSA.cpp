@@ -207,12 +207,25 @@ void BattleGroundSA::Update(uint32 diff)
                 SendWarningToAll(LANG_BG_SA_END_1ROUND);
                 RoundScores[0].winner = GetDefender();
                 RoundScores[0].time = BG_SA_ROUNDLENGTH;
+
+                for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+                {
+                    if (Player *plr = sObjectMgr.GetPlayer(itr->first))
+                        plr->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 52459);
+                }
+
                 ResetBattle(0, defender);
             }
             else // Timeout of second round
             {
                 SendMessageToAll(defender == ALLIANCE ? LANG_BG_SA_ALLIANCE_TIMEOUT_END_2ROUND : LANG_BG_SA_HORDE_TIMEOUT_END_2ROUND, CHAT_MSG_BG_SYSTEM_NEUTRAL, NULL);
                 RoundScores[1].winner = GetDefender();
+
+                for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+                {
+                    if (Player *plr = sObjectMgr.GetPlayer(itr->first))
+                        plr->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 52459);
+                }
 
                 if (RoundScores[0].winner == GetDefender())
                     EndBattleGround(GetDefender());
@@ -384,8 +397,15 @@ void BattleGroundSA::ResetBattle(uint32 winner, Team teamDefending)
 
     for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
     {
-        if (Player *plr = sObjectMgr.GetPlayer(itr->first))
-            TeleportPlayerToCorrectLoc(plr, true);
+        Player *plr = sObjectMgr.GetPlayer(itr->first);
+
+        if (!plr)
+            continue;
+
+        TeleportPlayerToCorrectLoc(plr, true);
+
+        if (plr->GetBGTeam() == defender && plr->GetItemByEntry(39213) != NULL)
+            plr->DestroyItemCount(39213, 1, true);
     }
 
     UpdatePhase();
@@ -473,9 +493,25 @@ bool BattleGroundSA::SetupShips()
         {
             case BG_SA_BOAT_ONE:
                 boatid = GetDefender() == ALLIANCE ? BG_SA_BOAT_ONE_H : BG_SA_BOAT_ONE_A;
+                if (!(AddObject(i, boatid, BG_SA_START_LOCATIONS[i + 5][0], BG_SA_START_LOCATIONS[i + 5][1], BG_SA_START_LOCATIONS[i + 5][2]+ (GetDefender() == ALLIANCE ? -3.750f: 0) , BG_SA_START_LOCATIONS[i + 5][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_ONE_DAY)))
+                {
+                    sLog.outError("SA_ERROR: Can't spawn ships!");
+                    return false;
+                }
+
+                if (GameObject* boat = GetBGObject(i))
+                    boat->SetTransportPathRotation(0.0f, 0.0f, 1.0f, 0.0002f);
                 break;
             case BG_SA_BOAT_TWO:
                 boatid = GetDefender() == ALLIANCE ? BG_SA_BOAT_TWO_H : BG_SA_BOAT_TWO_A;
+                if (!(AddObject(i, boatid, BG_SA_START_LOCATIONS[i + 5][0], BG_SA_START_LOCATIONS[i + 5][1], BG_SA_START_LOCATIONS[i + 5][2]+ (GetDefender() == ALLIANCE ? -3.750f: 0) , BG_SA_START_LOCATIONS[i + 5][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_ONE_DAY)))
+                {
+                    sLog.outError("SA_ERROR: Can't spawn ships!");
+                    return false;
+                }
+
+                if (GameObject* boat = GetBGObject(i))
+                    boat->SetTransportPathRotation(0, 0, 1.0f, 0.00001f);
                 break;
         }
         if (!(AddObject(i, boatid, BG_SA_START_LOCATIONS[i + 5][0], BG_SA_START_LOCATIONS[i + 5][1], BG_SA_START_LOCATIONS[i + 5][2]+ (GetDefender() == ALLIANCE ? -3.750f: 0) , BG_SA_START_LOCATIONS[i + 5][3], 0, 0, 0, 0, RESPAWN_ONE_DAY)))
@@ -485,9 +521,6 @@ bool BattleGroundSA::SetupShips()
         }
     }
 
-    //Feanor: to fix...
-    //GetBGObject(BG_SA_BOAT_ONE)->UpdateRotationFields(1.0f, 0.0002f);
-    //GetBGObject(BG_SA_BOAT_TWO)->UpdateRotationFields(1.0f, 0.00001f);
     SpawnBGObject(m_BgObjects[BG_SA_BOAT_ONE], RESPAWN_IMMEDIATELY);
     SpawnBGObject(m_BgObjects[BG_SA_BOAT_TWO], RESPAWN_IMMEDIATELY);
 
@@ -737,6 +770,14 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
     }
 }
 
+void BattleGroundSA::HandleKillPlayer(Player* player, Player* killer)
+{
+
+    player->CastSpell(player, 52417, false);
+
+    BattleGround::HandleKillPlayer(player, killer);
+}
+
 void BattleGroundSA::HandleKillUnit(Creature* unit, Player* killer)
 {
     if(!unit)
@@ -917,32 +958,27 @@ void BattleGroundSA::TeleportPlayerToCorrectLoc(Player *plr, bool resetBattle)
     if (!plr)
         return;
 
-    if (resetBattle)
-    {
-        plr->RemoveArenaAuras(true);
-        plr->CombatStopWithPets(true);
-
-        if (!plr->isAlive())
-        {
-            plr->ResurrectPlayer(1.0f);
-            plr->SpawnCorpseBones();
-        }
-
-        plr->SetHealth(plr->GetMaxHealth());
-        plr->SetPower(POWER_MANA, plr->GetMaxPower(POWER_MANA));
-    }
-
     if (!shipsStarted)
     {
         if (plr->GetTeam() != GetDefender())
         {
-            plr->CastSpell(plr,12438,true); //Without this player falls before boat loads...
-
             if (urand(0,1))
-                plr->TeleportTo(607, 2686.046f, -829.637f, 30.0f, 2.895f, 0);
+                plr->TeleportTo(607, 2682.936f, -830.368f, 15.0f, 2.895f, 0);
             else
-                plr->TeleportTo(607, 2579.309f, 986.523f, 30.0f, 0.807f, 0);
+                plr->TeleportTo(607, 2577.003f, 980.261f, 15.0f, 0.807f, 0);
 
+        }
+        else
+            plr->TeleportTo(607, 1209.7f, -65.16f, 70.1f, 0.0f, 0);
+    }
+    else if (GetStartTime() < (2 * MINUTE * IN_MILLISECONDS))
+    {
+        if (plr->GetTeam() != GetDefender())
+        {
+            if (urand(0,1))
+                plr->TeleportTo(607, 1804.10f, -168.46f, 60.55f, 2.65f, 0);
+            else
+                plr->TeleportTo(607, 1803.71f, 118.61f, 59.83f, 3.56f, 0);
         }
         else
             plr->TeleportTo(607, 1209.7f, -65.16f, 70.1f, 0.0f, 0);
@@ -950,11 +986,29 @@ void BattleGroundSA::TeleportPlayerToCorrectLoc(Player *plr, bool resetBattle)
     else
     {
         if (plr->GetTeam() != GetDefender())
-            plr->TeleportTo(607, 1600.381f, -106.263f, 8.8745f, 3.78f, 0);
+        {
+            if (urand(0,1))
+                plr->TeleportTo(607, 1597.64f, -106.35f, 8.89f, 4.13f, 0);
+            else
+                plr->TeleportTo(607, 1606.61f, 50.13f, 7.58f, 2.39f, 0);
+        }
         else
             plr->TeleportTo(607, 1209.7f, -65.16f, 70.1f, 0.0f, 0);
     }
     SendTransportInit(plr);
+    if (resetBattle)
+    {
+        if (!plr->isAlive())
+        {
+            plr->ResurrectPlayer(1.0f);
+            plr->SpawnCorpseBones();
+        }
+
+        plr->RemoveArenaAuras(true);
+        plr->SetHealth(plr->GetMaxHealth());
+        plr->SetPower(POWER_MANA, plr->GetMaxPower(POWER_MANA));
+        plr->CombatStopWithPets(true);
+    }
 }
 
 void BattleGroundSA::SendTransportInit(Player *player)

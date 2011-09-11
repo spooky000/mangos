@@ -224,6 +224,7 @@ class BattleGroundSA : public BattleGround
         virtual void FillInitialWorldStates(WorldPacket& data, uint32& count);
         virtual void EventPlayerClickedOnFlag(Player *source, GameObject* target_obj);
         virtual void HandleKillUnit(Creature* unit, Player* killer);
+        virtual void HandleKillPlayer(Player* player, Player* killer);
         virtual WorldSafeLocsEntry const* GetClosestGraveYard(Player* player);
         virtual void Reset();
 
