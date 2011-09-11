@@ -5024,6 +5024,8 @@ DiminishingReturnsType GetDiminishingReturnsGroupType(DiminishingGroup group)
         case DIMINISHING_BANISH:
         case DIMINISHING_CHEAPSHOT_POUNCE:
             return DRTYPE_PLAYER;
+        case DIMINISHING_TAUNT:
+            return DRTYPE_TAUNT;
         default:
             break;
     }
