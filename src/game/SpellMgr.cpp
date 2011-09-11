@@ -4390,7 +4390,6 @@ DiminishingReturnsType GetDiminishingReturnsGroupType(DiminishingGroup group)
         case DIMINISHING_CYCLONE:
         case DIMINISHING_TRIGGER_STUN:
         case DIMINISHING_CONTROL_STUN:
-        case DIMINISHING_TAUNT:
         case DIMINISHING_CHARGE:
             return DRTYPE_ALL;
         case DIMINISHING_CONTROL_ROOT:
