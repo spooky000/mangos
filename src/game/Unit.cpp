@@ -4562,10 +4562,8 @@ float Unit::CheckAuraStackingAndApply(Aura *Aur, UnitMods unitMod, UnitModifierT
         // TODO: find some better way of dividing to categories
         if (Aur->GetModifier()->m_auraname == SPELL_AURA_MOD_RESISTANCE_PCT &&
             (Aur->GetId() == 770 ||                                              // Faerie Fire
-            spellProto->SpellFamilyName == SPELLFAMILY_HUNTER &&                // Sting (Hunter Pet)
-            spellProto->SpellFamilyFlags & UI64LIT(0x1000000000000000) ||
-            spellProto->SpellFamilyName == SPELLFAMILY_WARLOCK &&               // Curse of Weakness
-            spellProto->SpellFamilyFlags & UI64LIT(0x0000000000008000)))
+            spellProto->IsFitToFamily<SPELLFAMILY_HUNTER, CF_HUNTER_PET_SPELLS>() ||            // Sting (Hunter Pet)
+            spellProto->IsFitToFamily<SPELLFAMILY_WARLOCK, CF_WARLOCK_CURSE_OF_WEAKNESS>()))    // Curse of Weakness
             modifierType = NONSTACKING_PCT_MINOR;
 		
         if (bIsPositive && amount < current ||               // value does not change as a result of applying/removing this aura

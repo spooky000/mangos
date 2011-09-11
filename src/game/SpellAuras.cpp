@@ -11438,7 +11438,7 @@ bool Aura::IsEffectStacking()
         case SPELL_AURA_HASTE_SPELLS:                                                           // Mind-Numbing Poison
         case SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN:                                               // Ebon Plague (spell not implemented) / Earth and Moon
             if (spellProto->IsFitToFamily<SPELLFAMILY_WARRIOR, CF_WARRIOR_SUNDER_ARMOR>() ||    // Sunder Armor (only spell triggering this aura has the flag)
-                spellProto->IsFitToFamily(SPELLFAMILY_HUNTER,  UI64LIT(0x1000000000000000)) ||  // Sting (Hunter Pet)
+                spellProto->IsFitToFamily<SPELLFAMILY_HUNTER,  CF_HUNTER_PET_SPELLS>() ||       // Sting (Hunter Pet)
                 spellProto->SpellFamilyName == SPELLFAMILY_DRUID &&                             // Earth and Moon
                 spellProto->SpellIconID == 2991 ||
                 spellProto->IsFitToFamily<SPELLFAMILY_ROGUE, CF_ROGUE_MIND_NUMBING_POISON>() || // Mind-Numbing Poison
