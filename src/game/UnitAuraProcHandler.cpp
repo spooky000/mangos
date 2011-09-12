@@ -4411,6 +4411,8 @@ SpellAuraProcResult Unit::HandleMendingAuraProc( Unit* /*pVictim*/, uint32 damag
                 target->AddSpellAuraHolder(new_holder);
                 triggeredByAura->SetInUse(false);
             }
+            else // Remove Aura if there is no nearest target to jump.
+                RemoveAura(triggeredByAura);
         }
     }
 
