@@ -2231,6 +2231,15 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                     return true;
             }
             break;
+        case SPELLFAMILY_MAGE:
+            if (spellInfo_2->SpellFamilyName == SPELLFAMILY_MAGE)
+            {
+                // Dampen/Amplify Magic
+                if (spellInfo_1->IsFitToFamily<SPELLFAMILY_MAGE, CF_MAGE_D_A_MAGIC>() &&
+                    spellInfo_2->IsFitToFamily<SPELLFAMILY_MAGE, CF_MAGE_D_A_MAGIC>())
+                    return true;
+            }
+            break;
         default:
             break;
     }
