@@ -1672,8 +1672,24 @@ void Aura::TriggerSpell()
                         break;
 //                    // Ice Tomb
 //                    case 70157: break;
-//                    // Mana Barrier
-//                    case 70842: break;
+                    // Mana Barrier
+                    case 70842:
+                    {
+                        // there should be some spell handling the effect?
+                        uint32 health = triggerTarget->GetHealth();
+                        uint32 amount = triggerTarget->GetMaxHealth() - health;
+                        uint32 mana = triggerTarget->GetPower(POWER_MANA);
+
+                        if (amount > mana)
+                        {
+                            triggerTarget->RemoveAurasDueToSpell(GetId());
+                            amount = mana;
+                        }
+
+                        triggerTarget->SetHealth(health + amount);
+                        triggerTarget->SetPower(POWER_MANA, mana - amount);
+                        break;
+                    }
 //                    // Summon Timer: Suppresser
 //                    case 70912: break;
 //                    // Aura of Darkness
@@ -2313,6 +2329,15 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         // Teach Learn Talent Specialization Switches, remove
                         if (target->GetTypeId() == TYPEID_PLAYER)
                             ((Player*)target)->removeSpell(63680);
+                        return;
+                    case 68912:                             // Wailing Souls
+                        if (Unit* caster = GetCaster())
+                        {
+                            caster->SetTargetGuid(target->GetObjectGuid());
+
+                            // TODO - this is confusing, it seems the boss should channel this aura, and start casting the next spell
+                            caster->CastSpell(caster, 68899, false);
+                        }
                         return;
                     case 71342:                             // Big Love Rocket
                         Spell::SelectMountByAreaAndSkill(target, GetSpellProto(), 71344, 71345, 71346, 71347, 0);
@@ -9084,6 +9109,20 @@ void Aura::PeriodicDummyTick()
                     target->CastSpell(target, 62593, true);
                     return;
                 }*/
+                case 68875:                                 // Wailing Souls
+                case 68876:                                 // Wailing Souls
+                {
+                    // Sweep around
+                    float newAngle = target->GetOrientation() + (spell->Id == 68875 ? 0.09f : 2*M_PI_F - 0.09f);
+                    if (newAngle > 2*M_PI_F)
+                        newAngle -= 2*M_PI_F;
+
+                    target->SetFacingTo(newAngle);
+
+                    // Should actually be SMSG_SPELL_START, too
+                    target->CastSpell(target, 68873, true);
+                    return;
+                }
             // Exist more after, need add later
                 default:
                     break;
@@ -11398,7 +11437,7 @@ bool Aura::IsEffectStacking()
     {
         // Mark/Gift of the Wild early exception check
         if (spellProto->SpellFamilyName == SPELLFAMILY_DRUID &&
-            spellProto->SpellFamilyFlags & UI64LIT(0x0000000000040000))
+            spellProto->SpellFamilyFlags.test<CF_DRUID_MARK_OF_THE_WILD>())
         {
             // only mod resistance exclusive isn't stacking
             return (GetModifier()->m_auraname != SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE);
@@ -11416,6 +11455,12 @@ bool Aura::IsEffectStacking()
     {
         // these effects never stack
         case SPELL_AURA_MOD_MELEE_HASTE:
+            if (spellProto->SpellFamilyName == SPELLFAMILY_GENERIC)
+                return true;
+            // Icy Talons
+            if (spellProto->IsFitToFamily<SPELLFAMILY_DEATHKNIGHT, CF_DEATHKNIGHT_ICY_TOUCH_TALONS>())
+                return true;
+            break;
         case SPELL_AURA_MOD_RESISTANCE_EXCLUSIVE:
         case SPELL_AURA_MOD_PARTY_MAX_HEALTH:                           // Commanding Shout / Blood Pact
         case SPELL_AURA_MOD_HEALING_PCT:                                // Mortal Strike / Wound Poison / Aimed Shot / Furious Attacks
@@ -11425,23 +11470,18 @@ bool Aura::IsEffectStacking()
             return (spellProto->CalculateSimpleValue(m_effIndex) > 0);
         case SPELL_AURA_MOD_DAMAGE_PERCENT_DONE:                        // Ferocious Inspiration / Sanctified Retribution
         case SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE:      // Heart of the Crusader / Totem of Wrath
-            if (spellProto->SpellFamilyName == SPELLFAMILY_PALADIN &&
-                spellProto->SpellFamilyFlags & UI64LIT(0x0000000020000008)) // Sanctified Retribution / HoC
-                return false;
+            if (spellProto->IsFitToFamily<SPELLFAMILY_PALADIN, CF_PALADIN_HEART_OF_THE_CRUSADER, CF_PALADIN_RETRIBUTION_AURA>())
+                return false;                                           // Sanctified Retribution / HoC
             break;
-        case SPELL_AURA_MOD_RESISTANCE_PCT:                                         // Sunder Armor / Sting
-        case SPELL_AURA_HASTE_SPELLS:                                               // Mind-Numbing Poison
-        case SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN:                                   // Ebon Plague (spell not implemented) / Earth and Moon
-            if (spellProto->SpellFamilyName == SPELLFAMILY_WARRIOR &&               // Sunder Armor
-                spellProto->SpellFamilyFlags & UI64LIT(0x0000000000004000) ||       // (only spell triggering this aura has the flag)
-                spellProto->SpellFamilyName == SPELLFAMILY_HUNTER &&                // Sting (Hunter Pet)
-                spellProto->SpellFamilyFlags & UI64LIT(0x1000000000000000) ||
-                spellProto->SpellFamilyName == SPELLFAMILY_DRUID &&                 // Earth and Moon
+        case SPELL_AURA_MOD_RESISTANCE_PCT:                                                     // Sunder Armor / Sting
+        case SPELL_AURA_HASTE_SPELLS:                                                           // Mind-Numbing Poison
+        case SPELL_AURA_MOD_DAMAGE_PERCENT_TAKEN:                                               // Ebon Plague (spell not implemented) / Earth and Moon
+            if (spellProto->IsFitToFamily<SPELLFAMILY_WARRIOR, CF_WARRIOR_SUNDER_ARMOR>() ||    // Sunder Armor (only spell triggering this aura has the flag)
+                spellProto->IsFitToFamily<SPELLFAMILY_HUNTER,  CF_HUNTER_PET_SPELLS>() ||       // Sting (Hunter Pet)
+                spellProto->SpellFamilyName == SPELLFAMILY_DRUID &&                             // Earth and Moon
                 spellProto->SpellIconID == 2991 ||
-                spellProto->SpellFamilyName == SPELLFAMILY_ROGUE &&                 // Mind-Numbing Poison
-                spellProto->SpellFamilyFlags & UI64LIT(0x0000000000008000) ||
-                spellProto->SpellFamilyName == SPELLFAMILY_PRIEST &&                 // Inspiration
-                spellProto->SpellFamilyFlags & UI64LIT(0x0000100000000000))
+                spellProto->IsFitToFamily<SPELLFAMILY_ROGUE, CF_ROGUE_MIND_NUMBING_POISON>() || // Mind-Numbing Poison
+                spellProto->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_MISC_TALENTS>())        // Inspiration
                 return false;
             break;
         case SPELL_AURA_MOD_CRIT_PERCENT:                               // Rampage
@@ -11453,9 +11493,8 @@ bool Aura::IsEffectStacking()
                 return false;
             break;
         case SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT:              // Mangle / Trauma
-            if (spellProto->SpellFamilyName == SPELLFAMILY_DRUID &&     // Mangle
-                spellProto->SpellFamilyFlags & UI64LIT(0x0000044000000000) ||
-                spellProto->Id == 46856 || spellProto->Id == 46857)     // Trauma has SPELLFAMILY_GENERIC and no flags
+            if (spellProto->IsFitToFamily<SPELLFAMILY_DRUID, CF_DRUID_MANGLE_BEAR, CF_DRUID_MANGLE_CAT>() ||   // Mangle
+                spellProto->Id == 46856 || spellProto->Id == 46857)                            // Trauma has SPELLFAMILY_GENERIC and no flags
                 return false;
             break;
         case SPELL_AURA_MOD_ATTACKER_SPELL_HIT_CHANCE:                  // Misery / Imp. Faerie Fire (must find triggered aura)
@@ -11623,7 +11662,7 @@ void Aura::HandleAuraLinked(bool apply, bool Real)
         if (pCaster && pCaster->GetTypeId() == TYPEID_PLAYER &&
             pTarget->GetObjectGuid().IsVehicle() &&
             spellInfo->AttributesEx  &  SPELL_ATTR_EX_HIDDEN_AURA &&
-            spellInfo->Attributes &  SPELL_ATTR_UNK8)
+            spellInfo->Attributes &  SPELL_ATTR_HIDE_IN_COMBAT_LOG)
         {
             float bonus = ((float)((Player*)pCaster)->GetEquipGearScore(false, false) - (float)sWorld.getConfig(CONFIG_UINT32_GEAR_CALC_BASE))
                                  / (float)sWorld.getConfig(CONFIG_UINT32_GEAR_CALC_BASE);

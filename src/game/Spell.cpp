@@ -1353,12 +1353,16 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
     }
 
     // Get Data Needed for Diminishing Returns, some effects may have multiple auras, so this must be done on spell hit, not aura add
-    m_diminishGroup = GetDiminishingReturnsGroupForSpell(m_spellInfo,m_triggeredByAuraSpell);
-    m_diminishLevel = unit->GetDiminishing(m_diminishGroup);
-    // Increase Diminishing on unit, current informations for actually casts will use values above
-    if ((GetDiminishingReturnsGroupType(m_diminishGroup) == DRTYPE_PLAYER && unit->GetCharmerOrOwnerPlayerOrPlayerItself()) ||
-        GetDiminishingReturnsGroupType(m_diminishGroup) == DRTYPE_ALL)
-        unit->IncrDiminishing(m_diminishGroup);
+    // Diminishing must not affect spells, casted on self
+    if (realCaster && unit && realCaster != unit)
+    {
+        m_diminishGroup = GetDiminishingReturnsGroupForSpell(m_spellInfo,m_triggeredByAuraSpell);
+        m_diminishLevel = unit->GetDiminishing(m_diminishGroup);
+        // Increase Diminishing on unit, current informations for actually casts will use values above
+        if ((GetDiminishingReturnsGroupType(m_diminishGroup) == DRTYPE_PLAYER && unit->GetCharmerOrOwnerPlayerOrPlayerItself()) ||
+            GetDiminishingReturnsGroupType(m_diminishGroup) >= DRTYPE_ALL)
+            unit->IncrDiminishing(m_diminishGroup);
+    }
 
     // Apply additional spell effects to target
     CastPreCastSpells(unit);
@@ -1716,7 +1720,9 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 67296:                                 // Touch of Light
                 case 67297:
                 case 67298:
+                case 68912:                                 // Wailing Souls (FoS)
                 case 68950:                                 // Fear (ICC: Forge of Souls)
+                case 69048:                                 // Mirrored Soul (FoS)
                 case 69057:                                 // Bone Spike Graveyard (Icecrown Citadel, Lord Marrowgar encounter, 10N)
                 case 69674:                                 // Mutated Infection
                 case 70882:                                 // Slime Spray Summon Trigger (Rotface)
@@ -5296,7 +5302,7 @@ SpellCastResult Spell::CheckCast(bool strict)
     }
 
     Unit *target = m_targets.getUnitTarget();
-    if (target && target->IsInWorld() && target->GetMap())
+    if (target && target->IsInWorld())
     {
         MAPLOCK_READ(target,MAP_LOCK_TYPE_AURAS);
         // target state requirements (not allowed state), apply to self also
@@ -5518,8 +5524,9 @@ SpellCastResult Spell::CheckCast(bool strict)
             if (target->IsImmuneToSpell(m_spellInfo))
                 return SPELL_FAILED_TARGET_AURASTATE;
 
-            if (target->HasMorePoweredBuff(m_spellInfo->Id))
-                return m_IsTriggeredSpell ? SPELL_FAILED_DONT_REPORT : SPELL_FAILED_AURA_BOUNCED;
+            if (target->IsInWorld() && target->IsInMap(m_caster))
+                if (target->HasMorePoweredBuff(m_spellInfo->Id))
+                    return m_IsTriggeredSpell ? SPELL_FAILED_DONT_REPORT : SPELL_FAILED_AURA_BOUNCED;
         }
 
         //Must be behind the target.

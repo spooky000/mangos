@@ -162,29 +162,29 @@ AuctionHouseBot.Neutral.Items.Amount.Ratio = 100
 AuctionHouseBot.MinTime = 1
 AuctionHouseBot.MaxTime = 2
 
-AuctionHouseBot.Items.Vendor = 0
+AuctionHouseBot.Items.Vendor = 1
 AuctionHouseBot.Items.Loot = 1
-AuctionHouseBot.Items.Misc = 0
+AuctionHouseBot.Items.Misc = 1
 AuctionHouseBot.Bind.No = 1
-AuctionHouseBot.Bind.Pickup = 0
+AuctionHouseBot.Bind.Pickup = 1
 AuctionHouseBot.Bind.Equip = 1
 AuctionHouseBot.Bind.Use = 1
-AuctionHouseBot.Bind.Quest = 0
-AuctionHouseBot.LockBox.Enabled = 0
+AuctionHouseBot.Bind.Quest = 1
+AuctionHouseBot.LockBox.Enabled = 1
 
 AuctionHouseBot.ItemsPerCycle.Boost = 75
-AuctionHouseBot.ItemsPerCycle.Normal = 20
+AuctionHouseBot.ItemsPerCycle.Normal = 10
 AuctionHouseBot.BuyPrice.Seller = 1
 AuctionHouseBot.Alliance.Price.Ratio = 200
 AuctionHouseBot.Horde.Price.Ratio = 200
 AuctionHouseBot.Neutral.Price.Ratio = 200
 
 AuctionHouseBot.Items.ItemLevel.Min = 0
-AuctionHouseBot.Items.ItemLevel.Max = 0
+AuctionHouseBot.Items.ItemLevel.Max = 80
 AuctionHouseBot.Items.ReqLevel.Min = 0
-AuctionHouseBot.Items.ReqLevel.Max = 0
+AuctionHouseBot.Items.ReqLevel.Max = 80
 AuctionHouseBot.Items.ReqSkill.Min = 0
-AuctionHouseBot.Items.ReqSkill.Max = 0
+AuctionHouseBot.Items.ReqSkill.Max = 80
 
 AuctionHouseBot.Items.Amount.Grey = 0
 AuctionHouseBot.Items.Amount.White = 2000

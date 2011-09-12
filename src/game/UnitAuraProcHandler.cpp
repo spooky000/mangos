@@ -44,7 +44,7 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
     &Unit::HandleNULLProc,                                  //  9 SPELL_AURA_MOD_ATTACKSPEED
     &Unit::HandleNULLProc,                                  // 10 SPELL_AURA_MOD_THREAT
     &Unit::HandleNULLProc,                                  // 11 SPELL_AURA_MOD_TAUNT
-    &Unit::HandleNULLProc,                                  // 12 SPELL_AURA_MOD_STUN
+    &Unit::HandleRemoveByDamageProc,                        // 12 SPELL_AURA_MOD_STUN
     &Unit::HandleNULLProc,                                  // 13 SPELL_AURA_MOD_DAMAGE_DONE
     &Unit::HandleNULLProc,                                  // 14 SPELL_AURA_MOD_DAMAGE_TAKEN
     &Unit::HandleNULLProc,                                  // 15 SPELL_AURA_DAMAGE_SHIELD
@@ -1066,6 +1066,59 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     CastSpell(triggeredByAura->GetCaster(), 71203, true);
                     return SPELL_AURA_PROC_OK;
                 }
+                // Item - Deathbringer's Will
+                case 71519:
+                case 71562:
+                {
+                    uint32 const normal_spells[MAX_CLASSES*3] =
+                    {
+                        0, 0, 0,                // (unused)
+                        71491, 71484, 71492,    // Warrior
+                        71491, 71484, 71492,    // Paladin
+                        71485, 71491, 71486,    // Hunter
+                        71485, 71486, 71492,    // Rogue
+                        71492, 71492, 71492,    // Priest
+                        71491, 71484, 71492,    // Death Knight
+                        71485, 71486, 71492,    // Shaman
+                        71492, 71492, 71492,    // Mage
+                        71492, 71492, 71492,    // Warlock
+                        0, 0, 0,                // (unused)
+                        71485, 71484, 71492     // Druid
+                    };
+                    uint32 const heroic_spells[MAX_CLASSES*3] =
+                    {
+                        0, 0, 0,                // (unused)
+                        71559, 71561, 71560,    // Warrior
+                        71559, 71561, 71560,    // Paladin
+                        71556, 71559, 71558,    // Hunter
+                        71556, 71558, 71560,    // Rogue
+                        71560, 71560, 71560,    // Priest
+                        71559, 71561, 71560,    // Death Knight
+                        71556, 71558, 71560,    // Shaman
+                        71560, 71560, 71560,    // Mage
+                        71560, 71560, 71560,    // Warlock
+                        0, 0, 0,                // (unused)
+                        71556, 71561, 71560     // Druid
+                    };
+
+                    if (cooldown && GetTypeId() == TYPEID_PLAYER && static_cast<Player*>(this)->HasSpellCooldown(dummySpell->Id))
+                        return SPELL_AURA_PROC_FAILED;
+
+                    uint32 const *proc_spells = NULL;
+                    switch (dummySpell->Id)
+                    {
+                        case 71519: proc_spells = normal_spells; break;
+                        case 71562: proc_spells = heroic_spells; break;
+                        default: return SPELL_AURA_PROC_FAILED;
+                    }
+
+                    CastSpell(this, proc_spells[getClass()*3 + urand(0,2)], true, castItem, triggeredByAura);
+
+                    if (cooldown && GetTypeId() == TYPEID_PLAYER)
+                        static_cast<Player*>(this)->AddSpellCooldown(dummySpell->Id, 0, time(NULL) + cooldown);
+
+                    return SPELL_AURA_PROC_OK;
+                }
                 // Item - Shadowmourne Legendary
                 case 71903:
                 {
@@ -1089,6 +1142,15 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                         CastSpell(this, 71904, true);       // Chaos Bane
                         return SPELL_AURA_PROC_OK;
                     }
+                    break;
+                }
+                // Necrotic Touch item 50692
+                case 71875:
+                case 71877:
+                {
+                    basepoints[0] = damage * triggerAmount / 100;
+                    target = pVictim;
+                    triggered_spell_id = 71879;
                     break;
                 }
             }
@@ -3391,6 +3453,15 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                     trigger_spell_id = 51132;
                     basepoints[0] = pVictim->GetMaxHealth() - pVictim->GetHealth();
                     break;
+                }
+                case 69023:                                 // Mirrored Soul
+                {
+                    int32 basepoints = (int32) (damage * 0.45f);
+                    if (Unit* caster = triggeredByAura->GetCaster())
+                        // Actually this spell should be sent with SMSG_SPELL_START
+                        CastCustomSpell(caster, 69034, &basepoints, NULL, NULL, true, NULL, triggeredByAura, GetObjectGuid());
+
+                    return SPELL_AURA_PROC_OK;
                 }
             }
             break;

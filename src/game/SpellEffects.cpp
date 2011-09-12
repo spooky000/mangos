@@ -2829,6 +2829,33 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     return;
                 }
+                case 57496:                                 // Volazj - Insanity
+                {
+                    m_caster->CastSpell(m_caster, 57561, true);
+                    return;
+                }
+                case 57385:                                 // Argent Cannon
+                case 57412:                                 // Reckoning Bomb
+                {
+                    if (!unitTarget || gameObjTarget)
+                        return;
+
+                    SpellEntry const* spellInfo = sSpellStore.LookupEntry(m_spellInfo->CalculateSimpleValue(eff_idx));
+
+                    // Init dest coordinates
+                    float x,y,z;
+                    x = m_targets.m_destX;
+                    y = m_targets.m_destY;
+                    z = m_targets.m_destZ;
+
+                    MaNGOS::NormalizeMapCoord(x);
+                    MaNGOS::NormalizeMapCoord(y);
+                    m_caster->UpdateGroundPositionZ(x,y,z);
+
+                    m_caster->CastSpell(x, y, z, spellInfo, false, NULL, NULL, m_originalCasterGUID);
+
+                    return;
+                }
                 case 57908:                                 // Stain Cloth
                 {
                     // nothing do more
@@ -6435,7 +6462,7 @@ void Spell::DoSummonVehicle(SpellEffectIndex eff_idx, uint32 forceFaction)
 
     if (m_caster->hasUnitState(UNIT_STAT_ON_VEHICLE))
     {
-        if (m_spellInfo->Attributes & SPELL_ATTR_UNK7)
+        if (m_spellInfo->Attributes & SPELL_ATTR_HIDDEN_CLIENTSIDE)
             m_caster->RemoveSpellsCausingAura(SPELL_AURA_CONTROL_VEHICLE);
         else 
             return;
@@ -9090,6 +9117,32 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
                     return;
                 }
+                case 68871:                                 // Wailing Souls
+                    // Left or Right direction?
+                    m_caster->CastSpell(m_caster, urand(0, 1) ? 68875 : 68876, false);
+                    // Clear TargetGuid for sweeping
+                    m_caster->SetTargetGuid(ObjectGuid());
+                    return;
+                case 69048:                                 // Mirrored Soul
+                {
+                    if (!unitTarget)
+                        return;
+
+                    // This is extremely strange!
+                    // The spell should send MSG_CHANNEL_START, SMSG_SPELL_START
+                    // However it has cast time 2s, but should send SMSG_SPELL_GO instantly.
+                    m_caster->CastSpell(unitTarget, 69051, true);
+                    return;
+                }
+                case 69051:                                 // Mirrored Soul
+                {
+                    if (!unitTarget)
+                        return;
+
+                    // Actually this spell should be sent with SMSG_SPELL_START
+                    unitTarget->CastSpell(m_caster, 69023, true);
+                    return;
+                }
                 case 69377:                                 // Fortitude
                 {
                     if (!unitTarget)
@@ -10529,7 +10582,7 @@ void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
         float ox, oy, oz;
         unitTarget->GetPosition(ox, oy, oz);
         float fx, fy, fz;
-        fz = oz + 0.05f;
+        fz = oz + 2.f;
         fx = unitTarget->GetPositionX() + distance * cos(unitTarget->GetOrientation());
         fy = unitTarget->GetPositionY() + distance * sin(unitTarget->GetOrientation());
 
