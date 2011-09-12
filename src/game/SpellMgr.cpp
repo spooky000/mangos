@@ -2141,46 +2141,6 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
     if (spellId_1 == spellId_2)
         return false;
 
-    // Mangle and Trauma 
-    if (spellInfo_1->EffectApplyAuraName[EFFECT_INDEX_1] == SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT && 
-        spellInfo_1->EffectMiscValue[EFFECT_INDEX_1] == MECHANIC_BLEED &&
-        spellInfo_2->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT &&
-        spellInfo_2->EffectMiscValue[EFFECT_INDEX_0] == MECHANIC_BLEED || 
-        spellInfo_2->EffectApplyAuraName[EFFECT_INDEX_1] == SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT && 
-        spellInfo_2->EffectMiscValue[EFFECT_INDEX_1] == MECHANIC_BLEED &&
-        spellInfo_1->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT &&
-        spellInfo_1->EffectMiscValue[EFFECT_INDEX_0] == MECHANIC_BLEED ) 
-        return true;
-
-    // Dispersion - stacks with everything
-     if ((spellInfo_1->Id == 47585 && spellInfo_2->Id == 60069) ||
-          (spellInfo_2->Id == 47585 && spellInfo_1->Id == 60069))
-          return false;
-
-    // Mistletoe debuff stack with everything
-     if (spellInfo_1->Id == 26218 || spellInfo_2->Id == 26218)
-         return false;
-
-     // Improved Mind Blast debuff stacks with everything
-     if (spellInfo_1->Id == 48301 || spellInfo_2->Id == 48301)
-         return false;
-
-     // Ardent Defender cooldown debuff stacks with everything
-    if (spellInfo_1->Id == 66233 || spellInfo_2->Id == 66233)
-        return false;
-
-    SpellStacksMap::const_iterator sitr = mSpellStacksMap.find(spellInfo_1->Id);
-    if(sitr != mSpellStacksMap.end())
-        for(std::set<uint32>::const_iterator idItr = (*sitr).second.begin(); idItr != (*sitr).second.end(); ++idItr)
-            if(spellInfo_2->Id == (*idItr))
-                return false;
-
-    SpellStacksMap::const_iterator sitr2 = mSpellStacksMap.find(spellInfo_2->Id);
-    if(sitr2 != mSpellStacksMap.end())
-        for(std::set<uint32>::const_iterator idItr = (*sitr2).second.begin(); idItr != (*sitr2).second.end(); ++idItr)
-            if(spellInfo_1->Id == (*idItr))
-                return false;
-
     // Specific spell family spells
     // also some SpellIconID exceptions related to late checks (isModifier)
     switch(spellInfo_1->SpellFamilyName)
