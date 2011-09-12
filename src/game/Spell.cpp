@@ -6411,15 +6411,9 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
     if(!m_caster->isAlive())
         return SPELL_FAILED_CASTER_DEAD;
 
-    if(m_caster->IsNonMeleeSpellCasted(false))              //prevent spellcast interruption by another spellcast
-    {
-        if(this->m_spellInfo->Id == 33395) // Water Elemental's Freeze should overcast Waterbolt
-            m_caster->InterruptNonMeleeSpells(false);
-        else
-            return SPELL_FAILED_SPELL_IN_PROGRESS;
-    }
-
-    if(m_caster->isInCombat() && IsNonCombatSpell(m_spellInfo))
+    if (m_caster->IsNonMeleeSpellCasted(false))              //prevent spellcast interruption by another spellcast
+        return SPELL_FAILED_SPELL_IN_PROGRESS;
+    if (m_caster->isInCombat() && IsNonCombatSpell(m_spellInfo))
         return SPELL_FAILED_AFFECTING_COMBAT;
 
     if(m_caster->GetTypeId()==TYPEID_UNIT && (((Creature*)m_caster)->IsPet() || m_caster->isCharmed()))
