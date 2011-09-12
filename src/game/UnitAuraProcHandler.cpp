@@ -4360,8 +4360,12 @@ SpellAuraProcResult Unit::HandleOverrideClassScriptAuraProc(Unit *pVictim, uint3
     return SPELL_AURA_PROC_OK;
 }
 
-SpellAuraProcResult Unit::HandleMendingAuraProc( Unit* /*pVictim*/, uint32 /*damage*/, Aura* triggeredByAura, SpellEntry const* /*procSpell*/, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/ )
+SpellAuraProcResult Unit::HandleMendingAuraProc( Unit* /*pVictim*/, uint32 damage, Aura* triggeredByAura, SpellEntry const* /*procSpell*/, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/ )
 {
+    // only at real damage
+    if (!damage)
+        return SPELL_AURA_PROC_FAILED;
+
     // aura can be deleted at casts
     SpellEntry const* spellProto = triggeredByAura->GetSpellProto();
     SpellEffectIndex effIdx = triggeredByAura->GetEffIndex();
