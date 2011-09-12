@@ -8119,11 +8119,6 @@ void Aura::PeriodicTick()
 
             pdamage = (pdamage <= absorb + resist) ? 0 : (pdamage - absorb - resist);
 
-            if (pdamage <= 0)
-                procEx &= ~PROC_EX_DIRECT_DAMAGE;
-            else
-                procEx |= PROC_EX_DIRECT_DAMAGE;
-
             uint32 overkill = pdamage > target->GetHealth() ? pdamage - target->GetHealth() : 0;
             SpellPeriodicAuraLogInfo pInfo(this, pdamage, overkill, absorb, resist, 0.0f, isCrit);
             target->SendPeriodicAuraLog(&pInfo);
