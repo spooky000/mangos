@@ -2030,55 +2030,6 @@ void SpellMgr::LoadSpellThreats()
     sLog.outString( ">> Loaded %u spell threat entries", rankHelper.worker.count );
 }
 
-void SpellMgr::LoadSpellStackingRules()
-{
-    mSpellStacksMap.clear();                                // need for reload case
-
-    uint32 count = 0;
-
-    //                                                0         1
-    QueryResult *result = WorldDatabase.Query("SELECT spellId1, spellId2 FROM spell_stacking");
-    if(!result)
-    {
-
-        BarGoLink bar( 1 );
-
-        bar.step();
-
-        sLog.outString();
-        sLog.outString( ">> Loaded %u spell stacking rules", count );
-        return;
-    }
-
-    BarGoLink bar(result->GetRowCount());
-
-    do
-    {
-        Field *fields = result->Fetch();
-
-        bar.step();
-
-        uint32 spellId1 = fields[0].GetUInt32();
-        std::string IdsChain = fields[1].GetCppString();
-
-        Tokens tokens(IdsChain, ' ');
-        std::set<uint32> spellSet;
-
-        Tokens::iterator iter;
-        for(iter = tokens.begin(); iter != tokens.end(); ++iter)
-            spellSet.insert(atoi(*iter));
-        
-        mSpellStacksMap[spellId1] = spellSet;
-
-        ++count;
-    } while( result->NextRow() );
-
-    delete result;
-
-    sLog.outString();
-    sLog.outString( ">> Loaded %u spell stacking rules", count );
-}
-
 bool SpellMgr::IsRankSpellDueToSpell(SpellEntry const *spellInfo_1,uint32 spellId_2) const
 {
     SpellEntry const *spellInfo_2 = sSpellStore.LookupEntry(spellId_2);

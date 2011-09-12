@@ -1016,9 +1016,6 @@ void World::SetInitialWorldSettings()
     sLog.outString( "Loading Spell Disabled Data...");
     sObjectMgr.LoadSpellDisabledEntrys();
 
-    sLog.outString( "Loading Spell Stacking Data...");
-    sSpellMgr.LoadSpellStackingRules();
-
     sLog.outString( "Loading Spell Proc Item Enchant..." );
     sSpellMgr.LoadSpellProcItemEnchant();                   // must be after LoadSpellChains
 

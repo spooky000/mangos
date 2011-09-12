@@ -339,7 +339,6 @@ bool ChatHandler::HandleReloadAllSpellCommand(char* /*args*/)
     HandleReloadSpellTargetPositionCommand((char*)"a");
     HandleReloadSpellThreatsCommand((char*)"a");
     HandleReloadSpellPetAurasCommand((char*)"a");
-    HandleReloadSpellStacksCommand((char*)"a");
     HandleReloadSpellDisabledCommand((char*)"a");
     return true;
 }
@@ -836,14 +835,6 @@ bool ChatHandler::HandleReloadSpellPetAurasCommand(char* /*args*/)
     sLog.outString( "Re-Loading Spell pet auras...");
     sSpellMgr.LoadSpellPetAuras();
     SendGlobalSysMessage("DB table `spell_pet_auras` reloaded.");
-    return true;
-}
-
-bool ChatHandler::HandleReloadSpellStacksCommand(char*)
-{
-    sLog.outString( "Re-Loading Spell Stacking Rules...");
-    sSpellMgr.LoadSpellStackingRules();
-    SendGlobalSysMessage("DB table `spell_stacking` (spell stacking definitions) reloaded.");
     return true;
 }
 

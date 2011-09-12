@@ -688,7 +688,6 @@ struct SpellThreatEntry
 typedef std::map<uint32, uint8> SpellElixirMap;
 typedef std::map<uint32, float> SpellProcItemEnchantMap;
 typedef std::map<uint32, SpellThreatEntry> SpellThreatMap;
-typedef std::map<uint32, std::set<uint32> > SpellStacksMap;
 
 // Spell script target related declarations (accessed using SpellMgr functions)
 enum SpellTargetType
@@ -1195,7 +1194,6 @@ class SpellMgr
         void LoadSpellBonuses();
         void LoadSpellTargetPositions();
         void LoadSpellThreats();
-        void LoadSpellStackingRules();
         void LoadSkillLineAbilityMap();
         void LoadSkillRaceClassInfoMap();
         void LoadSpellPetAuras();
@@ -1214,7 +1212,6 @@ class SpellMgr
         SpellTargetPositionMap mSpellTargetPositions;
         SpellElixirMap     mSpellElixirs;
         SpellThreatMap     mSpellThreatMap;
-        SpellStacksMap     mSpellStacksMap;
         SpellProcEventMap  mSpellProcEventMap;
         SpellProcItemEnchantMap mSpellProcItemEnchantMap;
         SpellBonusMap      mSpellBonusMap;
