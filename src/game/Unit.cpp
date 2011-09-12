@@ -12621,6 +12621,9 @@ bool Unit::HasMorePoweredBuff(uint32 spellId)
         if (!auraType || auraType >= TOTAL_AURAS)
             continue;
 
+        if (auraType == SPELL_AURA_PROC_TRIGGER_SPELL)
+            continue;
+
         AuraList const& auras = GetAurasByType(auraType);
 
         if (auras.empty())
