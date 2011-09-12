@@ -848,11 +848,6 @@ void Spell::AddUnitTarget(Unit* pVictim, SpellEffectIndex effIndex)
     target.processed  = false;                              // Effects not apply on target
     // Calculate hit result
     target.missCondition = m_caster->SpellHitResult(pVictim, m_spellInfo, m_canReflect);
-    /*// Procs can miss, weapon enchants can miss, triggered spells and effects cannot miss (miss already calculated in triggering spell)
-    bool canMiss = (m_triggeredByAuraSpell || !m_IsTriggeredSpell);
-    if(m_caster->GetTypeId() != TYPEID_PLAYER && ((Creature*)m_caster)->IsVehicle())
-        canMiss = false;
-    target.missCondition = m_caster->SpellHitResult(pVictim, m_spellInfo, m_canReflect, canMiss);*/
 
     // spell fly from visual cast object
     WorldObject* affectiveObject = GetAffectiveCasterObject();
