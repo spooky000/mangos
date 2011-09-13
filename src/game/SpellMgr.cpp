@@ -691,7 +691,7 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
     if (!spellproto)
         return false;
 
-    if(m_spellInfo->SpellFamilyName == SPELLFAMILY_PREIST && spellproto->SpellFamilyFlags.test<CF_PRIEST_PENANCE_HEAL, CF_PRIEST_PENANCE_BASE>())
+    if(spellproto->SpellFamilyName == SPELLFAMILY_PRIEST && spellproto->SpellFamilyFlags.test<CF_PRIEST_PENANCE_HEAL, CF_PRIEST_PENANCE_BASE>())
         return true;
 
     switch(spellproto->Id)
