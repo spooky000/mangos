@@ -2132,24 +2132,6 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                 }
             }
             break;
-        case SPELLFAMILY_WARRIOR:
-            if (spellInfo_2->SpellFamilyName == SPELLFAMILY_WARRIOR)
-            {
-                // Defensive/Berserker/Battle stance aura can not stack (needed for dummy auras)
-                if (spellInfo_1->SpellFamilyFlags.test<CF_WARRIOR_STANCES>() && spellInfo_2->SpellFamilyFlags.test<CF_WARRIOR_STANCES>())
-                    return true;
-
-            }
-            break;
-        case SPELLFAMILY_DRUID:
-            if (spellInfo_2->SpellFamilyName == SPELLFAMILY_DRUID)
-            {
-                // Mark/Gift of the Wild
-                if (spellInfo_1->IsFitToFamily<SPELLFAMILY_DRUID, CF_DRUID_MARK_OF_THE_WILD>() &&
-                    spellInfo_2->IsFitToFamily<SPELLFAMILY_DRUID, CF_DRUID_MARK_OF_THE_WILD>())
-                    return true;
-            }
-            break;
         case SPELLFAMILY_PALADIN:
             if (spellInfo_2->SpellFamilyName == SPELLFAMILY_PALADIN)
             {
@@ -2181,15 +2163,19 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
         case SPELLFAMILY_MAGE:
             if (spellInfo_2->SpellFamilyName == SPELLFAMILY_MAGE)
             {
-                // Dampen/Amplify Magic
-                if (spellInfo_1->IsFitToFamily<SPELLFAMILY_MAGE, CF_MAGE_D_A_MAGIC>() &&
-                    spellInfo_2->IsFitToFamily<SPELLFAMILY_MAGE, CF_MAGE_D_A_MAGIC>())
+                // Arcane Intellect / Brilliance
+                if (spellInfo_1->IsFitToFamily<SPELLFAMILY_MAGE, CF_MAGE_ARCANE_INT>() &&
+                    spellInfo_2->IsFitToFamily<SPELLFAMILY_MAGE, CF_MAGE_ARCANE_INT>())
                     return true;
             }
             break;
         default:
             break;
     }
+
+    if ((spellInfo_1->SpellFamilyName == spellInfo_2->SpellFamilyName)&&
+        (spellInfo_1->SpellFamilyFlags == spellInfo_2->SpellFamilyFlags))
+        return true;
 
     if (IsRankSpellDueToSpell(spellInfo_1, spellId_2))
         return true;
