@@ -1687,11 +1687,9 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 62016:                                 // Thorim charge orb
                 case 62042:                                 // Stormhammer
                 case 62488:                                 // Activate Construct (Ulduar - Ignis encounter)
-                case 62589:                                 // Nature's Fury
                 case 63018:                                 // Searing Light (10 man)
                 case 63024:                                 // Gravity Bomb (10 man)
                 case 63387:                                 // Rapid Burst
-                case 63571:                                 // Nature's Fury
                 case 63713:                                 // Dominate Mind (Yogg-Saron)
                 case 63795:                                 // Psychosis (Yogg-Saron)
                 case 63830:                                 // Malady of the Mind (Yogg-Saron)
@@ -8343,13 +8341,12 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
                 targetUnitMap.push_back((Unit*)m_caster);
             break;
         }
-        case 62589: // Nature's Fury (10 man)
-        case 63571: // Nature's Fury (25 man)
-        {
-            FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
-            targetUnitMap.remove(m_caster); // exclude caster
-            break;
-        }
+        //case 62589: // Nature's Fury (10 man)
+        //case 63571: // Nature's Fury (25 man)
+        //{
+        //    FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+        //    targetUnitMap.remove(m_caster); // exclude caster
+        //}
         case 65045: // Flame of demolisher
         {
             FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
