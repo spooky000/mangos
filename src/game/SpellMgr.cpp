@@ -691,20 +691,18 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
     if (!spellproto)
         return false;
 
-    if(spellproto->SpellFamilyName == SPELLFAMILY_PRIEST && spellproto->SpellFamilyFlags.test<CF_PRIEST_PENANCE_HEAL, CF_PRIEST_PENANCE_BASE>())
+    // Penance base and heal
+    if (spellproto->SpellFamilyName == SPELLFAMILY_PRIEST && spellproto->SpellFamilyFlags.test<CF_PRIEST_PENANCE_HEAL, CF_PRIEST_PENANCE_BASE>())
+        return true;
+
+    // Amplify Magic
+    if (spellproto->IsFitToFamily<SPELLFAMILY_MAGE, CF_MAGE_D_A_MAGIC>())
         return true;
 
     switch(spellproto->Id)
     {
         case 64844:                                         // Divine Hymn
         case 64904:                                         // Hymn of Hope
-        case 1008:                                          // Amplify Magic - Rank 1
-        case 8455:                                          // Amplify Magic - Rank 2
-        case 10169:                                         // Amplify Magic - Rank 3
-        case 10170:                                         // Amplify Magic - Rank 4
-        case 27130:                                         // Amplify Magic - Rank 5
-        case 33946:                                         // Amplify Magic - Rank 6
-        case 43017:                                         // Amplify Magic - Rank 7
         case 12042:                                         // Arcane Power
             return true;
         case 37675:                                         // Chaos Blast
