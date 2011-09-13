@@ -10791,17 +10791,11 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                     if(((Creature*)this)->IsPet())
                     {
                         Pet* p = (Pet*)this;
-                        switch (p->getPetType())
-                        {
-                            case HUNTER_PET:
-                            case SUMMON_PET:
-                                p->Unsummon(PET_SAVE_AS_DELETED, owner);
-                                break;  
-                            default:   
-                                //dismissing a summoned pet is like killing them (this prevents returning a soulshard...)
-                                p->SetDeathState(CORPSE);
-                                break;
-                        }
+                        if (p->getPetType() == HUNTER_PET || GetEntry() == 26125)
+                            p->Unsummon(PET_SAVE_AS_DELETED, owner);
+                        else
+                            //dismissing a summoned pet is like killing them (this prevents returning a soulshard...)
+                            p->SetDeathState(CORPSE);
                     }
                     else                                    // charmed
                         owner->Uncharm();
