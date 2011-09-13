@@ -4720,19 +4720,8 @@ SpellAuraProcResult Unit::HandleRemoveByDamageChanceProc(Unit* pVictim, uint32 d
             return SPELL_AURA_PROC_CANT_TRIGGER;
     }
 
-    if (pVictim && damage)
-    {
-        // Damage is dealt after proc system - lets ignore auras which wasn't updated yet
-        // to make spell not remove its own aura
-        if (triggeredByAura->GetAuraDuration() == triggeredByAura->GetAuraMaxDuration())
-            return SPELL_AURA_PROC_FAILED;
-        int32 damageLeft = triggeredByAura->GetModifier()->m_amount;
-        // No damage left
-        if (damageLeft < damage)
-            return HandleRemoveByDamageProc(pVictim, damage, triggeredByAura, procSpell, procFlag, procEx, cooldown);
-        else
-            triggeredByAura->GetModifier()->m_amount = (damageLeft-damage);
-    }
+    if (triggeredByAura->GetAuraDuration() == triggeredByAura->GetAuraMaxDuration())
+        return SPELL_AURA_PROC_FAILED;
 
     // The chance to dispel an aura depends on the damage taken with respect to the casters level.
     uint32 CCDamageCap = triggeredByAura->CalculateCrowdControlBreakDamage();
@@ -4744,12 +4733,7 @@ SpellAuraProcResult Unit::HandleRemoveByDamageChanceProc(Unit* pVictim, uint32 d
         chance = 100;
 
     if (roll_chance_i(chance))
-    {
-        triggeredByAura->SetInUse(true);
-        RemoveAurasByCasterSpell(triggeredByAura->GetId(), triggeredByAura->GetCasterGuid());
-        triggeredByAura->SetInUse(false);
-        return SPELL_AURA_PROC_OK;
-    }
+        return HandleRemoveByDamageProc(pVictim, damage, triggeredByAura, procSpell, procFlag, procEx, cooldown);
 
     return SPELL_AURA_PROC_FAILED;
 }
