@@ -11113,6 +11113,10 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
         if(itr->second->IsDeleted())
             continue;
 
+        // Frost Trap for Lock and Load hack
+        if(procSpell && procSpell->Id == 13810)
+            procExtra = PROC_EX_NONE;
+
         SpellProcEventEntry const* spellProcEvent = NULL;
         if(!IsTriggeredAtSpellProcEvent(pTarget, itr->second, procSpell, procFlag, procExtra, attType, isVictim, spellProcEvent))
            continue;
