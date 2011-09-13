@@ -9781,6 +9781,10 @@ int32 Unit::CalculateAuraDuration(SpellEntry const* spellProto, uint32 effectMas
         dmgClassMod = GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_DURATION_OF_MAGIC_EFFECTS, spellProto->DmgClass);
     }
 
+    // Hack to prevent cyclone being reduced by Mage Armor effect
+    if (spellProto->Id == 33786 && dmgClassMod)
+        dmgClassMod = 0;
+
     int32 durationMod = std::min(mechanicMod, std::min(dispelMod, dmgClassMod));
 
     if (durationMod != 0)
