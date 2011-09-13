@@ -5288,7 +5288,7 @@ void Aura::HandleAuraModSilence(bool apply, bool Real)
     else
     {
         // Real remove called after current aura remove from lists, check if other similar auras active
-        if(target->HasAuraType(SPELL_AURA_MOD_SILENCE))
+        if(target->HasAuraType(SPELL_AURA_MOD_SILENCE) || target->HasAuraType(SPELL_AURA_MOD_PACIFY_SILENCE))
             return;
 
         target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SILENCED);
