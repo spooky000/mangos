@@ -294,7 +294,7 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
     &Unit::HandleNULLProc,                                  //259 corrupt healing over time spell
     &Unit::HandleNULLProc,                                  //260 SPELL_AURA_SCREEN_EFFECT (miscvalue = id in ScreenEffect.dbc) not required any code
     &Unit::HandleNULLProc,                                  //261 SPELL_AURA_PHASE undetectable invisibility?
-    &Unit::HandleNULLProc,                                  //262 SPELL_AURA_IGNORE_UNIT_STATE
+    &Unit::HandleIgnoreAuraStateProc,                       //262 SPELL_AURA_IGNORE_UNIT_STATE
     &Unit::HandleNULLProc,                                  //263 SPELL_AURA_ALLOW_ONLY_ABILITY player can use only abilities set in SpellClassMask
     &Unit::HandleNULLProc,                                  //264 unused (3.0.8a-3.2.2a)
     &Unit::HandleNULLProc,                                  //265 unused (3.0.8a-3.2.2a)
@@ -4951,6 +4951,21 @@ SpellAuraProcResult Unit::HandleDropChargeByDamageProc(Unit* pVictim, uint32 dam
     }
     else
         return SPELL_AURA_PROC_FAILED;
+
+    return SPELL_AURA_PROC_OK;
+}
+
+SpellAuraProcResult Unit::HandleIgnoreAuraStateProc(Unit* /*pVictim*/, uint32 damage, Aura* triggeredByAura, SpellEntry const* /*procSpell*/, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/)
+{
+    SpellEntry const *spellInfo = triggeredByAura->GetSpellProto();
+
+    // Taste for Blood
+    if (spellInfo->Id == 60503)
+    {
+        // only at real damage
+        if (!damage)
+            return SPELL_AURA_PROC_FAILED;
+    }
 
     return SPELL_AURA_PROC_OK;
 }
