@@ -3568,6 +3568,10 @@ void Aura::HandleAuraWaterWalk(bool apply, bool Real)
     if(!Real)
         return;
 
+    // Dont remove flag if player has another water-walk effect
+    if (!apply && GetTarget()->HasAuraType(SPELL_AURA_WATER_WALK))
+        return;
+
     WorldPacket data;
     if(apply)
         data.Initialize(SMSG_MOVE_WATER_WALK, 8+4);
