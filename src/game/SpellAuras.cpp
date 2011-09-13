@@ -3587,7 +3587,16 @@ void Aura::HandleAuraFeatherFall(bool apply, bool Real)
     // only at real add/remove aura
     if(!Real)
         return;
+
     Unit *target = GetTarget();
+
+    if (!apply)
+    {
+        // do not remove unit flag if there are more than this auraEffect of that kind on unit on unit
+        if (target->HasAuraType(SPELL_AURA_FEATHER_FALL))
+            return;
+    }
+
     WorldPacket data;
     if(apply)
         data.Initialize(SMSG_MOVE_FEATHER_FALL, 8+4);
@@ -3607,6 +3616,13 @@ void Aura::HandleAuraHover(bool apply, bool Real)
     // only at real add/remove aura
     if(!Real)
         return;
+
+    if (!apply)
+    {
+        // do not remove unit flag if there are more than this auraEffect of that kind on unit on unit
+        if (GetTarget()->HasAuraType(SPELL_AURA_HOVER))
+            return;
+    }
 
     WorldPacket data;
     if(apply)
