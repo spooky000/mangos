@@ -2171,9 +2171,10 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
             break;
     }
 
-    if ((spellInfo_1->SpellFamilyName == spellInfo_2->SpellFamilyName)&&
-        (spellInfo_1->SpellFamilyFlags == spellInfo_2->SpellFamilyFlags))
-        return true;
+    if (IsPositiveSpell(spellId_1) && IsPositiveSpell(spellId_2))
+        if ((spellInfo_1->SpellFamilyName == spellInfo_2->SpellFamilyName) &&
+            (spellInfo_1->SpellFamilyFlags == spellInfo_2->SpellFamilyFlags))
+            return true;
 
     if (IsRankSpellDueToSpell(spellInfo_1, spellId_2))
         return true;
