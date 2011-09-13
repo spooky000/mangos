@@ -2250,6 +2250,9 @@ class MANGOS_DLL_SPEC Player : public Unit
         void SendCinematicStart(uint32 CinematicSequenceId);
         void SendMovieStart(uint32 MovieId);
 
+        // select modelid depending on hair color or skin tone
+        uint32 GetModelForForm(SpellShapeshiftFormEntry const* ssEntry) const;
+
         /*********************************************************/
         /***                 INSTANCE SYSTEM                   ***/
         /*********************************************************/
