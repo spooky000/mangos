@@ -691,16 +691,11 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
     if (!spellproto)
         return false;
 
+    if(m_spellInfo->SpellFamilyName == SPELLFAMILY_PREIST && spellproto->SpellFamilyFlags.test<CF_PRIEST_PENANCE_HEAL, CF_PRIEST_PENANCE_BASE>())
+        return true;
+
     switch(spellproto->Id)
     {
-        case 47540:                                         // Penance start dummy aura - Rank 1
-        case 53005:                                         // Penance start dummy aura - Rank 2
-        case 53006:                                         // Penance start dummy aura - Rank 3
-        case 53007:                                         // Penance start dummy aura - Rank 4
-        case 47757:                                         // Penance heal effect trigger - Rank 1
-        case 52986:                                         // Penance heal effect trigger - Rank 2
-        case 52987:                                         // Penance heal effect trigger - Rank 3
-        case 52988:                                         // Penance heal effect trigger - Rank 4
         case 64844:                                         // Divine Hymn
         case 64904:                                         // Hymn of Hope
         case 1008:                                          // Amplify Magic - Rank 1
@@ -1040,6 +1035,7 @@ bool IsPositiveSpell(SpellEntry const *spellproto)
     for (int i = 0; i < MAX_EFFECT_INDEX; ++i)
         if (spellproto->Effect[i] && !IsPositiveEffect(spellproto, SpellEffectIndex(i)))
             return false;
+
     return true;
 }
 

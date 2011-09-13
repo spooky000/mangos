@@ -1027,7 +1027,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
     }
 
     // Recheck immune (only for delayed spells)
-    if (m_spellInfo->speed && (
+    if (m_spellInfo->speed && !(IsPositiveSpell(m_spellInfo->Id) && caster->IsFriendlyTo(unit)) && (
         unit->IsImmunedToDamage(GetSpellSchoolMask(m_spellInfo)) ||
         unit->IsImmuneToSpell(m_spellInfo)))
     {
@@ -1224,13 +1224,15 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
     }
 
     // Recheck immune (only for delayed spells)
-    if (m_spellInfo->speed && (
+    if (m_spellInfo->speed && !((realCaster && realCaster->IsFriendlyTo(unit)) && IsPositiveSpell(m_spellInfo->Id)) && (
         unit->IsImmunedToDamage(GetSpellSchoolMask(m_spellInfo)) ||
         unit->IsImmuneToSpell(m_spellInfo)) &&
         !(m_spellInfo->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY))
     {
         if (realCaster)
+        {
             realCaster->SendSpellMiss(unit, m_spellInfo->Id, SPELL_MISS_IMMUNE);
+        }
 
         ResetEffectDamageAndHeal();
         return;
