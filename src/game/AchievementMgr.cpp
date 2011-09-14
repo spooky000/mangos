@@ -484,7 +484,7 @@ void AchievementMgr::ResetAchievementCriteria(AchievementCriteriaTypes type, uin
                     case 872:
                     case 1153:
                     case 1251:
-                    case 1765: 
+                    case 1765:
                     case 2193:
                     case 2189:
                     case 2190:
@@ -1619,7 +1619,7 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                         BattleGround* bg = GetPlayer()->GetBattleGround();
                         if (!bg)
                             continue;
-    
+
                         if (bg->GetTypeID(true) != BATTLEGROUND_WS)
                             continue;
 
@@ -1640,7 +1640,7 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                         if (!(unit->GetTypeId() == TYPEID_PLAYER))
                             continue;
 
-                        if (!((Player*)unit)->HasItemCount(39213, 1))
+                        if (!((Player*)unit)->HasAura(52418))
                             continue;
 
                         break;
