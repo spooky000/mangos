@@ -1635,16 +1635,6 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                                 break;
                         }
                     }
-                    case 2190:                      // Drop It Now!
-                    {
-                        if (!(unit->GetTypeId() == TYPEID_PLAYER))
-                            continue;
-
-                        if (!((Player*)unit)->HasAura(52418))
-                            continue;
-
-                        break;
-                    }
                 }
 
                 change = 1;
