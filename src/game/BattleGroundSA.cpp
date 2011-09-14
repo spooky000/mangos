@@ -456,9 +456,8 @@ void BattleGroundSA::UpdatePhase()
     for (uint8 i = 0; i < BG_SA_GRY_MAX; ++i)
     {
         for (uint8 z = 1; z < 5; ++z)
-        {
             SpawnEvent(i, z, false);
-        }
+
         m_BannerTimers[i].timer = 0;
         SpawnEvent(i, (GetDefender() == ALLIANCE ? 1 : 2), true);
         m_Gyd[i] = ((GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED);
@@ -466,9 +465,11 @@ void BattleGroundSA::UpdatePhase()
         _GydOccupied(i, GetDefender());
     }
 
+    // (Re)spawn graveyard at the beach.
     SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_HORDE_CONTESTED, GetDefender() == ALLIANCE ? false : true);
     SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_ALLY_CONTESTED, GetDefender() == ALLIANCE ? true : false);
 
+    // Reset world-state of gates
     for (uint32 z = 0; z <= BG_SA_GATE_MAX; ++z)
         UpdateWorldState(BG_SA_GateStatus[z], GateStatus[z]);
 

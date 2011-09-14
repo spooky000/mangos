@@ -71,10 +71,10 @@ enum BG_SA_Sounds
 
 enum BG_SA_GraveYardStatus
 {
-    BG_SA_GARVE_STATUS_ALLY_CONTESTED    = 1,   //owned by the Allies, clickable for Horde
-    BG_SA_GARVE_STATUS_HORDE_CONTESTED   = 2,
-    BG_SA_GARVE_STATUS_ALLY_OCCUPIED     = 3,   //captured by the Allies, not clickable by anyone
-    BG_SA_GARVE_STATUS_HORDE_OCCUPIED    = 4
+    BG_SA_GARVE_STATUS_ALLY_CONTESTED    = 1,   //Owned by the Allies, clickable for Horde
+    BG_SA_GARVE_STATUS_HORDE_CONTESTED   = 2,   //Owned by the Horde, clickable for Horde
+    BG_SA_GARVE_STATUS_ALLY_OCCUPIED     = 3,   //Captured by the Allies, not clickable by anyone
+    BG_SA_GARVE_STATUS_HORDE_OCCUPIED    = 4    //Captured by the Horde, not clickable by anyone
 };
 
 enum BG_SA_GraveYard
