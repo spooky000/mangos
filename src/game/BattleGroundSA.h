@@ -269,7 +269,6 @@ class BattleGroundSA : public BattleGround
     private:
         uint8               m_Gyd[BG_SA_GRY_MAX];
         uint8               m_prevGyd[BG_SA_GRY_MAX];   // used for performant wordlstate-updating
-        uint32              m_GydTimers[BG_SA_GRY_MAX];
         BG_SA_RoundScore RoundScores[2];
         /* Gameobject spawning/despawning */
         void _CreateBanner(uint8 node, uint8 type, uint8 teamIndex, bool delay);

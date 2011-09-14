@@ -446,20 +446,21 @@ void BattleGroundSA::UpdatePhase()
         SendMessageToAll(LANG_BG_SA_START_TWO_MINUTE, CHAT_MSG_BG_SYSTEM_NEUTRAL, NULL);
     }
 
+    // Spawn bombs at start
     SpawnEvent(SA_EVENT_ADD_BOMB, (GetDefender() == ALLIANCE ? 1 : 0), true);
 
     _GydOccupied(4, (GetDefender() == HORDE) ? ALLIANCE : HORDE);
     m_ActiveEvents[5] = (GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED;
 
+    // Spawn banners and graveyards
     for (uint8 i = 0; i < BG_SA_GRY_MAX; ++i)
     {
         for (uint8 z = 1; z < 5; ++z)
         {
             SpawnEvent(i, z, false);
         }
-        m_GydTimers[i] = 0;
         m_BannerTimers[i].timer = 0;
-        SpawnEvent(i, (GetDefender() == ALLIANCE ? 1 : 2), true);  
+        SpawnEvent(i, (GetDefender() == ALLIANCE ? 1 : 2), true);
         m_Gyd[i] = ((GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED);
         m_ActiveEvents[i] = ((GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED);
         _GydOccupied(i, GetDefender());
