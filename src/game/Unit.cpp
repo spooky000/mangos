@@ -6892,6 +6892,9 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
     if (!IsInWorld())
         return pdamage;
 
+    if (IsVehicle())
+        return pdamage;
+
     MAPLOCK_READ(this,MAP_LOCK_TYPE_AURAS);
 
     // For totems get damage bonus from owner (statue isn't totem in fact)
