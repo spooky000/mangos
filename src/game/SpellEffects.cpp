@@ -11014,8 +11014,19 @@ void Spell::EffectSummonAllTotems(SpellEffectIndex eff_idx)
         if (ActionButton const* actionButton = ((Player*)m_caster)->GetActionButton(start_button+slot))
             if (actionButton->GetType()==ACTION_BUTTON_SPELL)
                 if (uint32 spell_id = actionButton->GetAction())
-                  if (!((Player*)m_caster)->HasSpellCooldown(spell_id))
-                    m_caster->CastSpell(unitTarget,spell_id,true);
+                    if (!((Player*)m_caster)->HasSpellCooldown(spell_id))
+                    {
+                        // Check items for TotemCategory  (items presence in inventory)
+                        SpellEntry const *totemSpell = sSpellStore.LookupEntry(spell_id);
+                        bool hasRequired = true;
+                        for(int i= 0; i < MAX_SPELL_TOTEM_CATEGORIES; ++i)
+                            if (totemSpell->TotemCategory[i] != 0)
+                                if (!((Player*)m_caster)->HasItemTotemCategory(totemSpell->TotemCategory[i]))
+                                    hasRequired = false;
+
+                        if (hasRequired)
+                            m_caster->CastSpell(unitTarget, spell_id, true);
+                    }
 }
 
 void Spell::EffectDestroyAllTotems(SpellEffectIndex /*eff_idx*/)
