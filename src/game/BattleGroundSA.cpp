@@ -368,10 +368,10 @@ void BattleGroundSA::UpdatePlayerScore(Player* Source, uint32 type, uint32 value
     switch(type)
     {
         case SCORE_DEMOLISHERS_DESTROYED:
-            ((BattleGroundSAScore*)itr->second)->DemolishersDestroyed += value; 
+            ((BattleGroundSAScore*)itr->second)->DemolishersDestroyed += value;
             break;
         case SCORE_GATES_DESTROYED:
-            ((BattleGroundSAScore*)itr->second)->GatesDestroyed += value; 
+            ((BattleGroundSAScore*)itr->second)->GatesDestroyed += value;
             break;
         default:
             BattleGround::UpdatePlayerScore(Source,type,value);
