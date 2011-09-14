@@ -1559,7 +1559,7 @@ void Creature::SetDeathState(DeathState s)
         Unit::SetDeathState(ALIVE);
 
         clearUnitState(UNIT_STAT_ALL_STATE);
-        i_motionMaster.Clear();
+        i_motionMaster.Initialize();
 
         SetMeleeDamageSchool(SpellSchools(cinfo->dmgschool));
 
@@ -1607,9 +1607,6 @@ bool Creature::FallGround()
     init.SetFall();
     init.Launch();
 
-    // hacky solution: by some reason died creatures not updated, that's why need finalize movement state
-    GetMap()->CreatureRelocation(this, GetPositionX(), GetPositionY(), tz, GetOrientation());
-    DisableSpline();
     return true;
 }
 
