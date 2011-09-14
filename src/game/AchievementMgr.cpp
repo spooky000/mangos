@@ -467,6 +467,7 @@ void AchievementMgr::ResetAchievementCriteria(AchievementCriteriaTypes type, uin
             case ACHIEVEMENT_CRITERIA_TYPE_SPECIAL_PVP_KILL:
             case ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE:
             case ACHIEVEMENT_CRITERIA_TYPE_HONORABLE_KILL_AT_AREA:
+            case ACHIEVEMENT_CRITERIA_TYPE_CAST_SPELL:
             {
                 switch(achievementCriteria->referredAchievement) // All achievements that should reset its progress.
                 {
