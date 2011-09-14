@@ -511,7 +511,7 @@ void Pet::SetDeathState(DeathState s)                       // overwrite virtual
     if(getDeathState()==CORPSE)
     {
         //remove summoned pet (no corpse)
-        if(getPetType()==SUMMON_PET)
+        if(getPetType()==SUMMON_PET || GetEntry() == 26125)
             Unsummon(PET_SAVE_NOT_IN_SLOT);
         // other will despawn at corpse desppawning (Pet::Update code)
         else

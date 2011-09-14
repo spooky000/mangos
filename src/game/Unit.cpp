@@ -384,6 +384,11 @@ void Unit::Update( uint32 update_diff, uint32 p_time )
         setAttackTimer(BASE_ATTACK, (update_diff >= base_att ? 0 : base_att - update_diff) );
     }
 
+    if (uint32 base_att = getAttackTimer(OFF_ATTACK))
+    {
+        setAttackTimer(OFF_ATTACK, (update_diff >= base_att ? 0 : base_att - update_diff) );
+    }
+
     // update abilities available only for fraction of time
     UpdateReactives( update_diff );
 
@@ -399,10 +404,18 @@ bool Unit::haveOffhandWeapon() const
     if (!CanUseEquippedWeapon(OFF_ATTACK))
         return false;
 
-    if(GetTypeId() == TYPEID_PLAYER)
+    if (GetTypeId() == TYPEID_PLAYER)
         return ((Player*)this)->GetWeaponForAttack(OFF_ATTACK,true,true);
     else
+    {
+        uint32 ItemId = GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 1);
+        ItemEntry const* itemInfo = sItemStore.LookupEntry(ItemId);
+
+        if (itemInfo && itemInfo->Class == ITEM_CLASS_WEAPON)
+            return true;
+
         return false;
+    }
 }
 
 bool Unit::SetPosition(float x, float y, float z, float orientation, bool teleport)
@@ -1768,7 +1781,6 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
     if(int32(damageInfo->damage) > 0)
     {
         damageInfo->procVictim |= PROC_FLAG_TAKEN_ANY_DAMAGE;
-        damageInfo->procEx |= PROC_EX_DIRECT_DAMAGE;
 
         // Calculate absorb & resists
         uint32 absorb_affected_damage = CalcNotIgnoreAbsorbDamage(damageInfo->damage,damageInfo->damageSchoolMask);
@@ -1782,9 +1794,6 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
         }
         if (damageInfo->resist)
             damageInfo->HitInfo|=HITINFO_RESIST;
-
-        if (damageInfo->damage <= 0)
-            damageInfo->procEx &= ~PROC_EX_DIRECT_DAMAGE;
     }
     else // Umpossible get negative result but....
         damageInfo->damage = 0;
@@ -2562,7 +2571,7 @@ void Unit::CalculateDamageAbsorbAndResist(Unit *pCaster, SpellSchoolMask schoolM
             pCaster->SendSpellNonMeleeDamageLog(caster, (*i)->GetSpellProto()->Id, splitted, schoolMask, splitted_absorb, 0, false, 0, false);
 
             CleanDamage cleanDamage = CleanDamage(splitted, 0, BASE_ATTACK, MELEE_HIT_NORMAL);
-            pCaster->DealDamage(caster, splitted, &cleanDamage, DIRECT_DAMAGE, schoolMask, (*i)->GetSpellProto(), false);
+            pCaster->DealDamage(caster, splitted, &cleanDamage, damagetype, schoolMask, (*i)->GetSpellProto(), false);
         }
 
         AuraList const& vSplitDamagePct = GetAurasByType(SPELL_AURA_SPLIT_DAMAGE_PCT);
@@ -2589,7 +2598,7 @@ void Unit::CalculateDamageAbsorbAndResist(Unit *pCaster, SpellSchoolMask schoolM
             pCaster->SendSpellNonMeleeDamageLog(caster, (*i)->GetSpellProto()->Id, splitted, schoolMask, split_absorb, 0, false, 0, false);
 
             CleanDamage cleanDamage = CleanDamage(splitted, 0, BASE_ATTACK, MELEE_HIT_NORMAL);
-            pCaster->DealDamage(caster, splitted, &cleanDamage, DIRECT_DAMAGE, schoolMask, (*i)->GetSpellProto(), false);
+            pCaster->DealDamage(caster, splitted, &cleanDamage, damagetype, schoolMask, (*i)->GetSpellProto(), false);
         }
     }
 
@@ -9772,6 +9781,10 @@ int32 Unit::CalculateAuraDuration(SpellEntry const* spellProto, uint32 effectMas
         dmgClassMod = GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_DURATION_OF_MAGIC_EFFECTS, spellProto->DmgClass);
     }
 
+    // Hack to prevent cyclone being reduced by Mage Armor effect
+    if (spellProto->Id == 33786 && dmgClassMod)
+        dmgClassMod = 0;
+
     int32 durationMod = std::min(mechanicMod, std::min(dispelMod, dmgClassMod));
 
     if (durationMod != 0)
@@ -10778,17 +10791,11 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                     if(((Creature*)this)->IsPet())
                     {
                         Pet* p = (Pet*)this;
-                        switch (p->getPetType())
-                        {
-                            case HUNTER_PET:
-                            case SUMMON_PET:
-                                p->Unsummon(PET_SAVE_AS_DELETED, owner);
-                                break;  
-                            default:   
-                                //dismissing a summoned pet is like killing them (this prevents returning a soulshard...)
-                                p->SetDeathState(CORPSE);
-                                break;
-                        }
+                        if (p->getPetType() == HUNTER_PET || GetEntry() == 26125)
+                            p->Unsummon(PET_SAVE_AS_DELETED, owner);
+                        else
+                            //dismissing a summoned pet is like killing them (this prevents returning a soulshard...)
+                            p->SetDeathState(CORPSE);
                     }
                     else                                    // charmed
                         owner->Uncharm();
@@ -11106,16 +11113,13 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
         if(itr->second->IsDeleted())
             continue;
 
+        // Frost Trap for Lock and Load hack
+        if(procSpell && procSpell->Id == 13810)
+            procExtra = PROC_EX_NONE;
+
         SpellProcEventEntry const* spellProcEvent = NULL;
         if(!IsTriggeredAtSpellProcEvent(pTarget, itr->second, procSpell, procFlag, procExtra, attType, isVictim, spellProcEvent))
            continue;
-
-        // Frost Nova: prevent removing root effect on self damage
-        if (itr->second->GetCaster() == pTarget)
-           if (SpellEntry const* spellInfo = itr->second->GetSpellProto())
-              if (procSpell && spellInfo->SpellFamilyName == SPELLFAMILY_MAGE && spellInfo->SpellFamilyFlags.test<CF_MAGE_FROST_NOVA>()
-                 && procSpell->SpellFamilyName == SPELLFAMILY_MAGE && procSpell->SpellFamilyFlags.test<CF_MAGE_FROST_NOVA>())
-                    continue;
 
         itr->second->SetInUse(true);                        // prevent holder deletion
         procTriggered.push_back( ProcTriggeredData(spellProcEvent, itr->second) );
@@ -12598,6 +12602,21 @@ uint32 Unit::CalculateSpellDurationWithHaste(SpellEntry const* spellProto, uint3
     return duration;
 }
 
+uint32 Unit::GetModelForForm(SpellShapeshiftFormEntry const* ssEntry) const
+{
+    // i will asume that creatures will always take the defined model from the dbc
+    // since no field in creature_templates describes wether an alliance or
+    // horde modelid should be used at shapeshifting
+    return ssEntry->modelID_A;
+}
+
+uint32 Unit::GetModelForForm() const
+{
+    ShapeshiftForm form = GetShapeshiftForm();
+    SpellShapeshiftFormEntry const* ssEntry = sSpellShapeshiftFormStore.LookupEntry(form);
+    return ssEntry ? GetModelForForm(ssEntry) : 0;
+}
+
 bool Unit::IsCombatStationary()
 {
     return GetMotionMaster()->GetCurrentMovementGeneratorType() != CHASE_MOTION_TYPE || isInRoots();
@@ -12623,6 +12642,9 @@ bool Unit::HasMorePoweredBuff(uint32 spellId)
         AuraType auraType = AuraType(spellInfo->EffectApplyAuraName[SpellEffectIndex(i)]);
 
         if (!auraType || auraType >= TOTAL_AURAS)
+            continue;
+
+        if (auraType == SPELL_AURA_PROC_TRIGGER_SPELL)
             continue;
 
         AuraList const& auras = GetAurasByType(auraType);

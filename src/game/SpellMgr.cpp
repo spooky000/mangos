@@ -691,25 +691,18 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
     if (!spellproto)
         return false;
 
+    // Penance base and heal
+    if (spellproto->SpellFamilyName == SPELLFAMILY_PRIEST && spellproto->SpellFamilyFlags.test<CF_PRIEST_PENANCE_HEAL, CF_PRIEST_PENANCE_BASE>())
+        return true;
+
+    // Amplify Magic
+    if (spellproto->IsFitToFamily<SPELLFAMILY_MAGE, CF_MAGE_D_A_MAGIC>())
+        return true;
+
     switch(spellproto->Id)
     {
-        case 47540:                                         // Penance start dummy aura - Rank 1
-        case 53005:                                         // Penance start dummy aura - Rank 2
-        case 53006:                                         // Penance start dummy aura - Rank 3
-        case 53007:                                         // Penance start dummy aura - Rank 4
-        case 47757:                                         // Penance heal effect trigger - Rank 1
-        case 52986:                                         // Penance heal effect trigger - Rank 2
-        case 52987:                                         // Penance heal effect trigger - Rank 3
-        case 52988:                                         // Penance heal effect trigger - Rank 4
         case 64844:                                         // Divine Hymn
         case 64904:                                         // Hymn of Hope
-        case 1008:                                          // Amplify Magic - Rank 1
-        case 8455:                                          // Amplify Magic - Rank 2
-        case 10169:                                         // Amplify Magic - Rank 3
-        case 10170:                                         // Amplify Magic - Rank 4
-        case 27130:                                         // Amplify Magic - Rank 5
-        case 33946:                                         // Amplify Magic - Rank 6
-        case 43017:                                         // Amplify Magic - Rank 7
         case 12042:                                         // Arcane Power
             return true;
         case 37675:                                         // Chaos Blast
@@ -1040,6 +1033,7 @@ bool IsPositiveSpell(SpellEntry const *spellproto)
     for (int i = 0; i < MAX_EFFECT_INDEX; ++i)
         if (spellproto->Effect[i] && !IsPositiveEffect(spellproto, SpellEffectIndex(i)))
             return false;
+
     return true;
 }
 
@@ -2030,55 +2024,6 @@ void SpellMgr::LoadSpellThreats()
     sLog.outString( ">> Loaded %u spell threat entries", rankHelper.worker.count );
 }
 
-void SpellMgr::LoadSpellStackingRules()
-{
-    mSpellStacksMap.clear();                                // need for reload case
-
-    uint32 count = 0;
-
-    //                                                0         1
-    QueryResult *result = WorldDatabase.Query("SELECT spellId1, spellId2 FROM spell_stacking");
-    if(!result)
-    {
-
-        BarGoLink bar( 1 );
-
-        bar.step();
-
-        sLog.outString();
-        sLog.outString( ">> Loaded %u spell stacking rules", count );
-        return;
-    }
-
-    BarGoLink bar(result->GetRowCount());
-
-    do
-    {
-        Field *fields = result->Fetch();
-
-        bar.step();
-
-        uint32 spellId1 = fields[0].GetUInt32();
-        std::string IdsChain = fields[1].GetCppString();
-
-        Tokens tokens(IdsChain, ' ');
-        std::set<uint32> spellSet;
-
-        Tokens::iterator iter;
-        for(iter = tokens.begin(); iter != tokens.end(); ++iter)
-            spellSet.insert(atoi(*iter));
-        
-        mSpellStacksMap[spellId1] = spellSet;
-
-        ++count;
-    } while( result->NextRow() );
-
-    delete result;
-
-    sLog.outString();
-    sLog.outString( ">> Loaded %u spell stacking rules", count );
-}
-
 bool SpellMgr::IsRankSpellDueToSpell(SpellEntry const *spellInfo_1,uint32 spellId_2) const
 {
     SpellEntry const *spellInfo_2 = sSpellStore.LookupEntry(spellId_2);
@@ -2140,46 +2085,6 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
 
     if (spellId_1 == spellId_2)
         return false;
-
-    // Mangle and Trauma 
-    if (spellInfo_1->EffectApplyAuraName[EFFECT_INDEX_1] == SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT && 
-        spellInfo_1->EffectMiscValue[EFFECT_INDEX_1] == MECHANIC_BLEED &&
-        spellInfo_2->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT &&
-        spellInfo_2->EffectMiscValue[EFFECT_INDEX_0] == MECHANIC_BLEED || 
-        spellInfo_2->EffectApplyAuraName[EFFECT_INDEX_1] == SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT && 
-        spellInfo_2->EffectMiscValue[EFFECT_INDEX_1] == MECHANIC_BLEED &&
-        spellInfo_1->EffectApplyAuraName[EFFECT_INDEX_0] == SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT &&
-        spellInfo_1->EffectMiscValue[EFFECT_INDEX_0] == MECHANIC_BLEED ) 
-        return true;
-
-    // Dispersion - stacks with everything
-     if ((spellInfo_1->Id == 47585 && spellInfo_2->Id == 60069) ||
-          (spellInfo_2->Id == 47585 && spellInfo_1->Id == 60069))
-          return false;
-
-    // Mistletoe debuff stack with everything
-     if (spellInfo_1->Id == 26218 || spellInfo_2->Id == 26218)
-         return false;
-
-     // Improved Mind Blast debuff stacks with everything
-     if (spellInfo_1->Id == 48301 || spellInfo_2->Id == 48301)
-         return false;
-
-     // Ardent Defender cooldown debuff stacks with everything
-    if (spellInfo_1->Id == 66233 || spellInfo_2->Id == 66233)
-        return false;
-
-    SpellStacksMap::const_iterator sitr = mSpellStacksMap.find(spellInfo_1->Id);
-    if(sitr != mSpellStacksMap.end())
-        for(std::set<uint32>::const_iterator idItr = (*sitr).second.begin(); idItr != (*sitr).second.end(); ++idItr)
-            if(spellInfo_2->Id == (*idItr))
-                return false;
-
-    SpellStacksMap::const_iterator sitr2 = mSpellStacksMap.find(spellInfo_2->Id);
-    if(sitr2 != mSpellStacksMap.end())
-        for(std::set<uint32>::const_iterator idItr = (*sitr2).second.begin(); idItr != (*sitr2).second.end(); ++idItr)
-            if(spellInfo_1->Id == (*idItr))
-                return false;
 
     // Specific spell family spells
     // also some SpellIconID exceptions related to late checks (isModifier)
@@ -2268,6 +2173,34 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                 // Crypt Fever and Ebon Plague
                 if((spellInfo_1->SpellIconID == 264 && spellInfo_2->SpellIconID == 1933) ||
                     (spellInfo_2->SpellIconID == 264 && spellInfo_1->SpellIconID == 1933))
+                    return true;
+            }
+            break;
+        case SPELLFAMILY_MAGE:
+            if (spellInfo_2->SpellFamilyName == SPELLFAMILY_MAGE)
+            {
+                // Arcane Intellect / Brilliance
+                if (spellInfo_1->IsFitToFamily<SPELLFAMILY_MAGE, CF_MAGE_ARCANE_INT>() &&
+                    spellInfo_2->IsFitToFamily<SPELLFAMILY_MAGE, CF_MAGE_ARCANE_INT>())
+                    return true;
+
+                // Dampen / Amplify Magic
+                if (spellInfo_1->IsFitToFamily<SPELLFAMILY_MAGE, CF_MAGE_D_A_MAGIC>() &&
+                    spellInfo_2->IsFitToFamily<SPELLFAMILY_MAGE, CF_MAGE_D_A_MAGIC>())
+                    return true;
+            }
+            break;
+        case SPELLFAMILY_PRIEST:
+            if (spellInfo_2->SpellFamilyName == SPELLFAMILY_PRIEST)
+            {
+                // Power Word / Prayer of Fortitude
+                if (spellInfo_1->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_POWER_WORD_FORTITUDE>() &&
+                    spellInfo_2->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_POWER_WORD_FORTITUDE>())
+                    return true;
+
+                // Shadow Protection / Prayer of Shadow Protection
+                if (spellInfo_1->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_SHADOW_PROTECTION>() &&
+                    spellInfo_2->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_SHADOW_PROTECTION>())
                     return true;
             }
             break;

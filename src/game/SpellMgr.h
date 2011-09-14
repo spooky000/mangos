@@ -644,8 +644,7 @@ enum ProcFlagsEx
     PROC_EX_EX_TRIGGER_ALWAYS   = 0x0010000,                // If set trigger always ( no matter another flags) used for drop charges
     PROC_EX_EX_ONE_TIME_TRIGGER = 0x0020000,                // If set trigger always but only one time (not used)
     PROC_EX_PERIODIC_POSITIVE   = 0x0040000,                // For periodic heal
-    PROC_EX_CAST_END            = 0x0080000,                // procs on end of cast            
-    PROC_EX_DIRECT_DAMAGE       = 0x0100000                 // do not proc from absorbed damage
+    PROC_EX_CAST_END            = 0x0080000                 // procs on end of cast
 };
 
 struct SpellProcEventEntry
@@ -688,7 +687,6 @@ struct SpellThreatEntry
 typedef std::map<uint32, uint8> SpellElixirMap;
 typedef std::map<uint32, float> SpellProcItemEnchantMap;
 typedef std::map<uint32, SpellThreatEntry> SpellThreatMap;
-typedef std::map<uint32, std::set<uint32> > SpellStacksMap;
 
 // Spell script target related declarations (accessed using SpellMgr functions)
 enum SpellTargetType
@@ -1195,7 +1193,6 @@ class SpellMgr
         void LoadSpellBonuses();
         void LoadSpellTargetPositions();
         void LoadSpellThreats();
-        void LoadSpellStackingRules();
         void LoadSkillLineAbilityMap();
         void LoadSkillRaceClassInfoMap();
         void LoadSpellPetAuras();
@@ -1214,7 +1211,6 @@ class SpellMgr
         SpellTargetPositionMap mSpellTargetPositions;
         SpellElixirMap     mSpellElixirs;
         SpellThreatMap     mSpellThreatMap;
-        SpellStacksMap     mSpellStacksMap;
         SpellProcEventMap  mSpellProcEventMap;
         SpellProcItemEnchantMap mSpellProcItemEnchantMap;
         SpellBonusMap      mSpellBonusMap;

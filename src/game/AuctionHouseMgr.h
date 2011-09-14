@@ -112,9 +112,6 @@ class AuctionHouseObject
 
         uint32 GetCount() { return AuctionsMap.size(); }
 
-        AuctionEntryMap::iterator GetAuctionsBegin() {return AuctionsMap.begin();}
-        AuctionEntryMap::iterator GetAuctionsEnd() {return AuctionsMap.end();}
-
         AuctionEntryMap const& GetAuctions() const { return AuctionsMap; }
         AuctionEntryMapBounds GetAuctionsBounds() const {return AuctionEntryMapBounds(AuctionsMap.begin(), AuctionsMap.end()); }
 

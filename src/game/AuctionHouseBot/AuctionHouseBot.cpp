@@ -293,11 +293,6 @@ void AuctionBotConfig::setConfig(AuctionBotConfigBoolValues index, char const* f
     setConfig(index, m_AhBotCfg.GetBoolDefault(fieldname,defvalue));
 }
 
-void AuctionBotConfig::setConfig(AuctionBotConfigFloatValues index, char const* fieldname, float defvalue)
-{
-    setConfig(index, m_AhBotCfg.GetFloatDefault(fieldname,defvalue));
-}
-
 //Get AuctionHousebot configuration file
 void AuctionBotConfig::GetConfigFromFile()
 {
@@ -326,6 +321,7 @@ void AuctionBotConfig::GetConfigFromFile()
     setConfig(CONFIG_BOOL_AHBOT_BIND_USE                     , "AuctionHouseBot.Bind.Use"                    , true);
     setConfig(CONFIG_BOOL_AHBOT_BIND_QUEST                   , "AuctionHouseBot.Bind.Quest"                  , false);
     setConfig(CONFIG_BOOL_AHBOT_LOCKBOX_ENABLED              , "AuctionHouseBot.LockBox.Enabled"             , false);
+    setConfig(CONFIG_BOOL_AHBOT_PETS_ENABLED                 , "AuctionHouseBot.Pets.Enabled"                , false);
 
     setConfig(CONFIG_BOOL_AHBOT_BUYPRICE_SELLER              , "AuctionHouseBot.BuyPrice.Seller"             , true);
 
@@ -393,12 +389,6 @@ void AuctionBotConfig::GetConfigFromFile()
     setConfig(CONFIG_UINT32_AHBOT_CLASS_TRADEGOOD_MAX_ITEM_LEVEL   , "AuctionHouseBot.Class.TradeGood.ItemLevel.Max" , 0);
     setConfig(CONFIG_UINT32_AHBOT_CLASS_CONTAINER_MIN_ITEM_LEVEL   , "AuctionHouseBot.Class.Container.ItemLevel.Min" , 0);
     setConfig(CONFIG_UINT32_AHBOT_CLASS_CONTAINER_MAX_ITEM_LEVEL   , "AuctionHouseBot.Class.Container.ItemLevel.Max" , 0);
-
-    setConfig(CONFIG_FLOAT_AHBOT_BIND_NO_MULTIPLIER           , "AuctionHouseBot.Bind.No.Multiplier"                     , 1.0f );
-    setConfig(CONFIG_FLOAT_AHBOT_BIND_PICKUP_MULTIPLIER       , "AuctionHouseBot.Bind.Pickup.Multiplier"                 , 1.0f );
-    setConfig(CONFIG_FLOAT_AHBOT_BIND_EQUIP_MULTIPLIER        , "AuctionHouseBot.Bind.Equip.Multiplier"                  , 1.0f );
-    setConfig(CONFIG_FLOAT_AHBOT_BIND_USE_MULTIPLIER          , "AuctionHouseBot.Bind.Use.Multiplier"                    , 1.0f );
-    setConfig(CONFIG_FLOAT_AHBOT_BIND_QUEST_MULTIPLIER        , "AuctionHouseBot.Bind.Quest.Multiplier"                  , 1.0f );
 }
 
 bool AuctionBotConfig::Reload()
@@ -1123,6 +1113,7 @@ bool AuctionBotSeller::Initialize()
                 break;
             }
             case ITEM_CLASS_MISC:
+            {
                 if (prototype->SubClass==ITEM_SUBCLASS_JUNK_MOUNT)
                 {
                     if (uint32 value = sAuctionBotConfig.getConfig(CONFIG_UINT32_AHBOT_CLASS_MISC_MOUNT_MIN_REQ_LEVEL))
@@ -1149,7 +1140,15 @@ bool AuctionBotSeller::Initialize()
                         continue;
                 }
 
+                if (prototype->BagFamily & BAG_FAMILY_MASK_VANITY_PETS)
+                {
+                    // skip pets if disabled
+                    if (!sAuctionBotConfig.getConfig(CONFIG_BOOL_AHBOT_PETS_ENABLED))
+                        continue;
+                }
+
                 break;
+            }
             case ITEM_CLASS_GLYPH:
             {
                 if (uint32 value = sAuctionBotConfig.getConfig(CONFIG_UINT32_AHBOT_CLASS_GLYPH_MIN_REQ_LEVEL))
@@ -1490,30 +1489,6 @@ void AuctionBotSeller::SetPricesOfItem(ItemPrototype const *itemProto, AHB_Selle
 {
     double temp_buyp = buyp * stackcnt *
         (itemQuality < MAX_AUCTION_QUALITY ? config.GetPriceRatioPerQuality(AuctionQuality(itemQuality)) : 1) ;
-
-    if (itemProto)
-    {
-        switch (itemProto->Bonding)
-        {
-            case NO_BIND:
-                temp_buyp *= sAuctionBotConfig.getConfig(CONFIG_FLOAT_AHBOT_BIND_NO_MULTIPLIER);
-                break;
-            case BIND_WHEN_PICKED_UP:
-                temp_buyp *= sAuctionBotConfig.getConfig(CONFIG_FLOAT_AHBOT_BIND_PICKUP_MULTIPLIER);
-                break;
-            case BIND_WHEN_EQUIPPED:
-                temp_buyp *= sAuctionBotConfig.getConfig(CONFIG_FLOAT_AHBOT_BIND_EQUIP_MULTIPLIER);
-                break;
-            case BIND_WHEN_USE:
-                temp_buyp *= sAuctionBotConfig.getConfig(CONFIG_FLOAT_AHBOT_BIND_USE_MULTIPLIER);
-                break;
-            case BIND_QUEST_ITEM:
-                temp_buyp *= sAuctionBotConfig.getConfig(CONFIG_FLOAT_AHBOT_BIND_QUEST_MULTIPLIER);
-                break;
-            default:
-                break;
-        }
-    }
 
     double randrange = temp_buyp * 0.4;
     buyp = (urand(temp_buyp-randrange, temp_buyp+randrange)/100)+1;

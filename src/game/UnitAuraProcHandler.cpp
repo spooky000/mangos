@@ -294,7 +294,7 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
     &Unit::HandleNULLProc,                                  //259 corrupt healing over time spell
     &Unit::HandleNULLProc,                                  //260 SPELL_AURA_SCREEN_EFFECT (miscvalue = id in ScreenEffect.dbc) not required any code
     &Unit::HandleNULLProc,                                  //261 SPELL_AURA_PHASE undetectable invisibility?
-    &Unit::HandleNULLProc,                                  //262 SPELL_AURA_IGNORE_UNIT_STATE
+    &Unit::HandleIgnoreAuraStateProc,                       //262 SPELL_AURA_IGNORE_UNIT_STATE
     &Unit::HandleNULLProc,                                  //263 SPELL_AURA_ALLOW_ONLY_ABILITY player can use only abilities set in SpellClassMask
     &Unit::HandleNULLProc,                                  //264 unused (3.0.8a-3.2.2a)
     &Unit::HandleNULLProc,                                  //265 unused (3.0.8a-3.2.2a)
@@ -3148,6 +3148,62 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 triggered_spell_id = 50526;
                 break;
             }
+            // Blood of the North and Reaping
+            if (dummySpell->SpellIconID == 3041 || dummySpell->SpellIconID == 22)
+            {
+                if (GetTypeId()!=TYPEID_PLAYER)
+                    return SPELL_AURA_PROC_FAILED;
+
+                Player *player = (Player*)this;
+                for (uint32 i = 0; i < MAX_RUNES; ++i)
+                {
+                    if (player->GetCurrentRune(i) == RUNE_BLOOD)
+                    {
+                        if(!player->GetRuneCooldown(i))
+                            player->ConvertRune(i, RUNE_DEATH, dummySpell->Id);
+                        else
+                        {
+                            // search for another rune that might be available
+                            for (uint32 iter = i; iter < MAX_RUNES; ++iter)
+                            {
+                                if (player->GetCurrentRune(iter) == RUNE_BLOOD && !player->GetRuneCooldown(iter))
+                                {
+                                    player->ConvertRune(iter, RUNE_DEATH, dummySpell->Id);
+                                    triggeredByAura->SetAuraPeriodicTimer(0);
+                                    return SPELL_AURA_PROC_OK;
+                                }
+                            }
+                            player->SetNeedConvertRune(i, true, dummySpell->Id);
+                        }
+                        triggeredByAura->SetAuraPeriodicTimer(0);
+                        return SPELL_AURA_PROC_OK;
+                    }
+                }
+                return SPELL_AURA_PROC_FAILED;
+            }
+            // Death Rune Mastery
+            if (dummySpell->SpellIconID == 2622)
+            {
+                if (GetTypeId()!=TYPEID_PLAYER)
+                    return SPELL_AURA_PROC_FAILED;
+
+                Player *player = (Player*)this;
+                for (uint32 i = 0; i < MAX_RUNES; ++i)
+                {
+                    RuneType currRune = player->GetCurrentRune(i);
+                    if (currRune == RUNE_UNHOLY || currRune == RUNE_FROST)
+                    {
+                        uint16 cd = player->GetRuneCooldown(i);
+                        if(!cd)
+                            player->ConvertRune(i, RUNE_DEATH, dummySpell->Id);
+                        else // there is a cd
+                            player->SetNeedConvertRune(i, true, dummySpell->Id);
+                        // no break because it converts all
+                    }
+                }
+                triggeredByAura->SetAuraPeriodicTimer(0);
+                return SPELL_AURA_PROC_OK;
+            }
             // Hungering Cold - not break from diseases
             if (dummySpell->SpellIconID == 2797)
             {
@@ -4360,8 +4416,12 @@ SpellAuraProcResult Unit::HandleOverrideClassScriptAuraProc(Unit *pVictim, uint3
     return SPELL_AURA_PROC_OK;
 }
 
-SpellAuraProcResult Unit::HandleMendingAuraProc( Unit* /*pVictim*/, uint32 /*damage*/, Aura* triggeredByAura, SpellEntry const* /*procSpell*/, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/ )
+SpellAuraProcResult Unit::HandleMendingAuraProc( Unit* /*pVictim*/, uint32 damage, Aura* triggeredByAura, SpellEntry const* /*procSpell*/, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/ )
 {
+    // only at real damage
+    if (!damage)
+        return SPELL_AURA_PROC_FAILED;
+
     // aura can be deleted at casts
     SpellEntry const* spellProto = triggeredByAura->GetSpellProto();
     SpellEffectIndex effIdx = triggeredByAura->GetEffIndex();
@@ -4407,6 +4467,8 @@ SpellAuraProcResult Unit::HandleMendingAuraProc( Unit* /*pVictim*/, uint32 /*dam
                 target->AddSpellAuraHolder(new_holder);
                 triggeredByAura->SetInUse(false);
             }
+            else // Remove Aura if there is no nearest target to jump.
+                RemoveAura(triggeredByAura);
         }
     }
 
@@ -4714,19 +4776,8 @@ SpellAuraProcResult Unit::HandleRemoveByDamageChanceProc(Unit* pVictim, uint32 d
             return SPELL_AURA_PROC_CANT_TRIGGER;
     }
 
-    if (pVictim && damage)
-    {
-        // Damage is dealt after proc system - lets ignore auras which wasn't updated yet
-        // to make spell not remove its own aura
-        if (triggeredByAura->GetAuraDuration() == triggeredByAura->GetAuraMaxDuration())
-            return SPELL_AURA_PROC_FAILED;
-        int32 damageLeft = triggeredByAura->GetModifier()->m_amount;
-        // No damage left
-        if (damageLeft < damage)
-            return HandleRemoveByDamageProc(pVictim, damage, triggeredByAura, procSpell, procFlag, procEx, cooldown);
-        else
-            triggeredByAura->GetModifier()->m_amount = (damageLeft-damage);
-    }
+    if (triggeredByAura->GetAuraDuration() == triggeredByAura->GetAuraMaxDuration())
+        return SPELL_AURA_PROC_FAILED;
 
     // The chance to dispel an aura depends on the damage taken with respect to the casters level.
     uint32 CCDamageCap = triggeredByAura->CalculateCrowdControlBreakDamage();
@@ -4738,12 +4789,7 @@ SpellAuraProcResult Unit::HandleRemoveByDamageChanceProc(Unit* pVictim, uint32 d
         chance = 100;
 
     if (roll_chance_i(chance))
-    {
-        triggeredByAura->SetInUse(true);
-        RemoveAurasByCasterSpell(triggeredByAura->GetId(), triggeredByAura->GetCasterGuid());
-        triggeredByAura->SetInUse(false);
-        return SPELL_AURA_PROC_OK;
-    }
+        return HandleRemoveByDamageProc(pVictim, damage, triggeredByAura, procSpell, procFlag, procEx, cooldown);
 
     return SPELL_AURA_PROC_FAILED;
 }
@@ -4945,6 +4991,21 @@ SpellAuraProcResult Unit::HandleDropChargeByDamageProc(Unit* pVictim, uint32 dam
     }
     else
         return SPELL_AURA_PROC_FAILED;
+
+    return SPELL_AURA_PROC_OK;
+}
+
+SpellAuraProcResult Unit::HandleIgnoreAuraStateProc(Unit* /*pVictim*/, uint32 damage, Aura* triggeredByAura, SpellEntry const* /*procSpell*/, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/)
+{
+    SpellEntry const *spellInfo = triggeredByAura->GetSpellProto();
+
+    // Taste for Blood
+    if (spellInfo->Id == 60503)
+    {
+        // only at real damage
+        if (!damage)
+            return SPELL_AURA_PROC_FAILED;
+    }
 
     return SPELL_AURA_PROC_OK;
 }

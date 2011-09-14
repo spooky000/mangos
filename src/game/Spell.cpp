@@ -803,7 +803,7 @@ void Spell::prepareDataForTriggerSystem()
 
     // Hunter traps spells: Immolation Trap Effect, Frost Trap (triggering spell!!),
     // Freezing Trap Effect(+ Freezing Arrow Effect), Explosive Trap Effect, Snake Trap Effect
-    if (m_spellInfo->IsFitToFamily<SPELLFAMILY_HUNTER, CF_HUNTER_FREEZING_TRAP_EFFECT, CF_HUNTER_MISC_TRAPS, CF_HUNTER_SNAKE_TRAP_EFFECT, CF_HUNTER_EXPLOSIVE_TRAP_EFFECT, CF_HUNTER_IMMOLATION_TRAP, CF_HUNTER_FROST_TRAP>())
+    if (m_spellInfo->IsFitToFamily<SPELLFAMILY_HUNTER, CF_HUNTER_FROST_TRAP_EFFECTS, CF_HUNTER_FREEZING_TRAP_EFFECT, CF_HUNTER_MISC_TRAPS, CF_HUNTER_SNAKE_TRAP_EFFECT, CF_HUNTER_EXPLOSIVE_TRAP_EFFECT, CF_HUNTER_IMMOLATION_TRAP, CF_HUNTER_FROST_TRAP>())
         m_procAttacker |= PROC_FLAG_ON_TRAP_ACTIVATION;
 }
 
@@ -848,11 +848,6 @@ void Spell::AddUnitTarget(Unit* pVictim, SpellEffectIndex effIndex)
     target.processed  = false;                              // Effects not apply on target
     // Calculate hit result
     target.missCondition = m_caster->SpellHitResult(pVictim, m_spellInfo, m_canReflect);
-    /*// Procs can miss, weapon enchants can miss, triggered spells and effects cannot miss (miss already calculated in triggering spell)
-    bool canMiss = (m_triggeredByAuraSpell || !m_IsTriggeredSpell);
-    if(m_caster->GetTypeId() != TYPEID_PLAYER && ((Creature*)m_caster)->IsVehicle())
-        canMiss = false;
-    target.missCondition = m_caster->SpellHitResult(pVictim, m_spellInfo, m_canReflect, canMiss);*/
 
     // spell fly from visual cast object
     WorldObject* affectiveObject = GetAffectiveCasterObject();
@@ -1032,7 +1027,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
     }
 
     // Recheck immune (only for delayed spells)
-    if (m_spellInfo->speed && (
+    if (m_spellInfo->speed && !(IsPositiveSpell(m_spellInfo->Id) && caster->IsFriendlyTo(unit)) && (
         unit->IsImmunedToDamage(GetSpellSchoolMask(m_spellInfo)) ||
         unit->IsImmuneToSpell(m_spellInfo)))
     {
@@ -1229,13 +1224,15 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
     }
 
     // Recheck immune (only for delayed spells)
-    if (m_spellInfo->speed && (
+    if (m_spellInfo->speed && !((realCaster && realCaster->IsFriendlyTo(unit)) && IsPositiveSpell(m_spellInfo->Id)) && (
         unit->IsImmunedToDamage(GetSpellSchoolMask(m_spellInfo)) ||
         unit->IsImmuneToSpell(m_spellInfo)) &&
         !(m_spellInfo->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY))
     {
         if (realCaster)
+        {
             realCaster->SendSpellMiss(unit, m_spellInfo->Id, SPELL_MISS_IMMUNE);
+        }
 
         ResetEffectDamageAndHeal();
         return;
@@ -1685,17 +1682,16 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 31347:                                 // Doom TODO: exclude top threat target from target selection
                 case 33711:                                 // Murmur's Touch
                 case 38794:                                 // Murmur's Touch (h)
+                case 48278:                                 // Paralyze (Utgarde Pinnacle)
                 case 50988:                                 // Glare of the Tribunal (Halls of Stone)
                 case 51146:                                 // Searching Gaze (Halls Of Stone)
                 case 59870:                                 // Glare of the Tribunal (h) (Halls of Stone)
                 case 62016:                                 // Thorim charge orb
                 case 62042:                                 // Stormhammer
                 case 62488:                                 // Activate Construct (Ulduar - Ignis encounter)
-                case 62589:                                 // Nature's Fury
                 case 63018:                                 // Searing Light (10 man)
                 case 63024:                                 // Gravity Bomb (10 man)
                 case 63387:                                 // Rapid Burst
-                case 63571:                                 // Nature's Fury
                 case 63713:                                 // Dominate Mind (Yogg-Saron)
                 case 63795:                                 // Psychosis (Yogg-Saron)
                 case 63830:                                 // Malady of the Mind (Yogg-Saron)
@@ -3834,10 +3830,10 @@ void Spell::cast(bool skipCheck)
     }
     else
     {
-        m_caster->ProcDamageAndSpell(procTarget, m_procAttacker, 0, PROC_EX_CAST_END, 0, m_attackType, m_spellInfo);
-
         // Immediate spell, no big deal
         handle_immediate();
+
+        m_caster->ProcDamageAndSpell(procTarget, m_procAttacker, 0, PROC_EX_CAST_END, 0, m_attackType, m_spellInfo);
     }
 
     m_caster->DecreaseCastCounter();
@@ -5009,7 +5005,10 @@ SpellCastResult Spell::CheckOrTakeRunePower(bool take)
                 --runeCost[rune];
 
                 if (take)
+                {
                     plr->ConvertRune(i, plr->GetBaseRune(i));
+                    plr->ClearConvertedBy(i);
+                }
             }
         }
 
@@ -5329,7 +5328,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                 return SPELL_FAILED_CASTER_AURASTATE;
         }
 
-        if(IsDispelSpell(m_spellInfo) && GetSpellDuration(m_spellInfo) && target->IsFriendlyTo(m_caster))
+        if(IsDispelSpell(m_spellInfo) && target->IsFriendlyTo(m_caster) && !GetSpellDuration(m_spellInfo))
         {
             bool foundNeg = false;
             Unit::SpellAuraHolderMap const& auras = target->GetSpellAuraHolderMap();
@@ -6415,15 +6414,9 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
     if(!m_caster->isAlive())
         return SPELL_FAILED_CASTER_DEAD;
 
-    if(m_caster->IsNonMeleeSpellCasted(false))              //prevent spellcast interruption by another spellcast
-    {
-        if(this->m_spellInfo->Id == 33395) // Water Elemental's Freeze should overcast Waterbolt
-            m_caster->InterruptNonMeleeSpells(false);
-        else
-            return SPELL_FAILED_SPELL_IN_PROGRESS;
-    }
-
-    if(m_caster->isInCombat() && IsNonCombatSpell(m_spellInfo))
+    if (m_caster->IsNonMeleeSpellCasted(false))              //prevent spellcast interruption by another spellcast
+        return SPELL_FAILED_SPELL_IN_PROGRESS;
+    if (m_caster->isInCombat() && IsNonCombatSpell(m_spellInfo))
         return SPELL_FAILED_AFFECTING_COMBAT;
 
     if(m_caster->GetTypeId()==TYPEID_UNIT && (((Creature*)m_caster)->IsPet() || m_caster->isCharmed()))
@@ -8319,6 +8312,23 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
                 targetUnitMap.remove(unitTarget);
             return true;
         }
+        case 48278: //Svala - Banshee Paralize
+        {
+            UnitList tmpUnitMap;
+            FillAreaTargets(tmpUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+
+            if (tmpUnitMap.empty())
+                break;
+
+            for (UnitList::const_iterator itr = tmpUnitMap.begin(); itr != tmpUnitMap.end(); ++itr)
+            {
+                 if (!*itr) continue;
+
+                 if ((*itr)->HasAura(48267))
+                     targetUnitMap.push_back(*itr);
+            }
+            break;
+        }
         case 58912: // Deathstorm
         {
             if (!m_caster->GetObjectGuid().IsVehicle())
@@ -8336,13 +8346,12 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
                 targetUnitMap.push_back((Unit*)m_caster);
             break;
         }
-        case 62589: // Nature's Fury (10 man)
-        case 63571: // Nature's Fury (25 man)
-        {
-            FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
-            targetUnitMap.remove(m_caster); // exclude caster
-            break;
-        }
+        //case 62589: // Nature's Fury (10 man)
+        //case 63571: // Nature's Fury (25 man)
+        //{
+        //    FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+        //    targetUnitMap.remove(m_caster); // exclude caster
+        //}
         case 65045: // Flame of demolisher
         {
             FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
@@ -8577,6 +8586,41 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
                 }
             }
 
+            break;
+        }
+        case 71307: // Vile Gas (Festergut)
+        case 71908:
+        case 72270:
+        case 72271:
+        {
+            UnitList tempTargetUnitMap;
+            FillAreaTargets(tempTargetUnitMap, radius, PUSH_SELF_CENTER, SPELL_TARGETS_ALL);
+            if (!tempTargetUnitMap.empty())
+            {
+                for (UnitList::const_iterator iter = tempTargetUnitMap.begin(); iter != tempTargetUnitMap.end(); ++iter)
+                {
+                    if ((*iter)->GetEntry() == 38548)
+                        targetUnitMap.push_back(*iter);
+                }
+            }
+            if (!targetUnitMap.empty())
+            {
+                // remove random units from the map
+                while (targetUnitMap.size() > 1)
+                {
+                    uint32 poz = urand(0, targetUnitMap.size()-1);
+                    for (UnitList::iterator itr = targetUnitMap.begin(); itr != targetUnitMap.end(); ++itr, --poz)
+                    {
+                        if (!*itr) continue;
+
+                        if (!poz)
+                        {
+                            targetUnitMap.erase(itr);
+                            break;
+                        }
+                    }
+                }
+            }
             break;
         }
         case 72378: // Blood Nova

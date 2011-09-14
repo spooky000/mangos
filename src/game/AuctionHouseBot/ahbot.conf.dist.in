@@ -152,7 +152,7 @@ ConfVersion=2010102201
 #
 ###################################################################################################################
 
-AuctionHouseBot.Seller.Enabled = 1
+AuctionHouseBot.Seller.Enabled = 0
 AuctionHouseBot.DEBUG.Seller = 0
 
 AuctionHouseBot.Alliance.Items.Amount.Ratio = 100
@@ -171,6 +171,7 @@ AuctionHouseBot.Bind.Equip = 1
 AuctionHouseBot.Bind.Use = 1
 AuctionHouseBot.Bind.Quest = 0
 AuctionHouseBot.LockBox.Enabled = 0
+AuctionHouseBot.Pets.Enabled = 0
 
 AuctionHouseBot.ItemsPerCycle.Boost = 75
 AuctionHouseBot.ItemsPerCycle.Normal = 20
@@ -259,7 +260,7 @@ AuctionHouseBot.forceExcludeItems = ""
 #
 ###################################################################################################################
 
-AuctionHouseBot.Buyer.Enabled = 1
+AuctionHouseBot.Buyer.Enabled = 0
 AuctionHouseBot.DEBUG.Buyer = 0
 
 AuctionHouseBot.Buyer.Alliance.Enabled = 1
@@ -273,4 +274,3 @@ AuctionHouseBot.Buyer.Recheck.Interval = 20
 AuctionHouseBot.Buyer.Alliance.Chance.Ratio = 3
 AuctionHouseBot.Buyer.Horde.Chance.Ratio = 3
 AuctionHouseBot.Buyer.Neutral.Chance.Ratio = 3
-

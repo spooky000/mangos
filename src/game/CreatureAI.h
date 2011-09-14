@@ -25,6 +25,7 @@
 #include "Dynamic/ObjectRegistry.h"
 #include "Dynamic/FactoryHolder.h"
 #include "ObjectGuid.h"
+#include "Unit.h"
 
 class WorldObject;
 class GameObject;
@@ -254,6 +255,7 @@ class MANGOS_DLL_SPEC CreatureAI
         virtual bool canReachByRangeAttack(Unit*) { return false; }
 
         ///== Helper functions =============================
+        bool AttackByType(WeaponAttackType attType = BASE_ATTACK);
 
         /// This function is used to do the actual melee damage (if possible)
         bool DoMeleeAttackIfReady();

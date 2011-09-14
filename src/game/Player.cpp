@@ -2158,7 +2158,7 @@ void Player::Regenerate(Powers power, uint32 diff)
 
             for(uint32 rune = 0; rune < MAX_RUNES; ++rune)
             {
-                if(uint16 cd = GetRuneCooldown(rune))       // if we have cooldown, reduce it...
+                if (uint16 cd = GetRuneCooldown(rune))       // if we have cooldown, reduce it...
                 {
                     uint32 cd_diff = diff;
                     AuraList const& ModPowerRegenPCTAuras = GetAurasByType(SPELL_AURA_MOD_POWER_REGEN_PERCENT);
@@ -2167,6 +2167,22 @@ void Player::Regenerate(Powers power, uint32 diff)
                             cd_diff = cd_diff * ((*i)->GetModifier()->m_amount + 100) / 100;
 
                     SetRuneCooldown(rune, (cd < cd_diff) ? 0 : cd - cd_diff);
+
+                    // check if we don't have cooldown, need convert and that our rune wasn't already converted
+                    if (cd < cd_diff && m_runes->IsRuneNeedsConvert(rune) && GetBaseRune(rune) == GetCurrentRune(rune))
+                    {
+                        // currently all delayed rune converts happen with rune death
+                        // ConvertedBy was initialized at proc
+                        ConvertRune(rune, RUNE_DEATH);
+                        SetNeedConvertRune(rune, false);
+                    }
+                }
+                else if (m_runes->IsRuneNeedsConvert(rune) && GetBaseRune(rune) == GetCurrentRune(rune))
+                {
+                    // currently all delayed rune converts happen with rune death
+                    // ConvertedBy was initialized at proc
+                    ConvertRune(rune, RUNE_DEATH);
+                    SetNeedConvertRune(rune, false);
                 }
             }
         }   break;
@@ -4506,10 +4522,17 @@ void Player::BuildPlayerRepop()
     // there we must send 888 opcode
 
     // the player cannot have a corpse already, only bones which are not returned by GetCorpse
-    if(GetCorpse())
+    if(Corpse *old_corpse = GetCorpse())
     {
+        sObjectAccessor.RemoveCorpse(old_corpse);
+        Map *map = sMapMgr.FindMap(old_corpse->GetMapId(), old_corpse->GetInstanceId());
+        if(map)
+            map->Remove(old_corpse, false);
+
+        old_corpse->DeleteFromDB();
+        delete old_corpse;
         sLog.outError("BuildPlayerRepop: player %s(%d) already has a corpse", GetName(), GetGUIDLow());
-        MANGOS_ASSERT(false);
+        //MANGOS_ASSERT(false);
     }
 
     // create a corpse and place it at the player's location
@@ -5630,6 +5653,30 @@ bool Player::UpdateSkillPro(uint16 SkillId, int32 Chance, uint32 step)
                 break;
             }
         }
+
+        // Update depended enchants
+        for (int i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+        {
+            if (Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
+            {
+
+                for(int slot = 0; slot < MAX_ENCHANTMENT_SLOT; ++slot)
+                {
+                    uint32 enchant_id = pItem->GetEnchantmentId(EnchantmentSlot(slot));
+                    if (!enchant_id)
+                         continue;
+
+                     SpellItemEnchantmentEntry const *pEnchant = sSpellItemEnchantmentStore.LookupEntry(enchant_id);
+                     if (!pEnchant)
+                         continue;
+                     if (pEnchant->requiredSkill != SkillId)
+                         continue;
+                     if (SkillValue < pEnchant->requiredSkillValue && new_value >= pEnchant->requiredSkillValue)
+                         ApplyEnchantment(pItem, EnchantmentSlot(slot), true);
+                }
+            }
+        }
+
         GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_REACH_SKILL_LEVEL,SkillId);
         DEBUG_LOG("Player::UpdateSkillPro Chance=%3.1f%% taken", Chance/10.0);
         return true;
@@ -5820,22 +5867,83 @@ void Player::SetSkill(uint16 id, uint16 currVal, uint16 maxVal, uint16 step /*=0
     SkillStatusMap::iterator itr = mSkillStatus.find(id);
 
     // has skill
-    if(itr != mSkillStatus.end() && itr->second.uState != SKILL_DELETED)
+    if (itr != mSkillStatus.end() && itr->second.uState != SKILL_DELETED)
     {
-        if(currVal)
+        if (currVal)
         {
+             for (int i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+             {
+                if (Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
+                {
+                    for(int slot = 0; slot < MAX_ENCHANTMENT_SLOT; ++slot)
+                    {
+                         uint32 enchant_id = pItem->GetEnchantmentId(EnchantmentSlot(slot));
+                         if (!enchant_id)
+                             continue;
+
+                         SpellItemEnchantmentEntry const *pEnchant = sSpellItemEnchantmentStore.LookupEntry(enchant_id);
+                         if (!pEnchant)
+                             continue;
+                         if (pEnchant->requiredSkill != id)
+                             continue;
+                         ApplyEnchantment(pItem, EnchantmentSlot(slot), false);
+                    }
+                }
+            }
+
             if (step)                                      // need update step
                 SetUInt32Value(PLAYER_SKILL_INDEX(itr->second.pos), MAKE_PAIR32(id, step));
             // update value
             SetUInt32Value(PLAYER_SKILL_VALUE_INDEX(itr->second.pos), MAKE_SKILL_VALUE(currVal, maxVal));
-            if(itr->second.uState != SKILL_NEW)
+            if (itr->second.uState != SKILL_NEW)
                 itr->second.uState = SKILL_CHANGED;
             learnSkillRewardedSpells(id, currVal);
             GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_REACH_SKILL_LEVEL, id);
             GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LEARN_SKILL_LEVEL, id);
+
+             for (int i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+             {
+                if (Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
+                {
+                    for(int slot = 0; slot < MAX_ENCHANTMENT_SLOT; ++slot)
+                    {
+                         uint32 enchant_id = pItem->GetEnchantmentId(EnchantmentSlot(slot));
+                         if (!enchant_id)
+                             continue;
+
+                         SpellItemEnchantmentEntry const *pEnchant = sSpellItemEnchantmentStore.LookupEntry(enchant_id);
+                         if (!pEnchant)
+                             continue;
+                         if (pEnchant->requiredSkill != id)
+                             continue;
+                         ApplyEnchantment(pItem, EnchantmentSlot(slot), true);
+                    }
+                }
+            }
+
         }
         else                                                //remove
         {
+             // Remove depended enchants
+             for (int i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+             {
+                if (Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
+                {
+                    for(int slot = 0; slot < MAX_ENCHANTMENT_SLOT; ++slot)
+                    {
+                         uint32 enchant_id = pItem->GetEnchantmentId(EnchantmentSlot(slot));
+                         if (!enchant_id)
+                             continue;
+
+                         SpellItemEnchantmentEntry const *pEnchant = sSpellItemEnchantmentStore.LookupEntry(enchant_id);
+                         if (!pEnchant)
+                             continue;
+                         if (pEnchant->requiredSkill != id)
+                             continue;
+                         ApplyEnchantment(pItem, EnchantmentSlot(slot), false);
+                    }
+                }
+            }
             // clear skill fields
             SetUInt32Value(PLAYER_SKILL_INDEX(itr->second.pos), 0);
             SetUInt32Value(PLAYER_SKILL_VALUE_INDEX(itr->second.pos), 0);
@@ -12897,6 +13005,15 @@ void Player::ApplyEnchantment(Item *item, EnchantmentSlot slot, bool apply, bool
     if (!ignore_condition && pEnchant->EnchantmentCondition && !((Player*)this)->EnchantmentFitsRequirements(pEnchant->EnchantmentCondition, -1))
         return;
 
+    if ((pEnchant->requiredLevel) > ((Player*)this)->getLevel())
+        return;
+
+    if ((pEnchant->requiredSkill) > 0)
+    {
+       if ((pEnchant->requiredSkillValue) > (((Player*)this)->GetSkillValue(pEnchant->requiredSkill)))
+        return;
+    }
+
     if (!item->IsBroken())
     {
         for (int s = 0; s < 3; ++s)
@@ -14258,14 +14375,14 @@ void Player::RewardQuest(Quest const *pQuest, uint32 reward, Object* questGiver,
             DestroyItemCount(pQuest->ReqItemId[i], pQuest->ReqItemCount[i], true);
     }
 
-    // Destroy quest item  
-    uint32 srcitem = pQuest->GetSrcItemId();  
-    if (srcitem > 0)  
-    {  
-        uint32 count = pQuest->GetSrcItemCount();  
-        if (count <= 0)  
-            count = 1;  
-        DestroyItemCount(srcitem, count, true, true);  
+    // Destroy quest item
+    uint32 srcitem = pQuest->GetSrcItemId();
+    if (srcitem > 0)
+    {
+        uint32 count = pQuest->GetSrcItemCount();
+        if (count <= 0)
+            count = 1;
+        DestroyItemCount(srcitem, count, true, true);
     }
 
     RemoveTimedQuest(quest_id);
@@ -15908,10 +16025,6 @@ bool Player::LoadFromDB(ObjectGuid guid, SqlQueryHolder *holder )
 
             // We are not in BG anymore
             SetBattleGroundId(0, BATTLEGROUND_TYPE_NONE);
-
-            /*if(!isAlive() && IsInWorld())      // resurrect on exit - FEANOR: temp disabled...
-                ResurrectPlayer(1.0f);*/
-
             // remove outdated DB data in DB
             _SaveBGData();
         }
@@ -15923,14 +16036,9 @@ bool Player::LoadFromDB(ObjectGuid guid, SqlQueryHolder *holder )
         // player can have current coordinates in to BG/Arena map, fix this
         if(!mapEntry || mapEntry->IsBattleGroundOrArena())
         {
-            
-
             const WorldLocation& _loc = GetBattleGroundEntryPoint();
             SetLocationMapId(_loc.mapid);
             Relocate(_loc.coord_x, _loc.coord_y, _loc.coord_z, _loc.orientation);
-
-            /*if(!isAlive() && IsInWorld())      // resurrect on exit - Feanor: temp disabled..
-                ResurrectPlayer(1.0f);*/
 
             // We are not in BG anymore
             SetBattleGroundId(0, BATTLEGROUND_TYPE_NONE);
@@ -20801,9 +20909,6 @@ void Player::SendInitialPacketsBeforeAddToMap()
 
 void Player::SendInitialPacketsAfterAddToMap()
 {
-    if(getClass() == CLASS_DEATH_KNIGHT)
-        ResyncRunes();
-
     WorldPacket data0(SMSG_SET_PHASE_SHIFT, 4);
     data0 << uint32(GetPhaseMask());
     GetSession()->SendPacket(&data0);
@@ -22184,9 +22289,12 @@ void Player::SetTitle(CharTitlesEntry const* title, bool lost)
     GetSession()->SendPacket(&data);
 }
 
-void Player::ConvertRune(uint8 index, RuneType newType)
+void Player::ConvertRune(uint8 index, RuneType newType, uint32 spellid)
 {
     SetCurrentRune(index, newType);
+
+    if (spellid != 0)
+        SetConvertedBy(index, spellid);
 
     WorldPacket data(SMSG_CONVERT_RUNE, 2);
     data << uint8(index);
@@ -22240,18 +22348,20 @@ static RuneType runeSlotTypes[MAX_RUNES] = {
 
 void Player::InitRunes()
 {
-    if(getClass() != CLASS_DEATH_KNIGHT)
+    if (getClass() != CLASS_DEATH_KNIGHT)
         return;
 
     m_runes = new Runes;
 
     m_runes->runeState = 0;
+    m_runes->needConvert = 0;
 
     for(uint32 i = 0; i < MAX_RUNES; ++i)
     {
         SetBaseRune(i, runeSlotTypes[i]);                   // init base types
         SetCurrentRune(i, runeSlotTypes[i]);                // init current types
         SetRuneCooldown(i, 0);                              // reset cooldowns
+        SetConvertedBy(i, 0);                               // init spellid
         m_runes->SetRuneState(i);
     }
 
@@ -24030,4 +24140,89 @@ uint8 Player::GetTalentsCount(uint8 tab)
     }
     m_cachedTC[tab] = talentCount;
     return talentCount;
+}
+
+uint32 Player::GetModelForForm(SpellShapeshiftFormEntry const* ssEntry) const
+{
+    ShapeshiftForm form = ShapeshiftForm(ssEntry->ID);
+    Team team = TeamForRace(getRace());
+    uint32 modelid = 0;
+    // The following are the different shapeshifting models for cat/bear forms according
+    // to hair color for druids and skin tone for tauren introduced in patch 3.2
+    if (form == FORM_CAT || form == FORM_BEAR || form == FORM_DIREBEAR)
+    {
+        if (team == ALLIANCE)
+        {
+            uint8 hairColour = GetByteValue(PLAYER_BYTES, 3);
+            if (form == FORM_CAT)
+            {
+                if (hairColour >= 0 && hairColour <= 2) modelid = 29407;
+                else if (hairColour == 3 || hairColour == 5) modelid = 29405;
+                else if (hairColour == 6) modelid = 892;
+                else if (hairColour == 7) modelid = 29406;
+                else if (hairColour == 4) modelid = 29408;
+            }
+            else // form == FORM_BEAR || form == FORM_DIREBEAR
+            {
+                if (hairColour >= 0 && hairColour <= 2) modelid = 29413;
+                else if (hairColour == 3 || hairColour == 5) modelid = 29415;
+                else if (hairColour == 6) modelid = 29414;
+                else if (hairColour == 7) modelid = 29417;
+                else if (hairColour == 4) modelid = 29416;
+            }
+        }
+        else if (team == HORDE)
+        {
+            uint8 skinColour = GetByteValue(PLAYER_BYTES, 0);
+            if (getGender() == GENDER_MALE)
+            {
+                if (form == FORM_CAT)
+                {
+                    if (skinColour >= 0 && skinColour <= 5) modelid = 29412;
+                    else if (skinColour >= 6 && skinColour <= 8) modelid = 29411;
+                    else if (skinColour >= 9 && skinColour <= 11) modelid = 29410;
+                    else if (skinColour >= 12 && skinColour <= 14 || skinColour == 18) modelid = 29409;
+                    else if (skinColour >= 15 && skinColour <= 17) modelid = 8571;
+                }
+                else // form == FORM_BEAR || form == FORM_DIREBEAR
+                {
+                    if (skinColour >= 0 && skinColour <= 2) modelid = 29418;
+                    else if (skinColour >= 3 && skinColour <= 5 || skinColour >= 12 && skinColour <= 14) modelid = 29419;
+                    else if (skinColour >= 9 && skinColour <= 11 || skinColour >= 15 && skinColour <= 17) modelid = 29420;
+                    else if (skinColour >= 6 && skinColour <= 8) modelid = 2289;
+                    else if (skinColour == 18) modelid = 29421;
+                }
+            }
+            else // getGender() == GENDER_FEMALE
+            {
+                if (form == FORM_CAT)
+                {
+                    if (skinColour >= 0 && skinColour <= 3) modelid = 29412;
+                    else if (skinColour == 4 || skinColour == 5) modelid = 29411;
+                    else if (skinColour == 6 || skinColour == 7) modelid = 29410;
+                    else if (skinColour == 8 || skinColour == 9) modelid = 8571;
+                    else if (skinColour == 10) modelid = 29409;
+                }
+                else // form == FORM_BEAR || form == FORM_DIREBEAR
+                {
+                    if (skinColour == 0 || skinColour == 1) modelid = 29418;
+                    else if (skinColour == 2 || skinColour == 3) modelid = 29419;
+                    else if (skinColour == 4 || skinColour == 5) modelid = 2289;
+                    else if (skinColour >= 6 && skinColour <= 9) modelid = 29420;
+                    else if (skinColour == 10) modelid = 29421;
+                }
+            }
+        }
+    }
+    else if (team == HORDE)
+    {
+        if (ssEntry->modelID_H)
+            modelid = ssEntry->modelID_H;           // 3.2.3 only the moonkin form has this information
+        else                                        // get model for race
+            modelid = sObjectMgr.GetModelForRace(ssEntry->modelID_A, getRaceMask());
+    }
+    // nothing found in above, so use default
+    if (!modelid)
+        modelid = ssEntry->modelID_A;
+    return modelid;
 }

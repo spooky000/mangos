@@ -10564,40 +10564,81 @@ void Spell::EffectBlock(SpellEffectIndex /*eff_idx*/)
 
 void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
 {
-    if (unitTarget->IsTaxiFlying())
+    if(unitTarget->IsTaxiFlying())
         return;
 
-    if (m_spellInfo->rangeIndex == 1)                       //self range
+    if( m_spellInfo->rangeIndex == 1)                       //self range
     {
-        TerrainInfo const* terrain = unitTarget->GetTerrain();
-        if (!terrain)
-            return;
+        TerrainInfo const* map = unitTarget->GetTerrain();
+        float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
+        //For glyph of blink
+        if(m_caster->GetTypeId() == TYPEID_PLAYER)
+            ((Player*)m_caster)->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RADIUS, dis, this);
 
-        float distance = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
+        // Start Info //
+        float cx,cy,cz;
+        float dx,dy,dz;
+        float angle = unitTarget->GetOrientation();
+        unitTarget->GetPosition(cx,cy,cz);
+          
+        //Check use of vmaps//
+        bool useVmap = false;
+        bool swapZone = true;
 
-        //Glyph of blink
-        if (m_caster->GetTypeId() == TYPEID_PLAYER)
-            ((Player*)m_caster)->ApplySpellMod(m_spellInfo->Id, SPELLMOD_RADIUS, distance, this);
+        if (map->GetHeight(cx, cy, cz, false) < map->GetHeight(cx, cy, cz, true))
+            useVmap = true;
 
-        float ox, oy, oz;
-        unitTarget->GetPosition(ox, oy, oz);
-        float fx, fy, fz;
-        fz = oz + 2.f;
-        fx = unitTarget->GetPositionX() + distance * cos(unitTarget->GetOrientation());
-        fy = unitTarget->GetPositionY() + distance * sin(unitTarget->GetOrientation());
+        const float _dx = 0.5f * cos(angle);
+        const float _dy = 0.5f * sin(angle);
+        dx = cx;
+        dy = cy;
 
-        MaNGOS::NormalizeMapCoord(fx);
-        MaNGOS::NormalizeMapCoord(fy);
-
-        if (terrain->CheckPathAccurate(ox,oy,oz,fx,fy,fz, sWorld.getConfig(CONFIG_BOOL_CHECK_GO_IN_PATH) ? unitTarget : NULL ))
-            DEBUG_LOG("Spell::EffectLeapForward unit %u forwarded on %f",unitTarget->GetObjectGuid().GetCounter(), unitTarget->GetDistance(fx,fy,fz));
-        else
-            DEBUG_LOG("Spell::EffectLeapForward unit %u NOT forwarded on %f, real distance is %f",unitTarget->GetObjectGuid().GetCounter(), distance, unitTarget->GetDistance(fx,fy,fz));
+        //Going foward 0.5f until max distance
+        for (float i = 0.5f; i < dis; i += 0.5f)
+        {
+            //unitTarget->GetNearPoint2D(dx,dy,i,angle);
+            dx += _dx;
+            dy += _dy;
+            MaNGOS::NormalizeMapCoord(dx);
+            MaNGOS::NormalizeMapCoord(dy);
+            dz = cz;
+             
+            if (unitTarget->IsWithinLOS(dx, dy, dz))
+            {
+                //No climb, the z differenze between this and prev step is ok. Store this destination for future use or check.
+                cx = dx;
+                cy = dy;
+                unitTarget->UpdateGroundPositionZ(cx, cy, cz, 1.0f);
+            }
+            else
+            {
+                //Something wrong with los or z differenze... maybe we are going from outer world inside a building or viceversa
+                if(swapZone)
+                {
+                    //so... change use of vamp and go back 1 step backward and recheck again.
+                    swapZone = false;
+                    useVmap = !useVmap;
+                    //i-=0.5f;
+                    --i;
+                    dx -= _dx;
+                    dy -= _dy;
+                }
+                else
+                {
+                    //bad recheck result... so break this and use last good coord for teleport player...
+                    dz += 0.2f;
+                    break;
+                }
+            }
+        }
 
         //Prevent Falling during swap building/outerspace
-        unitTarget->UpdateAllowedPositionZ(fx, fy, fz);
+        unitTarget->UpdateGroundPositionZ(cx, cy, cz);
 
-        unitTarget->NearTeleportTo(fx, fy, fz, unitTarget->GetOrientation(), unitTarget == m_caster);
+        if(unitTarget->GetTypeId() == TYPEID_PLAYER)
+            ((Player*)unitTarget)->TeleportTo(map->GetMapId(), cx, cy, cz, unitTarget->GetOrientation(), TELE_TO_NOT_LEAVE_COMBAT | TELE_TO_NOT_UNSUMMON_PET | (unitTarget==m_caster ? TELE_TO_SPELL : 0));
+        else
+            unitTarget->GetMap()->CreatureRelocation((Creature*)unitTarget, cx, cy, cz, unitTarget->GetOrientation());
     }
 }
 
@@ -10973,8 +11014,19 @@ void Spell::EffectSummonAllTotems(SpellEffectIndex eff_idx)
         if (ActionButton const* actionButton = ((Player*)m_caster)->GetActionButton(start_button+slot))
             if (actionButton->GetType()==ACTION_BUTTON_SPELL)
                 if (uint32 spell_id = actionButton->GetAction())
-                  if (!((Player*)m_caster)->HasSpellCooldown(spell_id))
-                    m_caster->CastSpell(unitTarget,spell_id,true);
+                    if (!((Player*)m_caster)->HasSpellCooldown(spell_id))
+                    {
+                        // Check items for TotemCategory  (items presence in inventory)
+                        SpellEntry const *totemSpell = sSpellStore.LookupEntry(spell_id);
+                        bool hasRequired = true;
+                        for(int i= 0; i < MAX_SPELL_TOTEM_CATEGORIES; ++i)
+                            if (totemSpell->TotemCategory[i] != 0)
+                                if (!((Player*)m_caster)->HasItemTotemCategory(totemSpell->TotemCategory[i]))
+                                    hasRequired = false;
+
+                        if (hasRequired)
+                            m_caster->CastSpell(unitTarget, spell_id, true);
+                    }
 }
 
 void Spell::EffectDestroyAllTotems(SpellEffectIndex /*eff_idx*/)
