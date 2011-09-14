@@ -20909,9 +20909,6 @@ void Player::SendInitialPacketsBeforeAddToMap()
 
 void Player::SendInitialPacketsAfterAddToMap()
 {
-    if(getClass() == CLASS_DEATH_KNIGHT)
-        ResyncRunes();
-
     WorldPacket data0(SMSG_SET_PHASE_SHIFT, 4);
     data0 << uint32(GetPhaseMask());
     GetSession()->SendPacket(&data0);
@@ -22351,18 +22348,20 @@ static RuneType runeSlotTypes[MAX_RUNES] = {
 
 void Player::InitRunes()
 {
-    if(getClass() != CLASS_DEATH_KNIGHT)
+    if (getClass() != CLASS_DEATH_KNIGHT)
         return;
 
     m_runes = new Runes;
 
     m_runes->runeState = 0;
+    m_runes->needConvert = 0;
 
     for(uint32 i = 0; i < MAX_RUNES; ++i)
     {
         SetBaseRune(i, runeSlotTypes[i]);                   // init base types
         SetCurrentRune(i, runeSlotTypes[i]);                // init current types
         SetRuneCooldown(i, 0);                              // reset cooldowns
+        SetConvertedBy(i, 0);                               // init spellid
         m_runes->SetRuneState(i);
     }
 
