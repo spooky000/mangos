@@ -1305,7 +1305,7 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                     continue;
 
                 // Defense of the Ancients
-                if(achievementCriteria->referredAchievement == 1757)
+                if(achievementCriteria->referredAchievement == 1757 || achievementCriteria->referredAchievement == 2200)
                 {
                     // If not in SotA
                     BattleGround * bg = GetPlayer()->GetBattleGround();
