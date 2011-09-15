@@ -88,7 +88,8 @@ enum BG_SA_GraveYard
 enum BG_SA_Timers
 {
     BG_SA_ROUNDLENGTH                   = 600000,
-    BG_SA_BOAT_START                    = 60000
+    BG_SA_BOAT_START                    = 60000,
+    BG_SA_PILLAR_START                  = 90000
 };
 
 enum BG_SA_GateStatus
@@ -247,7 +248,7 @@ class BattleGroundSA : public BattleGround
         bool shipsStarted;
         bool relicGateDestroyed;
         uint32 shipsTimer;
-        bool isDemolisherDestroyed[2];
+        uint32 pillarOpenTimer;
         /* Scorekeeping */
         void UpdatePlayerScore(Player *Source, uint32 type, uint32 value);
         /* For boats */
@@ -265,6 +266,7 @@ class BattleGroundSA : public BattleGround
         void TeleportPlayerToCorrectLoc(Player *player, bool resetBattle = false);
         // for achievement - win with all walls
         bool winSAwithAllWalls(Team team);
+        bool isDemolisherDestroyed[2];
 
     private:
         uint8               m_Gyd[BG_SA_GRY_MAX];

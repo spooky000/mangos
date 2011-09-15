@@ -75,6 +75,7 @@ BattleGroundSA::BattleGroundSA()
     isDemolisherDestroyed[0] = false; // ALLIANCE
     isDemolisherDestroyed[1] = false; // HORDE
     shipsTimer = BG_SA_BOAT_START;
+    pillarOpenTimer = BG_SA_PILLAR_START;
     for (int32 i = 0; i <= BG_SA_GATE_MAX; ++i)
         GateStatus[i] = 1;
     TimerEnabled = false;
@@ -188,13 +189,22 @@ void BattleGroundSA::Update(uint32 diff)
     BattleGround::Update(diff);
 
     if (GetStatus() == STATUS_WAIT_JOIN && !shipsStarted)
+    {
         if (Phase == SA_ROUND_ONE) // Round one not started yet
         {
             if (shipsTimer <= diff)
                 StartShips();
             else
                 shipsTimer -= diff;
+
+            if (pillarOpenTimer && pillarOpenTimer <= diff)
+            {
+                OpenDoorEvent(SA_EVENT_OP_DOOR, 0);
+                pillarOpenTimer = diff;
+            }
+            else pillarOpenTimer -= diff;
         }
+    }
 
     if (GetStatus() == STATUS_IN_PROGRESS) // Battleground already in progress
     {
@@ -978,42 +988,31 @@ void BattleGroundSA::TeleportPlayerToCorrectLoc(Player *plr, bool resetBattle)
     if (!plr)
         return;
 
-    if (!shipsStarted)
-    {
-        if (plr->GetTeam() != GetDefender())
-        {
-            if (urand(0,1))
-                plr->TeleportTo(607, 2682.936f, -830.368f, 15.0f, 2.895f, 0);
-            else
-                plr->TeleportTo(607, 2577.003f, 980.261f, 15.0f, 0.807f, 0);
-
-        }
-        else
-            plr->TeleportTo(607, 1209.7f, -65.16f, 70.1f, 0.0f, 0);
-    }
-    else if (GetStartTime() < (2 * MINUTE * IN_MILLISECONDS))
-    {
-        if (plr->GetTeam() != GetDefender())
-        {
-            if (urand(0,1))
-                plr->TeleportTo(607, 1804.10f, -168.46f, 60.55f, 2.65f, 0);
-            else
-                plr->TeleportTo(607, 1803.71f, 118.61f, 59.83f, 3.56f, 0);
-        }
-        else
-            plr->TeleportTo(607, 1209.7f, -65.16f, 70.1f, 0.0f, 0);
-    }
+    if (plr->GetTeam() == GetDefender())
+        plr->TeleportTo(607, 1209.7f, -65.16f, 70.1f, 0.0f, 0); // Defenders position
     else
     {
-        if (plr->GetTeam() != GetDefender())
+        if (!shipsStarted)
+        {
+            if (urand(0,1))
+                plr->TeleportTo(607, 2682.936f, -830.368f, 15.0f, 2.895f, 0); // Ship Right
+            else
+                plr->TeleportTo(607, 2577.003f, 980.261f, 15.0f, 0.807f, 0); // Ship Left
+        }
+        else if (GetStartTime() < (90 * IN_MILLISECONDS))
+        {
+            if (urand(0,1))
+                plr->TeleportTo(607, 1804.10f, -168.46f, 60.55f, 2.65f, 0); // Pillar Left
+            else
+                plr->TeleportTo(607, 1803.71f, 118.61f, 59.83f, 3.56f, 0); // Pillar Right
+        }
+        else // If BG starts in 30 sec it teleports directly at the beach
         {
             if (urand(0,1))
                 plr->TeleportTo(607, 1597.64f, -106.35f, 8.89f, 4.13f, 0);
             else
                 plr->TeleportTo(607, 1606.61f, 50.13f, 7.58f, 2.39f, 0);
         }
-        else
-            plr->TeleportTo(607, 1209.7f, -65.16f, 70.1f, 0.0f, 0);
     }
     SendTransportInit(plr);
     if (resetBattle)
