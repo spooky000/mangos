@@ -1970,6 +1970,9 @@ void Group::RewardGroupAtKill(Unit* pVictim, Player* player_tap)
             if(!pGroupGuy->IsAtGroupRewardDistance(pVictim))
                 continue;                               // member (alive or dead) or his corpse at req. distance
 
+            if (pVictim->GetTypeId() == TYPEID_PLAYER)
+                pGroupGuy->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_SPECIAL_PVP_KILL,1,0,pVictim);
+
             RewardGroupAtKill_helper(pGroupGuy, pVictim, count, PvP, group_rate, sum_level, is_dungeon, not_gray_member_with_max_level, member_with_max_level, xp);
         }
 
