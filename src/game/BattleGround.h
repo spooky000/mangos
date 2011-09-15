@@ -504,7 +504,7 @@ class BattleGround
         virtual void EventPlayerClickedOnFlag(Player* /*player*/, GameObject* /*target_obj*/) {}
         virtual void EventPlayerCapturedFlag(Player* /*player*/) {}
 
-        virtual void EventPlayerDamageGO(Player* /*player*/, GameObject* /*target_obj*/, uint32 /*eventId*/) {}
+        virtual void EventPlayerDamageGO(Player* /*player*/, GameObject* /*target_obj*/, uint32 /*eventId*/, uint32 /*bySpellId*/) {}
         virtual void EventSpawnGOSA(Player* /*owner*/, Creature* /*obj*/, float /*x*/, float /*y*/, float /*z*/) {}
         virtual void VirtualUpdatePlayerScore(Player* /*Source*/, uint32 /*type*/, uint32 /*value*/) {}
 

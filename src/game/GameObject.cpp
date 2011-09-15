@@ -1185,7 +1185,7 @@ void GameObject::Use(Unit* user)
                     if (player->CanUseBattleGroundObject())
                         if (BattleGround *bg = player->GetBattleGround())
                             if (bg->GetTypeID(true) == BATTLEGROUND_SA)
-                                bg->EventPlayerDamageGO(player, this, info->goober.eventId);
+                                bg->EventPlayerDamageGO(player, this, info->goober.eventId, 0);
                 }
 
                 // possible quest objective for active quests
@@ -1719,7 +1719,7 @@ bool GameObject::IsInRange(float x, float y, float z, float radius) const
         && dz < info->maxZ + radius && dz > info->minZ - radius;
 }
 
-void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage, const SpellEntry * pSpell)
+void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage, uint32 spellId)
 {
     if (GetGoType() != GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING || !m_health)
         return;
@@ -1741,7 +1741,7 @@ void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage, const SpellEntry * pS
         // For Strand of the Ancients and probably Isle of Conquest
         if (pWho)
             if (BattleGround *bg = pWho->GetBattleGround())
-                bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.damageEvent, pSpell ? pSpell->Id : 0);
+                bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.damageEvent, spellId);
     }
     else
         m_health = 0;
@@ -1759,7 +1759,7 @@ void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage, const SpellEntry * pS
                 //sScriptMgr.OnGameObjectDestroyed(pWho, this, m_goInfo->destructibleBuilding.destroyedEvent);
 
                 if (BattleGround *bg = pWho->GetBattleGround())
-                    bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.destroyedEvent, pSpell ? pSpell->Id);
+                    bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.destroyedEvent, spellId);
             }
         }
     }
@@ -1782,7 +1782,7 @@ void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage, const SpellEntry * pS
 
             if (pWho)
                 if (BattleGround *bg = pWho->GetBattleGround())
-                    bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.damagedEvent);
+                    bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.damagedEvent, spellId);
          }
     }
     SetGoAnimProgress(m_health * 255 / GetMaxHealth());
