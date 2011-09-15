@@ -1605,20 +1605,12 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                 if (!miscvalue1)
                     continue;
 
-                // those requirements couldn't be found in the dbc
-                AchievementCriteriaRequirementSet const* data = sAchievementMgr.GetCriteriaRequirementSet(achievementCriteria);
-                if (!data)
-                    continue;
-
-                if (!data->Meets(GetPlayer(),unit))
-                    continue;
-
                 switch(achievementCriteria->referredAchievement)
                 {
                     case 207:                       // Save The Day
                     {
                         BattleGround* bg = GetPlayer()->GetBattleGround();
-                        if (!bg)
+                        if (!bg || !unit)
                             continue;
 
                         if (bg->GetTypeID(true) != BATTLEGROUND_WS)
@@ -1627,14 +1619,23 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                         switch(GetPlayer()->GetTeam())
                         {
                             case ALLIANCE:
-                                if (!(((BattleGroundWS*)bg)->GetFlagState(HORDE) == BG_WS_FLAG_STATE_ON_BASE))
+                                if (!(((BattleGroundWS*)bg)->GetFlagState(HORDE) == BG_WS_FLAG_STATE_ON_BASE) || !unit->HasAura(23335) || GetPlayer()->GetAreaId() != 4572)
                                     continue;
                                 break;
                             case HORDE:
-                                if (!(((BattleGroundWS*)bg)->GetFlagState(ALLIANCE) == BG_WS_FLAG_STATE_ON_BASE))
+                                if (!(((BattleGroundWS*)bg)->GetFlagState(ALLIANCE) == BG_WS_FLAG_STATE_ON_BASE) || !unit->HasAura(23333) || GetPlayer()->GetAreaId() != 4571)
                                     continue;
                                 break;
                         }
+                        break;
+                    }
+                    default:
+                    {
+                        // those requirements couldn't be found in the dbc
+                        AchievementCriteriaRequirementSet const* data = sAchievementMgr.GetCriteriaRequirementSet(achievementCriteria);
+                        if(!data || !data->Meets(GetPlayer(),unit))
+                            continue;
+                        break;
                     }
                 }
 
