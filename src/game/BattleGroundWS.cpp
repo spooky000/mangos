@@ -150,6 +150,9 @@ void BattleGroundWS::StartingEventOpenDoors()
     SpawnEvent(WS_EVENT_SPIRITGUIDES_SPAWN, 0, true);
     SpawnEvent(WS_EVENT_FLAG_A, 0, true);
     SpawnEvent(WS_EVENT_FLAG_H, 0, true);
+
+    // Players that join battleground after start are not available to get achievement.
+    StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_WIN_BG, BG_WS_EVENT_START_BATTLE);
 }
 
 void BattleGroundWS::AddPlayer(Player *plr)
