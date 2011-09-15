@@ -1719,7 +1719,7 @@ bool GameObject::IsInRange(float x, float y, float z, float radius) const
         && dz < info->maxZ + radius && dz > info->minZ - radius;
 }
 
-void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage)
+void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage, const SpellEntry * pSpell)
 {
     if (GetGoType() != GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING || !m_health)
         return;
@@ -1741,7 +1741,7 @@ void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage)
         // For Strand of the Ancients and probably Isle of Conquest
         if (pWho)
             if (BattleGround *bg = pWho->GetBattleGround())
-                bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.damageEvent);
+                bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.damageEvent, pSpell ? pSpell->Id : 0);
     }
     else
         m_health = 0;
@@ -1759,7 +1759,7 @@ void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage)
                 //sScriptMgr.OnGameObjectDestroyed(pWho, this, m_goInfo->destructibleBuilding.destroyedEvent);
 
                 if (BattleGround *bg = pWho->GetBattleGround())
-                    bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.destroyedEvent);
+                    bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.destroyedEvent, pSpell ? pSpell->Id);
             }
         }
     }
@@ -1780,7 +1780,7 @@ void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage)
             else
                 m_health = 0;
 
-            if (pWho)       
+            if (pWho)
                 if (BattleGround *bg = pWho->GetBattleGround())
                     bg->EventPlayerDamageGO(pWho, this, m_goInfo->destructibleBuilding.damagedEvent);
          }
