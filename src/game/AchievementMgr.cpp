@@ -1304,6 +1304,19 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                 if(!data->Meets(GetPlayer(),unit))
                     continue;
 
+                // Defense of the Ancients
+                if(achievementCriteria->referredAchievement == 1757)
+                {
+                    // If not in SotA
+                    BattleGround * bg = GetPlayer()->GetBattleGround();
+                    if(!bg || bg->GetTypeID(true) != BATTLEGROUND_SA)
+                        continue;
+
+                    // If hasnt all walls.
+                    if(!((BattleGroundSA*)bg)->winSAwithAllWalls(GetPlayer()->GetTeam()))
+                        continue;
+                }
+
                 change = 1;
                 progressType = PROGRESS_ACCUMULATE;
                 break;
