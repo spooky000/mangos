@@ -335,6 +335,7 @@ void BattleGroundSA::StartingEventOpenDoors()
 {
     SpawnEvent(SA_EVENT_ADD_NPC, 0, true);
     ToggleTimer();
+    StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, (defender  == HORDE) ? 23748 : 21702);
 }
 
 void BattleGroundSA::RemovePlayer(Player* /*plr*/, ObjectGuid /*guid*/)
