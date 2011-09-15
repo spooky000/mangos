@@ -945,22 +945,6 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                     // some hardcoded requirements
                     switch(achievementCriteria->referredAchievement)
                     {
-                        case 214:              // EY, win under 6 minutes
-                        case 226:              // AV, win under 6 minutes
-                        case 159:              // AB, win under 6 minutes
-                        {
-                            // set 8 minutes because there is 2 minutes long preparation
-                            if(bg->GetStartTime() > (8 * MINUTE * IN_MILLISECONDS))
-                                continue;
-                            break;
-                        }
-                        case 201:              // WS, win under 7 minutes
-                        {
-                            // set 9 minutes because there is 2 minutes long preparation
-                            if(bg->GetStartTime() > (9 * MINUTE * IN_MILLISECONDS))
-                                continue;
-                            break;
-                        }
                         case 1164:             // AV, own both mines (horde)
                         case 225:              // AV, own both mines (alliance)
                         {
