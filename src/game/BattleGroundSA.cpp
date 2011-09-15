@@ -999,7 +999,7 @@ void BattleGroundSA::TeleportPlayerToCorrectLoc(Player *plr, bool resetBattle)
             else
                 plr->TeleportTo(607, 2577.003f, 980.261f, 15.0f, 0.807f, 0); // Ship Left
         }
-        else if (GetStartTime() < (90 * IN_MILLISECONDS))
+        else if (GetStartTime() < (105 * IN_MILLISECONDS))
         {
             if (urand(0,1))
                 plr->TeleportTo(607, 1804.10f, -168.46f, 60.55f, 2.65f, 0); // Pillar Left
