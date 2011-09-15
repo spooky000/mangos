@@ -756,6 +756,15 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                 }
                 if(Phase == SA_ROUND_ONE) // Victory at first round
                 {
+
+                    //Achievement Storm the Beach (1310)
+                    for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+                    {
+                        if (Player *plr = sObjectMgr.GetPlayer(itr->first))
+                            if (plr->GetTeam() != defender)
+                                plr->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 65246);
+                    }
+
                     RoundScores[0].winner = GetDefender() == ALLIANCE ? HORDE : ALLIANCE;
                     RoundScores[0].time = Round_timer;
                     PlaySoundToAll(BG_SA_SOUND_GYD_VICTORY);
