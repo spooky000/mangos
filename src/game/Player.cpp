@@ -6941,6 +6941,10 @@ void Player::UpdateArea(uint32 newArea)
 
     AreaTableEntry const* area = GetAreaEntryByAreaID(newArea);
 
+    // Valgarde Inn resting (there is areatrigger missing)
+    if(newArea == 4379)
+        SetRestType(REST_TYPE_IN_TAVERN);
+
     // FFA_PVP flags are area and not zone id dependent
     // so apply them accordingly
     if (area && (area->flags & AREA_FLAG_ARENA))
