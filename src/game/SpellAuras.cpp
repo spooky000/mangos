@@ -6120,9 +6120,6 @@ void Aura::HandlePeriodicDamage(bool apply, bool Real)
                 if (spellProto->SpellFamilyFlags.test<CF_DRUID_RIP_BITE>())
                 {
                     // 0.01*$AP*cp
-                    if (caster->GetTypeId() != TYPEID_PLAYER)
-                        break;
-
                     uint8 cp = caster->GetComboPoints();
 
                     // Idol of Feral Shadows and Idol of Worship. Cant be handled as SpellMod in SpellAura:Dummy due its dependency from CPs
@@ -6136,6 +6133,20 @@ void Aura::HandlePeriodicDamage(bool apply, bool Real)
                         }
                     }
                     m_modifier.m_amount += int32(caster->GetTotalAttackPowerValue(BASE_ATTACK) * cp / 100);
+                }
+                // Insect Swarm
+                else if (spellProto->SpellFamilyFlags.test<CF_DRUID_INSECT_SWARM>())
+                {
+                    // Idol of the Crying Wind
+                    Unit::AuraList const& dummyAuras = caster->GetAurasByType(SPELL_AURA_DUMMY);
+                    for(Unit::AuraList::const_iterator itr = dummyAuras.begin(); itr != dummyAuras.end(); ++itr)
+                    {
+                        if((*itr)->GetId()==64950)
+                        {
+                            m_modifier.m_amount += (int)((*itr)->GetModifier()->m_amount * GetSpellProto()->EffectCoeffs[GetEffIndex()]);
+                            break;
+                        }
+                    }
                 }
                 break;
             }
