@@ -1319,13 +1319,13 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
                     team == BG_TEAM_ALLIANCE ? achiev_alliance : achiev_horde, team == BG_TEAM_ALLIANCE ? achiev_horde : achiev_alliance, guid.GetCounter());
 
                 // Titles conversion
-                AchievementEntry * pAchievAlliance = sAchievementStore.LookupEntry(achiev_alliance);
-                AchievementEntry * pAchievHorde = sAchievementStore.LookupEntry(achiev_horde);
+                const AchievementEntry *  pAchievAlliance = sAchievementStore.LookupEntry(achiev_alliance);
+                const AchievementEntry *  pAchievHorde = sAchievementStore.LookupEntry(achiev_horde);
                 if(!pAchievAlliance || !pAchievHorde)
                     continue;
 
                 AchievementReward const* rewardAlliance = sAchievementMgr.GetAchievementReward(pAchievAlliance, gender);
-                AchievementReward const* rewardHorde = sAchievementMgr.GetAchievementReward(pAchievHorde, gender));
+                AchievementReward const* rewardHorde = sAchievementMgr.GetAchievementReward(pAchievHorde, gender);
                 // no rewards
                 if(!rewardAlliance || !rewardHorde)
                     continue;
@@ -1333,19 +1333,19 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
                 // titles
                 if(uint32 titleId = rewardAlliance->titleId[team == BG_TEAM_HORDE ? 1 : 0])
                 {
-                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId)
-                    if(team == BG_TEAM_HORDE)
+                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId);
+                    //if(team == BG_TEAM_HORDE)
                         // Remove
-                    else
+                    //else
                         // Add
                 }
 
                 if(uint32 titleId = rewardHorde->titleId[team == BG_TEAM_HORDE ? 1 : 0])
                 {
-                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId))
-                    if(team == BG_TEAM_HORDE)
+                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId);
+                    //if(team == BG_TEAM_HORDE)
                         // Remove
-                    else
+                    //else
                         // Add
                 }
             }
