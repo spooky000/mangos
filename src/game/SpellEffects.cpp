@@ -11185,8 +11185,8 @@ void Spell::EffectTransmitted(SpellEffectIndex eff_idx)
 
     Map *cMap = m_caster->GetMap();
 
-    // if gameobject is summoning object, it should be spawned right on caster's position
-    if (goinfo->type==GAMEOBJECT_TYPE_SUMMONING_RITUAL)
+    // if gameobject is summoning object or Seaforium Charge (SotA), it should be spawned right on caster's position
+    if (goinfo->type==GAMEOBJECT_TYPE_SUMMONING_RITUAL || m_spellInfo->Id == 52410)
     {
         m_caster->GetPosition(fx, fy, fz);
     }
