@@ -1705,6 +1705,7 @@ bool BattleGround::AddSpiritGuide(uint32 type, float x, float y, float z, float 
 
     pCreature->SetDeathState(DEAD);
 
+   /* 
     pCreature->SetUInt64Value(UNIT_FIELD_CHANNEL_OBJECT, pCreature->GetObjectGuid());
     // aura
     //TODO: Fix display here
@@ -1714,7 +1715,7 @@ bool BattleGround::AddSpiritGuide(uint32 type, float x, float y, float z, float 
     // correct cast speed
     pCreature->SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0f);
 
-    pCreature->CastSpell(pCreature, SPELL_SPIRIT_HEAL_CHANNEL, true);
+    pCreature->CastSpell(pCreature, SPELL_SPIRIT_HEAL_CHANNEL, true);*/
 
     return true;
 }
