@@ -3204,12 +3204,6 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 triggeredByAura->SetAuraPeriodicTimer(0);
                 return SPELL_AURA_PROC_OK;
             }
-            // Hungering Cold - not break from diseases
-            if (dummySpell->SpellIconID == 2797)
-            {
-                if (procSpell && procSpell->Dispel == DISPEL_DISEASE)
-                    return SPELL_AURA_PROC_FAILED;
-            }
             // Blood-Caked Blade
             if (dummySpell->SpellIconID == 138)
             {
@@ -3218,15 +3212,6 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     return SPELL_AURA_PROC_FAILED;
 
                 // triggered_spell_id in spell data
-                break;
-            }
-            // Hungering Cold (51209 only)
-            if (dummySpell->SpellIconID == 2797)
-            {
-                // Damage from diseases does not break the freeze effect
-                if (procSpell && (GetAllSpellMechanicMask(procSpell) & (1 << MECHANIC_INFECTED)))
-                    return SPELL_AURA_PROC_FAILED;
-
                 break;
             }
             // Rune strike
@@ -4759,6 +4744,12 @@ SpellAuraProcResult Unit::HandleModRating(Unit* /*pVictim*/, uint32 /*damage*/, 
 
 SpellAuraProcResult Unit::HandleRemoveByDamageProc(Unit* pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown)
 {
+    // Hungering Cold - not break from diseases
+    if (triggeredByAura->GetSpellProto()->SpellIconID == 2797)
+        if (procSpell && procSpell->Dispel == DISPEL_DISEASE)
+            return SPELL_AURA_PROC_FAILED;
+    }
+
     triggeredByAura->SetInUse(true);
     RemoveAurasByCasterSpell(triggeredByAura->GetSpellProto()->Id, triggeredByAura->GetCasterGuid());
     triggeredByAura->SetInUse(false);
