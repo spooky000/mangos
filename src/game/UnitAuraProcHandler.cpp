@@ -3705,6 +3705,12 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
             // Glyph of Shadow Word: Pain
             else if (auraSpellInfo->Id == 55681)
                 basepoints[0] = triggerAmount * GetCreateMana() / 100;
+            // Glyph of Shadow
+            else if (auraSpellInfo->Id == 55689)
+            {
+                if(GetShapeshiftForm() != FORM_SHADOW)
+                    return SPELL_AURA_PROC_FAILED;
+            }
             break;
         }
         case SPELLFAMILY_DRUID:
