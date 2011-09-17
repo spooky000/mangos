@@ -315,6 +315,7 @@ class BattleGround
         /* achievement req. */
         virtual bool IsAllNodesConrolledByTeam(Team /*team*/) const { return false; }
         bool IsTeamScoreInRange(Team team, uint32 minScore, uint32 maxScore) const;
+        void StartTimedAchievement(AchievementCriteriaTypes type, uint32 entry);
 
         /* Battleground */
         // Get methods:
@@ -503,7 +504,7 @@ class BattleGround
         virtual void EventPlayerClickedOnFlag(Player* /*player*/, GameObject* /*target_obj*/) {}
         virtual void EventPlayerCapturedFlag(Player* /*player*/) {}
 
-        virtual void EventPlayerDamageGO(Player* /*player*/, GameObject* /*target_obj*/, uint32 /*eventId*/) {}
+        virtual void EventPlayerDamageGO(Player* /*player*/, GameObject* /*target_obj*/, uint32 /*eventId*/, uint32 /*bySpellId*/) {}
         virtual void EventSpawnGOSA(Player* /*owner*/, Creature* /*obj*/, float /*x*/, float /*y*/, float /*z*/) {}
         virtual void VirtualUpdatePlayerScore(Player* /*Source*/, uint32 /*type*/, uint32 /*value*/) {}
 

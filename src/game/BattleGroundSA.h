@@ -71,10 +71,10 @@ enum BG_SA_Sounds
 
 enum BG_SA_GraveYardStatus
 {
-    BG_SA_GARVE_STATUS_ALLY_CONTESTED    = 1,   //owned by the Allies, clickable for Horde
-    BG_SA_GARVE_STATUS_HORDE_CONTESTED   = 2,
-    BG_SA_GARVE_STATUS_ALLY_OCCUPIED     = 3,   //captured by the Allies, not clickable by anyone
-    BG_SA_GARVE_STATUS_HORDE_OCCUPIED    = 4
+    BG_SA_GARVE_STATUS_ALLY_CONTESTED    = 1,   //Owned by the Allies, clickable for Horde
+    BG_SA_GARVE_STATUS_HORDE_CONTESTED   = 2,   //Owned by the Horde, clickable for Alliance
+    BG_SA_GARVE_STATUS_ALLY_OCCUPIED     = 3,   //Captured by the Allies, not clickable by anyone
+    BG_SA_GARVE_STATUS_HORDE_OCCUPIED    = 4    //Captured by the Horde, not clickable by anyone
 };
 
 enum BG_SA_GraveYard
@@ -88,7 +88,8 @@ enum BG_SA_GraveYard
 enum BG_SA_Timers
 {
     BG_SA_ROUNDLENGTH                   = 600000,
-    BG_SA_BOAT_START                    = 60000
+    BG_SA_BOAT_START                    = 60000,
+    BG_SA_PILLAR_START                  = 90000
 };
 
 enum BG_SA_GateStatus
@@ -219,7 +220,7 @@ class BattleGroundSA : public BattleGround
         virtual void AddPlayer(Player *plr);
         virtual void StartingEventCloseDoors();
         virtual void StartingEventOpenDoors();
-        virtual void EventPlayerDamageGO(Player *player, GameObject* target_obj, uint32 eventId);
+        virtual void EventPlayerDamageGO(Player *player, GameObject* target_obj, uint32 eventId, uint32 doneBy = 0);
         virtual void EventSpawnGOSA(Player *owner, Creature* obj, float x, float y, float z);
         virtual void FillInitialWorldStates(WorldPacket& data, uint32& count);
         virtual void EventPlayerClickedOnFlag(Player *source, GameObject* target_obj);
@@ -228,9 +229,10 @@ class BattleGroundSA : public BattleGround
         virtual WorldSafeLocsEntry const* GetClosestGraveYard(Player* player);
         virtual void Reset();
 
-        Team GetDefender() const    { return defender; }
+        Team GetDefender() const { return defender; }
         uint8 GetGydController(uint8 gyd) const { return m_Gyd[gyd]; }
         uint32 GetVehicleFaction(uint8 vehicleType) const { return GetCorrectFactionSA(vehicleType); }
+        int32 GetGateStatus(int32 Type) const { return GateStatus[Type]; }
         void RemovePlayer(Player *plr, ObjectGuid guid);
         void HandleAreaTrigger(Player *Source, uint32 Trigger);
         void EndBattleGround(Team winner);
@@ -246,7 +248,7 @@ class BattleGroundSA : public BattleGround
         bool shipsStarted;
         bool relicGateDestroyed;
         uint32 shipsTimer;
-        bool isDemolisherDestroyed[2];
+        uint32 pillarOpenTimer;
         /* Scorekeeping */
         void UpdatePlayerScore(Player *Source, uint32 type, uint32 value);
         /* For boats */
@@ -264,11 +266,11 @@ class BattleGroundSA : public BattleGround
         void TeleportPlayerToCorrectLoc(Player *player, bool resetBattle = false);
         // for achievement - win with all walls
         bool winSAwithAllWalls(Team team);
+        bool isDemolisherDestroyed[2];
 
     private:
         uint8               m_Gyd[BG_SA_GRY_MAX];
         uint8               m_prevGyd[BG_SA_GRY_MAX];   // used for performant wordlstate-updating
-        uint32              m_GydTimers[BG_SA_GRY_MAX];
         BG_SA_RoundScore RoundScores[2];
         /* Gameobject spawning/despawning */
         void _CreateBanner(uint8 node, uint8 type, uint8 teamIndex, bool delay);

@@ -2146,6 +2146,10 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                 if (spellInfo_1->IsFitToFamily<SPELLFAMILY_DRUID, CF_DRUID_MARK_OF_THE_WILD>() &&
                     spellInfo_2->IsFitToFamily<SPELLFAMILY_DRUID, CF_DRUID_MARK_OF_THE_WILD>())
                     return true;
+
+                // Berserk remove Tiger's Fury
+                if(spellInfo_1->Id == 50334 && spellInfo_2->IsFitToFamily<SPELLFAMILY_DRUID, CF_DRUID_TIGERS_FURY>())
+                    return true;
             }
             break;
         case SPELLFAMILY_PALADIN:

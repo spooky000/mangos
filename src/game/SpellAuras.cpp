@@ -5228,7 +5228,7 @@ void Aura::HandleAuraModSilence(bool apply, bool Real)
     else
     {
         // Real remove called after current aura remove from lists, check if other similar auras active
-        if(target->HasAuraType(SPELL_AURA_MOD_SILENCE) || target->HasAuraType(SPELL_AURA_MOD_PACIFY_SILENCE))
+        if(target->HasAuraType(SPELL_AURA_MOD_SILENCE))
             return;
 
         target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SILENCED);
@@ -6120,22 +6120,33 @@ void Aura::HandlePeriodicDamage(bool apply, bool Real)
                 if (spellProto->SpellFamilyFlags.test<CF_DRUID_RIP_BITE>())
                 {
                     // 0.01*$AP*cp
-                    if (caster->GetTypeId() != TYPEID_PLAYER)
-                        break;
-
                     uint8 cp = caster->GetComboPoints();
 
-                    // Idol of Feral Shadows. Cant be handled as SpellMod in SpellAura:Dummy due its dependency from CPs
+                    // Idol of Feral Shadows and Idol of Worship. Cant be handled as SpellMod in SpellAura:Dummy due its dependency from CPs
                     Unit::AuraList const& dummyAuras = caster->GetAurasByType(SPELL_AURA_DUMMY);
                     for(Unit::AuraList::const_iterator itr = dummyAuras.begin(); itr != dummyAuras.end(); ++itr)
                     {
-                        if((*itr)->GetId()==34241)
+                        if((*itr)->GetId()==34241 || (*itr)->GetId() == 60774)
                         {
                             m_modifier.m_amount += cp * (*itr)->GetModifier()->m_amount;
                             break;
                         }
                     }
                     m_modifier.m_amount += int32(caster->GetTotalAttackPowerValue(BASE_ATTACK) * cp / 100);
+                }
+                // Insect Swarm
+                else if (spellProto->SpellFamilyFlags.test<CF_DRUID_INSECT_SWARM>())
+                {
+                    // Idol of the Crying Wind
+                    Unit::AuraList const& dummyAuras = caster->GetAurasByType(SPELL_AURA_DUMMY);
+                    for(Unit::AuraList::const_iterator itr = dummyAuras.begin(); itr != dummyAuras.end(); ++itr)
+                    {
+                        if((*itr)->GetId()==64950)
+                        {
+                            m_modifier.m_amount += (int)((*itr)->GetModifier()->m_amount * GetSpellProto()->EffectCoeffs[GetEffIndex()]);
+                            break;
+                        }
+                    }
                 }
                 break;
             }

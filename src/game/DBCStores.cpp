@@ -537,10 +537,6 @@ void LoadDBCStores(const std::string& dataPath)
 
     // DBC Hacks
 
-    // Gather Lumber
-    SpellEntry *sfix1 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(47939));
-    sfix1->EffectImplicitTargetA[EFFECT_INDEX_1] = TARGET_SELF;
-
     //Lifebloom final heal
     SpellEntry *sfix2 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(33778));
     sfix2->DmgClass = SPELL_DAMAGE_CLASS_MAGIC;
@@ -707,14 +703,6 @@ void LoadDBCStores(const std::string& dataPath)
     // Expose Razorthorn Root
     SpellEntry *sfix31 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(44935));
     sfix31->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
-
-    // Burninate (Seared Scourge quest)
-    SpellEntry *sfix32 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(47214));
-    sfix32->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_ALL_ENEMY_IN_AREA_INSTANT;
-
-    // Blood Tap, Misc Value should be for Blood Rune
-    SpellEntry *sfix33 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(45529));
-    sfix33->EffectMiscValue[EFFECT_INDEX_0] = RUNE_BLOOD;
 
     for (uint32 j = 0; j < sSkillLineAbilityStore.GetNumRows(); ++j)
     {

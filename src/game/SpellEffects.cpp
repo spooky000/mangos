@@ -5518,7 +5518,7 @@ void Spell::SendLoot(ObjectGuid guid, LootType loottype, LockType lockType)
                 break;
 
             case GAMEOBJECT_TYPE_TRAP:
-                if (lockType == LOCKTYPE_DISARM_TRAP)
+                if (lockType == LOCKTYPE_DISARM_TRAP || gameObjTarget->GetEntry() == 190752)
                 {
                     gameObjTarget->SetLootState(GO_JUST_DEACTIVATED);
                     return;
@@ -11185,8 +11185,8 @@ void Spell::EffectTransmitted(SpellEffectIndex eff_idx)
 
     Map *cMap = m_caster->GetMap();
 
-    // if gameobject is summoning object, it should be spawned right on caster's position
-    if (goinfo->type==GAMEOBJECT_TYPE_SUMMONING_RITUAL)
+    // if gameobject is summoning object or Seaforium Charge (SotA), it should be spawned right on caster's position
+    if (goinfo->type==GAMEOBJECT_TYPE_SUMMONING_RITUAL || m_spellInfo->Id == 52410)
     {
         m_caster->GetPosition(fx, fy, fz);
     }
@@ -11666,7 +11666,7 @@ void Spell::EffectWMODamage(SpellEffectIndex eff_idx)
 
     DEBUG_LOG( "Spell::EffectWMODamage,  spell ID %u, object %u, damage %u", m_spellInfo->Id,gameObjTarget->GetEntry(),uint32(damage));
 
-    gameObjTarget->DamageTaken(caster, uint32(damage));
+    gameObjTarget->DamageTaken(caster, uint32(damage), m_spellInfo->Id);
 
     WorldPacket data(SMSG_DESTRUCTIBLE_BUILDING_DAMAGE, 8+8+8+4+4);
     data << gameObjTarget->GetPackGUID();

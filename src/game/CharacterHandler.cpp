@@ -1314,8 +1314,40 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
                 Field *fields2 = result2->Fetch();
                 uint32 achiev_alliance = fields2[0].GetUInt32();
                 uint32 achiev_horde = fields2[1].GetUInt32();
+
                 CharacterDatabase.PExecute("UPDATE IGNORE `character_achievement` set achievement = '%u' where achievement = '%u' AND guid = '%u'",
                     team == BG_TEAM_ALLIANCE ? achiev_alliance : achiev_horde, team == BG_TEAM_ALLIANCE ? achiev_horde : achiev_alliance, guid.GetCounter());
+
+                // Titles conversion
+                const AchievementEntry *  pAchievAlliance = sAchievementStore.LookupEntry(achiev_alliance);
+                const AchievementEntry *  pAchievHorde = sAchievementStore.LookupEntry(achiev_horde);
+                if(!pAchievAlliance || !pAchievHorde)
+                    continue;
+
+                AchievementReward const* rewardAlliance = sAchievementMgr.GetAchievementReward(pAchievAlliance, gender);
+                AchievementReward const* rewardHorde = sAchievementMgr.GetAchievementReward(pAchievHorde, gender);
+                // no rewards
+                if(!rewardAlliance || !rewardHorde)
+                    continue;
+
+                // titles
+                if(uint32 titleId = rewardAlliance->titleId[team == BG_TEAM_HORDE ? 1 : 0])
+                {
+                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId);
+                    //if(team == BG_TEAM_HORDE)
+                        // Remove
+                    //else
+                        // Add
+                }
+
+                if(uint32 titleId = rewardHorde->titleId[team == BG_TEAM_HORDE ? 1 : 0])
+                {
+                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId);
+                    //if(team == BG_TEAM_HORDE)
+                        // Remove
+                    //else
+                        // Add
+                }
             }
             while (result2->NextRow());
         }

@@ -857,7 +857,7 @@ bool Item::CanBeTraded(bool mail, bool trade) const
     if (HasGeneratedLoot())
         return false;
 
-    if (IsBoundByEnchant())
+    if (!IsBoundAccountWide() && IsBoundByEnchant())
         return false;
 
     return true;

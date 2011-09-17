@@ -80,6 +80,7 @@ CREATE TABLE `spell_dbc` (
   `Stances` tinyint(3) unsigned NOT NULL DEFAULT '0',
   `StancesNot` int(10) unsigned NOT NULL DEFAULT '0',
   `Targets` int(10) unsigned NOT NULL DEFAULT '0',
+  `RequiresSpellFocus` int(10) unsigned NOT NULL DEFAULT '0',
   `CasterAuraSpell` int(10) unsigned NOT NULL DEFAULT '0',
   `TargetAuraSpell` int(10) unsigned NOT NULL DEFAULT '0',
   `ExcludeCasterAuraSpell` int(10) unsigned NOT NULL DEFAULT '0',

@@ -6892,6 +6892,9 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
     if (!IsInWorld())
         return pdamage;
 
+    if (GetTypeId()==TYPEID_UNIT && GetObjectGuid().IsVehicle())
+        return pdamage;
+
     MAPLOCK_READ(this,MAP_LOCK_TYPE_AURAS);
 
     // For totems get damage bonus from owner (statue isn't totem in fact)
@@ -9372,8 +9375,10 @@ void Unit::SetDeathState(DeathState s)
         RemoveMiniPet();
         UnsummonAllTotems();
 
+        i_motionMaster.Clear(false,true);
+        i_motionMaster.MoveIdle();
+
         StopMoving();
-        DisableSpline();
 
         ModifyAuraState(AURA_STATE_HEALTHLESS_20_PERCENT, false);
         ModifyAuraState(AURA_STATE_HEALTHLESS_35_PERCENT, false);
@@ -11843,7 +11848,7 @@ void Unit::SetContestedPvP(Player *attackedPlayer)
 void Unit::AddPetAura(PetAura const* petSpell)
 {
     m_petAuras.insert(petSpell);
-    if(Pet* pet = GetPet())
+    if (GetPet())
     {
         GroupPetList m_groupPets = GetPets();
         if (!m_groupPets.empty())
@@ -11853,12 +11858,13 @@ void Unit::AddPetAura(PetAura const* petSpell)
                     _pet->CastPetAura(petSpell);
         }
     }
+
 }
 
 void Unit::RemovePetAura(PetAura const* petSpell)
 {
     m_petAuras.erase(petSpell);
-    if(Pet* pet = GetPet())
+    if (GetPet())
     {
         GroupPetList m_groupPets = GetPets();
         if (!m_groupPets.empty())

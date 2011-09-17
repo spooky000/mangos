@@ -51,6 +51,7 @@
 #include "Weather.h"
 #include "BattleGround.h"
 #include "BattleGroundAV.h"
+#include "BattleGroundSA.h"
 #include "BattleGroundMgr.h"
 #include "ArenaTeam.h"
 #include "Chat.h"
@@ -6939,6 +6940,10 @@ void Player::UpdateArea(uint32 newArea)
     m_areaUpdateId    = newArea;
 
     AreaTableEntry const* area = GetAreaEntryByAreaID(newArea);
+
+    // Valgarde Inn resting (there is areatrigger missing)
+    if(newArea == 4379)
+        SetRestType(REST_TYPE_IN_TAVERN);
 
     // FFA_PVP flags are area and not zone id dependent
     // so apply them accordingly
@@ -22127,6 +22132,12 @@ bool ItemPosCount::isContainedIn(ItemPosCountVec const& vec) const
 
 bool Player::CanUseBattleGroundObject()
 {
+    // SotA Battleground, dont allow taking flag if noone of first gates was destroyed.
+    if (GetBattleGround() && GetBattleGround()->GetMapId() == 607)
+        if (BattleGroundSA * SotA = (BattleGroundSA*)GetBattleGround())
+            if (SotA->GetGateStatus(BG_SA_GO_GATES_T_GREEN_EMERALD) != BG_SA_GO_GATES_DESTROY && SotA->GetGateStatus(BG_SA_GO_GATES_T_BLUE_SAPHIRE) != BG_SA_GO_GATES_DESTROY)
+                return false;
+
     // TODO : some spells gives player ForceReaction to one faction (ReputationMgr::ApplyForceReaction)
     // maybe gameobject code should handle that ForceReaction usage
     // BUG: sometimes when player clicks on flag in AB - client won't send gameobject_use, only gameobject_report_use packet

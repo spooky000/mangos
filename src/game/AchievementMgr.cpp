@@ -467,6 +467,8 @@ void AchievementMgr::ResetAchievementCriteria(AchievementCriteriaTypes type, uin
             case ACHIEVEMENT_CRITERIA_TYPE_SPECIAL_PVP_KILL:
             case ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE:
             case ACHIEVEMENT_CRITERIA_TYPE_HONORABLE_KILL_AT_AREA:
+            case ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET:
+            case ACHIEVEMENT_CRITERIA_TYPE_CAST_SPELL:
             {
                 switch(achievementCriteria->referredAchievement) // All achievements that should reset its progress.
                 {
@@ -484,7 +486,7 @@ void AchievementMgr::ResetAchievementCriteria(AchievementCriteriaTypes type, uin
                     case 872:
                     case 1153:
                     case 1251:
-                    case 1765: 
+                    case 1765:
                     case 2193:
                     case 2189:
                     case 2190:
@@ -944,22 +946,6 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                     // some hardcoded requirements
                     switch(achievementCriteria->referredAchievement)
                     {
-                        case 214:              // EY, win under 6 minutes
-                        case 226:              // AV, win under 6 minutes
-                        case 159:              // AB, win under 6 minutes
-                        {
-                            // set 8 minutes because there is 2 minutes long preparation
-                            if(bg->GetStartTime() > (8 * MINUTE * IN_MILLISECONDS))
-                                continue;
-                            break;
-                        }
-                        case 201:              // WS, win under 7 minutes
-                        {
-                            // set 9 minutes because there is 2 minutes long preparation
-                            if(bg->GetStartTime() > (9 * MINUTE * IN_MILLISECONDS))
-                                continue;
-                            break;
-                        }
                         case 1164:             // AV, own both mines (horde)
                         case 225:              // AV, own both mines (alliance)
                         {
@@ -1319,6 +1305,19 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                 if(!data->Meets(GetPlayer(),unit))
                     continue;
 
+                // Defense of the Ancients
+                if(achievementCriteria->referredAchievement == 1757 || achievementCriteria->referredAchievement == 2200)
+                {
+                    // If not in SotA
+                    BattleGround * bg = GetPlayer()->GetBattleGround();
+                    if(!bg || bg->GetTypeID(true) != BATTLEGROUND_SA)
+                        continue;
+
+                    // If hasnt all walls.
+                    if(!((BattleGroundSA*)bg)->winSAwithAllWalls(GetPlayer()->GetTeam()))
+                        continue;
+                }
+
                 change = 1;
                 progressType = PROGRESS_ACCUMULATE;
                 break;
@@ -1604,45 +1603,36 @@ void AchievementMgr::UpdateAchievementCriteria(AchievementCriteriaTypes type, ui
                 if (!miscvalue1)
                     continue;
 
-                // those requirements couldn't be found in the dbc
-                AchievementCriteriaRequirementSet const* data = sAchievementMgr.GetCriteriaRequirementSet(achievementCriteria);
-                if (!data)
-                    continue;
-
-                if (!data->Meets(GetPlayer(),unit))
-                    continue;
-
                 switch(achievementCriteria->referredAchievement)
                 {
                     case 207:                       // Save The Day
                     {
                         BattleGround* bg = GetPlayer()->GetBattleGround();
-                        if (!bg)
+                        if (!bg || !unit)
                             continue;
-    
+
                         if (bg->GetTypeID(true) != BATTLEGROUND_WS)
                             continue;
 
                         switch(GetPlayer()->GetTeam())
                         {
                             case ALLIANCE:
-                                if (!(((BattleGroundWS*)bg)->GetFlagState(HORDE) == BG_WS_FLAG_STATE_ON_BASE))
+                                if (!(((BattleGroundWS*)bg)->GetFlagState(HORDE) == BG_WS_FLAG_STATE_ON_BASE) || !unit->HasAura(23335) || GetPlayer()->GetAreaId() != 4572)
                                     continue;
                                 break;
                             case HORDE:
-                                if (!(((BattleGroundWS*)bg)->GetFlagState(ALLIANCE) == BG_WS_FLAG_STATE_ON_BASE))
+                                if (!(((BattleGroundWS*)bg)->GetFlagState(ALLIANCE) == BG_WS_FLAG_STATE_ON_BASE) || !unit->HasAura(23333) || GetPlayer()->GetAreaId() != 4571)
                                     continue;
                                 break;
                         }
+                        break;
                     }
-                    case 2190:                      // Drop It Now!
+                    default:
                     {
-                        if (!(unit->GetTypeId() == TYPEID_PLAYER))
+                        // those requirements couldn't be found in the dbc
+                        AchievementCriteriaRequirementSet const* data = sAchievementMgr.GetCriteriaRequirementSet(achievementCriteria);
+                        if(!data || !data->Meets(GetPlayer(),unit))
                             continue;
-
-                        if (!((Player*)unit)->HasItemCount(39213, 1))
-                            continue;
-
                         break;
                     }
                 }
