@@ -4748,7 +4748,6 @@ SpellAuraProcResult Unit::HandleRemoveByDamageProc(Unit* pVictim, uint32 damage,
     if (triggeredByAura->GetSpellProto()->SpellIconID == 2797)
         if (procSpell && procSpell->Dispel == DISPEL_DISEASE)
             return SPELL_AURA_PROC_FAILED;
-    }
 
     triggeredByAura->SetInUse(true);
     RemoveAurasByCasterSpell(triggeredByAura->GetSpellProto()->Id, triggeredByAura->GetCasterGuid());
