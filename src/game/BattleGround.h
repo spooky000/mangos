@@ -89,7 +89,7 @@ enum BattleGroundMarksCount
 
 enum BattleGroundSpells
 {
-    SPELL_SPIRIT_HEAL_CHANNEL       = 22011,
+    //SPELL_SPIRIT_HEAL_CHANNEL       = 22011,
     SPELL_ARENA_PREPARATION         = 32727,                // use this one, 32728 not correct
     SPELL_ALLIANCE_GOLD_FLAG        = 32724,
     SPELL_ALLIANCE_GREEN_FLAG       = 32725,
