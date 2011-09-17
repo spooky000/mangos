@@ -272,7 +272,6 @@ void PetAI::UpdateAI(const uint32 diff)
                     if (CanAutoCast(Target, spellInfo))
                     {
                         targetSpellStore.push_back(TargetSpellList::value_type(Target->GetObjectGuid(), spellInfo->Id));
-                        spellUsed = true;
                         break;
                     }
                 }
@@ -359,3 +358,4 @@ bool PetAI::CanAutoCast(Unit* target, SpellEntry const* spellInfo)
     Spell spell = Spell(m_creature, spellInfo, false);
     return spell.CanAutoCast(target);
 }
+
