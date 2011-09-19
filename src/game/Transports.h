@@ -45,6 +45,9 @@ class Transport : public GameObject
 
         void BuildCreateUpdateBlockForPlayer(UpdateData* data, Player* target);
 
+        void BuildStartMovePacket(Map const *targetMap);
+        void BuildStopMovePacket(Map const *targetMap);
+
     private:
         struct WayPoint
         {
