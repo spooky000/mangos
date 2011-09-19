@@ -199,7 +199,7 @@ void BattleGroundSA::Update(uint32 diff)
 
             if (pillarOpenTimer && pillarOpenTimer <= diff)
             {
-                OpenDoorEvent(SA_EVENT_OP_DOOR, 0);
+                SpawnEvent(BG_EVENT_DOOR, 0, false);
                 pillarOpenTimer = diff;
             }
             else pillarOpenTimer -= diff;
@@ -279,7 +279,7 @@ void BattleGroundSA::Update(uint32 diff)
         if (TimeST2Round < diff)
         {
             Phase = 2;
-            OpenDoorEvent(SA_EVENT_OP_DOOR, 0);
+            SpawnEvent(BG_EVENT_DOOR, 0, false);
             SpawnEvent(SA_EVENT_ADD_NPC, 0, true);
             ToggleTimer();
             SetStatus(STATUS_IN_PROGRESS); // Start round two
@@ -450,7 +450,7 @@ void BattleGroundSA::UpdatePhase()
         SpawnEvent(SA_EVENT_ADD_BOMB, 0, false);
         SpawnEvent(SA_EVENT_ADD_BOMB, 1, false);
         SpawnEvent(SA_EVENT_ADD_NPC, 0, false);
-        OpenDoorEvent(SA_EVENT_OP_DOOR, 0);
+        SpawnEvent(BG_EVENT_DOOR, 0, true);
 
         Round_timer = (BG_SA_ROUNDLENGTH - RoundScores[0].time);
         SetStatus(STATUS_WAIT_JOIN);

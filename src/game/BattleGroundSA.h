@@ -133,8 +133,7 @@ enum BG_SA_Events
     SA_EVENT_ADD_NPC        = 7,
     SA_EVENT_ADD_GO         = 8,
     SA_EVENT_ADD_VECH_E     = 9,
-    SA_EVENT_ADD_VECH_W     = 10,
-    SA_EVENT_OP_DOOR        = 254
+    SA_EVENT_ADD_VECH_W     = 10
 };
 
 enum BG_SA_Boats
