@@ -188,14 +188,17 @@ void BattleGroundSA::Update(uint32 diff)
 {
     BattleGround::Update(diff);
 
-    if (GetStatus() == STATUS_WAIT_JOIN && !shipsStarted)
+    if (GetStatus() == STATUS_WAIT_JOIN)
     {
         if (Phase == SA_ROUND_ONE) // Round one not started yet
         {
-            if (shipsTimer <= diff)
-                StartShips();
-            else
-                shipsTimer -= diff;
+            if (!shipsStarted)
+            {
+                if (shipsTimer <= diff)
+                    StartShips();
+                else
+                    shipsTimer -= diff;
+            }
 
             if (pillarOpenTimer && pillarOpenTimer <= diff)
             {
@@ -276,10 +279,17 @@ void BattleGroundSA::Update(uint32 diff)
             else
                 shipsTimer -= diff;
         }
+
+        if (pillarOpenTimer && pillarOpenTimer <= diff)
+        {
+            SpawnEvent(BG_EVENT_DOOR, 0, false);
+            pillarOpenTimer = diff;
+        }
+        else pillarOpenTimer -= diff;
+
         if (TimeST2Round < diff)
         {
             Phase = 2;
-            SpawnEvent(BG_EVENT_DOOR, 0, false);
             SpawnEvent(SA_EVENT_ADD_NPC, 0, true);
             ToggleTimer();
             SetStatus(STATUS_IN_PROGRESS); // Start round two
@@ -394,6 +404,7 @@ void BattleGroundSA::ResetBattle(uint32 winner, Team teamDefending)
 {
     Phase = SA_ROUND_TWO;
     shipsTimer = 60000;
+    pillarOpenTimer = 90000;
     shipsStarted = false;
     
     for (int32 i = 0; i <= BG_SA_GATE_MAX; ++i)
