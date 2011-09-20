@@ -450,7 +450,7 @@ void BattleGroundSA::UpdatePhase()
         SpawnEvent(SA_EVENT_ADD_BOMB, 0, false);
         SpawnEvent(SA_EVENT_ADD_BOMB, 1, false);
         SpawnEvent(SA_EVENT_ADD_NPC, 0, false);
-        SpawnEvent(BG_EVENT_DOOR, 0, false);
+        SpawnEvent(BG_EVENT_DOOR, 0, true);
 
         Round_timer = (BG_SA_ROUNDLENGTH - RoundScores[0].time);
         SetStatus(STATUS_WAIT_JOIN);
