@@ -487,10 +487,10 @@ void AchievementMgr::ResetAchievementCriteria(AchievementCriteriaTypes type, uin
                     case 1153:
                     case 1251:
                     case 1765:
-                    case 2193:
+                    case 1766:
                     case 2189:
                     case 2190:
-                    case 1766:
+                    case 2193:
                     case 3845:
                     case 3848:
                     case 3849:

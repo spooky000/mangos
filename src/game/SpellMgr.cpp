@@ -2348,6 +2348,14 @@ bool SpellMgr::IsStackableSpellAuraHolder(SpellEntry const* spellInfo)
         }
     }
 
+    // some direct ID checks (hacks!)
+    switch(spellInfo->Id)
+    {
+        case 70602: // Corruption (Valithria Dreamwalker)
+        case 70588: // Suppression (Valithria Dreamwalker)
+            return true;
+    }
+
     return false;
 }
 

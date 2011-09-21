@@ -188,18 +188,21 @@ void BattleGroundSA::Update(uint32 diff)
 {
     BattleGround::Update(diff);
 
-    if (GetStatus() == STATUS_WAIT_JOIN && !shipsStarted)
+    if (GetStatus() == STATUS_WAIT_JOIN)
     {
         if (Phase == SA_ROUND_ONE) // Round one not started yet
         {
-            if (shipsTimer <= diff)
-                StartShips();
-            else
-                shipsTimer -= diff;
+            if (!shipsStarted)
+            {
+                if (shipsTimer <= diff)
+                    StartShips();
+                else
+                    shipsTimer -= diff;
+            }
 
             if (pillarOpenTimer && pillarOpenTimer <= diff)
             {
-                OpenDoorEvent(SA_EVENT_OP_DOOR, 0);
+                SpawnEvent(BG_EVENT_DOOR, 0, false);
                 pillarOpenTimer = diff;
             }
             else pillarOpenTimer -= diff;
@@ -276,10 +279,17 @@ void BattleGroundSA::Update(uint32 diff)
             else
                 shipsTimer -= diff;
         }
+
+        if (pillarOpenTimer && pillarOpenTimer <= diff)
+        {
+            SpawnEvent(BG_EVENT_DOOR, 0, false);
+            pillarOpenTimer = diff;
+        }
+        else pillarOpenTimer -= diff;
+
         if (TimeST2Round < diff)
         {
             Phase = 2;
-            OpenDoorEvent(SA_EVENT_OP_DOOR, 0);
             SpawnEvent(SA_EVENT_ADD_NPC, 0, true);
             ToggleTimer();
             SetStatus(STATUS_IN_PROGRESS); // Start round two
@@ -394,6 +404,7 @@ void BattleGroundSA::ResetBattle(uint32 winner, Team teamDefending)
 {
     Phase = SA_ROUND_TWO;
     shipsTimer = 60000;
+    pillarOpenTimer = 90000;
     shipsStarted = false;
     
     for (int32 i = 0; i <= BG_SA_GATE_MAX; ++i)
@@ -418,6 +429,14 @@ void BattleGroundSA::ResetBattle(uint32 winner, Team teamDefending)
         if (plr->GetBGTeam() == defender && plr->GetItemByEntry(39213) != NULL)
             plr->DestroyItemCount(39213, 1, true);
     }
+
+    m_ActiveEvents[SA_EVENT_ADD_GO] = BG_EVENT_NONE;
+    m_ActiveEvents[SA_EVENT_ADD_NPC] = BG_EVENT_NONE;
+    m_ActiveEvents[SA_EVENT_ADD_SPIR] = BG_EVENT_NONE;
+    m_ActiveEvents[SA_EVENT_ADD_BOMB] = BG_EVENT_NONE;
+    m_ActiveEvents[SA_EVENT_ADD_VECH_E] = BG_EVENT_NONE;
+    m_ActiveEvents[SA_EVENT_ADD_VECH_W] = BG_EVENT_NONE;
+    // spiritguides and flags not spawned at beginning
 
     UpdatePhase();
     ResetWorldStates();
@@ -450,7 +469,7 @@ void BattleGroundSA::UpdatePhase()
         SpawnEvent(SA_EVENT_ADD_BOMB, 0, false);
         SpawnEvent(SA_EVENT_ADD_BOMB, 1, false);
         SpawnEvent(SA_EVENT_ADD_NPC, 0, false);
-        OpenDoorEvent(SA_EVENT_OP_DOOR, 0);
+        SpawnEvent(BG_EVENT_DOOR, 0, true);
 
         Round_timer = (BG_SA_ROUNDLENGTH - RoundScores[0].time);
         SetStatus(STATUS_WAIT_JOIN);
