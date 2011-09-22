@@ -3550,3 +3550,12 @@ float Pet::OCTRegenMPPerSpirit()
     float regen     = spirit * moreRatio->ratio;
     return regen;
 }
+
+void ApplyArenaPreparationWithHelper::operator() (Unit* unit) const
+{
+    if (!unit || !unit->GetObjectGuid().IsPet())
+        return;
+
+    if (unit->IsInWorld())
+        unit->HandleArenaPreparation(apply);
+}
