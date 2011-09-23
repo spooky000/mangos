@@ -7918,7 +7918,16 @@ void Aura::HandleSchoolAbsorb(bool apply, bool Real)
         {
             if (Aura *aur = caster->GetAura(63231, EFFECT_INDEX_0))
             {
-                ((Player*)caster)->SendModifyCooldown(spellProto->Id,-aur->GetSpellProto()->CalculateSimpleValue(EFFECT_INDEX_0)*IN_MILLISECONDS);
+                int32 duration = aur->GetSpellProto()->CalculateSimpleValue(EFFECT_INDEX_0);
+                ((Player*)caster)->RemoveSpellCooldown(spellProto->Id, true);
+                ((Player*)caster)->AddSpellCooldown(spellProto->Id, 0, uint32(time(NULL) + duration));
+
+                WorldPacket data(SMSG_SPELL_COOLDOWN, 8+1+4+4);
+                data << caster->GetObjectGuid();
+                data << uint8(0x0);
+                data << uint32(spellProto->Id);
+                data << uint32(duration * IN_MILLISECONDS);
+                ((Player*)caster)->SendDirectMessage(&data);
             }
         }
         // Shield of Runes (Runemaster Molgeim: Ulduar)
