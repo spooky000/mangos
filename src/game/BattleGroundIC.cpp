@@ -330,8 +330,11 @@ void BattleGroundIC::AddPlayer(Player *plr)
 
 void BattleGroundIC::RemovePlayer(Player* plr, uint64 /*guid*/)
 {
-    plr->RemoveAurasDueToSpell(SPELL_QUARRY);
-    plr->RemoveAurasDueToSpell(SPELL_OIL_REFINERY);
+    if (plr)
+    {
+        plr->RemoveAurasDueToSpell(SPELL_QUARRY);
+        plr->RemoveAurasDueToSpell(SPELL_OIL_REFINERY);
+    }
 }
 
 void BattleGroundIC::HandleAreaTrigger(Player * /*Source*/, uint32 /*Trigger*/)
