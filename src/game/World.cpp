@@ -1443,7 +1443,7 @@ void World::DetectDBCLang()
     uint32 default_locale = MAX_LOCALE;
     for (int i = MAX_LOCALE-1; i >= 0; --i)
     {
-        if (strlen(race->name[i]) > 0)                      // check by race names
+        if (race->name[i][0] != '\0')                      // check by race names
         {
             default_locale = i;
             m_availableDbcLocaleMask |= (1 << i);

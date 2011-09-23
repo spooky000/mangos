@@ -293,7 +293,7 @@ HostileReference* ThreatContainer::selectNextVictim(Creature* pAttacker, Hostile
     bool noPriorityTargetFound = false;
 
     ThreatList::const_iterator lastRef = iThreatList.end();
-    lastRef--;
+    --lastRef;
 
     for(ThreatList::const_iterator iter = iThreatList.begin(); iter != iThreatList.end() && !found;)
     {
