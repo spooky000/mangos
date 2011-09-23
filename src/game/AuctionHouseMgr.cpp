@@ -138,12 +138,12 @@ void AuctionHouseMgr::SendAuctionWonMail(AuctionEntry *auction)
     if (bidder || bidder_accId)
     {
         std::ostringstream msgAuctionWonSubject;
-        msgAuctionWonSubject << auction->itemTemplate << ":" << auction->itemRandomPropertyId << ":" << AUCTION_WON;
+        msgAuctionWonSubject << auction->itemTemplate << ':' << auction->itemRandomPropertyId << ':' << AUCTION_WON;
 
         std::ostringstream msgAuctionWonBody;
         msgAuctionWonBody.width(16);
         msgAuctionWonBody << std::right << std::hex << auction->owner;
-        msgAuctionWonBody << std::dec << ":" << auction->bid << ":" << auction->buyout;
+        msgAuctionWonBody << std::dec << ':' << auction->bid << ':' << auction->buyout;
         DEBUG_LOG("AuctionWon body string : %s", msgAuctionWonBody.str().c_str());
 
         // set owner to bidder (to prevent delete item with sender char deleting)
@@ -189,15 +189,15 @@ void AuctionHouseMgr::SendAuctionSuccessfulMail(AuctionEntry * auction)
     if (owner || owner_accId)
     {
         std::ostringstream msgAuctionSuccessfulSubject;
-        msgAuctionSuccessfulSubject << auction->itemTemplate << ":" << auction->itemRandomPropertyId << ":" << AUCTION_SUCCESSFUL;
+        msgAuctionSuccessfulSubject << auction->itemTemplate << ':' << auction->itemRandomPropertyId << ':' << AUCTION_SUCCESSFUL;
 
         std::ostringstream auctionSuccessfulBody;
         uint32 auctionCut = auction->GetAuctionCut();
 
         auctionSuccessfulBody.width(16);
         auctionSuccessfulBody << std::right << std::hex << auction->bidder;
-        auctionSuccessfulBody << std::dec << ":" << auction->bid << ":" << auction->buyout;
-        auctionSuccessfulBody << ":" << auction->deposit << ":" << auctionCut;
+        auctionSuccessfulBody << std::dec << ':' << auction->bid << ':' << auction->buyout;
+        auctionSuccessfulBody << ':' << auction->deposit << ':' << auctionCut;
 
         DEBUG_LOG("AuctionSuccessful body string : %s", auctionSuccessfulBody.str().c_str());
 
@@ -237,7 +237,7 @@ void AuctionHouseMgr::SendAuctionExpiredMail(AuctionEntry * auction)
     if (owner || owner_accId)
     {
         std::ostringstream subject;
-        subject << auction->itemTemplate << ":" << auction->itemRandomPropertyId << ":" << AUCTION_EXPIRED << ":" << auction->Id << ":" << auction->itemCount;
+        subject << auction->itemTemplate << ':' << auction->itemRandomPropertyId << ':' << AUCTION_EXPIRED << ':' << auction->Id << ':' << auction->itemCount;
 
         if (owner)
             owner->GetSession()->SendAuctionOwnerNotification(auction);
@@ -432,7 +432,7 @@ void AuctionHouseMgr::LoadAuctions()
 
             // Attempt send item back to owner
             std::ostringstream msgAuctionCanceledOwner;
-            msgAuctionCanceledOwner << auction->itemTemplate << ":"<< auction->itemRandomPropertyId << ":" << AUCTION_CANCELED << ":" << auction->Id << ":" << auction->itemCount;
+            msgAuctionCanceledOwner << auction->itemTemplate << ':' << auction->itemRandomPropertyId << ':' << AUCTION_CANCELED << ':' << auction->Id << ':' << auction->itemCount;
 
             if (auction->itemGuidLow)
             {
@@ -869,12 +869,12 @@ void AuctionHouseObject::BuildListPendingSales(WorldPacket& data, Player* player
         if (Aentry->owner == player->GetGUIDLow())
         {
             std::ostringstream str1;
-            str1 << Aentry->itemTemplate << ":" << Aentry->itemRandomPropertyId << ":" << AUCTION_SUCCESSFUL << ":" << Aentry->Id << ":" << Aentry->itemCount;
+            str1 << Aentry->itemTemplate << ':' << Aentry->itemRandomPropertyId << ':' << AUCTION_SUCCESSFUL << ':' << Aentry->Id << ':' << Aentry->itemCount;
 
             std::ostringstream str2;
             str2.width(16);
-            str2 << std::right << std::hex << Aentry->bidder << std::dec << ":";
-            str2 << Aentry->bid << ":" << Aentry->buyout << ":" << Aentry->deposit << ":" << Aentry->GetAuctionCut();
+            str2 << std::right << std::hex << Aentry->bidder << std::dec << ':';
+            str2 << Aentry->bid << ':' << Aentry->buyout << ':' << Aentry->deposit << ':' << Aentry->GetAuctionCut();
 
             data << str1.str();                             // string "%d:%d:%d:%d:%d" -> itemId, ItemRandomPropertyId, 2, auctionId, unk1 (stack size?, unused)
             data << str2.str();                             // string "%16I64X:%d:%d:%d:%d" -> bidderGuid, bid, buyout, deposit, auctionCut

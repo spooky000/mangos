@@ -123,7 +123,7 @@ namespace VMAP
     {
         if (iBasePath.length() > 0 && (iBasePath[iBasePath.length()-1] != '/' || iBasePath[iBasePath.length()-1] != '\\'))
         {
-            iBasePath.append("/");
+            iBasePath.push_back('/');
         }
     }
 
@@ -236,7 +236,7 @@ namespace VMAP
     {
         std::string basePath = vmapPath;
         if (basePath.length() > 0 && (basePath[basePath.length()-1] != '/' || basePath[basePath.length()-1] != '\\'))
-            basePath.append("/");
+            basePath.push_back('/');
         std::string fullname = basePath + VMapManager2::getMapFileName(mapID);
         bool success = true;
         FILE *rf = fopen(fullname.c_str(), "rb");

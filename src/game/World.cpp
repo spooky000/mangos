@@ -877,7 +877,7 @@ void World::LoadConfigSettings(bool reload)
         dataPath = "./";
     // normalize dir path to path/ or path\ form
     else if (dataPath.at(dataPath.length()-1) != '/' && dataPath.at(dataPath.length()-1) != '\\')
-        dataPath.append("/");
+        dataPath.push_back('/');
 
     if (reload)
     {
