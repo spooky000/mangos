@@ -6138,15 +6138,8 @@ void Aura::HandlePeriodicDamage(bool apply, bool Real)
                 else if (spellProto->SpellFamilyFlags.test<CF_DRUID_INSECT_SWARM>())
                 {
                     // Idol of the Crying Wind
-                    Unit::AuraList const& dummyAuras = caster->GetAurasByType(SPELL_AURA_DUMMY);
-                    for(Unit::AuraList::const_iterator itr = dummyAuras.begin(); itr != dummyAuras.end(); ++itr)
-                    {
-                        if((*itr)->GetId()==64950)
-                        {
-                            m_modifier.m_amount += (int)((*itr)->GetModifier()->m_amount * GetSpellProto()->EffectCoeffs[GetEffIndex()]);
-                            break;
-                        }
-                    }
+                    if(Aura * pIdol = caster->GetAura(64950, EFFECT_INDEX_0))
+                        m_modifier.m_amount += (int)(pIdol->GetModifier()->m_amount * GetSpellProto()->EffectCoeffs[GetEffIndex()]);
                 }
                 break;
             }
