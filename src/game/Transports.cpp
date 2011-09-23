@@ -52,33 +52,31 @@ void MapManager::LoadTransports()
     {
         bar.step();
 
-        Transport *t = new Transport;
-
         Field *fields = result->Fetch();
 
         uint32 entry = fields[0].GetUInt32();
         std::string name = fields[1].GetCppString();
-        t->m_period = fields[2].GetUInt32();
 
         const GameObjectInfo *goinfo = ObjectMgr::GetGameObjectInfo(entry);
 
         if(!goinfo)
         {
             sLog.outErrorDb("Transport ID:%u, Name: %s, will not be loaded, gameobject_template missing", entry, name.c_str());
-            delete t;
             continue;
         }
 
         if(goinfo->type != GAMEOBJECT_TYPE_MO_TRANSPORT)
         {
             sLog.outErrorDb("Transport ID:%u, Name: %s, will not be loaded, gameobject_template type wrong", entry, name.c_str());
-            delete t;
             continue;
         }
 
         // sLog.outString("Loading transport %d between %s, %s", entry, name.c_str(), goinfo->name);
 
         std::set<uint32> mapsUsed;
+
+        Transport *t = new Transport;
+        t->m_period = fields[2].GetUInt32();
 
         if(!t->GenerateWaypoints(goinfo->moTransport.taxiPathId, mapsUsed))
             // skip transports with empty waypoints list
