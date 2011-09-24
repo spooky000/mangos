@@ -39,7 +39,6 @@
 static uint32 const BG_SA_GateStatus[6] = {3849, 3623, 3620, 3614, 3617, 3638};
 static uint32 const BG_SA_WorldStatusA[3] = {3630, 3627, 3626};
 static uint32 const BG_SA_WorldStatusH[3] = {3631, 3628, 3629};
-static uint32 const BG_IC_TEAM[BG_TEAMS_COUNT] = {84, 83};
 
 // WorldSafeLocs ids for 5 gyd, and for ally, and horde starting location
 static uint32 const BG_SA_GraveyardIdsPhase[3] = {1347, 1346, 1348};
@@ -586,6 +585,10 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
     BG_SA_GraveYard gyd = BG_SA_GraveYard(objectEvent);
 
     BattleGroundTeamIndex teamIndex = GetTeamIndexByTeamId(source->GetTeam());
+
+    if (gyd == 2)
+        if (GetGateStatus(BG_SA_GO_GATES_T_MAUVE_AMETHYST) != BG_SA_GO_GATES_DESTROY && GetGateStatus(BG_SA_GO_GATES_T_RED_SUN) != BG_SA_GO_GATES_DESTROY)
+            return;
 
     if ((m_Gyd[gyd] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[gyd] == BG_SA_GARVE_STATUS_HORDE_CONTESTED))
     {
