@@ -1619,7 +1619,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 case 15286:
                 {
                     // Return if self damage
-                    if (this == pVictim)
+                    if (this == pVictim || procSpell->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_MIND_SEAR1>() )
                         return SPELL_AURA_PROC_FAILED;
 
                     // Heal amount - Self/Team
