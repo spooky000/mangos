@@ -3144,6 +3144,14 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
             {
                 if (!roll_chance_f(GetUnitCriticalChance(BASE_ATTACK, pVictim)))
                     return SPELL_AURA_PROC_FAILED;
+
+                if (cooldown && GetTypeId() == TYPEID_PLAYER)
+                {
+                    if (((Player*)this)->HasSpellCooldown(80001))
+                        return SPELL_AURA_PROC_FAILED;
+
+                    ((Player*)this)->AddSpellCooldown(80001, 0, time(NULL) + cooldown);
+                }
                 basepoints[0] = triggerAmount * damage / 100;
                 triggered_spell_id = 50526;
                 break;
@@ -4634,6 +4642,17 @@ SpellAuraProcResult Unit::HandleModDamagePercentDoneAuraProc(Unit* /*pVictim*/, 
     else if (spellInfo->Id == 36032 && procSpell->SpellFamilyName == SPELLFAMILY_MAGE && procSpell->SpellIconID == 2294)
         // prevent proc from self(spell that triggered this aura)
         return SPELL_AURA_PROC_FAILED;
+    // Bone Shield cooldown
+    else if (spellInfo->Id == 49222)
+    {
+        if (cooldown && GetTypeId() == TYPEID_PLAYER)
+        {
+            if (((Player*)this)->HasSpellCooldown(80000))
+                return SPELL_AURA_PROC_FAILED;
+
+            ((Player*)this)->AddSpellCooldown(80000, 0, time(NULL) + cooldown);
+        }
+    }
 
     return SPELL_AURA_PROC_OK;
 }
