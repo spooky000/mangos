@@ -577,6 +577,13 @@ struct GameObjectData
     uint8 spawnMask;
 };
 
+// from `gameobject_addon`
+struct GameObjectDataAddon
+{
+    uint32 guid;
+    QuaternionData path_rotation;
+};
+
 // For containers:  [GO_NOT_READY]->GO_READY (close)->GO_ACTIVATED (open) ->GO_JUST_DEACTIVATED->GO_READY        -> ...
 // For bobber:      GO_NOT_READY  ->GO_READY (close)->GO_ACTIVATED (open) ->GO_JUST_DEACTIVATED-><deleted>
 // For door(closed):[GO_NOT_READY]->GO_READY (close)->GO_ACTIVATED (open) ->GO_JUST_DEACTIVATED->GO_READY(close) -> ...
@@ -618,7 +625,7 @@ class MANGOS_DLL_SPEC GameObject : public WorldObject
         // z_rot, y_rot, x_rot - rotation angles around z, y and x axes
         void SetWorldRotationAngles(float z_rot, float y_rot, float x_rot);
         void SetWorldRotation(float qx, float qy, float qz, float qw);   
-        void SetTransportPathRotation(float qx, float qy, float qz, float qw);      // transforms(rotates) transport's path
+        void SetTransportPathRotation(QuaternionData rotation);      // transforms(rotates) transport's path
         int64 GetPackedWorldRotation() const { return m_packedRotation; }
 
         // overwrite WorldObject function for proper name localization
