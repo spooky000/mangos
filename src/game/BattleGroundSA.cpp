@@ -463,10 +463,6 @@ void BattleGroundSA::UpdatePhase()
         SpawnEvent(SA_EVENT_ADD_NPC, 0, false);
         SpawnEvent(BG_EVENT_DOOR, 0, true);
 
-        m_ActiveEvents[SA_EVENT_ADD_NPC] = BG_EVENT_NONE;
-        m_ActiveEvents[SA_EVENT_ADD_VECH_E] = BG_EVENT_NONE;
-        m_ActiveEvents[SA_EVENT_ADD_VECH_W] = BG_EVENT_NONE;
-
         Round_timer = (BG_SA_ROUNDLENGTH - RoundScores[0].time);
         SetStatus(STATUS_WAIT_JOIN);
         SendMessageToAll(LANG_BG_SA_START_TWO_MINUTE, CHAT_MSG_BG_SYSTEM_NEUTRAL, NULL);
