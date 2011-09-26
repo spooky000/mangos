@@ -430,6 +430,14 @@ void BattleGroundSA::ResetBattle(uint32 winner, Team teamDefending)
             plr->DestroyItemCount(39213, 1, true);
     }
 
+    uint32 npcEvent = MAKE_PAIR32(SA_EVENT_ADD_NPC, 0);
+    for(std::vector<ObjectGuid>::iterator itr = m_EventObjects[npcEvent].creatures.begin(); itr != m_EventObjects[npcEvent].creatures.end(); ++itr)
+    {
+        if(Creature * pEventCreature = GetBgMap()->GetCreature((*itr)))
+            if(pEventCreature->GetEntry() == 28781)
+                pEventCreature->DealDamage(pEventCreature, pEventCreature->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+    }
+
     UpdatePhase();
     ResetWorldStates();
 }
