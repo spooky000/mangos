@@ -439,7 +439,7 @@ void BattleGroundSA::ResetBattle(uint32 winner, Team teamDefending)
                 float x,y,z,o;
                 pEventCreature->DealDamage(pEventCreature, pEventCreature->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
                 pEventCreature->GetRespawnCoord(x,y,z,&o);
-                pEventCreature->Relocate(x,y,z,o);
+                pEventCreature->NearTeleportTo(x,y,z,o);
             }
     }
 
