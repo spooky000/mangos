@@ -2173,6 +2173,28 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         if (Unit* caster = GetCaster())
                             caster->CastSpell(caster, 13138, true, NULL, this);
                         return;
+                    case 28832:                             // Mark of Korth'azz
+                    case 28833:                             // Mark of Blaumeux
+                    case 28834:                             // Mark of Rivendare
+                    case 28835:                             // Mark of Zeliek
+                    {
+                        uint32 stacks = GetStackAmount();
+                        int32 damage = 0;
+                        switch (stacks)
+                        {
+                            case 0:
+                            case 1: return;
+                            case 2: damage = 500;   break;
+                            case 3: damage = 1500;  break;
+                            case 4: damage = 4000;  break;
+                            case 5: damage = 12500; break;
+                            default: damage = 20000 + (1000 * (stacks - 6)); break;
+                        }
+
+                        if (Unit* caster = GetCaster())
+                            caster->CastCustomSpell(target, 28836, &damage, NULL, NULL, true, NULL, this, caster->GetObjectGuid());
+                        return;
+                    }
                     case 31606:                             // Stormcrow Amulet
                     {
                         CreatureInfo const * cInfo = ObjectMgr::GetCreatureTemplate(17970);
@@ -11147,35 +11169,6 @@ void SpellAuraHolder::HandleSpellSpecificBoostsForward(bool apply)
 
     switch(GetSpellProto()->SpellFamilyName)
     {
-        case SPELLFAMILY_PRIEST:
-        {
-            // Power Word: Shield
-            if (GetSpellProto()->SpellFamilyFlags.test<CF_PRIEST_POWER_WORD_SHIELD>() && GetSpellProto()->Mechanic == MECHANIC_SHIELD)
-            {
-                Unit* caster = GetCaster();
-
-                if (caster && !apply)
-                {
-                    // Glyph of Power Word: Shield
-                    if (Aura* glyph = caster->GetAura(55672, EFFECT_INDEX_0))
-                    {
-                        //int32 remainingDamage = 0;
-                        if (Aura* shield = GetAuraByEffectIndex(EFFECT_INDEX_0))
-                        {
-                            int32 remainingDamage = shield->GetModifier()->m_baseamount;
-                            if (shield->GetModifier()->m_amount > 0)
-                                remainingDamage -= shield->GetModifier()->m_amount;
-
-                            int32 heal = (glyph->GetModifier()->m_amount * remainingDamage)/100;
-                            if (heal > 0)
-                                caster->CastCustomSpell(m_target, 56160, &heal, NULL, NULL, true, 0, shield);
-                        }
-                    }
-                }
-                return;
-            }
-            break;
-        }
         case SPELLFAMILY_WARLOCK:
         {
             // Shadow embrace (healing reduction part)
