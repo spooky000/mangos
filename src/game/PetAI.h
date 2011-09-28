@@ -55,5 +55,7 @@ class MANGOS_DLL_DECL PetAI : public CreatureAI
         typedef std::set<ObjectGuid> AllySet;
         AllySet m_AllySet;
         uint32 m_updateAlliesTimer;
+
+        bool _CheckTargetCC(Unit* target);
 };
 #endif

@@ -466,24 +466,6 @@ void BattleGround::Update(uint32 diff)
                         sBattleGroundMgr.BuildBattleGroundStatusPacket(&status, this, queueSlot, GetStatus(), 0, GetStartTime(), GetArenaType());
                         plr->GetSession()->SendPacket(&status);
 
-                        /*for(Unit::SpellAuraHolderMap::iterator iter = plr->GetSpellAuraHolderMap().begin(); iter != plr->GetSpellAuraHolderMap().end();)
-                        {
-                            if (!iter->second->IsPassive() && iter->second->IsPositive() && iter->second->GetId() != 32612)
-                            {
-                                for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
-                                    if (Aura *aura = iter->second->GetAuraByEffectIndex(SpellEffectIndex(i)))
-                                        if (uint32(aura->GetAuraMaxDuration()) < 30000)
-                                        {
-                                             plr->RemoveAurasDueToSpell(iter->second->GetId());
-                                             iter = plr->GetSpellAuraHolderMap().begin();
-                                        }
-                                        else
-                                            ++iter;
-                            }
-                            else
-                                ++iter;
-                        }*/
-
                         plr->RemoveAurasDueToSpell(SPELL_ARENA_PREPARATION);
                     }
 
@@ -1608,8 +1590,9 @@ bool BattleGround::AddObject(uint32 type, uint32 entry, float x, float y, float 
     // and when loading it (in go::LoadFromDB()), a new guid would be assigned to the object, and a new object would be created
     // so we must create it specific for this instance
     GameObject * go = new GameObject;
-    if(!go->Create(GetBgMap()->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT),entry, GetBgMap(),
-        PHASEMASK_NORMAL, x,y,z,o,rotation0,rotation1,rotation2,rotation3,100,GO_STATE_READY))
+
+    if (!go->Create(GetBgMap()->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT),entry, GetBgMap(),
+        PHASEMASK_NORMAL, x,y,z,o, QuaternionData(rotation0,rotation1,rotation2,rotation3)))
     {
         sLog.outErrorDb("Gameobject template %u not found in database! BattleGround not created!", entry);
         sLog.outError("Cannot create gameobject template %u! BattleGround not created!", entry);
@@ -1991,7 +1974,7 @@ void BattleGround::SendWarningToAll(int32 entry, ...)
     data << (uint32)1;
     data << (uint8)0;
     data << (uint64)0;
-    data << (uint32)(strlen(msg.c_str())+1);
+    data << (uint32)(msg.length() + 1);
     data << msg.c_str();
     data << (uint8)0;
     uint8 control = 0;

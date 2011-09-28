@@ -22,6 +22,7 @@
 #include "Player.h"
 #include "DBCStores.h"
 #include "Spell.h"
+#include "SpellAuras.h"
 #include "ObjectAccessor.h"
 #include "SpellMgr.h"
 #include "Creature.h"
@@ -359,3 +360,18 @@ bool PetAI::CanAutoCast(Unit* target, SpellEntry const* spellInfo)
     return spell.CanAutoCast(target);
 }
 
+bool PetAI::_CheckTargetCC(Unit* target)
+{
+    if (m_creature->GetCharmerOrOwnerGuid())
+    {
+        Unit::SpellAuraHolderMap & auras = target->GetSpellAuraHolderMap();
+        for (Unit::SpellAuraHolderMap::iterator iter = auras.begin(); iter != auras.end(); ++iter )
+        {
+            SpellAuraHolder const* auraHolder = iter->second;
+            if (!auraHolder->IsPositive() && auraHolder->GetSpellProto()->Attributes & SPELL_ATTR_BREAKABLE_BY_DAMAGE && (auraHolder->GetCasterGuid() == m_creature->GetCharmerOrOwnerGuid()))
+                return true;
+        }
+    }
+
+    return false;
+}

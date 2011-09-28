@@ -639,7 +639,8 @@ void LoadDBCStores(const std::string& dataPath)
 
     // Wind Shear
     SpellEntry *sfix16 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(57994));
-    sfix16->EffectBasePoints[1] = 1;
+    sfix16->Effect[EFFECT_INDEX_1] = SPELL_EFFECT_MODIFY_THREAT_PERCENT;
+    sfix16->EffectBasePoints[EFFECT_INDEX_1] = -6;
 
     // Conjure Mana Gem filling
     for(int i = 0; i < 7; ++i)

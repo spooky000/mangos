@@ -1168,7 +1168,7 @@ void WorldSession::SendLfgRoleCheckUpdate()
     data << uint8(group->GetLFGState()->GetRoleCheckState() == LFG_ROLECHECK_INITIALITING);
     data << uint8(dungeons->size());                                               // Number of dungeons
 
-    if (dungeons->size())
+    if (!dungeons->empty())
     {
         for (LFGDungeonSet::const_iterator itr = dungeons->begin(); itr != dungeons->end(); ++itr)
         {

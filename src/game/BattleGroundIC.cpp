@@ -254,7 +254,7 @@ void BattleGroundIC::Update(uint32 diff)
 void BattleGroundIC::StartingEventCloseDoors()
 {
     // Show Full Gate Displays
-    // GetBGObject(BG_IC_GO_ALLIANCE_GATE_1)->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED); // Alliance door
+    GetBGObject(BG_IC_GO_ALLIANCE_GATE_1)->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED); // Alliance door
     GetBGObject(BG_IC_GO_ALLIANCE_GATE_2)->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED); // Alliance door
     GetBGObject(BG_IC_GO_HORDE_GATE_2)->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED); // Horde door
     GetBGObject(BG_IC_GO_HORDE_GATE_3)->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED); // Horde door
@@ -330,8 +330,11 @@ void BattleGroundIC::AddPlayer(Player *plr)
 
 void BattleGroundIC::RemovePlayer(Player* plr, uint64 /*guid*/)
 {
-    plr->RemoveAurasDueToSpell(SPELL_QUARRY);
-    plr->RemoveAurasDueToSpell(SPELL_OIL_REFINERY);
+    if (plr)
+    {
+        plr->RemoveAurasDueToSpell(SPELL_QUARRY);
+        plr->RemoveAurasDueToSpell(SPELL_OIL_REFINERY);
+    }
 }
 
 void BattleGroundIC::HandleAreaTrigger(Player * /*Source*/, uint32 /*Trigger*/)

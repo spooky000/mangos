@@ -39,7 +39,6 @@
 static uint32 const BG_SA_GateStatus[6] = {3849, 3623, 3620, 3614, 3617, 3638};
 static uint32 const BG_SA_WorldStatusA[3] = {3630, 3627, 3626};
 static uint32 const BG_SA_WorldStatusH[3] = {3631, 3628, 3629};
-static uint32 const BG_IC_TEAM[BG_TEAMS_COUNT] = {84, 83};
 
 // WorldSafeLocs ids for 5 gyd, and for ally, and horde starting location
 static uint32 const BG_SA_GraveyardIdsPhase[3] = {1347, 1346, 1348};
@@ -145,7 +144,7 @@ void BattleGroundSA::StartShips()
 
     for (int i = BG_SA_BOAT_ONE; i <= BG_SA_BOAT_TWO; i++)
     {
-        for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end();itr++)
+        for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
         {
             if (Player* p = sObjectMgr.GetPlayer(itr->first))
             {
@@ -355,7 +354,7 @@ void BattleGroundSA::StartingEventOpenDoors()
 {
     SpawnEvent(SA_EVENT_ADD_NPC, 0, true);
     ToggleTimer();
-    StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, (defender  == HORDE) ? 23748 : 21702);
+    StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, (defender  == HORDE) ? BG_SA_EVENT_START_BATTLE_1 : BG_SA_EVENT_START_BATTLE_2);
 }
 
 void BattleGroundSA::RemovePlayer(Player* /*plr*/, ObjectGuid /*guid*/)
@@ -542,7 +541,7 @@ bool BattleGroundSA::SetupShips()
                 }
 
                 if (GameObject* boat = GetBGObject(i))
-                    boat->SetTransportPathRotation(0.0f, 0.0f, 1.0f, 0.0002f);
+                    boat->SetTransportPathRotation(QuaternionData(0.0f, 0.0f, 1.0f, 0.0002f));
                 break;
             case BG_SA_BOAT_TWO:
                 boatid = GetDefender() == ALLIANCE ? BG_SA_BOAT_TWO_H : BG_SA_BOAT_TWO_A;
@@ -553,7 +552,7 @@ bool BattleGroundSA::SetupShips()
                 }
 
                 if (GameObject* boat = GetBGObject(i))
-                    boat->SetTransportPathRotation(0, 0, 1.0f, 0.00001f);
+                    boat->SetTransportPathRotation(QuaternionData(0, 0, 1.0f, 0.00001f));
                 break;
         }
     }
@@ -599,6 +598,10 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
     BG_SA_GraveYard gyd = BG_SA_GraveYard(objectEvent);
 
     BattleGroundTeamIndex teamIndex = GetTeamIndexByTeamId(source->GetTeam());
+
+    if (gyd == 2)
+        if (GetGateStatus(BG_SA_GO_GATES_T_MAUVE_AMETHYST) != BG_SA_GO_GATES_DESTROY && GetGateStatus(BG_SA_GO_GATES_T_RED_SUN) != BG_SA_GO_GATES_DESTROY)
+            return;
 
     if ((m_Gyd[gyd] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[gyd] == BG_SA_GARVE_STATUS_HORDE_CONTESTED))
     {
@@ -792,16 +795,17 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                     sLog.outError("Player %s has clicked SOTA Relic without Relic gate being destroyed", player->GetName());
                     return;
                 }
+
+                //Achievement Storm the Beach (1310)
+                for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+                {
+                    if (Player *plr = sObjectMgr.GetPlayer(itr->first))
+                        if (plr->GetTeam() != defender)
+                            plr->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 65246);
+                }
+
                 if(Phase == SA_ROUND_ONE) // Victory at first round
                 {
-
-                    //Achievement Storm the Beach (1310)
-                    for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
-                    {
-                        if (Player *plr = sObjectMgr.GetPlayer(itr->first))
-                            if (plr->GetTeam() != defender)
-                                plr->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 65246);
-                    }
 
                     RoundScores[0].winner = GetDefender() == ALLIANCE ? HORDE : ALLIANCE;
                     RoundScores[0].time = Round_timer;

@@ -59,9 +59,9 @@ float baseMoveSpeed[MAX_MOVE_TYPE] =
 {
     2.5f,                                                   // MOVE_WALK
     7.0f,                                                   // MOVE_RUN
-    2.5f,                                                   // MOVE_RUN_BACK
+    4.5f,                                                   // MOVE_RUN_BACK
     4.722222f,                                              // MOVE_SWIM
-    4.5f,                                                   // MOVE_SWIM_BACK
+    2.5f,                                                   // MOVE_SWIM_BACK
     3.141594f,                                              // MOVE_TURN_RATE
     7.0f,                                                   // MOVE_FLIGHT
     4.5f,                                                   // MOVE_FLIGHT_BACK
@@ -3544,7 +3544,7 @@ uint32 Unit::GetDefenseSkillValue(Unit const* target) const
 
 float Unit::GetUnitDodgeChance() const
 {
-    if (IsNonMeleeSpellCasted(false) || hasUnitState(UNIT_STAT_STUNNED))
+    if (IsNonMeleeSpellCasted(false) || hasUnitState(UNIT_STAT_NO_DEFENSE))
         return 0.0f;
 
     if (GetTypeId() == TYPEID_PLAYER)
@@ -3564,7 +3564,7 @@ float Unit::GetUnitDodgeChance() const
 
 float Unit::GetUnitParryChance() const
 {
-    if (IsNonMeleeSpellCasted(false) || hasUnitState(UNIT_STAT_STUNNED))
+    if (IsNonMeleeSpellCasted(false) || hasUnitState(UNIT_STAT_NO_DEFENSE))
         return 0.0f;
 
     float chance = 0.0f;
@@ -3596,7 +3596,7 @@ float Unit::GetUnitParryChance() const
 
 float Unit::GetUnitBlockChance() const
 {
-    if ( IsNonMeleeSpellCasted(false) || hasUnitState(UNIT_STAT_STUNNED))
+    if ( IsNonMeleeSpellCasted(false) || hasUnitState(UNIT_STAT_NO_DEFENSE))
         return 0.0f;
 
     if(GetTypeId() == TYPEID_PLAYER)
@@ -4359,32 +4359,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
                 {
                     // can be created with >1 stack by some spell mods
                     foundHolder->ModStackAmount(holder->GetStackAmount());
-
-                    switch(holder->GetId())
-                    {
-                        case 28832: // Mark of Korth'azz
-                        case 28833: // Mark of Blaumeux
-                        case 28834: // Mark of Rivendare
-                        case 28835: // Mark of Zeliek
-                            if(Unit *caster = holder->GetCaster()) // actually we can also use cast(this, originalcasterguid)
-                            {
-                                int32 damageToDeal;
-                                switch(foundHolder->GetStackAmount())
-                                {
-                                    case 1: damageToDeal = 0;     break;
-                                    case 2: damageToDeal = 500;   break;
-                                    case 3: damageToDeal = 1000;  break;
-                                    case 4: damageToDeal = 1500;  break;
-                                    case 5: damageToDeal = 4000;  break;
-                                    case 6: damageToDeal = 12000; break;
-                                    default:damageToDeal = 20000 + 1000 * (foundHolder->GetStackAmount() - 7); break;
-                                }
-                                if(damageToDeal)
-                                    caster->CastCustomSpell(this, 28836, &damageToDeal, NULL, NULL, true);
-                            }
-                            break;
-                    }
-
+                    foundHolder->HandleSpellSpecificBoostsForward(true);
                     delete holder;
                     return false;
                 }
@@ -4516,6 +4491,8 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolder *holder)
             scTargets[aurSpellInfo] = GetObjectGuid();
         }
     }
+
+    holder->HandleSpellSpecificBoostsForward(true);
 
     // add aura, register in lists and arrays
     holder->_AddSpellAuraHolder();
@@ -5084,6 +5061,11 @@ void Unit::RemoveAuraHolderFromStack(uint32 spellId, uint32 stackAmount, ObjectG
 
 void Unit::RemoveAurasDueToSpell(uint32 spellId, SpellAuraHolder* except, AuraRemoveMode mode)
 {
+    SpellEntry const* spellEntry = sSpellStore.LookupEntry(spellId);
+    if (spellEntry && spellEntry->SpellDifficultyId && IsInWorld() && GetMap()->IsDungeon())
+        if (SpellEntry const* spellDiffEntry = GetSpellEntryByDifficulty(spellEntry->SpellDifficultyId, GetMap()->GetDifficulty(), GetMap()->IsRaid()))
+            spellId = spellDiffEntry->Id;
+
     SpellAuraHolderBounds bounds = GetSpellAuraHolderBounds(spellId);
     for (SpellAuraHolderMap::iterator iter = bounds.first; iter != bounds.second; )
     {
@@ -5216,6 +5198,9 @@ void Unit::RemoveSpellAuraHolder(SpellAuraHolder *holder, AuraRemoveMode mode)
 {
     if (!holder)
         return;
+
+    if (mode != AURA_REMOVE_BY_DELETE)
+        holder->HandleSpellSpecificBoostsForward(false);
 
     // Statue unsummoned at holder remove
     SpellEntry const* AurSpellInfo = holder->GetSpellProto();
@@ -5362,6 +5347,56 @@ void Unit::RemoveArenaAuras(bool onleave)
     }
 }
 
+void Unit::HandleArenaPreparation(bool apply)
+{
+    ApplyModFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREPARATION, apply);
+
+    if (apply)
+    {
+        // max regen powers at start preparation
+        SetHealth(GetMaxHealth());
+        SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
+        SetPower(POWER_ENERGY, GetMaxPower(POWER_ENERGY));
+    }
+    else
+    {
+        // reset originally 0 powers at start/leave
+        SetPower(POWER_RAGE, 0);
+        SetPower(POWER_RUNIC_POWER, 0);
+        SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
+        SetPower(POWER_ENERGY, GetMaxPower(POWER_ENERGY));
+
+        // Remove all buffs with duration < 25 sec.
+        for(SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end();)
+        {
+            if (!(iter->second->GetSpellProto()->AttributesEx4 & SPELL_ATTR_EX4_UNK21) &&
+                                                            // don't remove stances, shadowform, pally/hunter auras
+            !iter->second->IsPassive() &&                   // don't remove passive auras
+            iter->second->GetAuraMaxDuration() > 0 &&
+            iter->second->GetAuraMaxDuration() <= 30000)
+            {
+                RemoveSpellAuraHolder(iter->second, AURA_REMOVE_BY_CANCEL);
+                iter = m_spellAuraHolders.begin();
+            }
+            else
+                ++iter;
+        }
+    }
+
+    if (GetObjectGuid().IsPet())
+    {
+        Pet* pet = ((Pet*)this);
+        if (pet)
+        {
+            Unit* owner = pet->GetOwner();
+            if (owner && (owner->GetTypeId() == TYPEID_PLAYER) && ((Player*)owner)->GetGroup())
+                ((Player*)owner)->SetGroupUpdateFlag(GROUP_UPDATE_FLAG_PET_AURAS);
+        }
+    }
+    else
+        CallForAllControlledUnits(ApplyArenaPreparationWithHelper(apply),CONTROLLED_PET|CONTROLLED_GUARDIANS);
+}
+
 void Unit::RemoveAllAurasOnDeath()
 {
     // used just after dieing to remove all visible auras
@@ -5460,6 +5495,16 @@ bool Unit::HasAura(uint32 spellId, SpellEffectIndex effIndex) const
             return true;
 
     return false;
+}
+
+bool Unit::HasAuraOfDifficulty(uint32 spellId) const
+{
+    SpellEntry const* spellEntry = sSpellStore.LookupEntry(spellId);
+    if (spellEntry && spellEntry->SpellDifficultyId && IsInWorld() && GetMap()->IsDungeon())
+        if (SpellEntry const* spellDiffEntry = GetSpellEntryByDifficulty(spellEntry->SpellDifficultyId, GetMap()->GetDifficulty(), GetMap()->IsRaid()))
+            spellId = spellDiffEntry->Id;
+
+    return m_spellAuraHolders.find(spellId) != m_spellAuraHolders.end();
 }
 
 void Unit::AddDynObject(DynamicObject* dynObj)

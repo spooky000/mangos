@@ -877,7 +877,7 @@ void World::LoadConfigSettings(bool reload)
         dataPath = "./";
     // normalize dir path to path/ or path\ form
     else if (dataPath.at(dataPath.length()-1) != '/' && dataPath.at(dataPath.length()-1) != '\\')
-        dataPath.append("/");
+        dataPath.push_back('/');
 
     if (reload)
     {
@@ -1092,7 +1092,10 @@ void World::SetInitialWorldSettings()
     sMapPersistentStateMgr.LoadCreatureRespawnTimes();
 
     sLog.outString( "Loading Gameobject Data..." );
-    sObjectMgr.LoadGameobjects();
+    sObjectMgr.LoadGameObjects();
+
+    sLog.outString( "Loading Gameobject Addon Data..." );
+    sObjectMgr.LoadGameObjectAddon();
 
     sLog.outString( "Loading CreatureLinking Data..." );    // must be after Creatures
     sCreatureLinkingMgr.LoadFromDB();
@@ -1127,7 +1130,7 @@ void World::SetInitialWorldSettings()
     sLog.outString( "Loading Creature Respawn Data..." );   // must be after LoadCreatures(), and sMapPersistentStateMgr.InitWorldMaps()
     sMapPersistentStateMgr.LoadCreatureRespawnTimes();
 
-    sLog.outString( "Loading Gameobject Respawn Data..." ); // must be after LoadGameobjects(), and sMapPersistentStateMgr.InitWorldMaps()
+    sLog.outString( "Loading Gameobject Respawn Data..." ); // must be after LoadGameObjects(), and sMapPersistentStateMgr.InitWorldMaps()
     sMapPersistentStateMgr.LoadGameobjectRespawnTimes();
 
     sLog.outString( "Loading UNIT_NPC_FLAG_SPELLCLICK Data..." );
@@ -1443,7 +1446,7 @@ void World::DetectDBCLang()
     uint32 default_locale = MAX_LOCALE;
     for (int i = MAX_LOCALE-1; i >= 0; --i)
     {
-        if (strlen(race->name[i]) > 0)                      // check by race names
+        if (race->name[i][0] != '\0')                      // check by race names
         {
             default_locale = i;
             m_availableDbcLocaleMask |= (1 << i);
@@ -1913,19 +1916,13 @@ void World::ShutdownMsg(bool show, Player* player)
     if(m_ShutdownMask & SHUTDOWN_MASK_IDLE)
         return;
 
-    ///- Display a message every 12 hours, hours, 5 minutes, minute, 5 seconds and finally seconds
-    if ( show ||
-        (m_ShutdownTimer < 10) ||
-                                                            // < 30 sec; every 5 sec
-        (m_ShutdownTimer<30        && (m_ShutdownTimer % 5         )==0) ||
-                                                            // < 5 min ; every 1 min
-        (m_ShutdownTimer<5*MINUTE  && (m_ShutdownTimer % MINUTE    )==0) ||
-                                                            // < 30 min ; every 5 min
-        (m_ShutdownTimer<30*MINUTE && (m_ShutdownTimer % (5*MINUTE))==0) ||
-                                                            // < 12 h ; every 1 h
-        (m_ShutdownTimer<12*HOUR   && (m_ShutdownTimer % HOUR      )==0) ||
-                                                            // > 12 h ; every 12 h
-        (m_ShutdownTimer>12*HOUR   && (m_ShutdownTimer % (12*HOUR) )==0))
+    ///- Display a message every 12 hours, 1 hour, 5 minutes, 1 minute and 15 seconds
+    if (show ||
+        (m_ShutdownTimer < 5 * MINUTE && (m_ShutdownTimer % 15) == 0) ||            // < 5 min; every 15 sec
+        (m_ShutdownTimer < 15 * MINUTE && (m_ShutdownTimer % MINUTE) == 0) ||       // < 15 min; every 1 min
+        (m_ShutdownTimer < 30 * MINUTE && (m_ShutdownTimer % (5 * MINUTE)) == 0) || // < 30 min; every 5 min
+        (m_ShutdownTimer < 12 * HOUR && (m_ShutdownTimer % HOUR) == 0) ||           // < 12 h; every 1 h
+        (m_ShutdownTimer >= 12 * HOUR && (m_ShutdownTimer % (12 * HOUR)) == 0))     // >= 12 h; every 12 h
     {
         std::string str = secsToTimeString(m_ShutdownTimer);
 

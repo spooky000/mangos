@@ -276,9 +276,9 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
         // Unit speeds
         *data << float(unit->GetSpeed(MOVE_WALK));
         *data << float(unit->GetSpeed(MOVE_RUN));
-        *data << float(unit->GetSpeed(MOVE_SWIM_BACK));
-        *data << float(unit->GetSpeed(MOVE_SWIM));
         *data << float(unit->GetSpeed(MOVE_RUN_BACK));
+        *data << float(unit->GetSpeed(MOVE_SWIM));
+        *data << float(unit->GetSpeed(MOVE_SWIM_BACK));
         *data << float(unit->GetSpeed(MOVE_FLIGHT));
         *data << float(unit->GetSpeed(MOVE_FLIGHT_BACK));
         *data << float(unit->GetSpeed(MOVE_TURN_RATE));
@@ -411,7 +411,7 @@ void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
     // 0x200
     if(updateFlags & UPDATEFLAG_ROTATION)
     {
-        *data << int64(((GameObject*)this)->GetRotation());
+        *data << int64(((GameObject*)this)->GetPackedWorldRotation());
     }
 }
 
@@ -1258,17 +1258,22 @@ bool WorldObject::IsInRange3d(float x, float y, float z, float minRange, float m
 
 bool WorldObject::IsInBetween(const WorldObject *obj1, const WorldObject *obj2, float size) const
 {
-    if(GetPositionX() > std::max(obj1->GetPositionX(), obj2->GetPositionX())
-        || GetPositionX() < std::min(obj1->GetPositionX(), obj2->GetPositionX())
-        || GetPositionY() > std::max(obj1->GetPositionY(), obj2->GetPositionY())
-        || GetPositionY() < std::min(obj1->GetPositionY(), obj2->GetPositionY()))
+    if (!obj1 || !obj2)
+        return false;
+
+    float dist = GetExactDist2d(obj1->GetPositionX(), obj1->GetPositionY());
+
+    // not using sqrt() for performance
+    if ((dist * dist) >= obj1->GetExactDist2dSq(obj2->GetPositionX(), obj2->GetPositionY()))
         return false;
 
     if(!size)
         size = GetObjectBoundingRadius() / 2;
 
-    float angle = obj1->GetAngle(this) - obj1->GetAngle(obj2);
-    return abs(sin(angle)) * GetExactDist2d(obj1->GetPositionX(), obj1->GetPositionY()) < size;
+    float angle = obj1->GetAngle(obj2);
+
+    // not using sqrt() for performance
+    return (size * size) >= GetExactDist2dSq(obj1->GetPositionX() + cos(angle) * dist, obj1->GetPositionY() + sin(angle) * dist);
 }
 
 float WorldObject::GetAngle(const WorldObject* obj) const
@@ -1675,7 +1680,7 @@ Creature* WorldObject::SummonCreature(uint32 id, float x, float y, float z, floa
     return pCreature;
 }
 
-GameObject* WorldObject::SummonGameObject(uint32 id, float x, float y, float z, float ang, uint32 despwtime)
+GameObject* WorldObject::SummonGameObject(uint32 id, float x, float y, float z, float angle, uint32 despwtime)
 {
     GameObject* pGameObj = new GameObject;
 
@@ -1684,8 +1689,8 @@ GameObject* WorldObject::SummonGameObject(uint32 id, float x, float y, float z, 
     if (!map)
         return NULL;
 
-    if(!pGameObj->Create(map->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT), id, GetMap(),
-    GetPhaseMask(), x, y, z, ang, 0.0f, 0.0f, 0.0f, 0.0f, 100, GO_STATE_READY))
+    if(!pGameObj->Create(map->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT), id, map,
+        GetPhaseMask(), x, y, z, angle))
     {
         delete pGameObj;
         return NULL;

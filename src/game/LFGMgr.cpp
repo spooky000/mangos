@@ -605,7 +605,7 @@ LFGJoinResult LFGMgr::GetPlayerJoinResult(Player* player)
     // TODO - Check if all dungeons are valid
 
     // must be last check - ignored in party
-    if (!dungeons || !dungeons->size())
+    if (!dungeons || dungeons->empty())
         return ERR_LFG_INVALID_SLOT;
 
     return ERR_LFG_OK;

@@ -425,6 +425,9 @@ enum UnitState
     // can't move currently
     UNIT_STAT_CAN_NOT_MOVE    = UNIT_STAT_ROOT | UNIT_STAT_STUNNED | UNIT_STAT_DIED | UNIT_STAT_ON_VEHICLE,
 
+    // can't block, dodge, parry
+    UNIT_STAT_NO_DEFENSE      = (UNIT_STAT_CONFUSED | UNIT_STAT_STUNNED | UNIT_STAT_FLEEING),
+
     // stay by different reasons
     UNIT_STAT_NOT_MOVE        = UNIT_STAT_ROOT | UNIT_STAT_STUNNED | UNIT_STAT_DIED |
                                 UNIT_STAT_DISTRACTED | UNIT_STAT_ON_VEHICLE,
@@ -1431,6 +1434,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         {
             return m_spellAuraHolders.find(spellId) != m_spellAuraHolders.end();
         }
+        bool HasAuraOfDifficulty(uint32 spellId) const;
 
         bool virtual HasSpell(uint32 /*spellID*/) const { return false; }
 
@@ -1621,6 +1625,8 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void RemoveAllAuras(AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
         void RemoveArenaAuras(bool onleave = false);
         void RemoveAllAurasOnDeath();
+
+        void HandleArenaPreparation(bool apply);
 
         // removing specific aura FROM stack by diff reasons and selections
         void RemoveAuraHolderFromStack(uint32 spellId, uint32 stackAmount = 1, ObjectGuid casterGuid = ObjectGuid(), AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);

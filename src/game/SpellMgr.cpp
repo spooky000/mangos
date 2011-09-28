@@ -756,6 +756,7 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
         case SPELL_EFFECT_SKILL_STEP:
         case SPELL_EFFECT_HEAL_PCT:
         case SPELL_EFFECT_ENERGIZE_PCT:
+        case SPELL_EFFECT_QUEST_COMPLETE:
             return true;
 
         case SPELL_EFFECT_PERSISTENT_AREA_AURA:

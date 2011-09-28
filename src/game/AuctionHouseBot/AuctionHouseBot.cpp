@@ -322,6 +322,7 @@ void AuctionBotConfig::GetConfigFromFile()
     setConfig(CONFIG_BOOL_AHBOT_BIND_QUEST                   , "AuctionHouseBot.Bind.Quest"                  , false);
     setConfig(CONFIG_BOOL_AHBOT_LOCKBOX_ENABLED              , "AuctionHouseBot.LockBox.Enabled"             , false);
     setConfig(CONFIG_BOOL_AHBOT_PETS_ENABLED                 , "AuctionHouseBot.Pets.Enabled"                , false);
+    setConfig(CONFIG_BOOL_AHBOT_DM_CARDS_ENABLED             , "AuctionHouseBot.DMcards.Enabled"             , false);
 
     setConfig(CONFIG_BOOL_AHBOT_BUYPRICE_SELLER              , "AuctionHouseBot.BuyPrice.Seller"             , true);
 
@@ -1144,6 +1145,13 @@ bool AuctionBotSeller::Initialize()
                 {
                     // skip pets if disabled
                     if (!sAuctionBotConfig.getConfig(CONFIG_BOOL_AHBOT_PETS_ENABLED))
+                        continue;
+                }
+
+                if ((prototype->BagFamily & BAG_FAMILY_MASK_INSCRIPTION_SUPP) && (prototype->Class & ITEM_CLASS_QUEST))
+                {
+                    // skip darkmoon cards if disabled
+                    if (!sAuctionBotConfig.getConfig(CONFIG_BOOL_AHBOT_DM_CARDS_ENABLED))
                         continue;
                 }
 

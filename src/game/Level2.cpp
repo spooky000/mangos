@@ -1099,7 +1099,7 @@ bool ChatHandler::HandleGameObjectAddCommand(char* args)
         return false;
     }
 
-    if (!pGameObj->Create(db_lowGUID, gInfo->id, map, chr->GetPhaseMaskForSpawn(), x, y, z, o, 0.0f, 0.0f, 0.0f, 0.0f, GO_ANIMPROGRESS_DEFAULT, GO_STATE_READY))
+    if (!pGameObj->Create(db_lowGUID, gInfo->id, map, chr->GetPhaseMaskForSpawn(), x, y, z, o))
     {
         delete pGameObj;
         return false;
@@ -1271,15 +1271,15 @@ void ChatHandler::ShowAchievementListHelper(AchievementEntry const * achEntry, L
     std::ostringstream ss;
     if (m_session)
     {
-        ss << achEntry->ID << " - |cffffffff|Hachievement:" << achEntry->ID << ":" << std::hex << guid.GetRawValue() << std::dec;
+        ss << achEntry->ID << " - |cffffffff|Hachievement:" << achEntry->ID << ':' << std::hex << guid.GetRawValue() << std::dec;
         if (date)
         {
             // complete date
             tm* aTm = localtime(date);
-            ss << ":1:" << aTm->tm_mon+1 << ":" << aTm->tm_mday << ":" << (aTm->tm_year+1900-2000) << ":";
+            ss << ":1:" << aTm->tm_mon+1 << ':' << aTm->tm_mday << ':' << (aTm->tm_year+1900-2000) << ':';
 
             // complete criteria mask (all bits set)
-            ss << uint32(-1) << ":" << uint32(-1) << ":" << uint32(-1) << ":" << uint32(-1) << ":";
+            ss << uint32(-1) << ':' << uint32(-1) << ':' << uint32(-1) << ':' << uint32(-1) << ':';
         }
         else
         {

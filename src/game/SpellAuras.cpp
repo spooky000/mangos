@@ -2173,6 +2173,28 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         if (Unit* caster = GetCaster())
                             caster->CastSpell(caster, 13138, true, NULL, this);
                         return;
+                    case 28832:                             // Mark of Korth'azz
+                    case 28833:                             // Mark of Blaumeux
+                    case 28834:                             // Mark of Rivendare
+                    case 28835:                             // Mark of Zeliek
+                    {
+                        uint32 stacks = GetStackAmount();
+                        int32 damage = 0;
+                        switch (stacks)
+                        {
+                            case 0:
+                            case 1: return;
+                            case 2: damage = 500;   break;
+                            case 3: damage = 1500;  break;
+                            case 4: damage = 4000;  break;
+                            case 5: damage = 12500; break;
+                            default: damage = 20000 + (1000 * (stacks - 6)); break;
+                        }
+
+                        if (Unit* caster = GetCaster())
+                            caster->CastCustomSpell(target, 28836, &damage, NULL, NULL, true, NULL, this, caster->GetObjectGuid());
+                        return;
+                    }
                     case 31606:                             // Stormcrow Amulet
                     {
                         CreatureInfo const * cInfo = ObjectMgr::GetCreatureTemplate(17970);
@@ -4816,7 +4838,7 @@ void Aura::HandleAuraModStun(bool apply, bool Real)
             {
                 GameObject* pObj = new GameObject;
                 if(pObj->Create(target->GetMap()->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT), 185584, target->GetMap(), target->GetPhaseMask(),
-                target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation(), 0.0f, 0.0f, 0.0f, 0.0f, GO_ANIMPROGRESS_DEFAULT, GO_STATE_READY))
+                target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation()))
                 {
                     pObj->SetRespawnTime(GetAuraDuration()/IN_MILLISECONDS);
                     pObj->SetSpellId(GetId());
@@ -6138,15 +6160,8 @@ void Aura::HandlePeriodicDamage(bool apply, bool Real)
                 else if (spellProto->SpellFamilyFlags.test<CF_DRUID_INSECT_SWARM>())
                 {
                     // Idol of the Crying Wind
-                    Unit::AuraList const& dummyAuras = caster->GetAurasByType(SPELL_AURA_DUMMY);
-                    for(Unit::AuraList::const_iterator itr = dummyAuras.begin(); itr != dummyAuras.end(); ++itr)
-                    {
-                        if((*itr)->GetId()==64950)
-                        {
-                            m_modifier.m_amount += (int)((*itr)->GetModifier()->m_amount * GetSpellProto()->EffectCoeffs[GetEffIndex()]);
-                            break;
-                        }
-                    }
+                    if(Aura * pIdol = caster->GetAura(64950, EFFECT_INDEX_0))
+                        m_modifier.m_amount += (int)(pIdol->GetModifier()->m_amount * GetSpellProto()->EffectCoeffs[GetEffIndex()]);
                 }
                 break;
             }
@@ -7925,7 +7940,16 @@ void Aura::HandleSchoolAbsorb(bool apply, bool Real)
         {
             if (Aura *aur = caster->GetAura(63231, EFFECT_INDEX_0))
             {
-                ((Player*)caster)->SendModifyCooldown(spellProto->Id,-aur->GetSpellProto()->CalculateSimpleValue(EFFECT_INDEX_0)*IN_MILLISECONDS);
+                int32 duration = aur->GetSpellProto()->CalculateSimpleValue(EFFECT_INDEX_0);
+                ((Player*)caster)->RemoveSpellCooldown(spellProto->Id, true);
+                ((Player*)caster)->AddSpellCooldown(spellProto->Id, 0, uint32(time(NULL) + duration));
+
+                WorldPacket data(SMSG_SPELL_COOLDOWN, 8+1+4+4);
+                data << caster->GetObjectGuid();
+                data << uint8(0x0);
+                data << uint32(spellProto->Id);
+                data << uint32(duration * IN_MILLISECONDS);
+                ((Player*)caster)->SendDirectMessage(&data);
             }
         }
         // Shield of Runes (Runemaster Molgeim: Ulduar)
@@ -9393,22 +9417,7 @@ void Aura::HandleArenaPreparation(bool apply, bool Real)
         return;
 
     Unit* target = GetTarget();
-
-    target->ApplyModFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PREPARATION, apply);
-
-    if (apply)
-    {
-        // max regen powers at start preparation
-        target->SetHealth(target->GetMaxHealth());
-        target->SetPower(POWER_MANA, target->GetMaxPower(POWER_MANA));
-        target->SetPower(POWER_ENERGY, target->GetMaxPower(POWER_ENERGY));
-    }
-    else
-    {
-        // reset originally 0 powers at start/leave
-        target->SetPower(POWER_RAGE, 0);
-        target->SetPower(POWER_RUNIC_POWER, 0);
-    }
+    target->HandleArenaPreparation(apply);
 }
 
 /**
@@ -9924,7 +9933,7 @@ void SpellAuraHolder::_RemoveSpellAuraHolder()
     if (m_target->GetTypeId() == TYPEID_PLAYER && m_removeMode != AURA_REMOVE_BY_DEFAULT && m_removeMode != AURA_REMOVE_BY_DELETE)
         if (ObjectGuid castItemGuid = GetCastItemGuid())
             if (Item* castItem = ((Player*)m_target)->GetItemByGuid(castItemGuid))
-                ((Player*)m_target)->DestroyItemWithOnStoreSpell(castItem);
+                ((Player*)m_target)->DestroyItemWithOnStoreSpell(castItem, GetId());
 
     //passive auras do not get put in slots - said who? ;)
     // Note: but totem can be not accessible for aura target in time remove (to far for find in grid)
@@ -10272,6 +10281,11 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                     else
                         return;
                     break;
+                }
+                case 37728:                                 // Arena preparation
+                {
+                    GetTarget()->HandleArenaPreparation(apply);
+                    return;
                 }
                 case 50720:                                 // Vigilance (warrior spell but not have warrior family)
                 {
@@ -11155,35 +11169,6 @@ void SpellAuraHolder::HandleSpellSpecificBoostsForward(bool apply)
 
     switch(GetSpellProto()->SpellFamilyName)
     {
-        case SPELLFAMILY_PRIEST:
-        {
-            // Power Word: Shield
-            if (GetSpellProto()->SpellFamilyFlags.test<CF_PRIEST_POWER_WORD_SHIELD>() && GetSpellProto()->Mechanic == MECHANIC_SHIELD)
-            {
-                Unit* caster = GetCaster();
-
-                if (caster && !apply)
-                {
-                    // Glyph of Power Word: Shield
-                    if (Aura* glyph = caster->GetAura(55672, EFFECT_INDEX_0))
-                    {
-                        //int32 remainingDamage = 0;
-                        if (Aura* shield = GetAuraByEffectIndex(EFFECT_INDEX_0))
-                        {
-                            int32 remainingDamage = shield->GetModifier()->m_baseamount;
-                            if (shield->GetModifier()->m_amount > 0)
-                                remainingDamage -= shield->GetModifier()->m_amount;
-
-                            int32 heal = (glyph->GetModifier()->m_amount * remainingDamage)/100;
-                            if (heal > 0)
-                                caster->CastCustomSpell(m_target, 56160, &heal, NULL, NULL, true, 0, shield);
-                        }
-                    }
-                }
-                return;
-            }
-            break;
-        }
         case SPELLFAMILY_WARLOCK:
         {
             // Shadow embrace (healing reduction part)
