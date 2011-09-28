@@ -484,6 +484,7 @@ void DungeonResetScheduler::LoadResetTimes()
             uint32 mapid            = fields[0].GetUInt32();
             Difficulty difficulty   = Difficulty(fields[1].GetUInt32());
             uint64 oldresettime     = fields[2].GetUInt64();
+            uint64 _oldresettime = fields[2].GetUInt64();
 
             if (_oldresettime > (time(NULL) + INSTANCE_MAX_RESET_OFFSET))
             {
