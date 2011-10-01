@@ -2644,6 +2644,33 @@ void Pet::ApplyPowerregenScalingBonus(bool apply)
         UpdateManaRegen();
 }
 
+void Pet::ApplyHasteScalingBonus(bool apply)
+{
+    Unit* owner = GetOwner();
+
+    // Don't apply scaling bonuses if no owner or owner is not player
+    if (!owner || owner->GetTypeId() != TYPEID_PLAYER || m_removed)
+        return;
+
+    int32 m_AttackSpeed =  ((Player*)owner)->GetRatingBonusValue(CR_HASTE_MELEE);
+
+    if (m_baseBonusData->attackspeedScale == m_AttackSpeed && !apply)
+        return;
+
+    m_baseBonusData->attackspeedScale = m_AttackSpeed;
+
+    int32 basePoints = int32(m_baseBonusData->attackspeedScale * (CalculateScalingData()->attackspeedScale / 100.0f));
+
+    bool needRecalculateStat = false;
+
+    if (basePoints == 0)
+        needRecalculateStat = true;
+
+    if (Aura* aura = GetScalingAura(SPELL_AURA_HASTE_ALL))
+        if (ReapplyScalingAura(aura, basePoints))
+            needRecalculateStat = true;
+}
+
 bool Pet::Summon()
 {
     Unit* owner = GetOwner();

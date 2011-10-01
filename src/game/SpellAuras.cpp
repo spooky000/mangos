@@ -9882,6 +9882,35 @@ void SpellAuraHolder::RemoveAura(SpellEffectIndex index)
     m_auraFlags &= ~(1 << index);
 }
 
+void SpellAuraHolder::CleanupsBeforeDelete()
+{
+    for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+        RemoveAura(SpellEffectIndex(i));
+    m_aurasStorage.clear();
+}
+
+Aura* SpellAuraHolder::GetAuraByEffectIndex(SpellEffectIndex index)
+{
+    if (m_auraFlags & (1 << index))
+    {
+        AuraStorage::iterator itr = m_aurasStorage.find(index);
+        if (itr != m_aurasStorage.end())
+            return &itr->second;
+    }
+    return (Aura*)NULL;
+}
+
+Aura const* SpellAuraHolder::GetAura(SpellEffectIndex index) const
+{
+    if (m_auraFlags & (1 << index))
+    {
+        AuraStorage::const_iterator itr = m_aurasStorage.find(index);
+        if (itr != m_aurasStorage.end())
+            return &itr->second;
+    }
+    return (Aura*)NULL;
+}
+
 void SpellAuraHolder::ApplyAuraModifiers(bool apply, bool real)
 {
     for (int32 i = 0; i < MAX_EFFECT_INDEX && !IsDeleted(); ++i)
@@ -9931,7 +9960,7 @@ void SpellAuraHolder::_AddSpellAuraHolder()
     uint8 flags = 0;
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
     {
-        if (m_auras[i])
+        if (GetAuraByEffectIndex(SpellEffectIndex(i)))
             flags |= (1 << i);
     }
     flags |= ((GetCasterGuid() == GetTarget()->GetObjectGuid()) ? AFLAG_NOT_CASTER : AFLAG_NONE) | ((GetSpellMaxDuration(m_spellProto) > 0 && !(m_spellProto->AttributesEx5 & SPELL_ATTR_EX5_HIDE_DURATION)) ? AFLAG_DURATION : AFLAG_NONE) | (IsPositive() ? AFLAG_POSITIVE : AFLAG_NEGATIVE);
