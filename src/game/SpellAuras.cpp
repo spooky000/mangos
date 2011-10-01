@@ -372,8 +372,8 @@ pAuraHandler AuraHandler[TOTAL_AURAS]=
 
 static AuraType const frozenAuraTypes[] = { SPELL_AURA_MOD_ROOT, SPELL_AURA_MOD_STUN, SPELL_AURA_NONE };
 
-Aura::Aura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolder *holder, Unit *target, Unit *caster, Item* castItem) :
-m_periodicTimer(0), m_periodicTick(0), m_removeMode(AURA_REMOVE_BY_DEFAULT),
+Aura::Aura(AuraClassType type, SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolderPtr holder, Unit *target, Unit *caster, Item* castItem) :
+m_classType(type),m_periodicTimer(0), m_periodicTick(0), m_removeMode(AURA_REMOVE_BY_DEFAULT),
 m_effIndex(eff), m_positive(false), m_isPeriodic(false), m_isAreaAura(false),
 m_isPersistent(false), m_in_use(0), m_spellAuraHolder(holder)
 {
@@ -443,14 +443,35 @@ m_isPersistent(false), m_in_use(0), m_spellAuraHolder(holder)
         m_periodicTimer = m_modifier.periodictime;
 
     m_stacking = IsEffectStacking();
+
+    switch (type)
+    {
+        case AURA_CLASS_AREA_AURA:
+        {
+            AreaAura(spellproto, eff, currentBasePoints, holder, target, caster, castItem);
+            break;
+        }
+        case AURA_CLASS_PERSISTENT_AREA_AURA:
+        {
+            PersistentAreaAura(spellproto, eff, currentBasePoints, holder, target, caster, castItem);
+            break;
+        }
+        case AURA_CLASS_SINGLE_ENEMY_AURA:
+        {
+            SingleEnemyTargetAura(spellproto, eff, currentBasePoints, holder, target, caster, castItem);
+            break;
+        }
+        case AURA_CLASS_AURA:
+        default:
+            break;
+    }
 }
 
 Aura::~Aura()
 {
 }
 
-AreaAura::AreaAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolder *holder, Unit *target,
-Unit *caster, Item* castItem) : Aura(spellproto, eff, currentBasePoints, holder, target, caster, castItem)
+void Aura::AreaAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolderPtr holder, Unit *target,Unit *caster, Item* castItem)
 {
     m_isAreaAura = true;
 
@@ -499,54 +520,69 @@ Unit *caster, Item* castItem) : Aura(spellproto, eff, currentBasePoints, holder,
         m_modifier.m_auraname = SPELL_AURA_NONE;
 }
 
-AreaAura::~AreaAura()
-{
-}
-
-PersistentAreaAura::PersistentAreaAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolder *holder, Unit *target,
-Unit *caster, Item* castItem) : Aura(spellproto, eff, currentBasePoints, holder, target, caster, castItem)
+void Aura::PersistentAreaAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolderPtr holder, Unit *target,Unit *caster, Item* castItem)
 {
     m_isPersistent = true;
 }
 
-PersistentAreaAura::~PersistentAreaAura()
-{
-}
-
-SingleEnemyTargetAura::SingleEnemyTargetAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolder *holder, Unit *target,
-Unit *caster, Item* castItem) : Aura(spellproto, eff, currentBasePoints, holder, target, caster, castItem)
+void Aura::SingleEnemyTargetAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolderPtr holder, Unit *target, Unit *caster, Item* castItem)
 {
     if (caster)
         m_castersTargetGuid = caster->GetTypeId()==TYPEID_PLAYER ? ((Player*)caster)->GetSelectionGuid() : caster->GetTargetGuid();
 }
 
-SingleEnemyTargetAura::~SingleEnemyTargetAura()
+Unit* Aura::GetTriggerTarget() const
 {
-}
+    if (GetAuraClassType() != AURA_CLASS_SINGLE_ENEMY_AURA)
+        return m_spellAuraHolder->GetTarget();
 
-Unit* SingleEnemyTargetAura::GetTriggerTarget() const
-{
+    // search for linked dummy aura with the correct target
+    for (int i = 0; i < MAX_EFFECT_INDEX; ++i)
+        if (i != GetEffIndex())
+            if (Aura *aur = GetHolder()->GetAuraByEffectIndex(SpellEffectIndex(i)))
+                if (aur->GetSpellProto()->EffectApplyAuraName[i] == SPELL_AURA_DUMMY)
+                    return aur->GetTarget();
+
     return ObjectAccessor::GetUnit(*(m_spellAuraHolder->GetTarget()), m_castersTargetGuid);
 }
 
-Aura* CreateAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolder *holder, Unit *target, Unit *caster, Item* castItem)
+Aura* SpellAuraHolder::CreateAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32* currentBasePoints, SpellAuraHolderPtr holder, Unit *target, Unit *caster, Item* castItem)
 {
-    if (IsAreaAuraEffect(spellproto->Effect[eff]))
-        return new AreaAura(spellproto, eff, currentBasePoints, holder, target, caster, castItem);
+    if (!spellproto || spellproto != m_spellProto)
+        return (Aura*)NULL;
 
     uint32 triggeredSpellId = spellproto->EffectTriggerSpell[eff];
-
-    if(SpellEntry const* triggeredSpellInfo = sSpellStore.LookupEntry(triggeredSpellId))
+    if (IsAreaAuraEffect(spellproto->Effect[eff]))
+    {
+        return CreateAura(AURA_CLASS_AREA_AURA, eff, currentBasePoints, holder, target, caster, castItem);
+    }
+    else if (SpellEntry const* triggeredSpellInfo = sSpellStore.LookupEntry(triggeredSpellId))
+    {
         for (int i = 0; i < MAX_EFFECT_INDEX; ++i)
+        {
             if (triggeredSpellInfo->EffectImplicitTargetA[i] == TARGET_SINGLE_ENEMY)
-                return new SingleEnemyTargetAura(spellproto, eff, currentBasePoints, holder, target, caster, castItem);
+            {
+                return CreateAura(AURA_CLASS_SINGLE_ENEMY_AURA, eff, currentBasePoints, holder, target, caster, castItem);
+            }
+        }
+    }
+    // else - normal aura
 
-    return new Aura(spellproto, eff, currentBasePoints, holder, target, caster, castItem);
+    return CreateAura(AURA_CLASS_AURA, eff, currentBasePoints, holder, target, caster, castItem);
 }
 
-SpellAuraHolder* CreateSpellAuraHolder(SpellEntry const* spellproto, Unit *target, WorldObject *caster, Item *castItem)
+Aura* SpellAuraHolder::CreateAura(AuraClassType type, SpellEffectIndex eff, int32* currentBasePoints, SpellAuraHolderPtr holder, Unit* target, Unit* caster, Item* castItem)
 {
-    return new SpellAuraHolder(spellproto, target, caster, castItem);
+    AddAura(Aura(type, m_spellProto, eff, currentBasePoints, holder, target, caster, castItem),eff);
+
+    return GetAuraByEffectIndex(eff);
+}
+
+SpellAuraHolderPtr CreateSpellAuraHolder(SpellEntry const* spellproto, Unit *target, WorldObject *caster, Item *castItem)
+{
+     SpellAuraHolder* holder = new SpellAuraHolder(spellproto, target, caster, castItem);
+     SpellAuraHolderPtr holderPtr = SpellAuraHolderPtr(holder);
+     return holderPtr;
 }
 
 void Aura::SetModifier(AuraType t, int32 a, uint32 pt, int32 miscValue)
@@ -572,7 +608,7 @@ void Aura::Update(uint32 diff)
     }
 }
 
-void AreaAura::Update(uint32 diff)
+void Aura::AreaAuraUpdate(uint32 diff)
 {
     // update for the caster of the aura
     if(GetCasterGuid() == GetTarget()->GetObjectGuid())
@@ -722,10 +758,11 @@ void AreaAura::Update(uint32 diff)
                 Unit::SpellAuraHolderBounds spair = (*tIter)->GetSpellAuraHolderBounds(GetId());
                 for(Unit::SpellAuraHolderMap::const_iterator i = spair.first; i != spair.second; ++i)
                 {
-                    if (i->second->IsDeleted())
+                    SpellAuraHolderPtr holder = i->second;
+                    if (!holder || holder->IsDeleted())
                         continue;
 
-                    Aura *aur = i->second->GetAuraByEffectIndex(m_effIndex);
+                    Aura *aur = holder->GetAuraByEffectIndex(m_effIndex);
 
                     if (!aur)
                         continue;
@@ -755,40 +792,48 @@ void AreaAura::Update(uint32 diff)
                 if(!apply)
                     continue;
 
-                if(SpellEntry const *actualSpellInfo = sSpellMgr.SelectAuraRankForLevel(GetSpellProto(), (*tIter)->getLevel()))
+                if (SpellEntry const *actualSpellInfo = sSpellMgr.SelectAuraRankForLevel(GetSpellProto(), (*tIter)->getLevel()))
                 {
                     int32 actualBasePoints = m_currentBasePoints;
                     // recalculate basepoints for lower rank (all AreaAura spell not use custom basepoints?)
-                    if(actualSpellInfo != GetSpellProto())
+                    if (actualSpellInfo != GetSpellProto())
                         actualBasePoints = actualSpellInfo->CalculateSimpleValue(m_effIndex);
 
-                    SpellAuraHolder *holder = (*tIter)->GetSpellAuraHolder(actualSpellInfo->Id, GetCasterGuid());
+                    SpellAuraHolderPtr holder = (*tIter)->GetSpellAuraHolder(actualSpellInfo->Id, GetCasterGuid());
 
-                    bool addedToExisting = true;
-                    if (!holder)
+                    if (!holder || holder->IsDeleted())
                     {
-                        holder = CreateSpellAuraHolder(actualSpellInfo, (*tIter), caster);
-                        addedToExisting = false;
-                    }
-
-                    holder->SetAuraDuration(GetAuraDuration());
-
-                    AreaAura *aur = new AreaAura(actualSpellInfo, m_effIndex, &actualBasePoints, holder, (*tIter), caster, NULL);
-                    holder->AddAura(aur, m_effIndex);
-
-                    if (addedToExisting)
-                    {
-                        (*tIter)->AddAuraToModList(aur);
-                        holder->SetInUse(true);
-                        aur->ApplyModifier(true,true);
-                        holder->SetInUse(false);
+                        SpellAuraHolderPtr newholder = CreateSpellAuraHolder(actualSpellInfo, (*tIter), caster);
+                        newholder->SetAuraDuration(GetAuraDuration());
+                        Aura* aura = newholder->CreateAura(AURA_CLASS_AREA_AURA, m_effIndex, &actualBasePoints, newholder, (*tIter), caster, NULL);
+                        (*tIter)->AddSpellAuraHolder(newholder);
                     }
                     else
-                        (*tIter)->AddSpellAuraHolder(holder);
+                    {
+
+                        holder->SetAuraDuration(GetAuraDuration());
+                        Aura* aura = holder->GetAuraByEffectIndex(m_effIndex);
+                        if (aura)
+                        {
+                            holder->SetInUse(true);
+                            aura->ApplyModifier(false,true);
+                            aura->GetModifier()->m_amount = actualBasePoints;
+                            aura->ApplyModifier(true,true);
+                            holder->SetInUse(false);
+                        }
+                        else
+                        {
+                            Aura* aura = holder->CreateAura(AURA_CLASS_AREA_AURA, m_effIndex, &actualBasePoints, holder, (*tIter), caster, NULL);
+                            (*tIter)->AddAuraToModList(aura);
+                            holder->SetInUse(true);
+                            aura->ApplyModifier(true,true);
+                            holder->SetInUse(false);
+                        }
+                    }
                 }
             }
         }
-        Aura::Update(diff);
+        Update(diff);
     }
     else                                                    // aura at non-caster
     {
@@ -853,7 +898,7 @@ void AreaAura::Update(uint32 diff)
     }
 }
 
-void PersistentAreaAura::Update(uint32 diff)
+void Aura::PersistentAreaAuraUpdate(uint32 diff)
 {
     bool remove = false;
 
@@ -876,7 +921,7 @@ void PersistentAreaAura::Update(uint32 diff)
     else
         remove = true;
 
-    Aura::Update(diff);
+    Update(diff);
 
     if(remove)
         GetTarget()->RemoveAura(GetId(), GetEffIndex());
@@ -2530,39 +2575,33 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                 // Honor Among Thieves
                 if (GetId() == 52916)
                 {
-                    if (!target)
-                        return;
-
-                    if (target->HasAura(51699, EFFECT_INDEX_1) ||
-                        target->GetTypeId() != TYPEID_PLAYER || target->getClass() != CLASS_ROGUE)
-                        return;
-
-                    Player *p_target = (Player*)target;
-
-                    Unit::AuraList const &aury = p_target->GetAurasByType(SPELL_AURA_PROC_TRIGGER_SPELL);
-                    for (Unit::AuraList::const_iterator i = aury.begin(); i != aury.end(); i++)
+                    // Get Honor Among Thieves party aura
+                    Unit::AuraList const &procTriggerSpellAuras = target->GetAurasByType(SPELL_AURA_PROC_TRIGGER_SPELL);
+                    for (Unit::AuraList::const_iterator i = procTriggerSpellAuras.begin(); i != procTriggerSpellAuras.end(); ++i)
                     {
                         SpellEntry const *spellInfo = (*i)->GetSpellProto();
 
                         if (!spellInfo)
                             continue;
 
-                        if (spellInfo->EffectTriggerSpell[EFFECT_INDEX_0] == 52916)
+                        if (spellInfo->EffectTriggerSpell[0] == 52916)
                         {
-                            if (roll_chance_i(spellInfo->CalculateSimpleValue(EFFECT_INDEX_0)) )
-                            {
-                                Unit *pVictim = p_target->GetMap()->GetUnit(p_target->GetComboTargetGuid());
+                            // Get caster of aura
+                            if(!(*i)->GetCaster() || (*i)->GetCaster()->GetTypeId() != TYPEID_PLAYER)
+                                continue;
 
-                                if (!pVictim)
-                                    pVictim = target->getVictim();
+                            Player *pCaster = (Player*)((*i)->GetCaster());
 
-                                if (pVictim)
-                                    target->CastSpell(pVictim, 51699, true );
-
-                                return;
-                            }
+                            // do not proc if player has CD, or if player has no target, or if player's target is not valid
+                            if (pCaster->HasAura(51699, EFFECT_INDEX_1) || !pCaster->getVictim() || pCaster->IsFriendlyTo(pCaster->getVictim()))
+                                continue;
+                            // give combo point and aura for cooldown on success
+                            else if (roll_chance_i(spellInfo->CalculateSimpleValue(EFFECT_INDEX_0)))
+                                pCaster->CastSpell(pCaster->getVictim(), 51699, true);
                         }
                     }
+
+                    // return after loop to make sure all rogues with Honor Among Thieves get the benefit of this proc rather than only first
                     return;
                 }
                 break;

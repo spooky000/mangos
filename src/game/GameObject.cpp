@@ -314,6 +314,7 @@ void GameObject::Update(uint32 update_diff, uint32 p_time)
                         }
                     }
 
+                    // SoTA Seaforium Charge
                     if (GetEntry() == 190752)
                     {
                         ok = owner;

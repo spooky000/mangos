@@ -1058,7 +1058,7 @@ void Group::SendUpdate()
         data << uint8(m_groupType);                         // group type (flags in 3.3)
         data << uint8(citr->group);                         // groupid
         data << uint8(citr->flags);                         // group flags
-        data << uint8(citr->roles);                         // roles mask
+        data << (isLFGGroup() ? uint8(citr->roles) : uint8(0)); // roles mask
         if(isLFGGroup())
         {
             uint32 dungeonID = GetLFGState()->GetDungeon() ? GetLFGState()->GetDungeon()->ID : 0;
@@ -1081,7 +1081,7 @@ void Group::SendUpdate()
             data << uint8(onlineState);                     // online-state
             data << uint8(citr2->group);                    // groupid
             data << uint8(citr2->flags);                    // group flags
-            data << uint8(citr2->roles);                    // 3.3, role?
+            data << (isLFGGroup() ? uint8(citr2->roles) : uint8(0));  // 3.3, role?
         }
 
         data << m_leaderGuid;                               // leader guid
