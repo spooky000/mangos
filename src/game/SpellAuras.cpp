@@ -11477,6 +11477,11 @@ void SpellAuraHolder::UnregisterSingleCastHolder()
     }
 }
 
+void SpellAuraHolder::SetVisibleAura(bool remove)
+{
+    m_target->SetVisibleAura(m_auraSlot, remove ? 0 : GetId());
+}
+
 bool Aura::IsEffectStacking()
 {
     SpellEntry const *spellProto = GetSpellProto();
