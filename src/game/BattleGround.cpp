@@ -1388,9 +1388,6 @@ void BattleGround::AddPlayer(Player *plr)
     plr->GetAchievementMgr().ResetAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE);
     plr->GetAchievementMgr().ResetAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HONORABLE_KILL_AT_AREA);
 
-    plr->Unmount();
-    plr->RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
-
     // setup BG group membership
     PlayerAddedToBGCheckIfBGIsRunning(plr);
     AddOrSetPlayerToCorrectBgGroup(plr, team);
