@@ -171,7 +171,7 @@ class MANGOS_DLL_SPEC SpellAuraHolder
 
         time_t GetAuraApplyTime() const { return m_applyTime; }
 
-        void SetVisibleAura(bool remove) { m_target->SetVisibleAura(m_auraSlot, remove ? 0 : GetId()); }
+        void SetVisibleAura(bool remove);
         void SetRemoveMode(AuraRemoveMode mode) { m_removeMode = mode; }
         void SetLoadedState(ObjectGuid const& casterGUID, ObjectGuid const& itemGUID, uint32 stackAmount, uint32 charges, int32 maxduration, int32 duration)
         {
@@ -240,7 +240,6 @@ class MANGOS_DLL_SPEC Aura
 {
     friend class SpellAuraHolder;
     friend struct ReapplyAffectedPassiveAurasHelper;
-    friend MANGOS_DLL_SPEC Aura* CreateAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolder *holder, Unit *target, Unit *caster, Item* castItem);
 
     public:
         //aura handlers

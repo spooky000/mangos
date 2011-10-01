@@ -593,6 +593,28 @@ void Aura::SetModifier(AuraType t, int32 a, uint32 pt, int32 miscValue)
     m_modifier.periodictime = pt;
 }
 
+void Aura::UpdateAura(uint32 diff)
+{
+    SetInUse(true);
+    switch(GetAuraClassType())
+    {
+        case AURA_CLASS_AREA_AURA:
+            AreaAuraUpdate(diff);
+            break;
+        case AURA_CLASS_PERSISTENT_AREA_AURA:
+        {
+            PersistentAreaAuraUpdate(diff);
+            break;
+        }
+        case AURA_CLASS_SINGLE_ENEMY_AURA:
+        case AURA_CLASS_AURA:
+        default:
+            Update(diff);
+            break;
+    }
+    SetInUse(false);
+}
+
 void Aura::Update(uint32 diff)
 {
     if (m_isPeriodic)
@@ -840,13 +862,14 @@ void Aura::AreaAuraUpdate(uint32 diff)
         Unit* caster = GetCaster();
         Unit* target = GetTarget();
 
-        Aura::Update(diff);
+        Update(diff);
 
         // remove aura if out-of-range from caster (after teleport for example)
         // or caster is isolated or caster no longer has the aura
         // or caster is (no longer) friendly
         bool needFriendly = (m_areaAuraType == AREA_AURA_ENEMY ? false : true);
-        if( !caster || caster->hasUnitState(UNIT_STAT_ISOLATED) ||
+        if ( !caster || caster->hasUnitState(UNIT_STAT_ISOLATED) ||
+            !caster->IsInMap(target)      ||
             !caster->IsWithinDistInMap(target, m_radius)      ||
             !caster->HasAura(GetId(), GetEffIndex())            ||
             caster->IsFriendlyTo(target) != needFriendly
@@ -3738,10 +3761,19 @@ void Aura::HandleAuraModShapeshift(bool apply, bool Real)
         {
             // remove movement affects
             target->RemoveSpellsCausingAura(SPELL_AURA_MOD_ROOT, GetHolder());
+            std::set<uint32> toRemoveSpellList;
             Unit::AuraList const& slowingAuras = target->GetAurasByType(SPELL_AURA_MOD_DECREASE_SPEED);
-            for (Unit::AuraList::const_iterator iter = slowingAuras.begin(); iter != slowingAuras.end();)
+            for (Unit::AuraList::const_iterator iter = slowingAuras.begin(); iter != slowingAuras.end(); ++iter)
             {
-                SpellEntry const* aurSpellInfo = (*iter)->GetSpellProto();
+                Aura* aura = *iter;
+                if (!aura)
+                    continue;
+
+                SpellAuraHolderPtr holder = aura->GetHolder();
+                if (!holder || holder->IsDeleted())
+                    continue;
+
+                SpellEntry const* aurSpellInfo = holder->GetSpellProto();
 
                 uint32 aurMechMask = GetAllSpellMechanicMask(aurSpellInfo);
 
@@ -3754,14 +3786,15 @@ void Aura::HandleAuraModShapeshift(bool apply, bool Real)
                     (aurSpellInfo->SpellIconID == 15 && aurSpellInfo->Dispel == 0 &&
                     (aurMechMask & (1 << (MECHANIC_SNARE-1))) == 0))
                 {
-                    ++iter;
                     continue;
                 }
 
                 // All OK, remove aura now
-                target->RemoveAurasDueToSpellByCancel(aurSpellInfo->Id);
-                iter = slowingAuras.begin();
+                toRemoveSpellList.insert(aurSpellInfo->Id);
             }
+
+            for (std::set<uint32>::iterator i = toRemoveSpellList.begin(); i != toRemoveSpellList.end(); ++i)
+                target->RemoveAurasDueToSpellByCancel(*i);
 
             // and polymorphic affects
             if (target->IsPolymorphed())
@@ -5075,7 +5108,7 @@ void Aura::HandleModStealth(bool apply, bool Real)
                 // Overkill
                 else if ((*i)->GetId() == 58426)//Overkill we should remove anyway
                 {
-                    if (SpellAuraHolder* holder = target->GetSpellAuraHolder(58427))
+                    if (SpellAuraHolderPtr holder = target->GetSpellAuraHolder(58427))
                     {
                         holder->SetAuraMaxDuration(20*IN_MILLISECONDS);
                         holder->RefreshHolder();
@@ -5662,25 +5695,27 @@ void Aura::HandleAuraModSchoolImmunity(bool apply, bool Real)
         && GetSpellProto()->AttributesEx & SPELL_ATTR_EX_DISPEL_AURAS_ON_IMMUNITY
         && IsPositiveSpell(GetId()) )                       //Only positive immunity removes auras
     {
+        std::set<uint32> toRemoveSpellList;
         uint32 school_mask = m_modifier.m_miscvalue;
         Unit::SpellAuraHolderMap& Auras = target->GetSpellAuraHolderMap();
-        for(Unit::SpellAuraHolderMap::iterator iter = Auras.begin(), next; iter != Auras.end(); iter = next)
+        for(Unit::SpellAuraHolderMap::iterator iter = Auras.begin(); iter != Auras.end(); ++iter)
         {
-            next = iter;
-            ++next;
-            SpellEntry const *spell = iter->second->GetSpellProto();
+            SpellAuraHolderPtr holder = iter->second;
+            if (!holder || holder->IsDeleted())
+                continue;
+
+            SpellEntry const *spell = holder->GetSpellProto();
+
             if((GetSpellSchoolMask(spell) & school_mask)//Check for school mask
                 && !( spell->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY)   //Spells unaffected by invulnerability
-                && !iter->second->IsPositive()          //Don't remove positive spells
+                && !holder->IsPositive()                //Don't remove positive spells
                 && spell->Id != GetId() )               //Don't remove self
             {
-                target->RemoveAurasDueToSpell(spell->Id);
-                if(Auras.empty())
-                    break;
-                else
-                    next = Auras.begin();
+                toRemoveSpellList.insert(holder->GetId());
             }
         }
+        for (std::set<uint32>::iterator i = toRemoveSpellList.begin(); i != toRemoveSpellList.end(); ++i)
+            target->RemoveAurasDueToSpell(*i);
     }
     if( Real && GetSpellProto()->Mechanic == MECHANIC_BANISH )
     {
@@ -6059,7 +6094,7 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
                     if (apply)
                     {
                         // for make duration visible
-                        if (SpellAuraHolder* holder = target->GetSpellAuraHolder(31665))
+                        if (SpellAuraHolderPtr holder = target->GetSpellAuraHolder(31665))
                         {
                             holder->SetAuraMaxDuration(GetHolder()->GetAuraDuration());
                             holder->RefreshHolder();
@@ -10160,7 +10195,7 @@ void SpellAuraHolder::SetStackAmount(uint32 stackAmount)
 
         for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
         {
-            if (Aura *aur = m_auras[i])
+            if (Aura* aur = GetAuraByEffectIndex(SpellEffectIndex(i)))
             {
                 int32 bp = aur->GetBasePoints();
                 int32 amount = m_stackAmount * caster->CalculateSpellDamage(target, m_spellProto, SpellEffectIndex(i), &bp);
@@ -10187,7 +10222,10 @@ void SpellAuraHolder::SetStackAmount(uint32 stackAmount)
 
 Unit* SpellAuraHolder::GetCaster() const
 {
-    if(GetCasterGuid() == m_target->GetObjectGuid())
+    if (!m_target)
+        return NULL;
+
+    if (GetCasterGuid() == m_target->GetObjectGuid())
         return m_target;
 
     return ObjectAccessor::GetUnit(*m_target, m_casterGuid);// player will search at any maps
@@ -11201,6 +11239,10 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
 
 void SpellAuraHolder::HandleSpellSpecificBoostsForward(bool apply)
 {
+    // in fact, possible call of this method for not fully created holder...
+    if (!GetSpellProto())
+        return;
+
     uint32 spellId1 = 0;
     uint32 spellId2 = 0;
     uint32 spellId3 = 0;
@@ -11274,10 +11316,7 @@ void SpellAuraHolder::HandleSpellSpecificBoostsForward(bool apply)
 
 SpellAuraHolder::~SpellAuraHolder()
 {
-    // note: auras in delete list won't be affected since they clear themselves from holder when adding to deletedAuraslist
-    for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
-        if (Aura *aur = m_auras[i])
-            delete aur;
+    DEBUG_LOG("SpellAuraHolder:: destructor for spell %u called.", GetId());
 }
 
 void SpellAuraHolder::Update(uint32 diff)
@@ -11316,7 +11355,7 @@ void SpellAuraHolder::Update(uint32 diff)
     }
 
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
-        if (Aura *aura = m_auras[i])
+        if (Aura *aura = GetAuraByEffectIndex(SpellEffectIndex(i)))
             aura->UpdateAura(diff);
 
     // Channeled aura required check distance from caster
@@ -11376,7 +11415,7 @@ bool SpellAuraHolder::HasMechanic(uint32 mechanic) const
         return true;
 
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
-        if (m_auras[i] && m_spellProto->EffectMechanic[i] == mechanic)
+        if (GetAura(SpellEffectIndex(i)) && m_spellProto->EffectMechanic[i] == mechanic)
             return true;
     return false;
 }
@@ -11387,7 +11426,7 @@ bool SpellAuraHolder::HasMechanicMask(uint32 mechanicMask) const
         return true;
 
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
-        if (m_auras[i] && m_spellProto->EffectMechanic[i] && ((1 << (m_spellProto->EffectMechanic[i] -1)) & mechanicMask))
+        if (GetAura(SpellEffectIndex(i)) && m_spellProto->EffectMechanic[i] && ((1 << (m_spellProto->EffectMechanic[i] -1)) & mechanicMask))
             return true;
     return false;
 }
@@ -11395,7 +11434,7 @@ bool SpellAuraHolder::HasMechanicMask(uint32 mechanicMask) const
 bool SpellAuraHolder::IsPersistent() const
 {
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
-        if (Aura *aur = m_auras[i])
+        if (Aura const* aur = GetAura(SpellEffectIndex(i)))
             if (aur->IsPersistent())
                 return true;
     return false;
@@ -11404,7 +11443,7 @@ bool SpellAuraHolder::IsPersistent() const
 bool SpellAuraHolder::IsAreaAura() const
 {
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
-        if (Aura *aur = m_auras[i])
+        if (Aura const* aur = GetAura(SpellEffectIndex(i)))
             if (aur->IsAreaAura())
                 return true;
     return false;
@@ -11413,7 +11452,7 @@ bool SpellAuraHolder::IsAreaAura() const
 bool SpellAuraHolder::IsPositive() const
 {
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
-        if (Aura *aur = m_auras[i])
+        if (Aura const* aur = GetAura(SpellEffectIndex(i)))
             if (!aur->IsPositive())
                 return false;
     return true;
@@ -11422,7 +11461,7 @@ bool SpellAuraHolder::IsPositive() const
 bool SpellAuraHolder::IsEmptyHolder() const
 {
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
-        if (m_auras[i])
+        if (m_auraFlags & (1 << i))
             return false;
     return true;
 }
