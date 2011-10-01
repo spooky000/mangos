@@ -4386,8 +4386,9 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolderPtr holder)
                 }
 
                 // Check for coexisting Weapon-proced Auras
-                if (holder->IsWeaponBuffCoexistableWith(foundHolder))
-                    continue;
+                if  (holder->IsWeaponBuffCoexistableWith() &&
+                    foundHolder->GetCastItemGuid() && foundHolder->GetCastItemGuid() != holder->GetCastItemGuid())
+                    continue;;
 
                 // Carry over removed Aura's remaining damage if Aura still has ticks remaining
                 if (foundHolder->GetSpellProto()->AttributesEx4 & SPELL_ATTR_EX4_STACK_DOT_MODIFIER)
@@ -4429,7 +4430,7 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolderPtr holder)
             for (int32 i = 0; i < MAX_EFFECT_INDEX && bRemove; ++i)
             {
                 // no need to check non stacking auras that weren't/won't be applied on this target
-                if (!foundHolder->m_auras[i] || !holder->m_auras[i])
+                if (!foundHolder->GetAuraByEffectIndex(SpellEffectIndex(i)) || !holder->GetAuraByEffectIndex(SpellEffectIndex(i)))
                     continue;
 
                 if (aurSpellInfo->AttributesEx3 & SPELL_ATTR_EX3_STACK_FOR_DIFF_CASTERS)
@@ -4476,7 +4477,6 @@ bool Unit::AddSpellAuraHolder(SpellAuraHolderPtr holder)
     {
         if (!RemoveNoStackAurasDueToAuraHolder(holder))
         {
-            delete holder;
             return false;                                   // couldn't remove conflicting aura with higher rank
         }
     }
@@ -12477,7 +12477,7 @@ SpellAuraHolderPtr Unit::GetSpellAuraHolder (uint32 spellid, ObjectGuid casterGu
     return SpellAuraHolderPtr(NULL);
 }
 
-void Unit::_AddAura(uint32 spellID, uint32 duration)
+void Unit::_AddAura(uint32 spellID, uint32 duration, Unit * caster)
 {
     SpellEntry const *spellInfo = sSpellStore.LookupEntry( spellID );
 
@@ -12485,7 +12485,7 @@ void Unit::_AddAura(uint32 spellID, uint32 duration)
     {
         if (IsSpellAppliesAura(spellInfo, (1 << EFFECT_INDEX_0) | (1 << EFFECT_INDEX_1) | (1 << EFFECT_INDEX_2)) || IsSpellHaveEffect(spellInfo, SPELL_EFFECT_PERSISTENT_AREA_AURA))
         {
-            SpellAuraHolderPtr holder = CreateSpellAuraHolder(spellInfo, this, this);
+            SpellAuraHolderPtr holder = CreateSpellAuraHolder(spellInfo, this, caster ? caster : this);
 
             for(uint8 i = 0; i < MAX_EFFECT_INDEX; ++i)
             {

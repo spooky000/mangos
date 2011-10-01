@@ -4530,7 +4530,7 @@ SpellAuraProcResult Unit::HandleAddFlatModifierAuraProc(Unit* pVictim, uint32 /*
         case 53257:                             // Cobra strike
         case 55166:                             // Tidal Force
         {
-            SpellAuraHolder* holder = triggeredByAura->GetHolder();
+            SpellAuraHolderPtr holder = triggeredByAura->GetHolder();
             if (!holder || holder->IsDeleted() || holder->GetStackAmount() < 1)
                 return SPELL_AURA_PROC_FAILED;
 

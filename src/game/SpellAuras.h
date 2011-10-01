@@ -110,7 +110,7 @@ class MANGOS_DLL_SPEC SpellAuraHolder
         bool IsPersistent() const;
         bool IsPositive() const;
         bool IsAreaAura() const;                            // if one from auras of holder applied as area aura
-        bool IsWeaponBuffCoexistableWith(SpellAuraHolder const* ref) const;
+        bool IsWeaponBuffCoexistableWith() const;
         bool IsNeedVisibleSlot(Unit const* caster) const;
         bool IsRemovedOnShapeLost() const { return m_isRemovedOnShapeLost; }
         bool IsInUse() const { return (m_in_use > 0);}

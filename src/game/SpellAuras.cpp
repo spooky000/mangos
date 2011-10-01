@@ -585,6 +585,7 @@ SpellAuraHolderPtr CreateSpellAuraHolder(SpellEntry const* spellproto, Unit *tar
      return holderPtr;
 }
 
+
 void Aura::SetModifier(AuraType t, int32 a, uint32 pt, int32 miscValue)
 {
     m_modifier.m_auraname = t;
@@ -8959,7 +8960,7 @@ void Aura::PeriodicDummyTick()
                     // Reset reapply counter at move and decrease stack amount by 1
                     if (((Player*)target)->isMoving() || target->HasAura(62821))
                     {
-                        if (SpellAuraHolder *holder = target->GetSpellAuraHolder(62039))
+                        if (SpellAuraHolderPtr holder = target->GetSpellAuraHolder(62039))
                         {
                             if (holder->ModStackAmount(-1))
                                 target->RemoveSpellAuraHolder(holder);
@@ -9154,7 +9155,7 @@ void Aura::PeriodicDummyTick()
                         return;
                     }
                     
-                    if (SpellAuraHolder *holder = target->GetSpellAuraHolder(65294))
+                    if (SpellAuraHolderPtr holder = target->GetSpellAuraHolder(65294))
                     {
                         holder->SetStackAmount(stacks);
                     }
@@ -9783,7 +9784,7 @@ void Aura::HandleAuraStopNaturalManaRegen(bool apply, bool Real)
 bool Aura::IsLastAuraOnHolder()
 {
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
-        if (i != GetEffIndex() && GetHolder()->m_auras[i])
+        if (i != GetEffIndex() && GetHolder()->GetAuraByEffectIndex(SpellEffectIndex(i)))
             return false;
     return true;
 }
@@ -9861,15 +9862,23 @@ m_permanent(false), m_isRemovedOnShapeLost(true), m_deleted(false), m_in_use(0)
         RemoveAura(SpellEffectIndex(i));
 }
 
-void SpellAuraHolder::AddAura(Aura *aura, SpellEffectIndex index)
+void SpellAuraHolder::AddAura(Aura aura, SpellEffectIndex index)
 {
-    m_auras[index] = aura;
+    if (Aura* _aura = GetAuraByEffectIndex(index))
+    {
+        DEBUG_LOG("SpellAuraHolder::AddAura attempt to add aura (effect %u) to holder of spell %u, but holder already have active aura!", index, GetId());
+        RemoveAura(index);
+    }
+    AuraStorage::iterator itr = m_aurasStorage.find(index);
+    if (itr != m_aurasStorage.end())
+        m_aurasStorage.erase(index);
+
+    m_aurasStorage.insert(std::make_pair(index,aura));
     m_auraFlags |= (1 << index);
 }
 
 void SpellAuraHolder::RemoveAura(SpellEffectIndex index)
 {
-    m_auras[index] = (Aura*)NULL;
     m_auraFlags &= ~(1 << index);
 }
 
@@ -10231,7 +10240,7 @@ Unit* SpellAuraHolder::GetCaster() const
     return ObjectAccessor::GetUnit(*m_target, m_casterGuid);// player will search at any maps
 }
 
-bool SpellAuraHolder::IsWeaponBuffCoexistableWith(SpellAuraHolder const* ref) const
+bool SpellAuraHolder::IsWeaponBuffCoexistableWith() const
 {
     // only item casted spells
     if (!GetCastItemGuid())
@@ -10262,8 +10271,7 @@ bool SpellAuraHolder::IsWeaponBuffCoexistableWith(SpellAuraHolder const* ref) co
         (castItem->GetSlot() != EQUIPMENT_SLOT_MAINHAND && castItem->GetSlot() != EQUIPMENT_SLOT_OFFHAND))
         return false;
 
-    // form different weapons
-    return ref->GetCastItemGuid() && ref->GetCastItemGuid() != GetCastItemGuid();
+    return true;
 }
 
 bool SpellAuraHolder::IsNeedVisibleSlot(Unit const* caster) const
