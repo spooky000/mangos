@@ -3564,11 +3564,37 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 if (HasAura(44401) || HasAura(57761))
                     return SPELL_AURA_PROC_FAILED;
             }
-            // Fingers of Frost 
+            // Fingers of Frost
             else if (auraSpellInfo->SpellIconID == 2947)
             {
-                // proc chance for spells in basepoints
-                if (!roll_chance_i(triggerAmount))
+                bool chillFound = false;    // Do not proc from spells that have no chill effect
+                for(uint8 idx = 0; idx < 3; ++idx)
+                {
+                    if (procSpell->EffectApplyAuraName[idx] == SPELL_AURA_MOD_DECREASE_SPEED)
+                    {
+                        chillFound = true;
+                        break;
+                    }
+                }
+
+                if (!chillFound) // If no speed decrease aura found, look for Improved Blizzard if Blizzard is casted.
+                {
+                    if (procSpell->SpellFamilyName==SPELLFAMILY_MAGE && procSpell->SpellFamilyFlags.test<CF_MAGE_BLIZZARD>())
+                    {
+                        AuraList const& mOverrideClassScript = GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
+                        for(AuraList::const_iterator i = mOverrideClassScript.begin(); i != mOverrideClassScript.end(); ++i)
+                        {
+                            int32 script = (*i)->GetModifier()->m_miscvalue;
+                            if (script==836 || script==988 || script==989)
+                            {
+                                chillFound = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!chillFound || !roll_chance_i(triggerAmount))
                     return SPELL_AURA_PROC_FAILED;
             }
             break;
