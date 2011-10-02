@@ -808,6 +808,11 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
     // Handle Login-Achievements (should be handled after loading)
     pCurrChar->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ON_LOGIN, 1);
 
+    if (pCurrChar->HasAtLoginFlag(AT_LOGIN_CHECK_TITLES))
+    {
+        // Check titles
+    }
+
     delete holder;
 }
 

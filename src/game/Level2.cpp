@@ -4065,6 +4065,7 @@ bool ChatHandler::HandleCharacterChangeRaceCommand(char* args)
         // TODO : add text into database
         PSendSysMessage(LANG_CUSTOMIZE_PLAYER, GetNameLink(target).c_str());
         target->SetAtLoginFlag(AT_LOGIN_CHANGE_RACE);
+        target->SetAtLoginFlag(AT_LOGIN_CHECK_TITLES);
         CharacterDatabase.PExecute("UPDATE characters SET at_login = at_login | '128' WHERE guid = '%u'", target->GetGUIDLow());
     }
     else
