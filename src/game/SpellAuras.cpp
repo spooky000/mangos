@@ -2164,23 +2164,6 @@ void Aura::TriggerSpellWithValue()
     int32  basepoints0 = GetModifier()->m_amount;
 
     target->CastCustomSpell(target, trigger_spell_id, &basepoints0, NULL, NULL, true, NULL, this, casterGuid);
-
-    Unit * pCaster = GetCaster();
-
-    if(GetSpellProto()->IsFitToFamily(SPELLFAMILY_PRIEST, 0x0, 0x440)) // Mindflay
-    {
-        Unit::AuraList const& mTriggerAuras = pCaster->GetAurasByType(SPELL_AURA_ADD_TARGET_TRIGGER);
-        for (Unit::AuraList::const_iterator itr = mTriggerAuras.begin(); itr != mTriggerAuras.end(); ++itr)
-        {
-            if((*itr)->GetSpellProto()->SpellIconID == 9) // Shadow Weaving
-            {
-                if(roll_chance_i((*itr)->GetSpellProto()->CalculateSimpleValue(EFFECT_INDEX_0))) // Apply Shadow Weaving
-                    pCaster->CastSpell(pCaster, (*itr)->GetSpellProto()->EffectTriggerSpell[EFFECT_INDEX_0], true, NULL, (*itr));
-
-                return;
-            }
-        }
-    }
 }
 
 /*********************************************************/
