@@ -697,10 +697,6 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix29 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49562));
     sfix29->EffectSpellClassMask[EFFECT_INDEX_0] = ClassFamilyMask(sfix29->EffectSpellClassMask[EFFECT_INDEX_0].Flags, 0x50);
 
-    // Glyph of Scourge Strike
-    SpellEntry *sfix30 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(58642));
-    sfix30->EffectTriggerSpell[EFFECT_INDEX_0] = 69961;
-
     // Expose Razorthorn Root
     SpellEntry *sfix31 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(44935));
     sfix31->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
