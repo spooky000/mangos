@@ -844,7 +844,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
                     pCurrChar->SetTitle(titleEntry, (team == BG_TEAM_HORDE) ? true : false);
                 }
             }
-            while (result2->NextRow());
+            while (result->NextRow());
         }
 
         // Check titles
