@@ -915,7 +915,7 @@ void Map::SendInitSelf( Player * player )
     // build other passengers at transport also (they always visible and marked as visible and will not send at visibility update at add to map
     if (Transport* transport = player->GetTransport())
     {
-        for(Transport::UnitSet::const_iterator itr = transport->GetUnitPassengers().begin(); itr != transport->GetUnitPassengers().end(); ++itr)
+        for(Transport::PlayerSet::const_iterator itr = transport->GetPassengers().begin();itr!=transport->GetPassengers().end();++itr)
         {
             if (player != (*itr) && player->HaveAtClient(*itr))
             {
