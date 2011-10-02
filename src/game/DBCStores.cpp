@@ -689,14 +689,6 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix27 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(62016));
     sfix27->EffectRadiusIndex[EFFECT_INDEX_0] = 9;
 
-    // Epidemic rank1
-    SpellEntry *sfix28 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49036));
-    sfix28->EffectSpellClassMask[EFFECT_INDEX_0] = ClassFamilyMask(sfix28->EffectSpellClassMask[EFFECT_INDEX_0].Flags, 0x50);
-
-    // Epidemic rank2
-    SpellEntry *sfix29 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49562));
-    sfix29->EffectSpellClassMask[EFFECT_INDEX_0] = ClassFamilyMask(sfix29->EffectSpellClassMask[EFFECT_INDEX_0].Flags, 0x50);
-
     // Expose Razorthorn Root
     SpellEntry *sfix31 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(44935));
     sfix31->EffectImplicitTargetA[EFFECT_INDEX_0] = TARGET_SELF;
