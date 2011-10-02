@@ -6215,6 +6215,9 @@ SpellCastResult Spell::CheckCast(bool strict)
                 //custom check
                 switch(m_spellInfo->Id)
                 {
+                    case 40856:                             // Wrangling Rope
+                        if (target && target->GetHealthPercent() > 40)
+                            return SPELL_FAILED_BAD_TARGETS;
                     case 34026:                             // Kill Command
                         if (!m_caster->GetPet())
                             return SPELL_FAILED_NO_PET;
