@@ -6215,6 +6215,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                 //custom check
                 switch(m_spellInfo->Id)
                 {
+                    case 45611:                             // Arcane Chains
                     case 40856:                             // Wrangling Rope
                         if (target && target->GetHealthPercent() > 40)
                             return SPELL_FAILED_BAD_TARGETS;
