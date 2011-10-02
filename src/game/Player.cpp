@@ -14062,6 +14062,7 @@ bool Player::CanTakeQuest(Quest const *pQuest, bool msg) const
         SatisfyQuestPreviousQuest(pQuest, msg) && SatisfyQuestTimed(pQuest, msg) &&
         SatisfyQuestPrevChain(pQuest, msg) &&
         SatisfyQuestDay(pQuest, msg) && SatisfyQuestWeek(pQuest, msg) && SatisfyQuestMonth(pQuest, msg) &&
+        SatisfyAdditionalChecks(pQuest, msg) &&
         pQuest->IsActive();
 }
 
@@ -14992,6 +14993,20 @@ bool Player::SatisfyQuestMonth(Quest const* qInfo, bool msg) const
 
     // if not found in cooldown list
     return m_monthlyquests.find(qInfo->GetQuestId()) == m_monthlyquests.end();
+}
+
+bool Player::SatisfyAdditionalChecks(Quest const* qInfo, bool msg) const
+{
+    // Custom requirements for quest taking checks:
+    switch(qInfo->GetQuestId())
+    {
+        case 12604: // Congratulations! (Only if with On Patrol buff)
+            if(!HasAura(51573))
+                return false;
+        break;
+    }
+
+    return true;
 }
 
 bool Player::CanGiveQuestSourceItemIfNeed( Quest const *pQuest, ItemPosCountVec* dest) const
