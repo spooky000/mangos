@@ -4935,6 +4935,49 @@ void Spell::EffectApplyAura(SpellEffectIndex eff_idx)
     DEBUG_FILTER_LOG(LOG_FILTER_SPELL_CAST, "Spell: Aura is: %u", m_spellInfo->EffectApplyAuraName[eff_idx]);
 
     Aura* aur = m_spellAuraHolder->CreateAura(m_spellInfo, eff_idx, &m_currentBasePoints[eff_idx], m_spellAuraHolder, unitTarget, caster, m_CastItem);
+
+    // Now Reduce spell duration using data received at spell hit
+    int32 duration = aur->GetAuraMaxDuration();
+
+    // Mixology - increase effect and duration of alchemy spells which the caster has
+    if (caster->GetTypeId() == TYPEID_PLAYER && aur->GetSpellProto()->SpellFamilyName == SPELLFAMILY_POTION
+        && caster->HasAura(53042))
+    {
+        SpellSpecific spellSpec = GetSpellSpecific(aur->GetSpellProto()->Id);
+        if (spellSpec == SPELL_BATTLE_ELIXIR || spellSpec == SPELL_GUARDIAN_ELIXIR || spellSpec == SPELL_FLASK_ELIXIR)
+        {
+            if (caster->HasSpell(aur->GetSpellProto()->EffectTriggerSpell[0]))
+            {
+               duration *= 2.0f; // Increase duration by 2x
+               float amountMod;
+               switch(aur->GetId())
+               {
+                    case 53758: // Flask of Stoneblood
+                        amountMod = 1.50f;
+                    break;
+                    case 53760: // Flask of Endless Rage
+                    case 54212: // Flask of Pure Mojo
+                        amountMod = 1.45f;
+                        break;
+                    case 67016: // Flask of the North
+                    case 67017:
+                    case 67018:
+                        amountMod = 1.0f;
+                        break;
+                    default:
+                        amountMod = 1.3f;
+                        break;
+               }
+               aur->GetModifier()->m_amount *= amountMod;
+            }
+        }
+    }
+
+    if (duration != aur->GetAuraMaxDuration())
+    {
+        m_spellAuraHolder->SetAuraMaxDuration(duration);
+        m_spellAuraHolder->SetAuraDuration(duration);
+    }
 }
 
 void Spell::EffectUnlearnSpecialization(SpellEffectIndex eff_idx)

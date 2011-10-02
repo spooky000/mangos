@@ -57,6 +57,8 @@ MapManager::Initialize()
     if (num_threads > 0 && m_updater.activate(num_threads) == -1)
         abort();
 
+    sLog.outString( "Initialized %i Update Threads", num_threads );
+
     InitStateMachine();
 }
 

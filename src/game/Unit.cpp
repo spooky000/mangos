@@ -9840,12 +9840,6 @@ int32 Unit::CalculateSpellDamage(Unit const* target, SpellEntry const* spellProt
     if (comboDamage != 0 && unitPlayer && target && (target->GetObjectGuid() == unitPlayer->GetComboTargetGuid() || IsAreaOfEffectSpell(spellProto)))
         value += (int32)(comboDamage * comboPoints);
 
-    // Mixology - wrong formula, TODO: find proper one
-    SpellSpecific spellSpec = GetSpellSpecific(spellProto->Id);
-    if(HasAura(53042) && (spellSpec == SPELL_BATTLE_ELIXIR || spellSpec == SPELL_GUARDIAN_ELIXIR || spellSpec == SPELL_FLASK_ELIXIR))
-        if(spellProto->Id != 67016 && spellProto->Id != 67017 && spellProto->Id != 67018)
-            value *= 1.4f;
-
     // Magic Absorption always misses 1 point
     if(spellProto->Id == 29444 && effect_index == EFFECT_INDEX_1)
         value += spellProto->EffectRealPointsPerLevel[EFFECT_INDEX_1];
@@ -9960,15 +9954,6 @@ int32 Unit::CalculateAuraDuration(SpellEntry const* spellProto, uint32 effectMas
                         duration += aur->GetModifier()->m_amount * MINUTE * IN_MILLISECONDS;
                 }
                 break;
-            case SPELLFAMILY_POTION:
-            {
-                // Mixology
-                if (HasAura(53042))
-                    if(spellProto->Id != 67016 && spellProto->Id != 67017 && spellProto->Id != 67018)
-                        duration *= 2;
-
-                break;
-            }
             default:
                 break;
         }
