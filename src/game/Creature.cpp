@@ -185,9 +185,6 @@ Creature::~Creature()
 {
     CleanupsBeforeDelete();
 
-    if (GetTransport())
-        GetTransport()->RemovePassenger(this);
-
     m_vendorItemCounts.clear();
 
     delete i_AI;
