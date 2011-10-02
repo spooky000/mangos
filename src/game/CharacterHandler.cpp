@@ -810,6 +810,43 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
 
     if (pCurrChar->HasAtLoginFlag(AT_LOGIN_CHECK_TITLES))
     {
+        // Achievement conversion
+        if (QueryResult *result = WorldDatabase.Query("SELECT alliance_id, horde_id FROM player_factionchange_achievements"))
+        {
+            do
+            {
+                Field *fields = result->Fetch();
+                uint32 achiev_alliance = fields[0].GetUInt32();
+                uint32 achiev_horde = fields[1].GetUInt32();
+
+                // Titles conversion
+                const AchievementEntry *  pAchievAlliance = sAchievementStore.LookupEntry(achiev_alliance);
+                const AchievementEntry *  pAchievHorde = sAchievementStore.LookupEntry(achiev_horde);
+                if(!pAchievAlliance || !pAchievHorde)
+                    continue;
+
+                AchievementReward const* rewardAlliance = sAchievementMgr.GetAchievementReward(pAchievAlliance, gender);
+                AchievementReward const* rewardHorde = sAchievementMgr.GetAchievementReward(pAchievHorde, gender);
+                // no rewards
+                if(!rewardAlliance || !rewardHorde)
+                    continue;
+
+                // titles
+                if(uint32 titleId = rewardAlliance->titleId[team == BG_TEAM_HORDE ? 1 : 0])
+                {
+                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId);
+                    pCurrChar->SetTitle(titleEntry, (team == BG_TEAM_HORDE) ? true : false);
+                }
+
+                if(uint32 titleId = rewardHorde->titleId[team == BG_TEAM_HORDE ? 1 : 0])
+                {
+                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId);
+                    pCurrChar->SetTitle(titleEntry, (team == BG_TEAM_HORDE) ? true : false);
+                }
+            }
+            while (result2->NextRow());
+        }
+
         // Check titles
     }
 
@@ -1322,37 +1359,6 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
 
                 CharacterDatabase.PExecute("UPDATE IGNORE `character_achievement` set achievement = '%u' where achievement = '%u' AND guid = '%u'",
                     team == BG_TEAM_ALLIANCE ? achiev_alliance : achiev_horde, team == BG_TEAM_ALLIANCE ? achiev_horde : achiev_alliance, guid.GetCounter());
-
-                // Titles conversion
-                const AchievementEntry *  pAchievAlliance = sAchievementStore.LookupEntry(achiev_alliance);
-                const AchievementEntry *  pAchievHorde = sAchievementStore.LookupEntry(achiev_horde);
-                if(!pAchievAlliance || !pAchievHorde)
-                    continue;
-
-                AchievementReward const* rewardAlliance = sAchievementMgr.GetAchievementReward(pAchievAlliance, gender);
-                AchievementReward const* rewardHorde = sAchievementMgr.GetAchievementReward(pAchievHorde, gender);
-                // no rewards
-                if(!rewardAlliance || !rewardHorde)
-                    continue;
-
-                // titles
-                if(uint32 titleId = rewardAlliance->titleId[team == BG_TEAM_HORDE ? 1 : 0])
-                {
-                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId);
-                    //if(team == BG_TEAM_HORDE)
-                        // Remove
-                    //else
-                        // Add
-                }
-
-                if(uint32 titleId = rewardHorde->titleId[team == BG_TEAM_HORDE ? 1 : 0])
-                {
-                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId);
-                    //if(team == BG_TEAM_HORDE)
-                        // Remove
-                    //else
-                        // Add
-                }
             }
             while (result2->NextRow());
         }
