@@ -808,10 +808,10 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
     // Handle Login-Achievements (should be handled after loading)
     pCurrChar->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ON_LOGIN, 1);
 
+    // Achievement conversion at login
     if (pCurrChar->HasAtLoginFlag(AT_LOGIN_CHECK_TITLES))
     {
         Team team = pCurrChar->GetTeam();
-        // Achievement conversion
         if (QueryResult *result = WorldDatabase.Query("SELECT alliance_id, horde_id FROM player_factionchange_achievements"))
         {
             do
@@ -821,7 +821,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
                 uint32 achiev_horde = fields[1].GetUInt32();
 
                 // Check all convertable achievements, if we are horde after switch, check alliance one.
-                const AchievementEntry *  pAchiev = sAchievementStore.LookupEntry(team == HORDE ? achiev_alliance : achiev_horde);
+                AchievementEntry const*  pAchiev = sAchievementStore.LookupEntry(team == HORDE ? achiev_alliance : achiev_horde);
                 if (!pAchiev)
                     continue;
 
@@ -833,7 +833,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
                 // Check opposite fraction title
                 if (uint32 titleId = pReward->titleId[team == BG_TEAM_HORDE ? 0 : 1])
                 {
-                    if( CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId))
+                    if (CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId))
                     {
                         // Check if we really have that title
                         uint32 fieldIndexOffset = titleEntry->bit_index / 32;
@@ -843,9 +843,9 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
                             // Convert title to opposite fraction one:
                             // Remove old title
                             pCurrChar->SetTitle(titleEntry, true);
+
                             // Find new title to add.
-                            // Check all convertable achievements, if we are horde after switch, check alliance one.
-                            const AchievementEntry *  pNewAchi = sAchievementStore.LookupEntry(team == HORDE ? achiev_horde : achiev_alliance);
+                            AchievementEntry const*  pNewAchi = sAchievementStore.LookupEntry(team == HORDE ? achiev_horde : achiev_alliance);
                             if (!pAchiev)
                                 continue;
 
@@ -854,6 +854,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
                             if (!pReward)
                                 continue;
 
+                            // Add new title
                             if (uint32 titleNewId = pReward->titleId[team == BG_TEAM_HORDE ? 1 : 0])
                                 if (CharTitlesEntry const* titleNewEntry = sCharTitlesStore.LookupEntry(titleNewId))
                                     pCurrChar->SetTitle(titleNewEntry);
