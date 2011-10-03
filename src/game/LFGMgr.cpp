@@ -251,7 +251,7 @@ void LFGMgr::Join(Player* player)
     if (!sWorld.getConfig(CONFIG_BOOL_LFG_ENABLE) && !sWorld.getConfig(CONFIG_BOOL_LFR_ENABLE))
         return;
 
-    ObjectGuid guid = player->GetObjectGuid();;
+    ObjectGuid guid = player->GetObjectGuid();
     Group* group = player->GetGroup();
 
     if (group)

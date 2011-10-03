@@ -3844,7 +3844,7 @@ bool ChatHandler::HandleWpExportCommand(char *args)
                 return true;
             }
             Field *fields = result->Fetch();
-            lowguid = fields[0].GetUInt32();;
+            lowguid = fields[0].GetUInt32();
             delete result;
         }
 
