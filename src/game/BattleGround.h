@@ -89,7 +89,6 @@ enum BattleGroundMarksCount
 
 enum BattleGroundSpells
 {
-    //SPELL_SPIRIT_HEAL_CHANNEL       = 22011,
     SPELL_ARENA_PREPARATION         = 32727,                // use this one, 32728 not correct
     SPELL_ALLIANCE_GOLD_FLAG        = 32724,
     SPELL_ALLIANCE_GREEN_FLAG       = 32725,
@@ -199,7 +198,7 @@ enum ScoreType
     SCORE_FLAG_CAPTURES         = 7,
     SCORE_FLAG_RETURNS          = 8,
     //AB
-    SCORE_BASES_ASSAULTED       = 9,
+    SCORE_BASES_ASSAULTED       = 9,    // these are used in IoC too
     SCORE_BASES_DEFENDED        = 10,
     //AV
     SCORE_GRAVEYARDS_ASSAULTED  = 11,
@@ -209,10 +208,7 @@ enum ScoreType
     SCORE_SECONDARY_OBJECTIVES  = 15,
     //SA
     SCORE_GATES_DESTROYED        = 16,
-    SCORE_DEMOLISHERS_DESTROYED  = 17,
-    //IC
-    SCORE_BASE_ASSAULTED        = 18,
-    SCORE_BASE_DEFENDED         = 19
+    SCORE_DEMOLISHERS_DESTROYED  = 17
 };
 
 enum BattleGroundType
@@ -273,12 +269,6 @@ enum GroupJoinBattlegroundResult
     ERR_LFG_CANT_USE_BATTLEGROUND           = -13,          // You cannot queue for a battleground or arena while using the dungeon system.
     ERR_IN_RANDOM_BG                        = -14,          // Can't do that while in a Random Battleground queue.
     ERR_IN_NON_RANDOM_BG                    = -15,          // Can't queue for Random Battleground while in another Battleground queue.
-};
-
-enum BattlegroundCreatures
-{
-    BG_CREATURE_ENTRY_A_SPIRITGUIDE      = 13116,           // alliance
-    BG_CREATURE_ENTRY_H_SPIRITGUIDE      = 13117,           // horde
 };
 
 class BattleGroundScore
@@ -450,7 +440,6 @@ class BattleGround
         void PlaySoundToTeam(uint32 SoundID, Team team);
         void PlaySoundToAll(uint32 SoundID);
         void CastSpellOnTeam(uint32 SpellID, Team team);
-        void RemoveAuraOnTeam(uint32 SpellID, Team team);
         void RewardHonorToTeam(uint32 Honor, Team team);
         void RewardReputationToTeam(uint32 faction_id, uint32 Reputation, Team TeamID);
         void RewardXpToTeam(uint32 Xp, float percentOfLevel, Team TeamID);
@@ -470,7 +459,6 @@ class BattleGround
         void SendWarningToAll(int32 entry, ...);
 
         GameObject* GetBGObject(uint32 type);
-        Creature* GetBGCreature(uint32 type);
 
         // specialized version with 2 string id args
         void SendMessage2ToAll(int32 entry, ChatMsg type, Player const* source, int32 strId1 = 0, int32 strId2 = 0);
@@ -517,17 +505,11 @@ class BattleGround
         virtual void EventPlayerCapturedFlag(Player* /*player*/) {}
 
         virtual void EventPlayerDamageGO(Player* /*player*/, GameObject* /*target_obj*/, uint32 /*eventId*/, uint32 /*bySpellId*/) {}
-        virtual void EventPlayerUsedGO(Player* /*Source*/, GameObject* /*object*/) {}
         virtual void EventSpawnGOSA(Player* /*owner*/, Creature* /*obj*/, float /*x*/, float /*y*/, float /*z*/) {}
         virtual void VirtualUpdatePlayerScore(Player* /*Source*/, uint32 /*type*/, uint32 /*value*/) {}
 
         void EventPlayerLoggedIn(Player* player);
         void EventPlayerLoggedOut(Player* player);
-
-        // this function can be used by spell to interact with the BG map
-        virtual void DoAction(uint32 action, uint64 var) {}
-
-        virtual void HandlePlayerResurrect(Player* player) {}
 
         /* Death related */
         virtual WorldSafeLocsEntry const* GetClosestGraveYard(Player* player);
@@ -568,10 +550,7 @@ class BattleGround
         void SpawnBGObject(ObjectGuid guid, uint32 respawntime);
         bool AddObject(uint32 type, uint32 entry, float x, float y, float z, float o, float rotation0, float rotation1, float rotation2, float rotation3, uint32 respawnTime = 0);
         void SpawnBGCreature(ObjectGuid guid, uint32 respawntime);
-        Creature* AddCreature(uint32 entry, uint32 type, uint32 teamval, float x, float y, float z, float o, uint32 respawntime = 0);
-        bool AddSpiritGuide(uint32 type, float x, float y, float z, float o, uint32 team);
         bool DelObject(uint32 type);
-        bool DelCreature(uint32 type);
 
         void DoorOpen(ObjectGuid guid);
         void DoorClose(ObjectGuid guid);
