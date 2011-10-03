@@ -1777,7 +1777,8 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         }
         void SetVisibleAura(uint8 slot, uint32 spellid)
         {
-            if(spellid == 0)
+            MAPLOCK_WRITE(this,MAP_LOCK_TYPE_AURAS);
+            if (spellid == 0)
                 m_visibleAuras.erase(slot);
             else
                 m_visibleAuras[slot] = spellid;
