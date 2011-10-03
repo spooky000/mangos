@@ -1046,13 +1046,13 @@ enum MangosStrings
     LANG_BG_IC_TEAM_DEFENDED_NODE       = 20092,
     LANG_BG_IC_TEAM_ASSAULTED_NODE_2    = 20093,
     LANG_BG_IC_TEAM_HAS_TAKEN_NODE      = 20094,
-    LANG_BG_IC_WORKSHOP                 = 20095,
-    LANG_BG_IC_DOCKS                    = 20096,
-    LANG_BG_IC_REFINERY                 = 20097,
-    LANG_BG_IC_QUARRY                   = 20098,
-    LANG_BG_IC_HANGAR                   = 20099,
-    LANG_BG_IC_ALLIANCE                 = 20100,
-    LANG_BG_IC_HORDE                    = 20101,
+    LANG_BG_IC_NODE_WORKSHOP            = 20095,
+    LANG_BG_IC_NODE_DOCKS               = 20096,
+    LANG_BG_IC_NODE_REFINERY            = 20097,
+    LANG_BG_IC_NODE_QUARRY              = 20098,
+    LANG_BG_IC_NODE_HANGAR              = 20099,
+    LANG_BG_IC_NODE_DEFENDED            = 20100,
+    LANG_BG_IC_NODE_ASSAULTED           = 20101,
 
     // NOT RESERVED IDS                   12000-1999999999
     // `db_script_string` table index     2000000000-2000009999 (MIN_DB_SCRIPT_STRING_ID-MAX_DB_SCRIPT_STRING_ID)
