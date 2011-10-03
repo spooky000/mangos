@@ -7546,6 +7546,8 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
 
 void Player::_ApplyWeaponDependentAuraMods(Item *item,WeaponAttackType attackType,bool apply)
 {
+    MAPLOCK_READ(this,MAP_LOCK_TYPE_AURAS);
+
     AuraList const& auraCritList = GetAurasByType(SPELL_AURA_MOD_CRIT_PERCENT);
     for(AuraList::const_iterator itr = auraCritList.begin(); itr!=auraCritList.end();++itr)
         _ApplyWeaponDependentAuraCritMod(item,attackType,*itr,apply);
@@ -21251,6 +21253,7 @@ void Player::SendAurasForTarget(Unit *target)
     WorldPacket data(SMSG_AURA_UPDATE_ALL);
     data << target->GetPackGUID();
 
+    MAPLOCK_READ(target,MAP_LOCK_TYPE_AURAS);
     Unit::VisibleAuraMap const& visibleAuras = target->GetVisibleAuras();
     for (Unit::VisibleAuraMap::const_iterator itr = visibleAuras.begin(); itr != visibleAuras.end(); ++itr)
     {

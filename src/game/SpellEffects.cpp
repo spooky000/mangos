@@ -1083,11 +1083,11 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 {
                     if (unitTarget->GetEntry() == 26406) // Anvil
                     {
-                        unitTarget->CastSpell(unitTarget, 47923, true); // Stunned by EMP
+                        unitTarget->CastSpell(unitTarget, 47923, false); // Stunned by EMP
                         if (Creature * pThane = unitTarget->GetClosestCreatureWithEntry(unitTarget, 26405, 15))
                         {
                             pThane->AddThreat(m_caster, 1);
-                            pThane->RemoveAura(47922, EFFECT_INDEX_0);
+                            pThane->RemoveAurasDueToSpell(47922);
                         }
                     }
                     return;
