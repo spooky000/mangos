@@ -856,7 +856,7 @@ int WorldSocket::HandleAuthSession (WorldPacket& recvPacket)
 
     K.SetHexStr (fields[2].GetString ());
 
-    QueryResult *muteResult = LoginDatabase.PQuery ("SELECT mutetime FROM account_muted WHERE account_id = %u", id);
+    QueryResult *muteResult = LoginDatabase.PQuery ("SELECT mutetime FROM account_muted WHERE account_id = '%u' AND active = '%u'", id, 1);
 
     time_t mutetime = 0;
     if (muteResult)
@@ -864,6 +864,9 @@ int WorldSocket::HandleAuthSession (WorldPacket& recvPacket)
         mutetime = muteResult->Fetch()[0].GetUInt64();
         delete muteResult;
     }
+
+    if (mutetime <= time (NULL))
+        LoginDatabase.PExecute("UPDATE account_muted SET active = '0' WHERE account_id = '%u'", id);
 
     locale = LocaleConstant (fields[8].GetUInt8 ());
     if (locale >= MAX_LOCALE)

@@ -367,7 +367,7 @@ bool PetAI::_CheckTargetCC(Unit* target)
         Unit::SpellAuraHolderMap & auras = target->GetSpellAuraHolderMap();
         for (Unit::SpellAuraHolderMap::iterator iter = auras.begin(); iter != auras.end(); ++iter )
         {
-            SpellAuraHolder const* auraHolder = iter->second;
+            SpellAuraHolderPtr auraHolder = iter->second;
             if (!auraHolder->IsPositive() && auraHolder->GetSpellProto()->Attributes & SPELL_ATTR_BREAKABLE_BY_DAMAGE && (auraHolder->GetCasterGuid() == m_creature->GetCharmerOrOwnerGuid()))
                 return true;
         }

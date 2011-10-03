@@ -563,7 +563,8 @@ enum AtLoginFlags
     AT_LOGIN_RESET_PET_TALENTS = 0x10,
     AT_LOGIN_FIRST             = 0x20,
     AT_LOGIN_CHANGE_FACTION    = 0x40,
-    AT_LOGIN_CHANGE_RACE       = 0x80
+    AT_LOGIN_CHANGE_RACE       = 0x80,
+    AT_LOGIN_CHECK_TITLES      = 0x100
 };
 
 typedef std::map<uint32, QuestStatusData> QuestStatusMap;
@@ -1371,6 +1372,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         bool SatisfyQuestDay( Quest const* qInfo, bool msg ) const;
         bool SatisfyQuestWeek( Quest const* qInfo, bool msg ) const;
         bool SatisfyQuestMonth(Quest const* qInfo, bool msg) const;
+        bool SatisfyAdditionalChecks(Quest const* qInfo, bool msg) const;
         bool CanGiveQuestSourceItemIfNeed( Quest const *pQuest, ItemPosCountVec* dest = NULL) const;
         void GiveQuestSourceItemIfNeed(Quest const *pQuest);
         bool TakeQuestSourceItem( uint32 quest_id, bool msg );

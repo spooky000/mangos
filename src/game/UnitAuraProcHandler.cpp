@@ -351,12 +351,13 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
     &Unit::HandleNULLProc                                   //316 makes haste affect HOT/DOT ticks
 };
 
-bool Unit::IsTriggeredAtSpellProcEvent(Unit *pVictim, SpellAuraHolder* holder, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, SpellProcEventEntry const*& spellProcEvent )
+bool Unit::IsTriggeredAtSpellProcEvent(Unit *pVictim, SpellAuraHolderPtr holder, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, SpellProcEventEntry const*& spellProcEvent )
 {
+
     if (IsTriggeredAtCustomProcEvent(pVictim, holder, procSpell, procFlag, procExtra, attType, isVictim, spellProcEvent))
         return true;
 
-    SpellEntry const* spellProto = holder->GetSpellProto ();
+    SpellEntry const* spellProto = holder->GetSpellProto();
 
     // Get proc Event Entry
     spellProcEvent = sSpellMgr.GetSpellProcEvent(spellProto->Id);
@@ -998,20 +999,23 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 case 58914:
                 {
                     // also decrease owner buff stack
-                    if (Unit* owner = GetOwner())
-                        owner->RemoveAuraHolderFromStack(34027);
+                    Unit* owner = GetOwner();
+                    if (!owner)
+                        return SPELL_AURA_PROC_FAILED;
+
+                    owner->RemoveAuraHolderFromStack(34027);
 
                     // Remove only single aura from stack
-                    SpellAuraHolder* holder = triggeredByAura->GetHolder();
+                    SpellAuraHolderPtr holder = triggeredByAura->GetHolder();
                     if (holder && !holder->IsDeleted())
                     {
-                        if (holder->GetStackAmount() > 1)
+                        if (holder->ModStackAmount(-1))
                         {
-                            holder->ModStackAmount(-1);
-                            return SPELL_AURA_PROC_CANT_TRIGGER;
+                            owner->RemoveAurasDueToSpell(34026);
+                            return SPELL_AURA_PROC_OK;
                         }
                         else
-                            return SPELL_AURA_PROC_OK;
+                            return SPELL_AURA_PROC_CANT_TRIGGER;
                     }
                     else
                         return SPELL_AURA_PROC_FAILED;
@@ -1127,7 +1131,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
 
                     triggered_spell_id = 71905;             // Soul Fragment
 
-                    SpellAuraHolder *aurHolder = GetSpellAuraHolder(triggered_spell_id);
+                    SpellAuraHolderPtr aurHolder = GetSpellAuraHolder(triggered_spell_id);
 
                     // will added first to stack
                     if (!aurHolder)
@@ -1306,10 +1310,11 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     basepoints[0] = damage * 15 / 100;
                     break;
                 }
+                // Fingers of Frost
                 case 74396:
                 {
                     // Remove only single aura from stack
-                    SpellAuraHolder* holder = triggeredByAura->GetHolder();
+                    SpellAuraHolderPtr holder = triggeredByAura->GetHolder();
                     if (holder && !holder->IsDeleted())
                     {
                         if (holder->ModStackAmount(-1))
@@ -1487,7 +1492,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                        }
                        else if (roll_chance_i((*itr)->GetModifier()->m_amount))
                        {
-                       // Replenishment proc
+                            // Replenishment proc
                             CastSpell(this, 57669, true, NULL, (*itr));
                         }
                     }
@@ -1586,7 +1591,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                         return SPELL_AURA_PROC_FAILED;
 
                     // Renew
-                    Aura* healingAura = pVictim->GetAura(SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_PRIEST, ClassFamilyMask::create<CF_PRIEST_RENEW>(), GetObjectGuid());
+                    Aura* healingAura = pVictim->GetAura<SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_PRIEST, CF_PRIEST_RENEW>(GetObjectGuid());
                     if (!healingAura)
                         return SPELL_AURA_PROC_FAILED;
 
@@ -1602,7 +1607,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     if (!procSpell)
                         return SPELL_AURA_PROC_FAILED;
 
-                    Aura* leachAura = pVictim->GetAura(SPELL_AURA_PERIODIC_LEECH, SPELLFAMILY_PRIEST, ClassFamilyMask::create<CF_PRIEST_DEVOURING_PLAGUE>(), GetObjectGuid());
+                    Aura* leachAura = pVictim->GetAura<SPELL_AURA_PERIODIC_LEECH, SPELLFAMILY_PRIEST, CF_PRIEST_DEVOURING_PLAGUE>(GetObjectGuid());
                     if (!leachAura)
                         return SPELL_AURA_PROC_FAILED;
 
@@ -1806,8 +1811,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 // Glyph of Shred
                 case 54815:
                 {
-                    // try to find spell Rip on the target
-                    if (Aura* aura = target->GetAura(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, UI64LIT(0x00800000), 0, GetObjectGuid()))
+                    if (Aura* aura = target->GetAura(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, CF_DRUID_SHRED, 0, GetObjectGuid()))
                     {
                         // Rip's max duration, note: spells which modifies Rip's duration also counted like Glyph of Rip
                         uint32 countMin = aura->GetAuraMaxDuration();
@@ -2135,6 +2139,11 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
             {
                 triggered_spell_id = 35079;                 // 4 sec buff on self
                 target = this;
+                break;
+            }
+            else if (dummySpell->Id == 37483)               // Improved Kill Command - Item set bonus
+            {
+                triggered_spell_id = 37482;                 // Exploited Weakness
                 break;
             }
             // Guard Dog
@@ -2475,7 +2484,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                         return SPELL_AURA_PROC_FAILED;
                     uint32 maxStack = mote->StackAmount - (dummySpell->Id == 71545 ? 1 : 0);
 
-                    SpellAuraHolder *aurHolder = GetSpellAuraHolder(71432);
+                    SpellAuraHolderPtr aurHolder = GetSpellAuraHolder(71432);
                     if (aurHolder && uint32(aurHolder->GetStackAmount() +1) >= maxStack)
                     {
                         RemoveAurasDueToSpell(71432);       // Mote of Anger
@@ -3555,11 +3564,37 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 if (HasAura(44401) || HasAura(57761))
                     return SPELL_AURA_PROC_FAILED;
             }
-            // Fingers of Frost 
+            // Fingers of Frost
             else if (auraSpellInfo->SpellIconID == 2947)
             {
-                // proc chance for spells in basepoints
-                if (!roll_chance_i(triggerAmount))
+                bool chillFound = false;    // Do not proc from spells that have no chill effect
+                for(uint8 idx = 0; idx < 3; ++idx)
+                {
+                    if (procSpell->EffectApplyAuraName[idx] == SPELL_AURA_MOD_DECREASE_SPEED)
+                    {
+                        chillFound = true;
+                        break;
+                    }
+                }
+
+                if (!chillFound) // If no speed decrease aura found, look for Improved Blizzard if Blizzard is casted.
+                {
+                    if (procSpell->SpellFamilyName==SPELLFAMILY_MAGE && procSpell->SpellFamilyFlags.test<CF_MAGE_BLIZZARD>())
+                    {
+                        AuraList const& mOverrideClassScript = GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
+                        for(AuraList::const_iterator i = mOverrideClassScript.begin(); i != mOverrideClassScript.end(); ++i)
+                        {
+                            int32 script = (*i)->GetModifier()->m_miscvalue;
+                            if (script==836 || script==988 || script==989)
+                            {
+                                chillFound = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!chillFound || !roll_chance_i(triggerAmount))
                     return SPELL_AURA_PROC_FAILED;
             }
             break;
@@ -4442,14 +4477,15 @@ SpellAuraProcResult Unit::HandleMendingAuraProc( Unit* /*pVictim*/, uint32 damag
         else
             radius = GetSpellMaxRange(sSpellRangeStore.LookupEntry(spellProto->rangeIndex));
 
-        if(Player* caster = ((Player*)triggeredByAura->GetCaster()))
+        if (Player* caster = ((Player*)triggeredByAura->GetCaster()))
         {
             caster->ApplySpellMod(spellProto->Id, SPELLMOD_RADIUS, radius, NULL);
 
-            if(Player* target = ((Player*)this)->GetNextRandomRaidMember(radius))
+            SpellAuraHolderPtr holder = GetSpellAuraHolder(spellProto->Id, caster->GetObjectGuid());
+
+            if (Player* target = ((Player*)this)->GetNextRandomRaidMember(radius))
             {
-                SpellAuraHolder *holder = GetSpellAuraHolder(spellProto->Id, caster->GetObjectGuid());
-                SpellAuraHolder *new_holder = CreateSpellAuraHolder(spellProto, target, caster);
+                SpellAuraHolderPtr new_holder = CreateSpellAuraHolder(spellProto, target, caster);
 
                 for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
                 {
@@ -4458,8 +4494,7 @@ SpellAuraProcResult Unit::HandleMendingAuraProc( Unit* /*pVictim*/, uint32 damag
                         continue;
 
                     int32 basePoints = aur->GetBasePoints();
-                    Aura * new_aur = CreateAura(spellProto, aur->GetEffIndex(), &basePoints, new_holder, target, caster);
-                    new_holder->AddAura(new_aur, new_aur->GetEffIndex());
+                    new_holder->CreateAura(spellProto, aur->GetEffIndex(), &basePoints, new_holder, target, caster, NULL);
                 }
                 new_holder->SetAuraCharges(jumps, false);
 
@@ -4521,7 +4556,7 @@ SpellAuraProcResult Unit::HandleAddFlatModifierAuraProc(Unit* pVictim, uint32 /*
         case 53257:                             // Cobra strike
         case 55166:                             // Tidal Force
         {
-            SpellAuraHolder* holder = triggeredByAura->GetHolder();
+            SpellAuraHolderPtr holder = triggeredByAura->GetHolder();
             if (!holder || holder->IsDeleted() || holder->GetStackAmount() < 1)
                 return SPELL_AURA_PROC_FAILED;
 
@@ -4898,7 +4933,7 @@ SpellAuraProcResult Unit::HandleModResistanceAuraProc(Unit* /*pVictim*/, uint32 
     return SPELL_AURA_PROC_OK;
 }
 
-bool Unit::IsTriggeredAtCustomProcEvent(Unit *pVictim, SpellAuraHolder* holder, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, SpellProcEventEntry const*& spellProcEvent )
+bool Unit::IsTriggeredAtCustomProcEvent(Unit *pVictim, SpellAuraHolderPtr holder, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, SpellProcEventEntry const*& spellProcEvent )
 {
     if (!holder || holder->IsDeleted())
         return false;
@@ -5000,7 +5035,7 @@ SpellAuraProcResult Unit::HandleDropChargeByDamageProc(Unit* pVictim, uint32 dam
     if (!triggeredByAura)
         return SPELL_AURA_PROC_FAILED;
 
-    if (SpellAuraHolder *holder = triggeredByAura->GetHolder())
+    if (SpellAuraHolderPtr holder = triggeredByAura->GetHolder())
     {
         triggeredByAura->SetInUse(true);
         if (holder->DropAuraCharge())

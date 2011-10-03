@@ -45,8 +45,8 @@ Map::~Map()
     if(!m_scriptSchedule.empty())
         sScriptMgr.DecreaseScheduledScriptCount(m_scriptSchedule.size());
 
-    if (m_persistentState)
-        m_persistentState->SetUsedByMapState(NULL);         // field pointer can be deleted after this
+    if (GetPersistentState())
+        GetPersistentState()->SetUsedByMapState(NULL);         // field pointer can be deleted after this
 
     if(i_data)
     {
@@ -72,7 +72,7 @@ void Map::LoadMapAndVMap(int gx,int gy)
 Map::Map(uint32 id, time_t expiry, uint32 InstanceId, uint8 SpawnMode)
   : i_mapEntry (sMapStore.LookupEntry(id)), i_spawnMode(SpawnMode),
   i_id(id), i_InstanceId(InstanceId), m_unloadTimer(0),
-  m_VisibleDistance(DEFAULT_VISIBILITY_DISTANCE), m_persistentState(NULL),
+  m_VisibleDistance(DEFAULT_VISIBILITY_DISTANCE),
   m_activeNonPlayersIter(m_activeNonPlayers.end()),
   i_gridExpiry(expiry), m_TerrainData(sTerrainMgr.LoadTerrain(id)),
   i_data(NULL), i_script_id(0)
@@ -96,8 +96,13 @@ Map::Map(uint32 id, time_t expiry, uint32 InstanceId, uint8 SpawnMode)
     //add reference for TerrainData object
     m_TerrainData->AddRef();
 
-    m_persistentState = sMapPersistentStateMgr.AddPersistentState(i_mapEntry, GetInstanceId(), GetDifficulty(), 0, IsDungeon());
-    m_persistentState->SetUsedByMapState(this);
+    MapPersistentState* persistentState = sMapPersistentStateMgr.AddPersistentState(i_mapEntry, GetInstanceId(), GetDifficulty(), 0, IsDungeon());
+    persistentState->SetUsedByMapState(this);
+}
+
+MapPersistentState* Map::GetPersistentState() const
+{
+    return sMapPersistentStateMgr.GetPersistentState(GetId(), GetInstanceId());
 }
 
 void Map::InitVisibilityDistance()
@@ -910,7 +915,7 @@ void Map::SendInitSelf( Player * player )
     // build other passengers at transport also (they always visible and marked as visible and will not send at visibility update at add to map
     if (Transport* transport = player->GetTransport())
     {
-        for(Transport::UnitSet::const_iterator itr = transport->GetUnitPassengers().begin(); itr != transport->GetUnitPassengers().end(); ++itr)
+        for(Transport::PlayerSet::const_iterator itr = transport->GetPassengers().begin();itr!=transport->GetPassengers().end();++itr)
         {
             if (player != (*itr) && player->HaveAtClient(*itr))
             {

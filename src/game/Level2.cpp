@@ -94,8 +94,8 @@ bool ChatHandler::HandleMuteCommand(char* args)
     if (!reason)
         reason = "reason was not provided";
 
-    LoginDatabase.PExecute("INSERT INTO account_muted VALUES ('%u', " UI64FMTD ", '%s', '%s')",
-        account_id,uint64(mutetime), m_session ? m_session->GetPlayerName() : "Console(IRC)", reason);
+    LoginDatabase.PExecute("INSERT INTO account_muted VALUES ('%u', " UI64FMTD ", '%s', '%s', '%u')",
+        account_id, uint64(mutetime), m_session ? m_session->GetPlayerName() : "Console(IRC)", reason, 1);
 
     if (target)
         ChatHandler(target).PSendSysMessage(LANG_YOUR_CHAT_DISABLED, notspeaktime, reason);
@@ -140,7 +140,7 @@ bool ChatHandler::HandleUnmuteCommand(char* args)
         target->GetSession()->m_muteTime = 0;
     }
 
-    LoginDatabase.PExecute("DELETE FROM account_muted WHERE account_id = '%u'", account_id);
+    LoginDatabase.PExecute("UPDATE account_muted SET active = '0' WHERE account_id = '%u'", account_id);
 
     if (target)
         ChatHandler(target).PSendSysMessage(LANG_YOUR_CHAT_ENABLED);
@@ -1637,8 +1637,7 @@ bool ChatHandler::HandleNpcAddCommand(char* args)
         float tO = chr->GetTransOffsetO();
         pCreature->m_movementInfo.SetTransportData(ObjectGuid(chr->GetTransport()->GetObjectGuid()), tX, tY, tZ, tO, 0, -1);
         map->CreatureRelocation(pCreature, chr->GetTransport()->GetPositionX() + tX, chr->GetTransport()->GetPositionY() + tY, chr->GetTransport()->GetPositionZ() + tZ, chr->GetTransOffsetO());
-        chr->GetTransport()->AddPassenger(pCreature);
-        
+
         pCreature->SaveToDB(chr->GetTransport()->GetGOInfo()->moTransport.mapID, (1 << map->GetSpawnMode()), chr->GetPhaseMaskForSpawn());
 
         pCreature->AIM_Initialize();
@@ -3845,7 +3844,7 @@ bool ChatHandler::HandleWpExportCommand(char *args)
                 return true;
             }
             Field *fields = result->Fetch();
-            lowguid = fields[0].GetUInt32();;
+            lowguid = fields[0].GetUInt32();
             delete result;
         }
 
@@ -4066,6 +4065,7 @@ bool ChatHandler::HandleCharacterChangeRaceCommand(char* args)
         // TODO : add text into database
         PSendSysMessage(LANG_CUSTOMIZE_PLAYER, GetNameLink(target).c_str());
         target->SetAtLoginFlag(AT_LOGIN_CHANGE_RACE);
+        target->SetAtLoginFlag(AT_LOGIN_CHECK_TITLES);
         CharacterDatabase.PExecute("UPDATE characters SET at_login = at_login | '128' WHERE guid = '%u'", target->GetGUIDLow());
     }
     else

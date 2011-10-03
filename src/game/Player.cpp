@@ -1959,6 +1959,9 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
 
 bool Player::TeleportToBGEntryPoint()
 {
+    RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
+    RemoveSpellsCausingAura(SPELL_AURA_FLY);
+
     ScheduleDelayedOperation(DELAYED_BG_MOUNT_RESTORE);
     ScheduleDelayedOperation(DELAYED_BG_TAXI_RESTORE);
     return TeleportTo(m_bgData.joinPos);
@@ -4631,7 +4634,7 @@ void Player::ResurrectPlayer(float restore_percent, bool applySickness)
         {
             int32 delta = (int32(getLevel()) - startLevel + 1)*MINUTE;
 
-            if (SpellAuraHolder* holder = GetSpellAuraHolder(SPELL_ID_PASSIVE_RESURRECTION_SICKNESS))
+            if (SpellAuraHolderPtr holder = GetSpellAuraHolder(SPELL_ID_PASSIVE_RESURRECTION_SICKNESS))
             {
                 holder->SetAuraDuration(delta*IN_MILLISECONDS);
                 holder->SendAuraUpdate(false);
@@ -7543,6 +7546,8 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
 
 void Player::_ApplyWeaponDependentAuraMods(Item *item,WeaponAttackType attackType,bool apply)
 {
+    MAPLOCK_READ(this,MAP_LOCK_TYPE_AURAS);
+
     AuraList const& auraCritList = GetAurasByType(SPELL_AURA_MOD_CRIT_PERCENT);
     for(AuraList::const_iterator itr = auraCritList.begin(); itr!=auraCritList.end();++itr)
         _ApplyWeaponDependentAuraCritMod(item,attackType,*itr,apply);
@@ -7806,7 +7811,7 @@ void Player::DestroyItemWithOnStoreSpell(Item* item, uint32 spellId)
 /// handles unique effect of Deadly Poison: apply poison of the other weapon when already at max. stack
 void Player::_HandleDeadlyPoison(Unit* Target, WeaponAttackType attType, SpellEntry const *spellInfo)
 {
-    SpellAuraHolder const* dPoison = NULL;
+    SpellAuraHolderPtr dPoison = SpellAuraHolderPtr(NULL);
     SpellAuraHolderConstBounds holders = Target->GetSpellAuraHolderBounds(spellInfo->Id);
     for (SpellAuraHolderMap::const_iterator iter = holders.first; iter != holders.second; ++iter)
     {
@@ -14059,6 +14064,7 @@ bool Player::CanTakeQuest(Quest const *pQuest, bool msg) const
         SatisfyQuestPreviousQuest(pQuest, msg) && SatisfyQuestTimed(pQuest, msg) &&
         SatisfyQuestPrevChain(pQuest, msg) &&
         SatisfyQuestDay(pQuest, msg) && SatisfyQuestWeek(pQuest, msg) && SatisfyQuestMonth(pQuest, msg) &&
+        SatisfyAdditionalChecks(pQuest, msg) &&
         pQuest->IsActive();
 }
 
@@ -14989,6 +14995,20 @@ bool Player::SatisfyQuestMonth(Quest const* qInfo, bool msg) const
 
     // if not found in cooldown list
     return m_monthlyquests.find(qInfo->GetQuestId()) == m_monthlyquests.end();
+}
+
+bool Player::SatisfyAdditionalChecks(Quest const* qInfo, bool msg) const
+{
+    // Custom requirements for quest taking checks:
+    switch(qInfo->GetQuestId())
+    {
+        case 12604: // Congratulations! (Only if with On Patrol buff)
+            if(!HasAura(51573))
+                return false;
+        break;
+    }
+
+    return true;
 }
 
 bool Player::CanGiveQuestSourceItemIfNeed( Quest const *pQuest, ItemPosCountVec* dest) const
@@ -16639,7 +16659,7 @@ void Player::_LoadAuras(QueryResult *result, uint32 timediff)
             else if (!stackcount)
                 stackcount = 1;
 
-            SpellAuraHolder *holder = CreateSpellAuraHolder(spellproto, this, NULL);
+            SpellAuraHolderPtr holder = CreateSpellAuraHolder(spellproto, this, NULL);
             holder->SetLoadedState(caster_guid, ObjectGuid(HIGHGUID_ITEM, item_lowguid), stackcount, remaincharges, maxduration, remaintime);
 
             for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
@@ -16647,12 +16667,12 @@ void Player::_LoadAuras(QueryResult *result, uint32 timediff)
                 if ((effIndexMask & (1 << i)) == 0)
                     continue;
 
-                Aura* aura = CreateAura(spellproto, SpellEffectIndex(i), NULL, holder, this);
+                Aura* aura = holder->CreateAura(spellproto, SpellEffectIndex(i), NULL, holder, this, NULL, NULL);
+
                 if (!damage[i])
                     damage[i] = aura->GetModifier()->m_amount;
 
                 aura->SetLoadedState(damage[i], periodicTime[i]);
-                holder->AddAura(aura, SpellEffectIndex(i));
             }
 
             if (!holder->IsEmptyHolder())
@@ -16664,14 +16684,12 @@ void Player::_LoadAuras(QueryResult *result, uint32 timediff)
                 AddSpellAuraHolder(holder);
                 DETAIL_LOG("Added auras from spellid %u", spellproto->Id);
             }
-            else
-                delete holder;
         }
         while( result->NextRow() );
         delete result;
     }
 
-    if(getClass() == CLASS_WARRIOR && !HasAuraType(SPELL_AURA_MOD_SHAPESHIFT))
+    if (getClass() == CLASS_WARRIOR && !HasAuraType(SPELL_AURA_MOD_SHAPESHIFT))
         CastSpell(this,SPELL_ID_PASSIVE_BATTLE_STANCE,true);
 }
 
@@ -18135,7 +18153,7 @@ void Player::_SaveAuras()
 
     for(SpellAuraHolderMap::const_iterator itr = auraHolders.begin(); itr != auraHolders.end(); ++itr)
     {
-        SpellAuraHolder *holder = itr->second;
+        SpellAuraHolderPtr holder = itr->second;
         //skip all holders from spells that are passive or channeled
         //do not save single target holders (unless they were cast by the player)
         if (!holder->IsPassive() && !IsChanneledSpell(holder->GetSpellProto()) && (holder->GetCasterGuid() == GetObjectGuid() || !holder->IsSingleTarget()))
@@ -21235,6 +21253,7 @@ void Player::SendAurasForTarget(Unit *target)
     WorldPacket data(SMSG_AURA_UPDATE_ALL);
     data << target->GetPackGUID();
 
+    MAPLOCK_READ(target,MAP_LOCK_TYPE_AURAS);
     Unit::VisibleAuraMap const& visibleAuras = target->GetVisibleAuras();
     for (Unit::VisibleAuraMap::const_iterator itr = visibleAuras.begin(); itr != visibleAuras.end(); ++itr)
     {
@@ -21640,7 +21659,7 @@ void Player::RemoveItemDependentAurasAndCasts( Item * pItem )
     SpellAuraHolderMap& auras = GetSpellAuraHolderMap();
     for(SpellAuraHolderMap::const_iterator itr = auras.begin(); itr != auras.end(); )
     {
-        SpellAuraHolder* holder = itr->second;
+        SpellAuraHolderPtr holder = itr->second;
 
         // skip passive (passive item dependent spells work in another way) and not self applied auras
         SpellEntry const* spellInfo = holder->GetSpellProto();

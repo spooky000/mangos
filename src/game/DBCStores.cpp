@@ -661,21 +661,6 @@ void LoadDBCStores(const std::string& dataPath)
     SpellEntry *sfix20 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(12051));
     sfix20->InterruptFlags |= SPELL_INTERRUPT_FLAG_INTERRUPT;
 
-    // Heart of the Phoenix - Make it give 100% Health and instant cast
-    SpellEntry *sfix21 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(54114));
-    sfix21->EffectBasePoints[EFFECT_INDEX_0] = 99; // 100% Health
-    sfix21->CastingTimeIndex = 1;
-
-    // Magic Suppression rank 1 and 3 (2 is fine ^^)
-    SpellEntry *sfix22 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49224));
-    sfix22->procCharges = 0;
-    SpellEntry *sfix23 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49611));
-    sfix23->procCharges = 0;
-
-    // Divine Hymn
-    SpellEntry *sfix24 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(64844));
-    sfix24->DmgClass = SPELL_DAMAGE_CLASS_MAGIC;
-
     // Searing Flames
     SpellEntry *sfix25 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(62661));
     sfix25->InterruptFlags |= SPELL_INTERRUPT_FLAG_INTERRUPT;
@@ -688,18 +673,6 @@ void LoadDBCStores(const std::string& dataPath)
     // Charge Orb
     SpellEntry *sfix27 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(62016));
     sfix27->EffectRadiusIndex[EFFECT_INDEX_0] = 9;
-
-    // Epidemic rank1
-    SpellEntry *sfix28 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49036));
-    sfix28->EffectSpellClassMask[EFFECT_INDEX_0] = ClassFamilyMask(sfix28->EffectSpellClassMask[EFFECT_INDEX_0].Flags, 0x50);
-
-    // Epidemic rank2
-    SpellEntry *sfix29 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(49562));
-    sfix29->EffectSpellClassMask[EFFECT_INDEX_0] = ClassFamilyMask(sfix29->EffectSpellClassMask[EFFECT_INDEX_0].Flags, 0x50);
-
-    // Glyph of Scourge Strike
-    SpellEntry *sfix30 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(58642));
-    sfix30->EffectTriggerSpell[EFFECT_INDEX_0] = 69961;
 
     // Expose Razorthorn Root
     SpellEntry *sfix31 = const_cast<SpellEntry*>(sSpellStore.LookupEntry(44935));

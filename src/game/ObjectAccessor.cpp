@@ -79,7 +79,7 @@ ObjectAccessor::FindPlayer(ObjectGuid guid)
     if (!guid)
         return NULL;
 
-    Player * plr = HashMapHolder<Player>::Find(guid);;
+    Player * plr = HashMapHolder<Player>::Find(guid);
     if (!plr || !plr->IsInWorld())
         return NULL;
 

@@ -808,6 +808,66 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
     // Handle Login-Achievements (should be handled after loading)
     pCurrChar->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ON_LOGIN, 1);
 
+    // Achievement conversion at login
+    if (pCurrChar->HasAtLoginFlag(AT_LOGIN_CHECK_TITLES))
+    {
+        Team team = pCurrChar->GetTeam();
+        if (QueryResult *result = WorldDatabase.Query("SELECT alliance_id, horde_id FROM player_factionchange_achievements"))
+        {
+            do
+            {
+                Field *fields = result->Fetch();
+                uint32 achiev_alliance = fields[0].GetUInt32();
+                uint32 achiev_horde = fields[1].GetUInt32();
+
+                // Check all convertable achievements, if we are horde after switch, check alliance one.
+                AchievementEntry const*  pAchiev = sAchievementStore.LookupEntry(team == HORDE ? achiev_alliance : achiev_horde);
+                if (!pAchiev)
+                    continue;
+
+                // Check whether achievement has reward, if not, pass it.
+                AchievementReward const* pReward = sAchievementMgr.GetAchievementReward(pAchiev, pCurrChar->getGender());
+                if (!pReward)
+                    continue;
+
+                // Check opposite fraction title
+                if (uint32 titleId = pReward->titleId[team == BG_TEAM_HORDE ? 0 : 1])
+                {
+                    if (CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId))
+                    {
+                        // Check if we really have that title
+                        uint32 fieldIndexOffset = titleEntry->bit_index / 32;
+                        uint32 flag = 1 << (titleEntry->bit_index % 32);
+                        if (pCurrChar->HasFlag(PLAYER__FIELD_KNOWN_TITLES + fieldIndexOffset, flag))
+                        {
+                            // Convert title to opposite fraction one:
+                            // Remove old title
+                            pCurrChar->SetTitle(titleEntry, true);
+
+                            // Find new title to add.
+                            AchievementEntry const*  pNewAchi = sAchievementStore.LookupEntry(team == HORDE ? achiev_horde : achiev_alliance);
+                            if (!pAchiev)
+                                continue;
+
+                            // Check whether achievement has reward, if not, pass it.
+                            AchievementReward const* pNewReward = sAchievementMgr.GetAchievementReward(pAchiev, pCurrChar->getGender());
+                            if (!pReward)
+                                continue;
+
+                            // Add new title
+                            if (uint32 titleNewId = pReward->titleId[team == BG_TEAM_HORDE ? 1 : 0])
+                                if (CharTitlesEntry const* titleNewEntry = sCharTitlesStore.LookupEntry(titleNewId))
+                                    pCurrChar->SetTitle(titleNewEntry);
+                        }
+                    }
+                }
+            }
+            while (result->NextRow());
+        }
+
+        // Check titles
+    }
+
     delete holder;
 }
 
@@ -1317,37 +1377,6 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
 
                 CharacterDatabase.PExecute("UPDATE IGNORE `character_achievement` set achievement = '%u' where achievement = '%u' AND guid = '%u'",
                     team == BG_TEAM_ALLIANCE ? achiev_alliance : achiev_horde, team == BG_TEAM_ALLIANCE ? achiev_horde : achiev_alliance, guid.GetCounter());
-
-                // Titles conversion
-                const AchievementEntry *  pAchievAlliance = sAchievementStore.LookupEntry(achiev_alliance);
-                const AchievementEntry *  pAchievHorde = sAchievementStore.LookupEntry(achiev_horde);
-                if(!pAchievAlliance || !pAchievHorde)
-                    continue;
-
-                AchievementReward const* rewardAlliance = sAchievementMgr.GetAchievementReward(pAchievAlliance, gender);
-                AchievementReward const* rewardHorde = sAchievementMgr.GetAchievementReward(pAchievHorde, gender);
-                // no rewards
-                if(!rewardAlliance || !rewardHorde)
-                    continue;
-
-                // titles
-                if(uint32 titleId = rewardAlliance->titleId[team == BG_TEAM_HORDE ? 1 : 0])
-                {
-                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId);
-                    //if(team == BG_TEAM_HORDE)
-                        // Remove
-                    //else
-                        // Add
-                }
-
-                if(uint32 titleId = rewardHorde->titleId[team == BG_TEAM_HORDE ? 1 : 0])
-                {
-                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId);
-                    //if(team == BG_TEAM_HORDE)
-                        // Remove
-                    //else
-                        // Add
-                }
             }
             while (result2->NextRow());
         }
