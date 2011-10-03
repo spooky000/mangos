@@ -5130,9 +5130,10 @@ void Unit::RemoveAurasWithInterruptFlags(uint32 flags, uint32 spellId)
 {
     for (SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end(); )
     {
-        if (iter->second->GetSpellProto()->AuraInterruptFlags & flags && !(flags == AURA_INTERRUPT_FLAG_DAMAGE && iter->second->GetId() == spellId))
+        SpellAuraHolderPtr holder = iter->second;
+        if (holder && holder->GetSpellProto()->AuraInterruptFlags & flags && !(flags == AURA_INTERRUPT_FLAG_DAMAGE && iter->second->GetId() == spellId))
         {
-            RemoveSpellAuraHolder(iter->second);
+            RemoveSpellAuraHolder(holder);
             iter = m_spellAuraHolders.begin();
         }
         else
