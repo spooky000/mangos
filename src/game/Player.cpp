@@ -23564,7 +23564,7 @@ void Player::RemoveBuffsAtSpecChange()
             if (pGroupGuy->GetObjectGuid() == GetObjectGuid())
                 continue;
 
-            for(SpellAuraHolderMap::iterator iter = pGroupGuy->GetSpellAuraHolderMap().begin(); iter != pGroupGuy->GetSpellAuraHolderMap.end();)
+            for(SpellAuraHolderMap::iterator iter = pGroupGuy->GetSpellAuraHolderMap().begin(); iter != pGroupGuy->GetSpellAuraHolderMap().end();)
             {
                 const SpellEntry * pSpell = iter->second->GetSpellProto();
                 if (!(pSpell->AttributesEx4 & SPELL_ATTR_EX4_UNK21) &&  // don't remove stances, shadowform, pally/hunter auras
