@@ -260,7 +260,7 @@ class BattleGroundSA : public BattleGround
         // Send packet to player for destroy boats (client part)
         void SendTransportsRemove(Player * player);
         /* For SendWarningToAll */
-        void SendWarningToAllSA(uint8 gyd, int status, Team team, bool isDoor = false, int door = NULL, bool destroyed = false);
+        void SendWarningToAllSA(uint8 gyd, int status, Team team, bool isDoor = false, uint32 door = 0, bool destroyed = false);
         /* For vehicle's faction*/
         uint32 GetCorrectFactionSA(uint8 vehicleType) const;
         /* This teleports player to correct loc in function of BG status and it resurects player if necesary */

@@ -950,7 +950,7 @@ void BattleGroundSA::_GydOccupied(uint8 node, Team team)
     }
 }
 
-void BattleGroundSA::SendWarningToAllSA(uint8 gyd, int status, Team team, bool isDoor, int door, bool destroyed)
+void BattleGroundSA::SendWarningToAllSA(uint8 gyd, int status, Team team, bool isDoor, uint32 door, bool destroyed)
 {
     if (!isDoor)
     {
