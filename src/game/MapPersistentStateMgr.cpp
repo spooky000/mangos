@@ -699,7 +699,8 @@ MapPersistentState* MapPersistentStateManager::AddPersistentState(MapEntry const
 
     DEBUG_LOG("MapPersistentStateManager::AddPersistentState: mapid = %d, instanceid = %d, reset time = %u, canReset = %u", mapEntry->MapID, instanceId, resetTime, canReset ? 1 : 0);
 
-    MapPersistentState *state;
+    MapPersistentState *state = NULL;
+
     if (mapEntry->IsDungeon() && instanceId)
     {
         DungeonPersistentState* dungeonState = new DungeonPersistentState(mapEntry->MapID, instanceId, difficulty, completedEncountersMask, resetTime, canReset);
