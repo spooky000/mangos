@@ -846,16 +846,16 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
 
                             // Find new title to add.
                             AchievementEntry const*  pNewAchi = sAchievementStore.LookupEntry(team == HORDE ? achiev_horde : achiev_alliance);
-                            if (!pAchiev)
+                            if (!pNewAchi)
                                 continue;
 
                             // Check whether achievement has reward, if not, pass it.
-                            AchievementReward const* pNewReward = sAchievementMgr.GetAchievementReward(pAchiev, pCurrChar->getGender());
-                            if (!pReward)
+                            AchievementReward const* pNewReward = sAchievementMgr.GetAchievementReward(pNewAchi, pCurrChar->getGender());
+                            if (!pNewReward)
                                 continue;
 
                             // Add new title
-                            if (uint32 titleNewId = pReward->titleId[team == BG_TEAM_HORDE ? 1 : 0])
+                            if (uint32 titleNewId = pNewReward->titleId[team == BG_TEAM_HORDE ? 1 : 0])
                                 if (CharTitlesEntry const* titleNewEntry = sCharTitlesStore.LookupEntry(titleNewId))
                                     pCurrChar->SetTitle(titleNewEntry);
                         }
