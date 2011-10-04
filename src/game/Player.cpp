@@ -23536,16 +23536,19 @@ void Player::RemoveBuffsAtSpecChange()
 {
     for(SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end();)
     {
-        const SpellEntry * pSpell = iter->second->GetSpellProto();
+        SpellAuraHolderPtr AuraPtr = iter->second;
+
+        const SpellEntry * pSpell = AuraPtr->GetSpellProto();
         if (!(pSpell->AttributesEx4 & SPELL_ATTR_EX4_UNK21) &&  // don't remove stances, shadowform, pally/hunter auras
-            !iter->second->IsPassive() &&                       // don't remove passive auras
+            !AuraPtr->IsPassive() &&                       // don't remove passive auras
             (!(pSpell->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY) ||
-            !(iter->second->GetSpellProto()->Attributes & SPELL_ATTR_HIDE_IN_COMBAT_LOG)) &&
-            iter->second->GetCaster() == this &&
+            !(AuraPtr->GetSpellProto()->Attributes & SPELL_ATTR_HIDE_IN_COMBAT_LOG)) &&
+            AuraPtr->GetCaster() == this && AuraPtr->IsPositive() && // don't remove other player and negative auras
+            AuraPtr->GetSpellProto()->SpellFamilyName != SPELLFAMILY_POTION && // don't remove potion buffs
             // not unaffected by invulnerability auras or not having that unknown flag (that seemed the most probable)
-            iter->second->IsPositive() && iter->second->GetId() != SPELL_ARENA_PREPARATION && iter->second->GetId() != SPELL_PREPARATION)        // remove positive buffs on enter, negative buffs on leave
+            AuraPtr->GetId() != SPELL_ARENA_PREPARATION && AuraPtr->GetId() != SPELL_PREPARATION)        // remove positive buffs on enter, negative buffs on leave
         {
-            RemoveSpellAuraHolder(iter->second);
+            RemoveSpellAuraHolder(AuraPtr);
             iter = m_spellAuraHolders.begin();
         }
         else
@@ -23566,16 +23569,19 @@ void Player::RemoveBuffsAtSpecChange()
 
             for(SpellAuraHolderMap::iterator iter = pGroupGuy->GetSpellAuraHolderMap().begin(); iter != pGroupGuy->GetSpellAuraHolderMap().end();)
             {
-                const SpellEntry * pSpell = iter->second->GetSpellProto();
+                SpellAuraHolderPtr AuraPtr = iter->second;
+
+                const SpellEntry * pSpell = AuraPtr->GetSpellProto();
                 if (!(pSpell->AttributesEx4 & SPELL_ATTR_EX4_UNK21) &&  // don't remove stances, shadowform, pally/hunter auras
-                    !iter->second->IsPassive() &&                       // don't remove passive auras
+                    !AuraPtr->IsPassive() &&                       // don't remove passive auras
                     (!(pSpell->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY) ||
-                    !(iter->second->GetSpellProto()->Attributes & SPELL_ATTR_HIDE_IN_COMBAT_LOG)) &&
-                    iter->second->GetCaster() == this &&
+                    !(AuraPtr->GetSpellProto()->Attributes & SPELL_ATTR_HIDE_IN_COMBAT_LOG)) &&
+                    AuraPtr->GetCaster() == this && AuraPtr->IsPositive() && // don't remove other player and negative auras
+                    AuraPtr->GetSpellProto()->SpellFamilyName != SPELLFAMILY_POTION && // don't remove potion buffs
                     // not unaffected by invulnerability auras or not having that unknown flag (that seemed the most probable)
-                    iter->second->IsPositive() && iter->second->GetId() != SPELL_ARENA_PREPARATION && iter->second->GetId() != SPELL_PREPARATION)        // remove positive buffs on enter, negative buffs on leave
+                    AuraPtr->GetId() != SPELL_ARENA_PREPARATION && AuraPtr->GetId() != SPELL_PREPARATION)        // remove positive buffs on enter, negative buffs on leave
                 {
-                    pGroupGuy->RemoveSpellAuraHolder(iter->second);
+                    pGroupGuy->RemoveSpellAuraHolder(AuraPtr);
                     iter = pGroupGuy->GetSpellAuraHolderMap().begin();
                 }
                 else
