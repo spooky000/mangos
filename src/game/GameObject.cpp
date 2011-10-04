@@ -1794,8 +1794,9 @@ void GameObject::Rebuild(Unit* pWho)
         return;
 
     RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED | GO_FLAG_DESTROYED);
-    SetUInt32Value(GAMEOBJECT_DISPLAYID, m_goInfo->displayId);
+    SetDisplayId(m_goInfo->displayId);
     m_health = GetMaxHealth();
+    GetMap()->ScriptsStart(sEventScripts, m_goInfo->destructibleBuilding.rebuildingEvent, pWho, this);
 
     SetGoAnimProgress(255);
 }

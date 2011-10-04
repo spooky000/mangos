@@ -2956,7 +2956,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                                 y = m_targets.m_destY;
                                 z = m_targets.m_destZ;
                                 //m_targets.m_dstPos.GetPosition(x, y, z);
-                                passenger->MonsterMoveJump(x, y, z, passenger->GetOrientation(), 100, 10);
+                                passenger->MonsterMoveJump(x, y, z, 100, 10);
                             }
                         }
                     return;
@@ -4666,7 +4666,7 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
         return;
 
     // Init dest coordinates
-    float x,y,z,o;
+    float x,y,z;
     if(m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
     {
         x = m_targets.m_destX;
@@ -4684,21 +4684,15 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
                 pTarget = m_caster->getVictim();
             else if(m_caster->GetTypeId() == TYPEID_PLAYER)
                 pTarget = m_caster->GetMap()->GetUnit(((Player*)m_caster)->GetSelectionGuid());
-
-            o = pTarget ? pTarget->GetOrientation() : m_caster->GetOrientation();
         }
-        else
-            o = m_caster->GetOrientation();
     }
     else if(unitTarget)
     {
         unitTarget->GetContactPoint(m_caster,x,y,z,CONTACT_DISTANCE);
-        o = m_caster->GetOrientation();
     }
     else if(gameObjTarget)
     {
         gameObjTarget->GetContactPoint(m_caster,x,y,z,CONTACT_DISTANCE);
-        o = m_caster->GetOrientation();
     }
     else
     {
@@ -4714,7 +4708,7 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
     if (!speed_xy)
         speed_xy = 150;
 
-    m_caster->MonsterMoveJump(x, y, z, o, float(speed_xy) / 2, float(speed_z) / 10);
+    m_caster->MonsterMoveJump(x, y, z, float(speed_xy) / 2, float(speed_z) / 10);
 }
 
 void Spell::EffectTeleportUnits(SpellEffectIndex eff_idx)
@@ -11083,7 +11077,7 @@ void Spell::EffectPlayerPull(SpellEffectIndex eff_idx)
     else
         m_caster->GetPosition(x,y,z);
 
-        unitTarget->MonsterMoveJump(x, y, z, unitTarget->GetOrientation(), speedXY, speedZ);
+        unitTarget->MonsterMoveJump(x, y, z, speedXY, speedZ);
 }
 
 void Spell::EffectDispelMechanic(SpellEffectIndex eff_idx)
