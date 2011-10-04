@@ -23532,6 +23532,59 @@ void Player::DeleteEquipmentSet(uint64 setGuid)
     }
 }
 
+void Player::RemoveBuffsAtSpecChange()
+{
+    for(SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end();)
+    {
+        const SpellEntry * pSpell = iter->second->GetSpellProto();
+        if (!(pSpell->AttributesEx4 & SPELL_ATTR_EX4_UNK21) &&  // don't remove stances, shadowform, pally/hunter auras
+            !iter->second->IsPassive() &&                       // don't remove passive auras
+            (!(pSpell->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY) ||
+            !(iter->second->GetSpellProto()->Attributes & SPELL_ATTR_HIDE_IN_COMBAT_LOG)) &&
+            iter->second->GetCaster() == this &&
+            // not unaffected by invulnerability auras or not having that unknown flag (that seemed the most probable)
+            iter->second->IsPositive() && iter->second->GetId() != SPELL_ARENA_PREPARATION && iter->second->GetId() != SPELL_PREPARATION)        // remove positive buffs on enter, negative buffs on leave
+        {
+            RemoveSpellAuraHolder(iter->second);
+            iter = m_spellAuraHolders.begin();
+        }
+        else
+            ++iter;
+    }
+
+    Group * group = GetGroup();
+    if (!group)
+        return;
+
+    for(GroupReference *itr = group->GetFirstMember(); itr != NULL; itr = itr->next())
+    {
+        if (Player *pGroupGuy = itr->getSource())
+        {
+            // dont remove my auras from myself (already done outside the group loop)
+            if (pGroupGuy->GetObjectGuid() == GetObjectGuid())
+                continue;
+
+            for(SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end();)
+            {
+                const SpellEntry * pSpell = iter->second->GetSpellProto();
+                if (!(pSpell->AttributesEx4 & SPELL_ATTR_EX4_UNK21) &&  // don't remove stances, shadowform, pally/hunter auras
+                    !iter->second->IsPassive() &&                       // don't remove passive auras
+                    (!(pSpell->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY) ||
+                    !(iter->second->GetSpellProto()->Attributes & SPELL_ATTR_HIDE_IN_COMBAT_LOG)) &&
+                    iter->second->GetCaster() == this &&
+                    // not unaffected by invulnerability auras or not having that unknown flag (that seemed the most probable)
+                    iter->second->IsPositive() && iter->second->GetId() != SPELL_ARENA_PREPARATION && iter->second->GetId() != SPELL_PREPARATION)        // remove positive buffs on enter, negative buffs on leave
+                {
+                    RemoveSpellAuraHolder(iter->second);
+                    iter = m_spellAuraHolders.begin();
+                }
+                else
+                    ++iter;
+            }
+        }
+    }
+}
+
 void Player::ActivateSpec(uint8 specNum)
 {
     if(GetActiveSpec() == specNum)
@@ -23549,7 +23602,7 @@ void Player::ActivateSpec(uint8 specNum)
     ClearComboPointHolders();
     ClearAllReactives();
     RemoveAllEnchantments(TEMP_ENCHANTMENT_SLOT);
-    RemoveArenaAuras();
+    RemoveBuffsAtSpecChange();
 
     // prevent deletion of action buttons by client at spell unlearn or by player while spec change in progress
     SendLockActionButtons();

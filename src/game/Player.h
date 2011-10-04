@@ -1612,6 +1612,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         void SetSpecsCount(uint8 count) { m_specsCount = count; }
         void ActivateSpec(uint8 specNum);
         void UpdateSpecCount(uint8 count);
+        void RemoveBuffsAtSpecChange();
 
         void InitGlyphsForLevel();
         void SetGlyphSlot(uint8 slot, uint32 slottype) { SetUInt32Value(PLAYER_FIELD_GLYPH_SLOTS_1 + slot, slottype); }
