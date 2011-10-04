@@ -23564,7 +23564,7 @@ void Player::RemoveBuffsAtSpecChange()
             if (pGroupGuy->GetObjectGuid() == GetObjectGuid())
                 continue;
 
-            for(SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end();)
+            for(SpellAuraHolderMap::iterator iter = pGroupGuy->GetSpellAuraHolderMap().begin(); iter != pGroupGuy->GetSpellAuraHolderMap.end();)
             {
                 const SpellEntry * pSpell = iter->second->GetSpellProto();
                 if (!(pSpell->AttributesEx4 & SPELL_ATTR_EX4_UNK21) &&  // don't remove stances, shadowform, pally/hunter auras
@@ -23575,8 +23575,8 @@ void Player::RemoveBuffsAtSpecChange()
                     // not unaffected by invulnerability auras or not having that unknown flag (that seemed the most probable)
                     iter->second->IsPositive() && iter->second->GetId() != SPELL_ARENA_PREPARATION && iter->second->GetId() != SPELL_PREPARATION)        // remove positive buffs on enter, negative buffs on leave
                 {
-                    RemoveSpellAuraHolder(iter->second);
-                    iter = m_spellAuraHolders.begin();
+                    pGroupGuy->RemoveSpellAuraHolder(iter->second);
+                    iter = pGroupGuy->GetSpellAuraHolderMap().begin();
                 }
                 else
                     ++iter;
