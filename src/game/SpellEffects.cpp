@@ -11729,7 +11729,7 @@ void Spell::EffectRestoreItemCharges( SpellEffectIndex eff_idx )
     item->RestoreCharges();
 }
 
-void Spell::EffectRedirectThreat(SpellEffectIndex eff_idx)
+void Spell::EffectRedirectThreat(SpellEffectIndex /*eff_idx*/)
 {
     if (!unitTarget)
         return;
@@ -11778,7 +11778,7 @@ void Spell::EffectQuestStart(SpellEffectIndex eff_idx)
     }
 }
 
-void Spell::EffectWMODamage(SpellEffectIndex eff_idx)
+void Spell::EffectWMODamage(SpellEffectIndex /*eff_idx*/)
 {
     if (!gameObjTarget || gameObjTarget->GetGoType() != GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING || !gameObjTarget->GetHealth())
     {
@@ -11810,7 +11810,7 @@ void Spell::EffectWMODamage(SpellEffectIndex eff_idx)
     gameObjTarget->SendMessageToSet(&data, false);
 }
 
-void Spell::EffectWMORepair(SpellEffectIndex eff_idx)
+void Spell::EffectWMORepair(SpellEffectIndex /*eff_idx*/)
 {
     if (gameObjTarget && gameObjTarget->GetGoType() == GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
     {
@@ -11854,7 +11854,7 @@ void Spell::EffectCancelAura(SpellEffectIndex eff_idx)
     unitTarget->RemoveAurasDueToSpell(spellId);
 }
 
-void Spell::EffectServerSide(SpellEffectIndex eff_idx)
+void Spell::EffectServerSide(SpellEffectIndex /*eff_idx*/)
 {
 
     if (!unitTarget)

@@ -245,7 +245,8 @@ void Object::DestroyForPlayer( Player *target, bool anim ) const
 
 void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
 {
-    uint16 moveFlags2 = (isType(TYPEMASK_UNIT) ? ((Unit*)this)->m_movementInfo.GetMovementFlags2() : MOVEFLAG2_NONE);
+    // Not used yet ?
+    //uint16 moveFlags2 = (isType(TYPEMASK_UNIT) ? ((Unit*)this)->m_movementInfo.GetMovementFlags2() : MOVEFLAG2_NONE);
 
     *data << uint16(updateFlags);                           // update flags
 

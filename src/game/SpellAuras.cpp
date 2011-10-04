@@ -828,7 +828,7 @@ void Aura::AreaAuraUpdate(uint32 diff)
                     {
                         SpellAuraHolderPtr newholder = CreateSpellAuraHolder(actualSpellInfo, (*tIter), caster);
                         newholder->SetAuraDuration(GetAuraDuration());
-                        Aura* aura = newholder->CreateAura(AURA_CLASS_AREA_AURA, m_effIndex, &actualBasePoints, newholder, (*tIter), caster, NULL);
+                        newholder->CreateAura(AURA_CLASS_AREA_AURA, m_effIndex, &actualBasePoints, newholder, (*tIter), caster, NULL);
                         (*tIter)->AddSpellAuraHolder(newholder);
                     }
                     else
@@ -6920,7 +6920,7 @@ void Aura::HandleAuraModCritPercent(bool apply, bool Real)
     }
 }
 
-void Aura::HandleModHitChance(bool apply, bool /*Real*/)
+void Aura::HandleModHitChance(bool /*apply*/, bool /*Real*/)
 {
     Unit *target = GetTarget();
 
@@ -7205,7 +7205,7 @@ void Aura::HandleAuraModAttackPowerOfArmor(bool /*apply*/, bool Real)
 /********************************/
 /***        DAMAGE BONUS      ***/
 /********************************/
-void Aura::HandleModDamageDone(bool apply, bool Real)
+void Aura::HandleModDamageDone(bool apply, bool /*Real*/)
 {
     Unit *target = GetTarget();
 
