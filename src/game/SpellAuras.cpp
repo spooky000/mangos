@@ -2068,10 +2068,9 @@ void Aura::TriggerSpell()
             {
                 if( triggeredSpellInfo->Id == 54363 ) // If it triggers our hacky-moded spell
                 {
-                    uint32 irangeIndex;
-                    if( GetAuraDuration() > 50000 )
-                        irangeIndex = 7; // 2 yards
-                    else if( GetAuraDuration() > 40000 && GetAuraDuration() < 50000 )
+                    uint32 irangeIndex = 7; // 2 yards
+
+                    if( GetAuraDuration() > 40000 && GetAuraDuration() < 50000 )
                         irangeIndex = 8; // 5 yards
                     else if( GetAuraDuration() > 30000 && GetAuraDuration() < 40000 )
                         irangeIndex = 14; // 8 yards
