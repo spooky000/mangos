@@ -661,7 +661,7 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
     if (doneBy == 52408)
         player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 60937);
 
-    uint32 type = NULL;
+    uint32 type = 0;
     switch (target_obj->GetEntry())
     {
         case BG_SA_GO_GATES_ROOM_ANCIENT_SHRINE:
