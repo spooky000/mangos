@@ -9613,16 +9613,16 @@ void Unit::AddThreat(Unit* pVictim, float threat /*= 0.0f*/, bool crit /*= false
                     // Death and Decay
                     if (threatSpell->Id==52212)
                         bonus=1.9f;
-                    // Icy Touch in Frost Presense
+                    // Icy Touch in Frost Presence
                     if (pVictim->HasAura(48263) && threatSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_ICY_TOUCH_TALONS>())
                         bonus=7.0f;
                 };
                 break;
             case SPELLFAMILY_DRUID:
                 {
-                    // Swipe
-                    if (threatSpell->SpellFamilyFlags.test<CF_DRUID_SWIPE>())
-                        bonus=1.5f;
+                    // Dire Bear form
+                    if (pVictim->HasAura(9635))
+                        bonus=2.0735f;
                 };
                 break;
             };
