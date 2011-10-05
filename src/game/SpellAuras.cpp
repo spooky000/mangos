@@ -471,7 +471,7 @@ Aura::~Aura()
 {
 }
 
-void Aura::AreaAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 * /*currentBasePoints*/, SpellAuraHolderPtr holder, Unit *target,Unit *caster, Item* /*castItem*/)
+void Aura::AreaAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 * /*currentBasePoints*/, SpellAuraHolderPtr /*holder*/, Unit *target,Unit *caster, Item* /*castItem*/)
 {
     m_isAreaAura = true;
 
