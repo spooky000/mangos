@@ -223,21 +223,15 @@ void ThreatContainer::clearReferences()
 HostileReference* ThreatContainer::getReferenceByTarget(Unit* pVictim)
 {
     HostileReference* result = NULL;
-    if(!pVictim)
-    {
-        sLog.outError("getReferenceByTarget: pVictim is empty!");
-        return result;
-    }
-
+    MAPLOCK_READ(pVictim, MAP_LOCK_TYPE_DEFAULT);
     ObjectGuid guid = pVictim->GetObjectGuid();
     for(ThreatList::const_iterator i = iThreatList.begin(); i != iThreatList.end(); ++i)
     {
-        if((*i) && (*i)->getUnitGuid())
-            if ((*i)->getUnitGuid() == guid)
-            {
-                result = (*i);
-                break;
-            }
+        if ((*i) && (*i)->getUnitGuid() == guid)
+        {
+            result = (*i);
+            break;
+        }
     }
 
     return result;
