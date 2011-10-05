@@ -471,7 +471,7 @@ Aura::~Aura()
 {
 }
 
-void Aura::AreaAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolderPtr holder, Unit *target,Unit *caster, Item* castItem)
+void Aura::AreaAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 * /*currentBasePoints*/, SpellAuraHolderPtr holder, Unit *target,Unit *caster, Item* /*castItem*/)
 {
     m_isAreaAura = true;
 
@@ -520,12 +520,12 @@ void Aura::AreaAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *c
         m_modifier.m_auraname = SPELL_AURA_NONE;
 }
 
-void Aura::PersistentAreaAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolderPtr holder, Unit *target,Unit *caster, Item* castItem)
+void Aura::PersistentAreaAura(SpellEntry const* /*spellproto*/, SpellEffectIndex /*eff*/, int32 * /*currentBasePoints*/, SpellAuraHolderPtr /*holder*/, Unit* /*target*/, Unit* /*caster*/, Item* /*castItem*/)
 {
     m_isPersistent = true;
 }
 
-void Aura::SingleEnemyTargetAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolderPtr holder, Unit *target, Unit *caster, Item* castItem)
+void Aura::SingleEnemyTargetAura(SpellEntry const* /*spellproto*/, SpellEffectIndex /*eff*/, int32 * /*currentBasePoints*/, SpellAuraHolderPtr /*holder*/, Unit* /*target*/, Unit *caster, Item* /*castItem*/)
 {
     if (caster)
         m_castersTargetGuid = caster->GetTypeId()==TYPEID_PLAYER ? ((Player*)caster)->GetSelectionGuid() : caster->GetTargetGuid();
@@ -968,7 +968,7 @@ bool Aura::isAffectedOnSpell(SpellEntry const *spell) const
     return spell->IsFitToFamily(SpellFamily(GetSpellProto()->SpellFamilyName), GetAuraSpellClassMask());
 }
 
-bool Aura::CanProcFrom(SpellEntry const *spell, uint32 procFlag, uint32 EventProcEx, uint32 procEx, bool active, bool useClassMask) const
+bool Aura::CanProcFrom(SpellEntry const *spell, uint32 /*procFlag*/, uint32 EventProcEx, uint32 procEx, bool active, bool useClassMask) const
 {
     // Check EffectClassMask
     ClassFamilyMask const& mask  = GetAuraSpellClassMask();
@@ -10647,10 +10647,10 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
             else if (m_spellProto->SpellFamilyFlags.test<CF_WARLOCK_SHADOWFLAME2>())
             {
                 // Glyph of Shadowflame
-                Unit* caster;
-                if(!apply)
+                Unit* caster = GetCaster();
+                if (!apply)
                     spellId1 = 63311;
-                else if(((caster = GetCaster())) && caster->HasAura(63310))
+                else if (caster && caster->HasAura(63310))
                     spellId1 = 63311;
                 else
                     return;
