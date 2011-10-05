@@ -14481,7 +14481,7 @@ void Player::RewardQuest(Quest const *pQuest, uint32 reward, Object* questGiver,
     else
     {
         // reward money for max level already included in pQuest->GetRewMoneyMaxLevel()
-        uint32 money = (pQuest->GetRewOrReqMoney() + int32(pQuest->GetRewMoneyMaxLevel() * sWorld.getConfig(CONFIG_FLOAT_RATE_DROP_MONEY)));
+        uint32 money = uint32(pQuest->GetRewMoneyMaxLevel() * sWorld.getConfig(CONFIG_FLOAT_RATE_DROP_MONEY));
 
         // reward money used if > xp replacement money
         if (pQuest->GetRewOrReqMoney() > int32(money))
@@ -15626,7 +15626,7 @@ void Player::SendQuestReward( Quest const *pQuest, uint32 XP, Object * questGive
     else
     {
         data << uint32(0);
-        data << uint32(pQuest->GetRewOrReqMoney() + int32(pQuest->GetRewMoneyMaxLevel() * sWorld.getConfig(CONFIG_FLOAT_RATE_DROP_MONEY)));
+        data << uint32(int32(pQuest->GetRewMoneyMaxLevel() * sWorld.getConfig(CONFIG_FLOAT_RATE_DROP_MONEY)));
     }
 
     data << uint32(10*MaNGOS::Honor::hk_honor_at_level(getLevel(), pQuest->GetRewHonorAddition()));
