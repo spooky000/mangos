@@ -1788,7 +1788,7 @@ void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage, uint32 spellId)
     SetGoAnimProgress(m_health * 255 / GetMaxHealth());
 }
 
-void GameObject::Rebuild(Unit* pWho)
+void GameObject::Rebuild(Unit* /*pWho*/)
 {
     if (GetGoType() != GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
         return;
@@ -1796,7 +1796,6 @@ void GameObject::Rebuild(Unit* pWho)
     RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED | GO_FLAG_DESTROYED);
     SetDisplayId(m_goInfo->displayId);
     m_health = GetMaxHealth();
-    GetMap()->ScriptsStart(sEventScripts, m_goInfo->destructibleBuilding.rebuildingEvent, pWho, this);
 
     SetGoAnimProgress(255);
 }
