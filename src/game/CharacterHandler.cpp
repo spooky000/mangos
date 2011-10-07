@@ -1395,7 +1395,7 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
                 uint32 reputation_alliance = fields2[0].GetUInt32();
                 uint32 reputation_horde = fields2[1].GetUInt32();
                 CharacterDatabase.PExecute("DELETE FROM character_reputation WHERE faction = '%u' AND guid = '%u'",team == BG_TEAM_ALLIANCE ? reputation_horde : reputation_alliance, guid.GetCounter());
-                CharacterDatabase.PExecute("UPDATE IGNORE `character_reputation` set faction = '%u' where faction = '%u' AND guid = '%u'",
+                CharacterDatabase.PExecute("UPDATE `character_reputation` set faction = '%u' where faction = '%u' AND guid = '%u'",
                     team == BG_TEAM_ALLIANCE ? reputation_alliance : reputation_horde, team == BG_TEAM_ALLIANCE ? reputation_horde : reputation_alliance, guid.GetCounter());
             }
             while( result2->NextRow() );
