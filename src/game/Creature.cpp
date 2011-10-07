@@ -1649,7 +1649,7 @@ bool Creature::IsImmuneToSpell(SpellEntry const* spellInfo)
     if (!spellInfo)
         return false;
 
-    if ((!IsPet() || GetEntry() == 26125 || GetEntry() == 27829) && GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->Mechanic - 1)))
+    if ((!IsPet() || GetEntry() == 26125 || GetEntry() == 27829 || GetEntry() == 24207) && GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->Mechanic - 1)))
         return true;
 
     return Unit::IsImmuneToSpell(spellInfo);
@@ -1657,7 +1657,7 @@ bool Creature::IsImmuneToSpell(SpellEntry const* spellInfo)
 
 bool Creature::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex index) const
 {
-    if ((!IsPet() || GetEntry() == 26125 || GetEntry() == 27829) && GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->EffectMechanic[index] - 1)))
+    if ((!IsPet() || GetEntry() == 26125 || GetEntry() == 27829 || GetEntry() == 24207) && GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->EffectMechanic[index] - 1)))
         return true;
 
     // Taunt immunity special flag check
