@@ -104,7 +104,7 @@ class MANGOS_DLL_SPEC CreatureAI
         virtual void JustReachedHome() {}
 
         // Called at any heal cast/item used (call non implemented)
-        virtual void HealBy(Unit * /*healer*/, uint32 /*amount_healed*/) {}
+        // virtual void HealBy(Unit * /*healer*/, uint32 /*amount_healed*/) {}
 
         /**
          * Called at any Damage to any victim (before damage apply)
@@ -162,7 +162,7 @@ class MANGOS_DLL_SPEC CreatureAI
          * Called when the creature summon successfully a gameobject
          * @param pGo GameObject that was summoned
          */
-        virtual void JustSummoned(GameObject* ) {}
+        virtual void JustSummoned(GameObject* /*pGo*/) {}
 
         /**
          * Called when a summoned creature gets TemporarySummon::UnSummon ed

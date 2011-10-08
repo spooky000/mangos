@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
@@ -2093,6 +2094,7 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
     switch(spellInfo_1->SpellFamilyName)
     {
         case SPELLFAMILY_GENERIC:
+
             // Cologne Immune and Perfume Immune
             if ((spellInfo_1->Id == 68529 && spellInfo_2->Id == 68530) ||
                 (spellInfo_2->Id == 68529 && spellInfo_1->Id == 68530))

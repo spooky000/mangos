@@ -1279,6 +1279,13 @@ void BattleGround::StartBattleGround()
     sBattleGroundMgr.AddBattleGround(GetInstanceID(), GetTypeID(), this);
 }
 
+void BattleGround::StartTimedAchievement(AchievementCriteriaTypes type, uint32 entry)
+{
+    for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+        if (Player* pPlayer = GetBgMap()->GetPlayer(itr->first))
+            pPlayer->GetAchievementMgr().StartTimedAchievementCriteria(type, entry);
+}
+
 void BattleGround::AddPlayer(Player *plr)
 {
     // remove afk from player
@@ -2071,9 +2078,3 @@ GameObject* BattleGround::GetBGObject(uint32 type)
     return obj;
 }
 
-void BattleGround::StartTimedAchievement(AchievementCriteriaTypes type, uint32 entry)
-{
-    for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
-        if (Player* pPlayer = sObjectMgr.GetPlayer(itr->first))
-            pPlayer->GetAchievementMgr().StartTimedAchievementCriteria(type, entry);
-}

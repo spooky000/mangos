@@ -2101,7 +2101,7 @@ Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position, b
     if (!CanHaveThreatList())
         return NULL;
 
-    //ThreatList m_threatlist;
+    // ThreatList m_threatlist;
     ThreatList const& threatlist = getThreatManager().getThreatList();
     ThreatList::const_iterator i = threatlist.begin();
     ThreatList::const_reverse_iterator r = threatlist.rbegin();

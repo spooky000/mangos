@@ -24,7 +24,7 @@ class BattleGround;
 #define BG_SA_GRY_MAX   4
 #define BG_SA_GATE_MAX  6
 #define BG_SA_MAX_WS    3
-#define BG_SA_EVENT_START_BATTLE_1      23748
+#define BG_SA_EVENT_START_BATTLE_1      23748       // Ally / Horde likely
 #define BG_SA_EVENT_START_BATTLE_2      21702
 
 enum BG_SA_WorldStates

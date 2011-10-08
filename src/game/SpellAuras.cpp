@@ -1200,18 +1200,11 @@ void Aura::TriggerSpell()
                     {
                         trigger_spell_id = 25779;           // Mana Burn
 
-                        // expected selection current fight target
-                        triggerTarget = GetTarget()->getVictim();
-                        if (!triggerTarget || triggerTarget->GetMaxPower(POWER_MANA) <= 0)
+                        if (GetTarget()->GetTypeId() != TYPEID_UNIT)
                             return;
 
-                        triggeredSpellInfo = sSpellStore.LookupEntry(trigger_spell_id);
-                        if (!triggeredSpellInfo)
-                            return;
-
-                        SpellRangeEntry const* srange = sSpellRangeStore.LookupEntry(triggeredSpellInfo->rangeIndex);
-                        float max_range = GetSpellMaxRange(srange);
-                        if (!triggerTarget->IsWithinDist(GetTarget(),max_range))
+                        triggerTarget = ((Creature*)GetTarget())->SelectAttackingTarget(ATTACKING_TARGET_TOPAGGRO, 0, trigger_spell_id, SELECT_FLAG_POWER_MANA);
+                        if (!triggerTarget)
                             return;
 
                         break;
@@ -4891,7 +4884,7 @@ void Aura::HandleAuraModStun(bool apply, bool Real)
             case 39837:
             {
                 GameObject* pObj = new GameObject;
-                if(pObj->Create(target->GetMap()->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT), 185584, target->GetMap(), target->GetPhaseMask(),
+                if (pObj->Create(target->GetMap()->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT), 185584, target->GetMap(), target->GetPhaseMask(),
                 target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), target->GetOrientation()))
                 {
                     pObj->SetRespawnTime(GetAuraDuration()/IN_MILLISECONDS);
@@ -9169,7 +9162,7 @@ void Aura::PeriodicDummyTick()
                     target->CastSpell(target, 68873, true);
                     return;
                 }
-            // Exist more after, need add later
+                // Exist more after, need add later
                 default:
                     break;
             }

@@ -181,7 +181,7 @@ void BattleGroundAB::StartingEventOpenDoors()
     }
     OpenDoorEvent(BG_EVENT_DOOR);
 
-    // Players that join battleground after start are not available to get achievement.
+    // Players that join battleground after start are not eligible to get achievement.
     StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_WIN_BG, BG_AB_EVENT_START_BATTLE);
 }
 
