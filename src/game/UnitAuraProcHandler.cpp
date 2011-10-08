@@ -1817,6 +1817,9 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 // Glyph of Shred
                 case 54815:
                 {
+                    if (!target)
+                        return SPELL_AURA_PROC_FAILED;
+
                     if (Aura* aura = target->GetAura(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, CF_DRUID_SHRED, 0, GetObjectGuid()))
                     {
                         // Rip's max duration, note: spells which modifies Rip's duration also counted like Glyph of Rip
