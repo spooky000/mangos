@@ -10049,12 +10049,14 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         return;
 
                     // Blood Plague
-                    if (mainTarget->HasAura(55078))
-                        m_caster->CastSpell(unitTarget, 55078, true);
+                    if (Aura * pBP = mainTarget->GetAura(55078, EFFECT_INDEX_0))
+                        if (pBP->GetCasterGuid() == m_caster->GetObjectGuid())
+                            m_caster->CastSpell(unitTarget, 55078, true);
 
                     // Frost Fever
-                    if (mainTarget->HasAura(55095))
-                        m_caster->CastSpell(unitTarget, 55095, true);
+                    if (Aura * pFF = mainTarget->GetAura(55095, EFFECT_INDEX_0))
+                        if (pFF->GetCasterGuid() == m_caster->GetObjectGuid())
+                            m_caster->CastSpell(unitTarget, 55095, true);
 
                     break;
                 }
