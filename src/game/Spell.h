@@ -359,9 +359,11 @@ class Spell
         void EffectPlayMusic(SpellEffectIndex eff_idx);
         void EffectSpecCount(SpellEffectIndex eff_idx);
         void EffectActivateSpec(SpellEffectIndex eff_idx);
-        void EffectCancelAura(SpellEffectIndex eff_idx);
 
         void EffectFriendSummon(SpellEffectIndex eff_idx);
+
+        void EffectCancelAura(SpellEffectIndex eff_idx);
+
         void EffectServerSide(SpellEffectIndex eff_idx);
 
         Spell(Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid originalCasterGUID = ObjectGuid(), SpellEntry const* triggeredBy = NULL);
