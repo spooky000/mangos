@@ -3754,7 +3754,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 }
 
                 //Any effect which causes you to lose control of your character will supress the starfall effect.
-                if (m_caster->hasUnitState(UNIT_STAT_NO_FREE_MOVE))
+                if (m_caster->hasUnitState(UNIT_STAT_NO_FREE_MOVE & ~ UNIT_STAT_ROOT))
                     return;
 
                 if (unitTarget->isVisibleForOrDetect(m_caster,m_caster,false))
