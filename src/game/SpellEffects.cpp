@@ -9298,8 +9298,8 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!pCaster)
                         return;
 
-                    Unit * pOwner = pCaster->GetCharmer();
-                    if (!pOwner || pOwner->GetTypeId() != TYPEID_PLAYER)
+                    Player * pOwner = pCaster->GetCharmerOrOwnerPlayerOrPlayerItself();
+                    if (!pOwner)
                         return;
 
                     std::list<Creature*> creatureList;
