@@ -7328,6 +7328,10 @@ void Spell::EffectWeaponDmg(SpellEffectIndex eff_idx)
                         m_spellInfo->SpellIconID == 1736)
                         bonus /= 2.0f;
 
+                    if (m_spellInfo->SpellIconID != 1736) // Blood Strike, Heart Strike, Obliterate
+                        if (Aura* dummy = m_caster->GetDummyAura(64736)) // Item - Death Knight T8 Melee 4P Bonus
+                            bonus *= ((float)dummy->GetModifier()->m_amount+100.0f)/100.0f;
+
                     totalDamagePercentMod *= 1.0f + bonus;
                 }
 

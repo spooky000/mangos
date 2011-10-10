@@ -1174,6 +1174,9 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
                     if(caster->HasAura(48266, EFFECT_INDEX_0)) // If Blood Presence is active, additional damage from Scourge Strike gains bonus too.
                         bp *= 1.15;
 
+                    if (Aura* dummy = caster->GetDummyAura(64736)) // Item - Death Knight T8 Melee 4P Bonus
+                        bp *= ((float)dummy->GetModifier()->m_amount+100.0f)/100.0f;
+
                     caster->CastCustomSpell(unitTarget, 70890, &bp, NULL, NULL, true);
                 }
             }
