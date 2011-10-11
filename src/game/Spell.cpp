@@ -6161,6 +6161,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                 if (m_spellInfo->Id == 781)
                     if(!m_caster->isInCombat())
                         return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
+                break;
             }
             case SPELL_EFFECT_FRIEND_SUMMON:
             {
@@ -6245,6 +6246,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                     case 40856:                             // Wrangling Rope
                         if (target && target->GetHealthPercent() > 40)
                             return SPELL_FAILED_BAD_TARGETS;
+                        break;
                     case 34026:                             // Kill Command
                         if (!m_caster->GetPet())
                             return SPELL_FAILED_NO_PET;
