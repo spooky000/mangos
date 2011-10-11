@@ -11520,7 +11520,7 @@ void Spell::EffectStealBeneficialBuff(SpellEffectIndex eff_idx)
 
             // Try dispel
             if (!roll_chance_i(miss_chance))
-                success_list.push_back(std::pair<uint32,ObjectGuid>(holder->GetId(),holder->GetCasterGuid()));
+                success_list.push_back(SuccessList::value_type(holder->GetId(),holder->GetCasterGuid()));
             else m_caster->SendSpellMiss(unitTarget, holder->GetSpellProto()->Id, SPELL_MISS_RESIST);
 
             // Remove buff from list for prevent doubles
