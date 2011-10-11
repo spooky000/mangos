@@ -9645,7 +9645,6 @@ void Unit::DeleteThreatList()
     if (CanHaveThreatList() && !m_ThreatManager.isThreatListEmpty())
         SendThreatClear();
 
-    MAPLOCK_WRITE(this, MAP_LOCK_TYPE_DEFAULT);
     m_ThreatManager.clearReferences();
 }
 
