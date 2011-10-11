@@ -11504,18 +11504,16 @@ void Spell::EffectStealBeneficialBuff(SpellEffectIndex eff_idx)
                 continue;
 
             if (Player* modOwner = caster->GetSpellModOwner())
-            {
                 modOwner->ApplySpellMod(holder->GetSpellProto()->Id, SPELLMOD_RESIST_DISPEL_CHANCE, miss_chance, this);
-                miss_chance += modOwner->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
-            }
 
-            if (caster != target)
+            if(caster == target)
+                miss_chance += caster->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
+            else
             {
                 if (Player* modOwner = target->GetSpellModOwner())
-                {
                     modOwner->ApplySpellMod(holder->GetSpellProto()->Id, SPELLMOD_RESIST_DISPEL_CHANCE, miss_chance, this);
-                    miss_chance += modOwner->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
-                }
+
+                miss_chance += target->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
             }
 
             // Try dispel
