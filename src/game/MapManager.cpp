@@ -60,6 +60,7 @@ MapManager::Initialize()
     sLog.outString( "Initialized %i Update Threads", num_threads );
 
     InitStateMachine();
+    m_statisticInterval == sWorld.getConfig(CONFIG_UINT32_VMSS_STATISTIC_INTERVAL);
 }
 
 void MapManager::InitStateMachine()
@@ -219,6 +220,15 @@ MapManager::Update(uint32 diff)
         helper.Update((uint32)i_timer.GetCurrent());
     }
 
+    bool b_stat = false;
+    if (m_statisticInterval < diff)
+    {
+        b_stat = true;
+        m_statisticInterval = sWorld.getConfig(CONFIG_UINT32_VMSS_STATISTIC_INTERVAL);
+    }
+    else
+        m_statisticInterval -= diff;
+
     //remove all maps which can be unloaded
     MapMapType::iterator iter = i_maps.begin();
     while(iter != i_maps.end())
@@ -233,7 +243,25 @@ MapManager::Update(uint32 diff)
             i_maps.erase(iter++);
         }
         else
+        {
             ++iter;
+            if (sWorld.getConfig(CONFIG_BOOL_VMSS_STATISTIC_ENABLE) && b_stat)
+                UpdateStatisticForMap(pMap);
+        }
+    }
+
+    if (sWorld.getConfig(CONFIG_BOOL_VMSS_STATISTIC_ENABLE) && b_stat)
+    {
+        if (m_statMaps.size() != sWorld.getConfig(CONFIG_UINT32_VMSS_STATISTIC_THREADSCOUNT))
+            m_statMaps.resize(sWorld.getConfig(CONFIG_UINT32_VMSS_STATISTIC_THREADSCOUNT), (Map*)NULL);
+
+        for (std::vector<Map*>::iterator i = m_statMaps.begin(); i != m_statMaps.end(); ++i)
+        {
+            Map* map = *i;
+            if (map)
+                map->PrintStatistic();
+        }
+        m_statMaps.clear();
     }
 
     i_timer.SetCurrent(0);
@@ -405,3 +433,26 @@ BattleGroundMap* MapManager::CreateBattleGroundMap(uint32 id, uint32 InstanceId,
     return map;
 }
 
+void MapManager::UpdateStatisticForMap(Map* map)
+{
+    if (!map)
+        return;
+
+    if (m_statMaps.size() != sWorld.getConfig(CONFIG_UINT32_VMSS_STATISTIC_THREADSCOUNT))
+        m_statMaps.resize(sWorld.getConfig(CONFIG_UINT32_VMSS_STATISTIC_THREADSCOUNT), (Map*)NULL);
+
+    for (std::vector<Map*>::iterator i = m_statMaps.begin(); i != m_statMaps.end(); ++i)
+    {
+        Map* _map = *i;
+        if (!_map ||
+            _map->GetUpdatesCount() == 0 ||
+            (float(map->GetExecutionTime()/map->GetUpdatesCount()) > float(_map->GetExecutionTime()/_map->GetUpdatesCount())) ||
+            (map->GetExecutionTime() > _map->GetExecutionTime())
+            && (_map != map)
+            )
+        {
+            m_statMaps.insert(i, map);
+            break;
+        }
+    }
+}

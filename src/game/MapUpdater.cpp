@@ -81,7 +81,13 @@ class MapUpdateRequest : public ACE_Method_Request
             }
             else
             {
+                if (sWorld.getConfig(CONFIG_BOOL_VMSS_STATISTIC_ENABLE))
+                    m_map.SetProcessingTime(true);
+
                 m_map.Update(m_diff);
+
+                if (sWorld.getConfig(CONFIG_BOOL_VMSS_STATISTIC_ENABLE))
+                    m_map.SetProcessingTime(false);
             }
             m_updater.unregister_thread(threadId);
             m_updater.update_finished ();
@@ -234,4 +240,69 @@ MapBrokenData const* MapUpdater::GetMapBrokenData(MapID const* mapPair)
             return &itr->second;
     }
     return NULL;
+}
+
+void Map::SetProcessingTime(bool stage)
+{
+    if (stage)
+    {
+        m_lastStartTime = WorldTimer::getMSTime();
+        ++m_updatesCount;
+    }
+    else if (m_updatesCount)
+    {
+        uint32 timeDiff = WorldTimer::getMSTimeDiff(WorldTimer::getMSTime(), m_lastStartTime);
+        m_executionTime += timeDiff;
+    }
+}
+
+void Map::ResetStatistic(bool full)
+{
+    if (full)
+    {
+        m_lastStartTime = 0;
+        m_updatesCount = 0;
+        m_executionTime = 0;
+    }
+
+    for (size_t i = 0; i != MAX_TYPE_ID; ++i)
+    {
+        switch (TypeID(i))
+        {
+            case TYPEID_CORPSE:
+                if (full)
+                    m_objectCount[i] = 0;
+                break;
+            default:
+                m_objectCount[i] = 0;
+                break;
+        }
+    }
+}
+
+void Map::AddProcessedObject(uint8 typeId, bool type)
+{
+    if (!sWorld.getConfig(CONFIG_BOOL_VMSS_STATISTIC_ENABLE))
+        return;
+    if (type)
+        ++m_objectCount[typeId];
+    else if (m_objectCount[typeId] > 0)
+        ++m_objectCount[typeId];
+}
+
+void Map::PrintStatistic()
+{
+    sLog.outDetail("Map::Statistic map (id %u, inst %u, diff %u): AVG exec time %f ms, objects/type: %u/%u %u/%u %u/%u %u/%u %u/%u %u/%u %u/%u %u/%u",
+    GetId(), GetInstanceId(), GetDifficulty(),
+    ((float)m_executionTime/(float)m_updatesCount),
+    m_objectCount[TYPEID_OBJECT],TYPEID_OBJECT,
+    m_objectCount[TYPEID_ITEM],TYPEID_ITEM,
+    m_objectCount[TYPEID_CONTAINER],TYPEID_CONTAINER,
+    m_objectCount[TYPEID_UNIT],TYPEID_UNIT,
+    m_objectCount[TYPEID_PLAYER],TYPEID_PLAYER,
+    m_objectCount[TYPEID_GAMEOBJECT],TYPEID_GAMEOBJECT,
+    m_objectCount[TYPEID_DYNAMICOBJECT],TYPEID_DYNAMICOBJECT,
+    m_objectCount[TYPEID_CORPSE],TYPEID_CORPSE
+    );
+
 }

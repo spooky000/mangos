@@ -322,6 +322,9 @@ void Unit::Update( uint32 update_diff, uint32 p_time )
     if (!IsInWorld())
         return;
 
+    if (GetMap())
+        GetMap()->AddProcessedObject(GetTypeId());
+
     /*if (p_time > m_AurasCheck)
     {
     m_AurasCheck = 2000;
