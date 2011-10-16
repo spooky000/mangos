@@ -9592,43 +9592,44 @@ void Unit::AddThreat(Unit* pVictim, float threat /*= 0.0f*/, bool crit /*= false
         if (threatSpell && pVictim && pVictim->GetTypeId() == TYPEID_PLAYER)
         {
             if (threatSpell && pVictim && pVictim->GetTypeId() == TYPEID_PLAYER)
-        {
-            float bonus=1.0f;
-            switch (threatSpell->SpellFamilyName)
             {
-            case SPELLFAMILY_WARRIOR:
+                float bonus=1.0f;
+                switch (threatSpell->SpellFamilyName)
                 {
-                    // Heroic Throw
-                    if (threatSpell->Id==57755)
-                        bonus=1.5f;
-                    //Thunder Clap
-                    if (threatSpell->SpellFamilyFlags.test<CF_WARRIOR_THUNDER_CLAP>())
-                        bonus=1.85f;
+                    case SPELLFAMILY_WARRIOR:
+                    {
+                        // Heroic Throw
+                        if (threatSpell->Id==57755)
+                            bonus=1.5f;
+                        //Thunder Clap
+                        if (threatSpell->SpellFamilyFlags.test<CF_WARRIOR_THUNDER_CLAP>())
+                            bonus=1.85f;
+                    };
+                    break;
+                case SPELLFAMILY_DEATHKNIGHT:
+                    {
+                        //Rune Strike
+                        if (threatSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_RUNE_STRIKE>())
+                            bonus=1.75f;
+                        // Death and Decay
+                        if (threatSpell->Id==52212)
+                            bonus=1.9f;
+                        // Icy Touch in Frost Presence
+                        if (pVictim->HasAura(48263) && threatSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_ICY_TOUCH_TALONS>())
+                            bonus=7.0f;
+                    };
+                    break;
+                case SPELLFAMILY_DRUID:
+                    {
+                        // Dire Bear form
+                        if (pVictim->HasAura(9635))
+                            bonus=2.0735f;
+                    };
+                    break;
                 };
-                break;
-            case SPELLFAMILY_DEATHKNIGHT:
-                {
-                    //Rune Strike
-                    if (threatSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_RUNE_STRIKE>())
-                        bonus=1.75f;
-                    // Death and Decay
-                    if (threatSpell->Id==52212)
-                        bonus=1.9f;
-                    // Icy Touch in Frost Presence
-                    if (pVictim->HasAura(48263) && threatSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_ICY_TOUCH_TALONS>())
-                        bonus=7.0f;
-                };
-                break;
-            case SPELLFAMILY_DRUID:
-                {
-                    // Dire Bear form
-                    if (pVictim->HasAura(9635))
-                        bonus=2.0735f;
-                };
-                break;
-            };
 
-            threat*=bonus;
+                threat*=bonus;
+            }
         }
 
         m_ThreatManager.addThreat(pVictim, threat, crit, schoolMask, threatSpell);

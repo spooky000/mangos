@@ -4961,10 +4961,13 @@ void Spell::EffectApplyAura(SpellEffectIndex eff_idx)
         {
             if (caster->HasSpell(aur->GetSpellProto()->EffectTriggerSpell[0]))
             {
-               duration *= 2.0f; // Increase duration by 2x
-               float amountMod;
-               switch(aur->GetId())
-               {
+                // do not exceed 2 hours duration (cause of ApplyAura effect triggered twiceapplied twice)
+                if(duration < 2 * HOUR * IN_MILLISECONDS)
+                    duration *= 2.0f; // Increase duration by 2x
+
+                float amountMod;
+                switch(aur->GetId())
+                {
                     case 53758: // Flask of Stoneblood
                         amountMod = 1.50f;
                     break;
@@ -4980,8 +4983,8 @@ void Spell::EffectApplyAura(SpellEffectIndex eff_idx)
                     default:
                         amountMod = 1.3f;
                         break;
-               }
-               aur->GetModifier()->m_amount *= amountMod;
+                }
+                aur->GetModifier()->m_amount *= amountMod;
             }
         }
     }
