@@ -1174,9 +1174,6 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
                     if(caster->HasAura(48266, EFFECT_INDEX_0)) // If Blood Presence is active, additional damage from Scourge Strike gains bonus too.
                         bp *= 1.15;
 
-                    if (Aura* dummy = caster->GetDummyAura(64736)) // Item - Death Knight T8 Melee 4P Bonus
-                        bp *= ((float)dummy->GetModifier()->m_amount+100.0f)/100.0f;
-
                     caster->CastCustomSpell(unitTarget, 70890, &bp, NULL, NULL, true);
                 }
             }
@@ -1974,9 +1971,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 if(!prev->IsWithinDist(*next, CHAIN_SPELL_JUMP_RADIUS))
                     break;
 
-                if(!prev->IsWithinLOSInMap(*next)
-                    || ((m_spellInfo->AttributesEx6 & SPELL_ATTR_EX6_IGNORE_CCED_TARGETS) && !(*next)->CanFreeMove())
-                    || (*next)->GetCreatureType() == CREATURE_TYPE_CRITTER)
+                if(!prev->IsWithinLOSInMap(*next) || ((m_spellInfo->AttributesEx6 & SPELL_ATTR_EX6_IGNORE_CCED_TARGETS) && !(*next)->CanFreeMove()))
                 {
                     ++next;
                     continue;
@@ -3202,7 +3197,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     else if (m_spellInfo->Effect[effIndex] == SPELL_EFFECT_TRIGGER_SPELL)
                         targetUnitMap.push_back(m_caster);
                     break;
-                case SPELL_EFFECT_FRIEND_SUMMON:
                 case SPELL_EFFECT_SUMMON_PLAYER:
                     if (m_caster->GetTypeId()==TYPEID_PLAYER && ((Player*)m_caster)->GetSelectionGuid())
                         if (Player* target = sObjectMgr.GetPlayer(((Player*)m_caster)->GetSelectionGuid()))
@@ -6129,11 +6123,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                     return SPELL_FAILED_BAD_TARGETS;
 
                 Player* target = sObjectMgr.GetPlayer(((Player*)m_caster)->GetSelectionGuid());
-
-                if ( !target || ((Player*)m_caster) == target)
-                    return SPELL_FAILED_BAD_TARGETS;
-
-                if (!target->IsInSameRaidWith((Player*)m_caster) && m_spellInfo->Id != 48955)
+                if (!target || ((Player*)m_caster) == target || !target->IsInSameRaidWith((Player*)m_caster))
                     return SPELL_FAILED_BAD_TARGETS;
 
                 // check if our map is dungeon
@@ -6161,32 +6151,15 @@ SpellCastResult Spell::CheckCast(bool strict)
                 if (m_spellInfo->Id == 781)
                     if(!m_caster->isInCombat())
                         return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
-                break;
-            }
-            case SPELL_EFFECT_FRIEND_SUMMON:
-            {
-                if (m_caster->GetTypeId() != TYPEID_PLAYER)
-                    return SPELL_FAILED_BAD_TARGETS;
-
-                if(((Player*)m_caster)->GetSelectionGuid().IsEmpty())
-                    return SPELL_FAILED_BAD_TARGETS;
-
-                Player* target = sObjectMgr.GetPlayer(((Player*)m_caster)->GetSelectionGuid());
-
-                if (!target || !target->IsReferAFriendLinked(((Player*)m_caster)))
-                    return SPELL_FAILED_BAD_TARGETS;
-
-                break;
             }
             // no break here!
             case SPELL_EFFECT_LEAP:
             case SPELL_EFFECT_TELEPORT_UNITS_FACE_CASTER:
             {
-                // Not used yet...
-                /*float direction = (m_spellInfo->Effect[i] == SPELL_EFFECT_LEAP_BACK ? M_PI + m_caster->GetOrientation() : m_caster->GetOrientation());
+                float direction = (m_spellInfo->Effect[i] == SPELL_EFFECT_LEAP_BACK ? M_PI + m_caster->GetOrientation() : m_caster->GetOrientation());
                 float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[i]));
                 float fx = m_caster->GetPositionX() + dis * cos(direction);
-                float fy = m_caster->GetPositionY() + dis * sin(direction);*/
+                float fy = m_caster->GetPositionY() + dis * sin(direction);
 
                 // simple check for avoid falling under map
                 /*if (!m_caster->GetTerrain()->IsNextZcoordOK(fx, fy, m_caster->GetPositionZ(), 40.0f))
@@ -6242,11 +6215,6 @@ SpellCastResult Spell::CheckCast(bool strict)
                 //custom check
                 switch(m_spellInfo->Id)
                 {
-                    case 45611:                             // Arcane Chains
-                    case 40856:                             // Wrangling Rope
-                        if (target && target->GetHealthPercent() > 40)
-                            return SPELL_FAILED_BAD_TARGETS;
-                        break;
                     case 34026:                             // Kill Command
                         if (!m_caster->GetPet())
                             return SPELL_FAILED_NO_PET;
@@ -6470,8 +6438,8 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
                 need = true;
                 if(!target)
                 {
-                    DEBUG_LOG("Charmed creature attempt to cast spell %u, but no required target",m_spellInfo->Id);
                     return SPELL_FAILED_BAD_IMPLICIT_TARGETS;
+                    DEBUG_LOG("Charmed creature attempt to cast spell %u, but no required target",m_spellInfo->Id);
                 }
                 break;
             }
@@ -6772,9 +6740,7 @@ SpellCastResult Spell::CheckRange(bool strict)
     switch(m_spellInfo->rangeIndex)
     {
         // self cast doesn't need range checking -- also for Starshards fix
-        // spells that can be cast anywhere also need no check
         case SPELL_RANGE_IDX_SELF_ONLY:
-        case SPELL_RANGE_IDX_ANYWHERE:
             return SPELL_CAST_OK;
         // combat range spells are treated differently
         case SPELL_RANGE_IDX_COMBAT:
@@ -7637,7 +7603,6 @@ bool Spell::CheckTarget( Unit* target, SpellEffectIndex eff )
     // Check targets for LOS visibility (except spells without range limitations )
     switch(m_spellInfo->Effect[eff])
     {
-        case SPELL_EFFECT_FRIEND_SUMMON:
         case SPELL_EFFECT_SUMMON_PLAYER:                    // from anywhere
             break;
         case SPELL_EFFECT_DUMMY:

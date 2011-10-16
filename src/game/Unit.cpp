@@ -3953,14 +3953,10 @@ void Unit::FinishSpell(CurrentSpellTypes spellType, bool ok /*= true*/)
 }
 
 
-bool Unit::IsNonMeleeSpellCasted(bool withDelayed, bool skipChanneled, bool skipAutorepeat, bool skipInstant) const
+bool Unit::IsNonMeleeSpellCasted(bool withDelayed, bool skipChanneled, bool skipAutorepeat) const
 {
     // We don't do loop here to explicitly show that melee spell is excluded.
     // Maybe later some special spells will be excluded too.
-
-    // if skipInstant then instant spells shouldn't count as being casted
-    if (skipInstant && m_currentSpells[CURRENT_GENERIC_SPELL] && !m_currentSpells[CURRENT_GENERIC_SPELL]->GetCastTime())
-        return false;
 
     // generic spells are casted when they are not finished and not delayed
     if (m_currentSpells[CURRENT_GENERIC_SPELL] &&
@@ -5134,10 +5130,9 @@ void Unit::RemoveAurasWithInterruptFlags(uint32 flags, uint32 spellId)
 {
     for (SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end(); )
     {
-        SpellAuraHolderPtr holder = iter->second;
-        if (holder && holder->GetSpellProto()->AuraInterruptFlags & flags && !(flags == AURA_INTERRUPT_FLAG_DAMAGE && iter->second->GetId() == spellId))
+        if (iter->second->GetSpellProto()->AuraInterruptFlags & flags && !(flags == AURA_INTERRUPT_FLAG_DAMAGE && iter->second->GetId() == spellId))
         {
-            RemoveSpellAuraHolder(holder);
+            RemoveSpellAuraHolder(iter->second);
             iter = m_spellAuraHolders.begin();
         }
         else
@@ -6952,7 +6947,7 @@ void Unit::EnergizeBySpell(Unit *pVictim, uint32 SpellID, uint32 Damage, Powers 
 int32 Unit::SpellBonusWithCoeffs(SpellEntry const *spellProto, int32 total, int32 benefit, int32 ap_benefit,  DamageEffectType damagetype, bool donePart, float defCoeffMod)
 {
     // Distribute Damage over multiple effects, reduce by AoE
-    float coeff = 1.0f;
+    float coeff;
 
     // Not apply this to creature casted spells
     if (GetTypeId()==TYPEID_UNIT && !((Creature*)this)->IsPet())
@@ -9514,6 +9509,7 @@ void Unit::SetDeathState(DeathState s)
 
         i_motionMaster.Clear(false,true);
         i_motionMaster.MoveIdle();
+
         StopMoving();
 
         ModifyAuraState(AURA_STATE_HEALTHLESS_20_PERCENT, false);
@@ -9604,28 +9600,27 @@ void Unit::AddThreat(Unit* pVictim, float threat /*= 0.0f*/, bool crit /*= false
                     if (threatSpell->Id==57755)
                         bonus=1.5f;
                     //Thunder Clap
-                    if (threatSpell->SpellFamilyFlags.test<CF_WARRIOR_THUNDER_CLAP>())
+                    if (threatSpell->SpellFamilyFlags & UI64LIT(0x80))
                         bonus=1.85f;
                 };
                 break;
             case SPELLFAMILY_DEATHKNIGHT:
                 {
                     //Rune Strike
-                    if (threatSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_RUNE_STRIKE>())
+                    if (threatSpell->SpellFamilyFlags & UI64LIT(0x2000000000000000))
                         bonus=1.75f;
                     // Death and Decay
                     if (threatSpell->Id==52212)
                         bonus=1.9f;
-                    // Icy Touch in Frost Presence
-                    if (pVictim->HasAura(48263) && threatSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_ICY_TOUCH_TALONS>())
+                    // Icy Touch in Frost Presense
+                    if (pVictim->HasAura(48263) && threatSpell->SpellFamilyFlags & UI64LIT(0x2))
                         bonus=7.0f;
                 };
                 break;
             case SPELLFAMILY_DRUID:
                 {
-                    // Dire Bear form
-                    if (pVictim->HasAura(9635))
-                        bonus=2.0735f;
+                    if (threatSpell->SpellFamilyFlags & UI64LIT(0x0010000000000000))
+                        bonus=1.5f;
                 };
                 break;
             };
@@ -12088,7 +12083,7 @@ void Unit::MonsterMoveWithSpeed(float x, float y, float z, float speed)
     init.Launch();
 }
 
-void Unit::MonsterMoveJump(float x, float y, float z, float speed, float height, bool isKnockBack)
+void Unit::MonsterMoveJump(float x, float y, float z, float o, float speed, float height, bool isKnockBack)
 {
     MaNGOS::NormalizeMapCoord(x);
     MaNGOS::NormalizeMapCoord(y);
@@ -12533,7 +12528,7 @@ void Unit::_AddAura(uint32 spellID, uint32 duration, Unit * caster)
                     spellInfo->Effect[i] == SPELL_EFFECT_APPLY_AURA  ||
                     spellInfo->Effect[i] == SPELL_EFFECT_PERSISTENT_AREA_AURA )
                 {
-                    holder->CreateAura(spellInfo, SpellEffectIndex(i), NULL, holder, this, NULL, NULL);
+                    Aura *aura = holder->CreateAura(spellInfo, SpellEffectIndex(i), NULL, holder, this, NULL, NULL);
                     holder->SetAuraDuration(duration);
                     DEBUG_FILTER_LOG(LOG_FILTER_SPELL_CAST, "Manually adding aura of spell %u, index %u, duration %u ms", spellID, i, duration);
                 }
@@ -12593,7 +12588,7 @@ public:
         {
             MaNGOS::PlayerRelocationNotifier notify((Player&)m_owner);
             Cell::VisitAllObjects(&m_owner,notify,radius);
-        }
+        } 
         else //if(m_owner.GetTypeId() == TYPEID_UNIT)
         {
             MaNGOS::CreatureRelocationNotifier notify((Creature&)m_owner);

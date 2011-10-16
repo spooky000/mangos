@@ -3844,7 +3844,7 @@ bool ChatHandler::HandleWpExportCommand(char *args)
                 return true;
             }
             Field *fields = result->Fetch();
-            lowguid = fields[0].GetUInt32();
+            lowguid = fields[0].GetUInt32();;
             delete result;
         }
 
@@ -4065,7 +4065,6 @@ bool ChatHandler::HandleCharacterChangeRaceCommand(char* args)
         // TODO : add text into database
         PSendSysMessage(LANG_CUSTOMIZE_PLAYER, GetNameLink(target).c_str());
         target->SetAtLoginFlag(AT_LOGIN_CHANGE_RACE);
-        target->SetAtLoginFlag(AT_LOGIN_CHECK_TITLES);
         CharacterDatabase.PExecute("UPDATE characters SET at_login = at_login | '128' WHERE guid = '%u'", target->GetGUIDLow());
     }
     else

@@ -1,4 +1,3 @@
-
 /*
  * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
  *
@@ -27,6 +26,7 @@
 #include "Spell.h"
 #include "BattleGroundMgr.h"
 #include "MapManager.h"
+#include "BattleGroundIC.h"
 #include "Unit.h"
 
 SpellMgr::SpellMgr()
@@ -2094,7 +2094,6 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
     switch(spellInfo_1->SpellFamilyName)
     {
         case SPELLFAMILY_GENERIC:
-
             // Cologne Immune and Perfume Immune
             if ((spellInfo_1->Id == 68529 && spellInfo_2->Id == 68530) ||
                 (spellInfo_2->Id == 68529 && spellInfo_1->Id == 68530))
@@ -4409,6 +4408,26 @@ bool SpellArea::IsFitToRequirements(Player const* player, uint32 newZone, uint32
         else
             // not have expected aura
             return !player->HasAura(-auraSpell, EFFECT_INDEX_0);
+    }
+
+    // Extra conditions -- leaving the possibility add extra conditions...
+    switch(spellId)
+    {
+        case 68719: // Oil Refinery - Isle of Conquest.
+        case 68720: // Quarry - Isle of Conquest.
+        {
+            if (player->GetBattleGroundTypeId() != BATTLEGROUND_IC || !player->GetBattleGround())
+                return false;
+ 
+            uint8 nodeType = spellId == 68719 ? NODE_TYPE_REFINERY : NODE_TYPE_QUARRY;
+            uint8 nodeState = player->GetTeamId() == TEAM_ALLIANCE ? NODE_STATE_CONTROLLED_A : NODE_STATE_CONTROLLED_H;
+
+            BattleGroundIC* pIC = static_cast<BattleGroundIC*>(player->GetBattleGround());
+            if (pIC->GetNodeState(nodeType) == nodeState)
+                return true;
+ 
+            return false;
+        }
     }
 
     return true;

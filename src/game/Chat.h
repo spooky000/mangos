@@ -145,10 +145,6 @@ class MANGOS_DLL_SPEC ChatHandler
         bool HandleAccountSetGmLevelCommand(char* args);
         bool HandleAccountSetPasswordCommand(char* args);
 
-        bool HandleAccountFriendAddCommand(char* args);
-        bool HandleAccountFriendDeleteCommand(char* args);
-        bool HandleAccountFriendListCommand(char* args);
-
         bool HandleAHBotItemsAmountCommand(char* args);
         template <int Q>
         bool HandleAHBotItemsAmountQualityCommand(char* args);

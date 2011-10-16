@@ -201,7 +201,7 @@ enum UnitRename
     UNIT_CAN_BE_ABANDONED   = 0x02,
 };
 
-#define CREATURE_MAX_SPELLS     4
+#define CREATURE_MAX_SPELLS     8
 
 enum Swing
 {
@@ -696,6 +696,13 @@ enum SplineFlags
     SPLINEFLAG_UNKNOWN10    = 0x10000000,
     SPLINEFLAG_UNKNOWN11    = 0x20000000,
     SPLINEFLAG_UNKNOWN12    = 0x40000000
+};
+
+enum SplineMode
+{
+    SPLINEMODE_LINEAR       = 0,
+    SPLINEMODE_CATMULLROM   = 1,
+    SPLINEMODE_BEZIER3      = 2
 };
 
 enum SplineType
@@ -1454,7 +1461,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void SendSpellMiss(Unit *target, uint32 spellID, SpellMissInfo missInfo);
 
         void NearTeleportTo(float x, float y, float z, float orientation, bool casting = false);
-        void MonsterMoveJump(float x, float y, float z, float speed, float height, bool isKnockBack = false);
+        void MonsterMoveJump(float x, float y, float z, float o, float speed, float height, bool isKnockBack = false);
         void MonsterMoveWithSpeed(float x, float y, float z, float speed);
 
         // recommend use MonsterMove/MonsterMoveWithSpeed for most case that correctly work with movegens
@@ -1655,7 +1662,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         // set withDelayed to true to account delayed spells as casted
         // delayed+channeled spells are always accounted as casted
         // we can skip channeled or delayed checks using flags
-        bool IsNonMeleeSpellCasted(bool withDelayed, bool skipChanneled = false, bool skipAutorepeat = false, bool skipInstant = false) const;
+        bool IsNonMeleeSpellCasted(bool withDelayed, bool skipChanneled = false, bool skipAutorepeat = false) const;
 
         // set withDelayed to true to interrupt delayed spells too
         // delayed+channeled spells are always interrupted
@@ -1770,8 +1777,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         }
         void SetVisibleAura(uint8 slot, uint32 spellid)
         {
-            MAPLOCK_WRITE(this,MAP_LOCK_TYPE_AURAS);
-            if (spellid == 0)
+            if(spellid == 0)
                 m_visibleAuras.erase(slot);
             else
                 m_visibleAuras[slot] = spellid;

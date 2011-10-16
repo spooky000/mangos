@@ -1079,19 +1079,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
         {
             switch(m_spellInfo->Id)
             {
-                case 47911:                                 // EMP
-                {
-                    if (unitTarget->GetEntry() == 26406) // Anvil
-                    {
-                        unitTarget->CastSpell(unitTarget, 47923, false); // Stunned by EMP
-                        if (Creature * pThane = unitTarget->GetClosestCreatureWithEntry(unitTarget, 26405, 15))
-                        {
-                            pThane->AddThreat(m_caster, 1);
-                            pThane->RemoveAurasDueToSpell(47922);
-                        }
-                    }
-                    return;
-                }
                 case 56727:                                 // Q: Feeding Angrim
                 {
                     if (unitTarget->GetTypeId() == TYPEID_UNIT && unitTarget->GetEntry() == 30422)
@@ -2956,7 +2943,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                                 y = m_targets.m_destY;
                                 z = m_targets.m_destZ;
                                 //m_targets.m_dstPos.GetPosition(x, y, z);
-                                passenger->MonsterMoveJump(x, y, z, 100, 10);
+                                passenger->MonsterMoveJump(x, y, z, passenger->GetOrientation(), 100, 10);
                             }
                         }
                     return;
@@ -3754,7 +3741,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 }
 
                 //Any effect which causes you to lose control of your character will supress the starfall effect.
-                if (m_caster->hasUnitState(UNIT_STAT_NO_FREE_MOVE & ~ UNIT_STAT_ROOT))
+                if (m_caster->hasUnitState(UNIT_STAT_NO_FREE_MOVE))
                     return;
 
                 if (unitTarget->isVisibleForOrDetect(m_caster,m_caster,false))
@@ -4666,7 +4653,7 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
         return;
 
     // Init dest coordinates
-    float x,y,z;
+    float x,y,z,o;
     if(m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
     {
         x = m_targets.m_destX;
@@ -4684,15 +4671,21 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
                 pTarget = m_caster->getVictim();
             else if(m_caster->GetTypeId() == TYPEID_PLAYER)
                 pTarget = m_caster->GetMap()->GetUnit(((Player*)m_caster)->GetSelectionGuid());
+
+            o = pTarget ? pTarget->GetOrientation() : m_caster->GetOrientation();
         }
+        else
+            o = m_caster->GetOrientation();
     }
     else if(unitTarget)
     {
         unitTarget->GetContactPoint(m_caster,x,y,z,CONTACT_DISTANCE);
+        o = m_caster->GetOrientation();
     }
     else if(gameObjTarget)
     {
         gameObjTarget->GetContactPoint(m_caster,x,y,z,CONTACT_DISTANCE);
+        o = m_caster->GetOrientation();
     }
     else
     {
@@ -4708,13 +4701,39 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
     if (!speed_xy)
         speed_xy = 150;
 
-    m_caster->MonsterMoveJump(x, y, z, float(speed_xy) / 2, float(speed_z) / 10);
+    m_caster->MonsterMoveJump(x, y, z, o, float(speed_xy) / 2, float(speed_z) / 10);
 }
 
 void Spell::EffectTeleportUnits(SpellEffectIndex eff_idx)
 {
     if(!unitTarget || unitTarget->IsTaxiFlying())
         return;
+
+    switch (m_spellInfo->Id)
+    {
+        case 66550: // teleports outside (Isle of Conquest)
+        {
+            if (Player* pTarget = ((Player*)unitTarget))
+            {
+                if (pTarget->GetTeamId() == TEAM_ALLIANCE)
+                    m_targets.setDestination(442.24f, -835.25f, 44.30f);
+                else
+                    m_targets.setDestination(1120.43f, -762.11f, 47.92f);
+            }
+            break;
+        }
+        case 66551: // teleports inside (Isle of Conquest)
+        {
+            if (Player* pTarget = ((Player*)unitTarget))
+            {
+                if (pTarget->GetTeamId() == TEAM_ALLIANCE)
+                    m_targets.setDestination(389.57f, -832.38f, 48.65f);
+                else
+                    m_targets.setDestination(1174.85f, -763.24f, 48.72f);
+            }
+            break;
+        }
+    }
 
     switch (m_spellInfo->EffectImplicitTargetB[eff_idx])
     {
@@ -4929,13 +4948,10 @@ void Spell::EffectApplyAura(SpellEffectIndex eff_idx)
         {
             if (caster->HasSpell(aur->GetSpellProto()->EffectTriggerSpell[0]))
             {
-                // do not exceed 2 hours duration (cause of ApplyAura effect triggered twiceapplied twice)
-                if(duration < 2 * HOUR * IN_MILLISECONDS)
-                    duration *= 2.0f; // Increase duration by 2x
-
-                float amountMod;
-                switch(aur->GetId())
-                {
+               duration *= 2.0f; // Increase duration by 2x
+               float amountMod;
+               switch(aur->GetId())
+               {
                     case 53758: // Flask of Stoneblood
                         amountMod = 1.50f;
                     break;
@@ -4951,8 +4967,8 @@ void Spell::EffectApplyAura(SpellEffectIndex eff_idx)
                     default:
                         amountMod = 1.3f;
                         break;
-                }
-                aur->GetModifier()->m_amount *= amountMod;
+               }
+               aur->GetModifier()->m_amount *= amountMod;
             }
         }
     }
@@ -7328,10 +7344,6 @@ void Spell::EffectWeaponDmg(SpellEffectIndex eff_idx)
                         m_spellInfo->SpellIconID == 1736)
                         bonus /= 2.0f;
 
-                    if (m_spellInfo->SpellIconID != 1736) // Blood Strike, Heart Strike, Obliterate
-                        if (Aura* dummy = m_caster->GetDummyAura(64736)) // Item - Death Knight T8 Melee 4P Bonus
-                            bonus *= ((float)dummy->GetModifier()->m_amount+100.0f)/100.0f;
-
                     totalDamagePercentMod *= 1.0f + bonus;
                 }
 
@@ -9003,16 +9015,6 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         m_caster->CastSpell(m_caster, 62239, true);
                     return;
                 }
-                /* // FEANOR - Commented out yet (handled other way)
-                case 64456:                                 // Feral Essence Application Removal
-                {
-                    if (!unitTarget)
-                        return;
-
-                    uint32 spellId = m_spellInfo->CalculateSimpleValue(eff_idx);
-                    unitTarget->RemoveAuraHolderFromStack(spellId);
-                    return;
-                }*/
                 case 62536:                                 // Frog Kiss (quest Blade fit for a champion)
                 {
                     if (!unitTarget)
@@ -9312,8 +9314,8 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!pCaster)
                         return;
 
-                    Player * pOwner = pCaster->GetCharmerOrOwnerPlayerOrPlayerItself();
-                    if (!pOwner)
+                    Unit * pOwner = pCaster->GetCharmer();
+                    if (!pOwner || pOwner->GetTypeId() != TYPEID_PLAYER)
                         return;
 
                     std::list<Creature*> creatureList;
@@ -10063,14 +10065,12 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         return;
 
                     // Blood Plague
-                    if (Aura * pBP = mainTarget->GetAura(55078, EFFECT_INDEX_0))
-                        if (pBP->GetCasterGuid() == m_caster->GetObjectGuid())
-                            m_caster->CastSpell(unitTarget, 55078, true);
+                    if (mainTarget->HasAura(55078))
+                        m_caster->CastSpell(unitTarget, 55078, true);
 
                     // Frost Fever
-                    if (Aura * pFF = mainTarget->GetAura(55095, EFFECT_INDEX_0))
-                        if (pFF->GetCasterGuid() == m_caster->GetObjectGuid())
-                            m_caster->CastSpell(unitTarget, 55095, true);
+                    if (mainTarget->HasAura(55095))
+                        m_caster->CastSpell(unitTarget, 55095, true);
 
                     break;
                 }
@@ -11096,7 +11096,7 @@ void Spell::EffectPlayerPull(SpellEffectIndex eff_idx)
     else
         m_caster->GetPosition(x,y,z);
 
-        unitTarget->MonsterMoveJump(x, y, z, speedXY, speedZ);
+        unitTarget->MonsterMoveJump(x, y, z, unitTarget->GetOrientation(), speedXY, speedZ);
 }
 
 void Spell::EffectDispelMechanic(SpellEffectIndex eff_idx)
@@ -11309,7 +11309,7 @@ void Spell::EffectTransmitted(SpellEffectIndex eff_idx)
             m_caster->GetNearPoint2D(fx, fy, dis, m_caster->GetOrientation() + angle_offset);
             float waterZ = m_caster->GetTerrain()->GetWaterOrGroundLevel(fx, fy, m_caster->GetPositionZ());
             GridMapLiquidData liqData;
-            if (!m_caster->GetTerrain()->IsInWater(fx, fy, waterZ, &liqData, 0.5f))
+            if (!m_caster->GetTerrain()->IsInWater(fx, fy, waterZ, &liqData))
             {
                 SendCastResult(SPELL_FAILED_NOT_FISHABLE);
                 SendChannelUpdate(0);
@@ -11507,28 +11507,18 @@ void Spell::EffectStealBeneficialBuff(SpellEffectIndex eff_idx)
 
             int32 miss_chance = 0;
             // Apply dispel mod from aura caster
-
-            Unit * caster = holder->GetCaster();
-            Unit * target = holder->GetTarget();
-            if(!caster || !target)
-                continue;
-
-            if (Player* modOwner = caster->GetSpellModOwner())
-                modOwner->ApplySpellMod(holder->GetSpellProto()->Id, SPELLMOD_RESIST_DISPEL_CHANCE, miss_chance, this);
-
-            if(caster == target)
-                miss_chance += caster->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
-            else
+            if (Unit *caster = holder->GetCaster())
             {
-                if (Player* modOwner = target->GetSpellModOwner())
+                if (Player* modOwner = caster->GetSpellModOwner())
+                {
                     modOwner->ApplySpellMod(holder->GetSpellProto()->Id, SPELLMOD_RESIST_DISPEL_CHANCE, miss_chance, this);
-
-                miss_chance += target->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
+                    miss_chance += modOwner->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
+                }
             }
 
             // Try dispel
             if (!roll_chance_i(miss_chance))
-                success_list.push_back(SuccessList::value_type(holder->GetId(),holder->GetCasterGuid()));
+                success_list.push_back(std::pair<uint32,ObjectGuid>(holder->GetId(),holder->GetCasterGuid()));
             else m_caster->SendSpellMiss(unitTarget, holder->GetSpellProto()->Id, SPELL_MISS_RESIST);
 
             // Remove buff from list for prevent doubles
@@ -11758,7 +11748,7 @@ void Spell::EffectRestoreItemCharges( SpellEffectIndex eff_idx )
     item->RestoreCharges();
 }
 
-void Spell::EffectRedirectThreat(SpellEffectIndex /*eff_idx*/)
+void Spell::EffectRedirectThreat(SpellEffectIndex eff_idx)
 {
     if (!unitTarget)
         return;
@@ -11807,7 +11797,7 @@ void Spell::EffectQuestStart(SpellEffectIndex eff_idx)
     }
 }
 
-void Spell::EffectWMODamage(SpellEffectIndex /*eff_idx*/)
+void Spell::EffectWMODamage(SpellEffectIndex eff_idx)
 {
     if (!gameObjTarget || gameObjTarget->GetGoType() != GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING || !gameObjTarget->GetHealth())
     {
@@ -11839,7 +11829,7 @@ void Spell::EffectWMODamage(SpellEffectIndex /*eff_idx*/)
     gameObjTarget->SendMessageToSet(&data, false);
 }
 
-void Spell::EffectWMORepair(SpellEffectIndex /*eff_idx*/)
+void Spell::EffectWMORepair(SpellEffectIndex eff_idx)
 {
     if (gameObjTarget && gameObjTarget->GetGoType() == GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
     {
@@ -11883,7 +11873,7 @@ void Spell::EffectCancelAura(SpellEffectIndex eff_idx)
     unitTarget->RemoveAurasDueToSpell(spellId);
 }
 
-void Spell::EffectServerSide(SpellEffectIndex /*eff_idx*/)
+void Spell::EffectServerSide(SpellEffectIndex eff_idx)
 {
 
     if (!unitTarget)

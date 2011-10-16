@@ -563,8 +563,7 @@ enum AtLoginFlags
     AT_LOGIN_RESET_PET_TALENTS = 0x10,
     AT_LOGIN_FIRST             = 0x20,
     AT_LOGIN_CHANGE_FACTION    = 0x40,
-    AT_LOGIN_CHANGE_RACE       = 0x80,
-    AT_LOGIN_CHECK_TITLES      = 0x100
+    AT_LOGIN_CHANGE_RACE       = 0x80
 };
 
 typedef std::map<uint32, QuestStatusData> QuestStatusMap;
@@ -746,32 +745,6 @@ enum TransferAbortReason
     TRANSFER_ABORT_NOT_FOUND4                   = 0x0E,     // 3.2
     TRANSFER_ABORT_REALM_ONLY                   = 0x0F,     // All players on party must be from the same realm.
     TRANSFER_ABORT_MAP_NOT_ALLOWED              = 0x10,     // Map can't be entered at this time.
-};
-
-enum ReferAFriendError
-{
-    ERR_REFER_A_FRIEND_NONE                          = 0x00,
-    ERR_REFER_A_FRIEND_NOT_REFERRED_BY               = 0x01,
-    ERR_REFER_A_FRIEND_TARGET_TOO_HIGH               = 0x02,
-    ERR_REFER_A_FRIEND_INSUFFICIENT_GRANTABLE_LEVELS = 0x03,
-    ERR_REFER_A_FRIEND_TOO_FAR                       = 0x04,
-    ERR_REFER_A_FRIEND_DIFFERENT_FACTION             = 0x05,
-    ERR_REFER_A_FRIEND_NOT_NOW                       = 0x06,
-    ERR_REFER_A_FRIEND_GRANT_LEVEL_MAX_I             = 0x07,
-    ERR_REFER_A_FRIEND_NO_TARGET                     = 0x08,
-    ERR_REFER_A_FRIEND_NOT_IN_GROUP                  = 0x09,
-    ERR_REFER_A_FRIEND_SUMMON_LEVEL_MAX_I            = 0x0A,
-    ERR_REFER_A_FRIEND_SUMMON_COOLDOWN               = 0x0B,
-    ERR_REFER_A_FRIEND_INSUF_EXPAN_LVL               = 0x0C,
-    ERR_REFER_A_FRIEND_SUMMON_OFFLINE_S              = 0x0D
-};
-
-enum AccountLinkedState
-{
-    STATE_NOT_LINKED = 0x00,
-    STATE_REFER      = 0x01,
-    STATE_REFERRAL   = 0x02,
-    STATE_DUAL       = 0x04,
 };
 
 enum InstanceResetWarningType
@@ -1101,12 +1074,13 @@ class MANGOS_DLL_SPEC Player : public Unit
         Creature* GetNPCIfCanInteractWith(ObjectGuid guid, uint32 npcflagmask);
         GameObject* GetGameObjectIfCanInteractWith(ObjectGuid guid, uint32 gameobject_type = MAX_GAMEOBJECT_TYPE) const;
 
-        void ToggleAFK();
-        void ToggleDND();
+        bool ToggleAFK();
+        bool ToggleDND();
         bool isAFK() const { return HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_AFK); }
         bool isDND() const { return HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_DND); }
         uint8 chatTag() const;
-        std::string autoReplyMsg;
+        std::string afkMsg;
+        std::string dndMsg;
         // used to whisper from cli to ingame characters
         std::string rcGmName;
 
@@ -1367,13 +1341,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         void PrepareQuestMenu(ObjectGuid guid );
         void SendPreparedQuest(ObjectGuid guid);
         bool IsActiveQuest( uint32 quest_id ) const;        // can be taken or taken
-
-        // Quest is taken and not yet rewarded
-        // if completed_or_not = 0 (or any other value except 1 or 2) - returns true, if quest is taken and doesn't depend if quest is completed or not
-        // if completed_or_not = 1 - returns true, if quest is taken but not completed
-        // if completed_or_not = 2 - returns true, if quest is taken and already completed
-        bool IsCurrentQuest(uint32 quest_id, uint8 completed_or_not = 0) const; // taken and not yet rewarded
-
+        bool IsCurrentQuest( uint32 quest_id ) const;       // taken and not yet rewarded
         Quest const *GetNextQuest(ObjectGuid guid, Quest const *pQuest );
         bool CanSeeStartQuest( Quest const *pQuest ) const;
         bool CanTakeQuest( Quest const *pQuest, bool msg ) const;
@@ -1403,7 +1371,6 @@ class MANGOS_DLL_SPEC Player : public Unit
         bool SatisfyQuestDay( Quest const* qInfo, bool msg ) const;
         bool SatisfyQuestWeek( Quest const* qInfo, bool msg ) const;
         bool SatisfyQuestMonth(Quest const* qInfo, bool msg) const;
-        bool SatisfyAdditionalChecks(Quest const* qInfo, bool msg) const;
         bool CanGiveQuestSourceItemIfNeed( Quest const *pQuest, ItemPosCountVec* dest = NULL) const;
         void GiveQuestSourceItemIfNeed(Quest const *pQuest);
         bool TakeQuestSourceItem( uint32 quest_id, bool msg );
@@ -1643,7 +1610,6 @@ class MANGOS_DLL_SPEC Player : public Unit
         void SetSpecsCount(uint8 count) { m_specsCount = count; }
         void ActivateSpec(uint8 specNum);
         void UpdateSpecCount(uint8 count);
-        void RemoveBuffsAtSpecChange();
 
         void InitGlyphsForLevel();
         void SetGlyphSlot(uint8 slot, uint32 slottype) { SetUInt32Value(PLAYER_FIELD_GLYPH_SLOTS_1 + slot, slottype); }
@@ -1867,7 +1833,7 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         void BuildCreateUpdateBlockForPlayer( UpdateData *data, Player *target ) const;
         void DestroyForPlayer( Player *target, bool anim = false ) const;
-        void SendLogXPGain(uint32 GivenXP,Unit* victim,uint32 BonusXP, bool ReferAFriend);
+        void SendLogXPGain(uint32 GivenXP,Unit* victim,uint32 RestXP);
 
         // notifiers
         void SendAttackSwingCantAttack();
@@ -1954,6 +1920,7 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         static Team TeamForRace(uint8 race);
         Team GetTeam() const { return m_team; }
+        TeamId GetTeamId() const { return m_team == ALLIANCE ? TEAM_ALLIANCE : TEAM_HORDE; }
         static uint32 getFactionForRace(uint8 race);
         void setFactionForRace(uint8 race);
 
@@ -2198,22 +2165,6 @@ class MANGOS_DLL_SPEC Player : public Unit
         void UpdateSpeakTime();
         bool CanSpeak() const;
         void ChangeSpeakTime(int utime);
-
-        /*********************************************************/
-        /*** REFER-A-FRIEND SYSTEM ***/
-        /*********************************************************/
-        void SendReferFriendError(ReferAFriendError err, Player * target = NULL);
-        ReferAFriendError GetReferFriendError(Player * target, bool summon);
-        void AccessGrantableLevel(ObjectGuid guid) { m_curGrantLevelGiverGuid = guid; }
-        bool IsAccessGrantableLevel(ObjectGuid guid) { return m_curGrantLevelGiverGuid == guid; }
-        uint32 GetGrantableLevels() { return m_GrantableLevelsCount; }
-        void ChangeGrantableLevels(uint8 increase = 0);
-        bool CheckRAFConditions();
-        AccountLinkedState GetAccountLinkedState();
-        bool IsReferAFriendLinked(Player * target);
-        void LoadAccountLinkedState();
-        std::vector<uint32> m_referredAccounts;
-        std::vector<uint32> m_referalAccounts;
 
         /*********************************************************/
         /***                 VARIOUS SYSTEMS                   ***/
@@ -2672,11 +2623,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         Runes *m_runes;
         EquipmentSets m_EquipmentSets;
 
-        // Refer-A-Friend
-        ObjectGuid m_curGrantLevelGiverGuid;
-        int32 m_GrantableLevelsCount;
-
-        // class dependent melee diminishing constant for dodge/parry/missed chances
+        /// class dependent melee diminishing constant for dodge/parry/missed chances
         static const float m_diminishing_k[MAX_CLASSES];
 
     private:

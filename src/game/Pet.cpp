@@ -2693,7 +2693,7 @@ bool Pet::Summon()
     if (getPetType() == MINI_PET)
         SetPetFollowAngle(M_PI_F*1.25f);
 
-    uint16 level = getLevel() ? getLevel() : owner->getLevel();
+    uint16 level = getLevel() ? getLevel() : owner->getLevel();;
 
     if (GetCreateSpellID())
         SetUInt32Value(UNIT_CREATED_BY_SPELL, GetCreateSpellID());

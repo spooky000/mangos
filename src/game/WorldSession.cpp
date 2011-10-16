@@ -483,6 +483,9 @@ void WorldSession::LogoutPlayer(bool Save)
         sSocialMgr.SendFriendStatus(GetPlayer(), FRIEND_OFFLINE, GetPlayer()->GetObjectGuid(), true);
         sSocialMgr.RemovePlayerSocial (GetPlayer()->GetGUIDLow ());
 
+        // Playerbot - remember player GUID for update SQL below
+        uint32 guid = GetPlayer()->GetGUIDLow();
+
         ///- Remove the player from the world
         // the player may not be in the world when logging out
         // e.g if he got disconnected during a transfer to another map

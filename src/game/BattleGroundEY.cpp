@@ -117,7 +117,7 @@ void BattleGroundEY::StartingEventOpenDoors()
         SpawnBGObject(m_BgObjects[BG_EY_OBJECT_SPEEDBUFF_FEL_REAVER + buff + i * 3], RESPAWN_IMMEDIATELY);
     }
 
-    // Players that join battleground after start are not eligible to get achievement.
+    // Players that join battleground after start are not available to get achievement.
     StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_WIN_BG, BG_EY_EVENT_START_BATTLE);
 }
 

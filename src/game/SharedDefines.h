@@ -573,6 +573,13 @@ enum Language
 
 #define LANGUAGES_COUNT   19
 
+enum TeamId
+{
+    TEAM_ALLIANCE = 0,
+    TEAM_HORDE,
+    TEAM_NEUTRAL,
+};
+
 // In fact !=0 values is alliance/horde root faction ids
 enum Team
 {
@@ -580,6 +587,8 @@ enum Team
     HORDE               = 67,
     ALLIANCE            = 469,
 };
+
+const Team TeamId2Team[3] = {ALLIANCE, HORDE, TEAM_NONE};
 
 enum SpellEffects
 {
@@ -1344,7 +1353,6 @@ enum SpellRangeIndex
 {
     SPELL_RANGE_IDX_SELF_ONLY = 1,                          // 0.0
     SPELL_RANGE_IDX_COMBAT    = 2,                          // 5.5 (but dynamic)
-    SPELL_RANGE_IDX_ANYWHERE  = 13,                         // 500000 (anywhere)
 };
 
 enum DamageEffectType

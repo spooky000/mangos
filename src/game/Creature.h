@@ -306,17 +306,6 @@ enum AttackingTarget
     ATTACKING_TARGET_BOTTOMAGGRO,                           //Selects targets from bottom aggro to top
 };
 
-enum SelectFlags
-{
-    SELECT_FLAG_IN_LOS          = 0x001,                    // Default Selection Requirement for Spell-targets
-    SELECT_FLAG_PLAYER          = 0x002,
-    SELECT_FLAG_POWER_MANA      = 0x004,                    // For Energy based spells, like manaburn
-    SELECT_FLAG_POWER_RAGE      = 0x008,
-    SELECT_FLAG_POWER_ENERGY    = 0x010,
-    SELECT_FLAG_POWER_RUNIC     = 0x020,
-    SELECT_FLAG_IN_MELEE_RANGE  = 0x040,
-};
-
 // Vendors
 struct VendorItem
 {
@@ -690,6 +679,8 @@ class MANGOS_DLL_SPEC Creature : public Unit
 
         void SetDeadByDefault (bool death_state) { m_isDeadByDefault = death_state; }
 
+        void SetActiveObjectState(bool on);
+
         void SetFactionTemporary(uint32 factionId, uint32 tempFactionFlags = TEMPFACTION_ALL);
         void ClearTemporaryFaction();
         uint32 GetTemporaryFactionFlags() { return m_temporaryFactionFlags; }
@@ -701,8 +692,6 @@ class MANGOS_DLL_SPEC Creature : public Unit
         void SetVirtualItem(VirtualItemSlot slot, uint32 item_id) { SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + slot, item_id); }
 
     protected:
-        bool MeetsSelectAttackingRequirement(Unit* pTarget, SpellEntry const* pSpellInfo, uint32 selectFlags) const;
-
         bool CreateFromProto(uint32 guidlow, CreatureInfo const* cinfo, Team team, const CreatureData *data = NULL, GameEventCreatureData const* eventData =NULL);
         bool InitEntry(uint32 entry, const CreatureData* data = NULL, GameEventCreatureData const* eventData = NULL);
 
