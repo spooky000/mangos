@@ -6445,8 +6445,8 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
                 need = true;
                 if(!target)
                 {
-                    return SPELL_FAILED_BAD_IMPLICIT_TARGETS;
                     DEBUG_LOG("Charmed creature attempt to cast spell %u, but no required target",m_spellInfo->Id);
+                    return SPELL_FAILED_BAD_IMPLICIT_TARGETS;
                 }
                 break;
             }

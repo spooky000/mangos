@@ -2170,3 +2170,20 @@ void WorldObject::SetLootRecipient(Unit *unit)
     if (Group* group = player->GetGroup())
         m_lootGroupRecipientId = group->GetId();
 }
+
+void WorldObject::SetActiveObjectState(bool active)
+{
+    if (m_isActiveObject == active || (isType(TYPEMASK_PLAYER) && !active))  // player shouldn't became inactive, never
+        return;
+
+    if (IsInWorld() && !isType(TYPEMASK_PLAYER))
+        // player's update implemented in a different from other active worldobject's way
+        // it's considired to use generic way in future
+    {
+        if (isActiveObject() && !active)
+            GetMap()->RemoveFromActive(this);
+        else if (!isActiveObject() && active)
+            GetMap()->AddToActive(this);
+    }
+    m_isActiveObject = active;
+}

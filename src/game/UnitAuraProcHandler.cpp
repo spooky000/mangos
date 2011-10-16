@@ -3603,6 +3603,7 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 if (!chillFound || !roll_chance_i(triggerAmount))
                     return SPELL_AURA_PROC_FAILED;
             }
+            break;
         case SPELLFAMILY_WARRIOR:
             // Deep Wounds (replace triggered spells to directly apply DoT), dot spell have familyflags
             if (!auraSpellInfo->SpellFamilyFlags.Flags && auraSpellInfo->SpellIconID == 243)

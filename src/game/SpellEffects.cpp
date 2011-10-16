@@ -4722,32 +4722,6 @@ void Spell::EffectTeleportUnits(SpellEffectIndex eff_idx)
     if(!unitTarget || unitTarget->IsTaxiFlying())
         return;
 
-    switch (m_spellInfo->Id)
-    {
-        case 66550: // teleports outside (Isle of Conquest)
-        {
-            if (Player* pTarget = ((Player*)unitTarget))
-            {
-                if (pTarget->GetTeamId() == TEAM_ALLIANCE)
-                    m_targets.setDestination(442.24f, -835.25f, 44.30f);
-                else
-                    m_targets.setDestination(1120.43f, -762.11f, 47.92f);
-            }
-            break;
-        }
-        case 66551: // teleports inside (Isle of Conquest)
-        {
-            if (Player* pTarget = ((Player*)unitTarget))
-            {
-                if (pTarget->GetTeamId() == TEAM_ALLIANCE)
-                    m_targets.setDestination(389.57f, -832.38f, 48.65f);
-                else
-                    m_targets.setDestination(1174.85f, -763.24f, 48.72f);
-            }
-            break;
-        }
-    }
-
     switch (m_spellInfo->EffectImplicitTargetB[eff_idx])
     {
         case TARGET_INNKEEPER_COORDINATES:
@@ -9330,8 +9304,8 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!pCaster)
                         return;
 
-                    Unit * pOwner = pCaster->GetCharmer();
-                    if (!pOwner || pOwner->GetTypeId() != TYPEID_PLAYER)
+                    Player * pOwner = pCaster->GetCharmerOrOwnerPlayerOrPlayerItself();
+                    if (!pOwner)
                         return;
 
                     std::list<Creature*> creatureList;
@@ -11523,18 +11497,28 @@ void Spell::EffectStealBeneficialBuff(SpellEffectIndex eff_idx)
 
             int32 miss_chance = 0;
             // Apply dispel mod from aura caster
-            if (Unit *caster = holder->GetCaster())
+
+            Unit * caster = holder->GetCaster();
+            Unit * target = holder->GetTarget();
+            if(!caster || !target)
+                continue;
+
+            if (Player* modOwner = caster->GetSpellModOwner())
+                modOwner->ApplySpellMod(holder->GetSpellProto()->Id, SPELLMOD_RESIST_DISPEL_CHANCE, miss_chance, this);
+
+            if(caster == target)
+                miss_chance += caster->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
+            else
             {
-                if (Player* modOwner = caster->GetSpellModOwner())
-                {
+                if (Player* modOwner = target->GetSpellModOwner())
                     modOwner->ApplySpellMod(holder->GetSpellProto()->Id, SPELLMOD_RESIST_DISPEL_CHANCE, miss_chance, this);
-                    miss_chance += modOwner->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
-                }
+
+                miss_chance += target->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
             }
 
             // Try dispel
             if (!roll_chance_i(miss_chance))
-                success_list.push_back(std::pair<uint32,ObjectGuid>(holder->GetId(),holder->GetCasterGuid()));
+                success_list.push_back(SuccessList::value_type(holder->GetId(),holder->GetCasterGuid()));
             else m_caster->SendSpellMiss(unitTarget, holder->GetSpellProto()->Id, SPELL_MISS_RESIST);
 
             // Remove buff from list for prevent doubles

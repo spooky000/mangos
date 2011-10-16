@@ -2068,10 +2068,9 @@ void Aura::TriggerSpell()
             {
                 if( triggeredSpellInfo->Id == 54363 ) // If it triggers our hacky-moded spell
                 {
-                    uint32 irangeIndex;
-                    if( GetAuraDuration() > 50000 )
-                        irangeIndex = 7; // 2 yards
-                    else if( GetAuraDuration() > 40000 && GetAuraDuration() < 50000 )
+                    uint32 irangeIndex = 7; // 2 yards
+
+                    if( GetAuraDuration() > 40000 && GetAuraDuration() < 50000 )
                         irangeIndex = 8; // 5 yards
                     else if( GetAuraDuration() > 30000 && GetAuraDuration() < 40000 )
                         irangeIndex = 14; // 8 yards
@@ -2373,10 +2372,9 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                     {
                         if (Unit* caster = GetCaster())
                         {
-                            if (caster->GetTypeId() == TYPEID_PLAYER && target->GetEntry() == 25316 && target->GetHealthPercent() < 35)
+                            if (caster->GetTypeId() == TYPEID_PLAYER && target->GetEntry() == 25316 && target->GetHealthPercent() < 40)
                             {
-                                target->SetVisibility(VISIBILITY_OFF);
-                                target->DealDamage(target, target->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
+                                ((Creature*)target)->ForcedDespawn();
                                 caster->CastSpell(caster, 45626, true);
                             }
                         }
@@ -2546,7 +2544,7 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                 if (GetSpellProto()->SpellFamilyFlags.test<CF_WARRIOR_OVERPOWER>())
                 {
                     // Must be casting target
-                    if (!target->IsNonMeleeSpellCasted(false))
+                    if (!target->IsNonMeleeSpellCasted(false, false, true, true))
                         return;
 
                     Unit* caster = GetCaster();
