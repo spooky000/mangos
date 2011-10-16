@@ -9591,6 +9591,8 @@ void Unit::AddThreat(Unit* pVictim, float threat /*= 0.0f*/, bool crit /*= false
     {
         if (threatSpell && pVictim && pVictim->GetTypeId() == TYPEID_PLAYER)
         {
+            if (threatSpell && pVictim && pVictim->GetTypeId() == TYPEID_PLAYER)
+        {
             float bonus=1.0f;
             switch (threatSpell->SpellFamilyName)
             {
@@ -9600,27 +9602,28 @@ void Unit::AddThreat(Unit* pVictim, float threat /*= 0.0f*/, bool crit /*= false
                     if (threatSpell->Id==57755)
                         bonus=1.5f;
                     //Thunder Clap
-                    if (threatSpell->SpellFamilyFlags & UI64LIT(0x80))
+                    if (threatSpell->SpellFamilyFlags.test<CF_WARRIOR_THUNDER_CLAP>())
                         bonus=1.85f;
                 };
                 break;
             case SPELLFAMILY_DEATHKNIGHT:
                 {
                     //Rune Strike
-                    if (threatSpell->SpellFamilyFlags & UI64LIT(0x2000000000000000))
+                    if (threatSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_RUNE_STRIKE>())
                         bonus=1.75f;
                     // Death and Decay
                     if (threatSpell->Id==52212)
                         bonus=1.9f;
-                    // Icy Touch in Frost Presense
-                    if (pVictim->HasAura(48263) && threatSpell->SpellFamilyFlags & UI64LIT(0x2))
+                    // Icy Touch in Frost Presence
+                    if (pVictim->HasAura(48263) && threatSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_ICY_TOUCH_TALONS>())
                         bonus=7.0f;
                 };
                 break;
             case SPELLFAMILY_DRUID:
                 {
-                    if (threatSpell->SpellFamilyFlags & UI64LIT(0x0010000000000000))
-                        bonus=1.5f;
+                    // Dire Bear form
+                    if (pVictim->HasAura(9635))
+                        bonus=2.0735f;
                 };
                 break;
             };

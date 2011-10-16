@@ -808,6 +808,40 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
     // Handle Login-Achievements (should be handled after loading)
     pCurrChar->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ON_LOGIN, 1);
 
+    // Achievement conversion at login
+    if (pCurrChar->HasAtLoginFlag(AT_LOGIN_CHECK_TITLES))
+    {
+        Team team = pCurrChar->GetTeam();
+        if (QueryResult *result = WorldDatabase.Query("SELECT title_A, title_H FROM achievement_reward WHERE title_A != title_H"))
+        {
+            do
+            {
+                Field *fields = result->Fetch();
+                uint32 id_titleAlliance = fields[0].GetUInt32();
+                uint32 id_titleHorde = fields[1].GetUInt32();
+
+                // Check if we really have that title
+                CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(team == HORDE ? id_titleAlliance : id_titleHorde);
+
+                uint32 fieldIndexOffset = titleEntry->bit_index / 32;
+                uint32 flag = 1 << (titleEntry->bit_index % 32);
+                if (pCurrChar->HasFlag(PLAYER__FIELD_KNOWN_TITLES + fieldIndexOffset, flag))
+                {
+                    pCurrChar->SetTitle(titleEntry, true);
+                    if (CharTitlesEntry const* titleNewEntry = sCharTitlesStore.LookupEntry(team == HORDE ? id_titleHorde : id_titleAlliance))
+                    {
+                        pCurrChar->SetTitle(titleNewEntry);
+                        pCurrChar->SetUInt32Value(PLAYER_CHOSEN_TITLE, 0);
+                    }
+                }
+            }
+            while (result->NextRow());
+        }
+
+        pCurrChar->RemoveAtLoginFlag(AT_LOGIN_CHECK_TITLES);
+        // Check titles
+    }
+
     delete holder;
 }
 

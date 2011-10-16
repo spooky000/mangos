@@ -1079,6 +1079,19 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
         {
             switch(m_spellInfo->Id)
             {
+                case 47911:                                 // EMP
+                {
+                    if (unitTarget->GetEntry() == 26406) // Anvil
+                    {
+                        unitTarget->CastSpell(unitTarget, 47923, false); // Stunned by EMP
+                        if (Creature * pThane = unitTarget->GetClosestCreatureWithEntry(unitTarget, 26405, 15))
+                        {
+                            pThane->AddThreat(m_caster, 1);
+                            pThane->RemoveAurasDueToSpell(47922); // Remove immunity from Thane
+                        }
+                    }
+                    return;
+                }
                 case 56727:                                 // Q: Feeding Angrim
                 {
                     if (unitTarget->GetTypeId() == TYPEID_UNIT && unitTarget->GetEntry() == 30422)
