@@ -1838,6 +1838,9 @@ class MANGOS_DLL_SPEC Player : public Unit
         void DestroyForPlayer( Player *target, bool anim = false ) const;
         void SendLogXPGain(uint32 GivenXP,Unit* victim,uint32 RestXP);
 
+        uint8 LastSwingErrorMsg() const { return m_swingErrorMsg; }
+        void SwingErrorMsg(uint8 val) { m_swingErrorMsg = val; }
+
         // notifiers
         void SendAttackSwingCantAttack();
         void SendAttackSwingCancelAttack();
@@ -1923,7 +1926,6 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         static Team TeamForRace(uint8 race);
         Team GetTeam() const { return m_team; }
-        TeamId GetTeamId() const { return m_team == ALLIANCE ? TEAM_ALLIANCE : TEAM_HORDE; }
         static uint32 getFactionForRace(uint8 race);
         void setFactionForRace(uint8 race);
 
