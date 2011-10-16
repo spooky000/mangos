@@ -518,7 +518,6 @@ class BattleGround
 
         virtual void EventPlayerDamageGO(Player* /*player*/, GameObject* /*target_obj*/, uint32 /*eventId*/, uint32 /*bySpellId*/) {}
         virtual void EventPlayerUsedGO(Player* /*Source*/, GameObject* /*object*/) {}
-        virtual void EventSpawnGOSA(Player* /*owner*/, Creature* /*obj*/, float /*x*/, float /*y*/, float /*z*/) {}
         virtual void VirtualUpdatePlayerScore(Player* /*Source*/, uint32 /*type*/, uint32 /*value*/) {}
 
         void EventPlayerLoggedIn(Player* player);

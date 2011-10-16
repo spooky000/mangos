@@ -632,11 +632,6 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
     }
 }
 
-void BattleGroundSA::EventSpawnGOSA(Player *owner, Creature* obj, float x, float y, float z)
-{
-    SendMessageToAll(LANG_BG_SA_INSTALL_BOMB, (defender == ALLIANCE) ? CHAT_MSG_BG_SYSTEM_HORDE : CHAT_MSG_BG_SYSTEM_ALLIANCE , owner);
-}
-
 void BattleGroundSA::SendMessageSA(Player *player, uint32 type, uint32 name)
 {
     uint32 entryMSG = 0;
