@@ -12168,7 +12168,7 @@ void Unit::MonsterMoveJump(float x, float y, float z, float o, float speed, floa
         InterruptNonMeleeSpells(false);
     }
 
-    GetMotionMaster()->MoveJump(x, y, z, speed, height, 0, isKnockBack);
+    GetMotionMaster()->MoveJump(x, y, z, speed, height, 0);
 }
 
 struct SetPvPHelper
