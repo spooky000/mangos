@@ -1162,6 +1162,12 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
         }
         case SPELLFAMILY_MAGE:
         {
+            // Improved Mana Gems
+            if (dummySpell->Id == 37447)
+            {
+                triggered_spell_id = 37445;
+                break;
+            }
             // Magic Absorption
             if (dummySpell->SpellIconID == 459)             // only this spell have SpellIconID == 459 and dummy aura
             {
