@@ -1205,15 +1205,13 @@ void GameObject::Use(Unit* user)
             SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_IN_USE);
             SetLootState(GO_ACTIVATED);
 
-            uint32 time_to_restore = info->GetAutoCloseTime();
-
             // this appear to be ok, however others exist in addition to this that should have custom (ex: 190510, 188692, 187389)
-            if (time_to_restore && info->goober.customAnim)
+            if (info->goober.customAnim)
                 SendGameObjectCustomAnim(GetObjectGuid());
             else
                 SetGoState(GO_STATE_ACTIVE);
 
-            m_cooldownTime = time(NULL) + time_to_restore;
+            m_cooldownTime = time(NULL) + info->GetAutoCloseTime();
 
             // cast this spell later if provided
             spellId = info->goober.spellId;
@@ -1457,13 +1455,6 @@ void GameObject::Use(Unit* user)
             spellId = info->spellcaster.spellId;
 
             AddUse();
-
-            // For Isle of Conquest teleports
-            if (user->GetTypeId() == TYPEID_PLAYER)
-                if (((Player*)user)->InBattleGround())
-                    if (BattleGround *bg = ((Player*)user)->GetBattleGround())
-                        bg->EventPlayerUsedGO(((Player*)user), this);
-
             break;
         }
         case GAMEOBJECT_TYPE_MEETINGSTONE:                  //23
@@ -1795,13 +1786,13 @@ void GameObject::DamageTaken(Unit* pDoneBy, uint32 damage, uint32 spellId)
     SetGoAnimProgress(m_health * 255 / GetMaxHealth());
 }
 
-void GameObject::Rebuild(Unit* pWho)
+void GameObject::Rebuild(Unit* /*pWho*/)
 {
     if (GetGoType() != GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
         return;
 
     RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED | GO_FLAG_DESTROYED);
-    SetUInt32Value(GAMEOBJECT_DISPLAYID, m_goInfo->displayId);
+    SetDisplayId(m_goInfo->displayId);
     m_health = GetMaxHealth();
 
     SetGoAnimProgress(255);

@@ -494,7 +494,7 @@ bool Transport::RemovePassenger(Player* passenger)
     return true;
 }
 
-void Transport::Update( uint32 update_diff, uint32 /*p_time*/)
+void Transport::Update( uint32 /*update_diff*/, uint32 /*p_time*/)
 {
     if (m_WayPoints.size() <= 1)
         return;
@@ -579,18 +579,4 @@ void Transport::DoEventIfAny(WayPointMap::value_type const& node, bool departure
         if (!sScriptMgr.OnProcessEvent(eventid, this, this, departure))
             GetMap()->ScriptsStart(sEventScripts, eventid, this, this);
     }
-}
-
-void Transport::BuildStartMovePacket(Map const* targetMap)
-{
-    SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_IN_USE);
-    SetGoState(GO_STATE_ACTIVE);
-    UpdateForMap(targetMap);
-}
-
-void Transport::BuildStopMovePacket(Map const* targetMap)
-{
-    RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_IN_USE);
-    SetGoState(GO_STATE_READY);
-    UpdateForMap(targetMap);
 }

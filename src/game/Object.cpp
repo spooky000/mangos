@@ -245,7 +245,8 @@ void Object::DestroyForPlayer( Player *target, bool anim ) const
 
 void Object::BuildMovementUpdate(ByteBuffer * data, uint16 updateFlags) const
 {
-    uint16 moveFlags2 = (isType(TYPEMASK_UNIT) ? ((Unit*)this)->m_movementInfo.GetMovementFlags2() : MOVEFLAG2_NONE);
+    // Not used yet ?
+    //uint16 moveFlags2 = (isType(TYPEMASK_UNIT) ? ((Unit*)this)->m_movementInfo.GetMovementFlags2() : MOVEFLAG2_NONE);
 
     *data << uint16(updateFlags);                           // update flags
 
@@ -2169,4 +2170,21 @@ void WorldObject::SetLootRecipient(Unit *unit)
     // set group for group existed case including if player will leave group at loot time
     if (Group* group = player->GetGroup())
         m_lootGroupRecipientId = group->GetId();
+}
+
+void WorldObject::SetActiveObjectState(bool active)
+{
+    if (m_isActiveObject == active || (isType(TYPEMASK_PLAYER) && !active))  // player shouldn't became inactive, never
+        return;
+
+    if (IsInWorld() && !isType(TYPEMASK_PLAYER))
+        // player's update implemented in a different from other active worldobject's way
+        // it's considired to use generic way in future
+    {
+        if (isActiveObject() && !active)
+            GetMap()->RemoveFromActive(this);
+        else if (!isActiveObject() && active)
+            GetMap()->AddToActive(this);
+    }
+    m_isActiveObject = active;
 }

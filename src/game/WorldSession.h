@@ -833,6 +833,10 @@ class MANGOS_DLL_SPEC WorldSession
         void HandleQueryQuestsCompletedOpcode(WorldPacket& recv_data);
         void HandleQuestPOIQueryOpcode(WorldPacket& recv_data);
 
+        // Refer-A-Friend
+        void HandleGrantLevel(WorldPacket& recv_data);
+        void HandleAcceptGrantLevel(WorldPacket& recv_data);
+
         // LFG
         void HandleLfgJoinOpcode(WorldPacket& recv_data);
         void HandleLfgLeaveOpcode(WorldPacket& recv_data);

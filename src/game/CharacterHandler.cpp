@@ -72,7 +72,7 @@ bool LoginQueryHolder::Initialize()
         "position_x, position_y, position_z, map, orientation, taximask, cinematic, totaltime, leveltime, rest_bonus, logout_time, is_logout_resting, resettalents_cost,"
         "resettalents_time, trans_x, trans_y, trans_z, trans_o, transguid, extra_flags, stable_slots, at_login, zone, online, death_expire_time, taxi_path, dungeon_difficulty,"
         "arenaPoints, totalHonorPoints, todayHonorPoints, yesterdayHonorPoints, totalKills, todayKills, yesterdayKills, chosenTitle, knownCurrencies, watchedFaction, drunk,"
-        "health, power1, power2, power3, power4, power5, power6, power7, specCount, activeSpec, exploredZones, equipmentCache, ammoId, knownTitles, actionBars FROM characters WHERE guid = '%u'", m_guid.GetCounter());
+        "health, power1, power2, power3, power4, power5, power6, power7, specCount, activeSpec, exploredZones, equipmentCache, ammoId, knownTitles, actionBars, grantableLevels FROM characters WHERE guid = '%u'", m_guid.GetCounter());
     res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADGROUP,           "SELECT groupId FROM group_member WHERE memberGuid ='%u'", m_guid.GetCounter());
     res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADBOUNDINSTANCES,  "SELECT id, permanent, map, difficulty, extend, resettime FROM character_instance LEFT JOIN instance ON instance = id WHERE guid = '%u'", m_guid.GetCounter());
     res &= SetPQuery(PLAYER_LOGIN_QUERY_LOADAURAS,           "SELECT caster_guid,item_guid,spell,stackcount,remaincharges,basepoints0,basepoints1,basepoints2,periodictime0,periodictime1,periodictime2,maxduration,remaintime,effIndexMask FROM character_aura WHERE guid = '%u'", m_guid.GetCounter());
@@ -808,6 +808,40 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
     // Handle Login-Achievements (should be handled after loading)
     pCurrChar->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ON_LOGIN, 1);
 
+    // Achievement conversion at login
+    if (pCurrChar->HasAtLoginFlag(AT_LOGIN_CHECK_TITLES))
+    {
+        Team team = pCurrChar->GetTeam();
+        if (QueryResult *result = WorldDatabase.Query("SELECT title_A, title_H FROM achievement_reward WHERE title_A != title_H"))
+        {
+            do
+            {
+                Field *fields = result->Fetch();
+                uint32 id_titleAlliance = fields[0].GetUInt32();
+                uint32 id_titleHorde = fields[1].GetUInt32();
+
+                // Check if we really have that title
+                CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(team == HORDE ? id_titleAlliance : id_titleHorde);
+
+                uint32 fieldIndexOffset = titleEntry->bit_index / 32;
+                uint32 flag = 1 << (titleEntry->bit_index % 32);
+                if (pCurrChar->HasFlag(PLAYER__FIELD_KNOWN_TITLES + fieldIndexOffset, flag))
+                {
+                    pCurrChar->SetTitle(titleEntry, true);
+                    if (CharTitlesEntry const* titleNewEntry = sCharTitlesStore.LookupEntry(team == HORDE ? id_titleHorde : id_titleAlliance))
+                    {
+                        pCurrChar->SetTitle(titleNewEntry);
+                        pCurrChar->SetUInt32Value(PLAYER_CHOSEN_TITLE, 0);
+                    }
+                }
+            }
+            while (result->NextRow());
+        }
+
+        pCurrChar->RemoveAtLoginFlag(AT_LOGIN_CHECK_TITLES);
+        // Check titles
+    }
+
     delete holder;
 }
 
@@ -1317,37 +1351,6 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
 
                 CharacterDatabase.PExecute("UPDATE IGNORE `character_achievement` set achievement = '%u' where achievement = '%u' AND guid = '%u'",
                     team == BG_TEAM_ALLIANCE ? achiev_alliance : achiev_horde, team == BG_TEAM_ALLIANCE ? achiev_horde : achiev_alliance, guid.GetCounter());
-
-                // Titles conversion
-                const AchievementEntry *  pAchievAlliance = sAchievementStore.LookupEntry(achiev_alliance);
-                const AchievementEntry *  pAchievHorde = sAchievementStore.LookupEntry(achiev_horde);
-                if(!pAchievAlliance || !pAchievHorde)
-                    continue;
-
-                AchievementReward const* rewardAlliance = sAchievementMgr.GetAchievementReward(pAchievAlliance, gender);
-                AchievementReward const* rewardHorde = sAchievementMgr.GetAchievementReward(pAchievHorde, gender);
-                // no rewards
-                if(!rewardAlliance || !rewardHorde)
-                    continue;
-
-                // titles
-                if(uint32 titleId = rewardAlliance->titleId[team == BG_TEAM_HORDE ? 1 : 0])
-                {
-                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId);
-                    //if(team == BG_TEAM_HORDE)
-                        // Remove
-                    //else
-                        // Add
-                }
-
-                if(uint32 titleId = rewardHorde->titleId[team == BG_TEAM_HORDE ? 1 : 0])
-                {
-                    CharTitlesEntry const* titleEntry = sCharTitlesStore.LookupEntry(titleId);
-                    //if(team == BG_TEAM_HORDE)
-                        // Remove
-                    //else
-                        // Add
-                }
             }
             while (result2->NextRow());
         }
@@ -1391,7 +1394,7 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
                 Field *fields2 = result2->Fetch();
                 uint32 reputation_alliance = fields2[0].GetUInt32();
                 uint32 reputation_horde = fields2[1].GetUInt32();
-                CharacterDatabase.PExecute("DELETE FROM character_reputation WHERE faction = '%u' AND guid = '%u'",team == BG_TEAM_ALLIANCE ? reputation_horde : reputation_alliance, guid.GetCounter());
+                CharacterDatabase.PExecute("DELETE FROM character_reputation WHERE faction = '%u' AND guid = '%u'",team == BG_TEAM_ALLIANCE ? reputation_alliance : reputation_horde, guid.GetCounter());
                 CharacterDatabase.PExecute("UPDATE IGNORE `character_reputation` set faction = '%u' where faction = '%u' AND guid = '%u'",
                     team == BG_TEAM_ALLIANCE ? reputation_alliance : reputation_horde, team == BG_TEAM_ALLIANCE ? reputation_horde : reputation_alliance, guid.GetCounter());
             }

@@ -531,6 +531,8 @@ void Creature::Update(uint32 update_diff, uint32 diff)
         }
         case CORPSE:
         {
+            Unit::Update(update_diff, diff);
+
             if (m_isDeadByDefault)
                 break;
 
@@ -548,7 +550,6 @@ void Creature::Update(uint32 update_diff, uint32 diff)
             }
             else
             {
-                Unit::Update(update_diff, diff);
                 m_corpseDecayTimer -= update_diff;
                 if (m_groupLootId)
                 {
@@ -1594,16 +1595,10 @@ bool Creature::FallGround()
 
     Unit::SetDeathState(CORPSE_FALLING);
 
-    // For creatures that are moving towards target and dies, the visual effect is not nice.
-    // It is possibly caused by a xyz mismatch in DestinationHolder's GetLocationNow and the location
-    // of the mob in client. For mob that are already reached target or dies while not moving
-    // the visual appear to be fairly close to the expected.
-
     Movement::MoveSplineInit init(*this);
     init.MoveTo(GetPositionX(),GetPositionY(),tz);
     init.SetFall();
     init.Launch();
-
     return true;
 }
 
@@ -1649,7 +1644,7 @@ bool Creature::IsImmuneToSpell(SpellEntry const* spellInfo)
     if (!spellInfo)
         return false;
 
-    if ((!IsPet() || GetEntry() == 26125 || GetEntry() == 27829) && GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->Mechanic - 1)))
+    if ((!IsPet() || GetEntry() == 26125 || GetEntry() == 27829 || GetEntry() == 24207) && GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->Mechanic - 1)))
         return true;
 
     return Unit::IsImmuneToSpell(spellInfo);
@@ -1657,7 +1652,7 @@ bool Creature::IsImmuneToSpell(SpellEntry const* spellInfo)
 
 bool Creature::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex index) const
 {
-    if ((!IsPet() || GetEntry() == 26125 || GetEntry() == 27829) && GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->EffectMechanic[index] - 1)))
+    if ((!IsPet() || GetEntry() == 26125 || GetEntry() == 27829 || GetEntry() == 24207) && GetCreatureInfo()->MechanicImmuneMask & (1 << (spellInfo->EffectMechanic[index] - 1)))
         return true;
 
     // Taunt immunity special flag check
@@ -2024,26 +2019,19 @@ bool Creature::LoadCreatureAddon(bool reload)
     if (cainfo->splineFlags & SPLINEFLAG_FLYING)
         SetLevitate(true);
 
-    if(cainfo->auras)
+    if (cainfo->auras)
     {
         for (uint32 const* cAura = cainfo->auras; *cAura; ++cAura)
         {
-            SpellEntry const *AdditionalSpellInfo = sSpellStore.LookupEntry(*cAura);
-            if (!AdditionalSpellInfo)
-            {
-                sLog.outErrorDb("Creature (GUIDLow: %u Entry: %u ) has wrong spell %u defined in `auras` field.",GetGUIDLow(),GetEntry(), *cAura);
-                continue;
-            }
-
             if (HasAura(*cAura))
             {
                 if (!reload)
-                    sLog.outErrorDb("Creature (GUIDLow: %u Entry: %u) has duplicate spell %u in `auras` field.", GetGUIDLow(), GetEntry(), *cAura);
+                    sLog.outErrorDb("Creature (GUIDLow: %u Entry: %u) has spell %u in `auras` field, but aura is already applied.", GetGUIDLow(), GetEntry(), *cAura);
 
                 continue;
             }
 
-            CastSpell(this, AdditionalSpellInfo, true);
+            CastSpell(this, *cAura, true);
         }
     }
     return true;
@@ -2101,7 +2089,7 @@ Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position, b
     if (!CanHaveThreatList())
         return NULL;
 
-    //ThreatList m_threatlist;
+    // ThreatList m_threatlist;
     ThreatList const& threatlist = getThreatManager().getThreatList();
     ThreatList::const_iterator i = threatlist.begin();
     ThreatList::const_reverse_iterator r = threatlist.rbegin();
@@ -2467,26 +2455,6 @@ void Creature::ClearTemporaryFaction()
 
     m_temporaryFactionFlags = TEMPFACTION_NONE;
     setFaction(GetCreatureInfo()->faction_A);
-}
-
-void Creature::SetActiveObjectState( bool on )
-{
-    if(m_isActiveObject==on)
-        return;
-
-    bool world = IsInWorld();
-
-    Map* map;
-    if(world)
-    {
-        map = GetMap();
-        map->Remove(this,false);
-    }
-
-    m_isActiveObject = on;
-
-    if(world)
-        map->Add(this);
 }
 
 void Creature::SendAreaSpiritHealerQueryOpcode(Player *pl)
