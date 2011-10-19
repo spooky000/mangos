@@ -2151,7 +2151,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                         next = itr;
                         ++next;
 
-                        if (!(*itr)->HasInArc(M_PI_F, caster))
+                        if (!(*itr)->HasInArc(M_PI_F/2, caster))
                             targetUnitMap.erase(itr);
                     }
                 }
