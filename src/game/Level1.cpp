@@ -34,6 +34,7 @@
 #include "Mail.h"
 #include "Util.h"
 #include "ChannelMgr.h"
+#include "GossipDef.h"
 #ifdef _DEBUG_VMAPS
 #include "VMapFactory.h"
 #endif

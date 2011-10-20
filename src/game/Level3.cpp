@@ -54,7 +54,6 @@
 #include "InstanceData.h"
 #include "CreatureEventAIMgr.h"
 #include "DBCEnums.h"
-#include "GossipDef.h"
 #include "AuctionHouseBot/AuctionHouseBot.h"
 
 static uint32 ahbotQualityIds[MAX_AUCTION_QUALITY] =
