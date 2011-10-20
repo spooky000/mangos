@@ -2508,6 +2508,14 @@ void Player::GiveXP(uint32 xp, Unit* victim)
     if(level >= sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
         return;
 
+    if(HasAtLoginFlag(CUSTOMFLAG_DOUBLE_RATE))
+    {
+        if(level < 60)
+            xp *= 2;
+        else
+            RemoveAtLoginFlag(CUSTOMFLAG_DOUBLE_RATE);
+    }
+
     if(victim)
     {
         // handle SPELL_AURA_MOD_KILL_XP_PCT auras

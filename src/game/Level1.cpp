@@ -2397,7 +2397,7 @@ bool ChatHandler::HandleNewsGossipCommand(char* args)
     player->PlayerTalkClass->SendTalking(textId);
 
     player->PlayerTalkClass->SendGossipMenu(textId, player->GetObjectGuid());
-    player->PlayerTalkClass->SendGossipMenu(textId, player->GetObjectGuid());
+    //player->PlayerTalkClass->SendGossipMenu(textId, player->GetObjectGuid());
     PSendSysMessage("Sending News Gossip nr. %u to player GUID: %s",entry,target_guid.GetString().c_str());
 
     return true;
