@@ -387,8 +387,10 @@ class MANGOS_DLL_SPEC ChatHandler
 
         bool HandleQuestAddCommand(char* args);
         bool HandleQuestRemoveCommand(char* args);
-        bool HandleNewsGossipCommand(char * args);
         bool HandleQuestCompleteCommand(char* args);
+
+        bool HandleNewsGossipCommand(char * args);
+        bool HandleRatesCommand(char * args);
 
         bool HandleReloadAllCommand(char* args);
         bool HandleReloadAllAchievementCommand(char* args);

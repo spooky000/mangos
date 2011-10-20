@@ -243,3 +243,12 @@ bool ChatHandler::HandleServerMotdCommand(char* /*args*/)
     PSendSysMessage(LANG_MOTD_CURRENT, sWorld.GetMotd());
     return true;
 }
+
+/// Display the gossip of rate changer
+bool ChatHandler::HandleRatesCommand(char* /*args*/)
+{
+    printf("\n ! rates ! \n ");
+    //PSendSysMessage(LANG_MOTD_CURRENT, sWorld.GetMotd());
+
+    return true;
+}
