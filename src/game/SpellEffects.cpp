@@ -489,12 +489,6 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         }
                         break;
                     }
-                    // Gargoyle Strike
-                    case 51963:
-                    {
-                        damage += m_caster->GetTotalAttackPowerValue(BASE_ATTACK);
-                        break;
-                    }
                     // Biting Cold
                     case 62188:
                     {
