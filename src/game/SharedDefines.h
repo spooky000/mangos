@@ -1576,6 +1576,7 @@ enum TextEmotes
     TEXTEMOTE_FLOP                 = 224,
     TEXTEMOTE_LOVE                 = 225,
     TEXTEMOTE_MOO                  = 226,
+    TEXTEMOTE_TRAIN                = 264,
     TEXTEMOTE_OPENFIRE             = 327,
     TEXTEMOTE_FLIRT                = 328,
     TEXTEMOTE_JOKE                 = 329,
@@ -1595,8 +1596,7 @@ enum TextEmotes
     TEXTEMOTE_ENCOURAGE            = 375,
     TEXTEMOTE_ENEMY                = 376,
     TEXTEMOTE_EYEBROW              = 377,
-    TEXTEMOTE_TOAST                = 378,
-    TEXTEMOTE_TRAIN                = 379
+    TEXTEMOTE_TOAST                = 378
 };
 
 enum Emote
