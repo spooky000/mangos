@@ -223,15 +223,21 @@ void ThreatContainer::clearReferences()
 HostileReference* ThreatContainer::getReferenceByTarget(Unit* pVictim)
 {
     HostileReference* result = NULL;
-    MAPLOCK_READ(pVictim, MAP_LOCK_TYPE_DEFAULT);
+    if(!pVictim)
+    {
+        sLog.outError("getReferenceByTarget: pVictim is empty!");
+        return result;
+    }
+
     ObjectGuid guid = pVictim->GetObjectGuid();
     for(ThreatList::const_iterator i = iThreatList.begin(); i != iThreatList.end(); ++i)
     {
-        if ((*i) && (*i)->getUnitGuid() == guid)
-        {
-            result = (*i);
-            break;
-        }
+        if((*i) && (*i)->getUnitGuid())
+            if ((*i)->getUnitGuid() == guid)
+            {
+                result = (*i);
+                break;
+            }
     }
 
     return result;
@@ -426,7 +432,6 @@ void ThreatManager::addThreatDirectly(Unit* pVictim, float threat)
 
     if(!ref)                                                // there was no ref => create a new one
     {
-        MAPLOCK_READ(pVictim, MAP_LOCK_TYPE_DEFAULT);
         // threat has to be 0 here
         HostileReference* hostileReference = new HostileReference(pVictim, this, 0);
         iThreatContainer.addReference(hostileReference);
@@ -537,7 +542,7 @@ void ThreatManager::processThreatEvent(ThreatRefStatusChangeEvent* threatRefStat
                     setCurrentVictim(NULL);
                     setDirty(true);
                 }
-                iOwner->SendThreatRemove(hostileReference);
+                //iOwner->SendThreatRemove(hostileReference);
                 iThreatContainer.remove(hostileReference);
                 iUpdateNeed = true;
                 iThreatOfflineContainer.addReference(hostileReference);

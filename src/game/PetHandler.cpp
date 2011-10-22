@@ -395,6 +395,7 @@ void WorldSession::HandlePetAbandon(WorldPacket& recv_data)
                 pet->ModifyPower(POWER_HAPPINESS, -50000);
 
             ((Pet*)pet)->Unsummon(PET_SAVE_AS_DELETED, GetPlayer());
+
         }
         else if (pet->GetObjectGuid() == GetPlayer()->GetCharmGuid())
         {

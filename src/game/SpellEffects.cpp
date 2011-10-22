@@ -489,12 +489,6 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         }
                         break;
                     }
-                    // Gargoyle Strike
-                    case 51963:
-                    {
-                        damage += m_caster->GetTotalAttackPowerValue(BASE_ATTACK);
-                        break;
-                    }
                     // Biting Cold
                     case 62188:
                     {
@@ -1087,7 +1081,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                         if (Creature * pThane = unitTarget->GetClosestCreatureWithEntry(unitTarget, 26405, 15))
                         {
                             pThane->AddThreat(m_caster, 1);
-                            pThane->RemoveAurasDueToSpell(47922);
+                            pThane->RemoveAurasDueToSpell(47922); // Remove immunity from Thane
                         }
                     }
                     return;
@@ -2956,7 +2950,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                                 y = m_targets.m_destY;
                                 z = m_targets.m_destZ;
                                 //m_targets.m_dstPos.GetPosition(x, y, z);
-                                passenger->MonsterMoveJump(x, y, z, 100, 10);
+                                passenger->MonsterMoveJump(x, y, z, passenger->GetOrientation(), 100, 10);
                             }
                         }
                     return;
@@ -3754,7 +3748,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 }
 
                 //Any effect which causes you to lose control of your character will supress the starfall effect.
-                if (m_caster->hasUnitState(UNIT_STAT_NO_FREE_MOVE))
+                if (m_caster->hasUnitState(UNIT_STAT_NO_FREE_MOVE & ~ UNIT_STAT_ROOT))
                     return;
 
                 if (unitTarget->isVisibleForOrDetect(m_caster,m_caster,false))
@@ -4666,7 +4660,7 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
         return;
 
     // Init dest coordinates
-    float x,y,z;
+    float x,y,z,o;
     if(m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
     {
         x = m_targets.m_destX;
@@ -4684,15 +4678,21 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
                 pTarget = m_caster->getVictim();
             else if(m_caster->GetTypeId() == TYPEID_PLAYER)
                 pTarget = m_caster->GetMap()->GetUnit(((Player*)m_caster)->GetSelectionGuid());
+
+            o = pTarget ? pTarget->GetOrientation() : m_caster->GetOrientation();
         }
+        else
+            o = m_caster->GetOrientation();
     }
     else if(unitTarget)
     {
         unitTarget->GetContactPoint(m_caster,x,y,z,CONTACT_DISTANCE);
+        o = m_caster->GetOrientation();
     }
     else if(gameObjTarget)
     {
         gameObjTarget->GetContactPoint(m_caster,x,y,z,CONTACT_DISTANCE);
+        o = m_caster->GetOrientation();
     }
     else
     {
@@ -4708,7 +4708,7 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
     if (!speed_xy)
         speed_xy = 150;
 
-    m_caster->MonsterMoveJump(x, y, z, float(speed_xy) / 2, float(speed_z) / 10);
+    m_caster->MonsterMoveJump(x, y, z, o, float(speed_xy) / 2, float(speed_z) / 10);
 }
 
 void Spell::EffectTeleportUnits(SpellEffectIndex eff_idx)
@@ -9298,8 +9298,8 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!pCaster)
                         return;
 
-                    Unit * pOwner = pCaster->GetCharmer();
-                    if (!pOwner || pOwner->GetTypeId() != TYPEID_PLAYER)
+                    Player * pOwner = pCaster->GetCharmerOrOwnerPlayerOrPlayerItself();
+                    if (!pOwner)
                         return;
 
                     std::list<Creature*> creatureList;
@@ -11080,7 +11080,7 @@ void Spell::EffectPlayerPull(SpellEffectIndex eff_idx)
     else
         m_caster->GetPosition(x,y,z);
 
-        unitTarget->MonsterMoveJump(x, y, z, speedXY, speedZ);
+        unitTarget->MonsterMoveJump(x, y, z, unitTarget->GetOrientation(), speedXY, speedZ);
 }
 
 void Spell::EffectDispelMechanic(SpellEffectIndex eff_idx)
@@ -11293,7 +11293,7 @@ void Spell::EffectTransmitted(SpellEffectIndex eff_idx)
             m_caster->GetNearPoint2D(fx, fy, dis, m_caster->GetOrientation() + angle_offset);
             float waterZ = m_caster->GetTerrain()->GetWaterOrGroundLevel(fx, fy, m_caster->GetPositionZ());
             GridMapLiquidData liqData;
-            if (!m_caster->GetTerrain()->IsInWater(fx, fy, waterZ, &liqData))
+            if (!m_caster->GetTerrain()->IsInWater(fx, fy, waterZ, &liqData, 0.5f))
             {
                 SendCastResult(SPELL_FAILED_NOT_FISHABLE);
                 SendChannelUpdate(0);
@@ -11491,18 +11491,28 @@ void Spell::EffectStealBeneficialBuff(SpellEffectIndex eff_idx)
 
             int32 miss_chance = 0;
             // Apply dispel mod from aura caster
-            if (Unit *caster = holder->GetCaster())
+
+            Unit * caster = holder->GetCaster();
+            Unit * target = holder->GetTarget();
+            if(!caster || !target)
+                continue;
+
+            if (Player* modOwner = caster->GetSpellModOwner())
+                modOwner->ApplySpellMod(holder->GetSpellProto()->Id, SPELLMOD_RESIST_DISPEL_CHANCE, miss_chance, this);
+
+            if(caster == target)
+                miss_chance += caster->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
+            else
             {
-                if (Player* modOwner = caster->GetSpellModOwner())
-                {
+                if (Player* modOwner = target->GetSpellModOwner())
                     modOwner->ApplySpellMod(holder->GetSpellProto()->Id, SPELLMOD_RESIST_DISPEL_CHANCE, miss_chance, this);
-                    miss_chance += modOwner->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
-                }
+
+                miss_chance += target->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
             }
 
             // Try dispel
             if (!roll_chance_i(miss_chance))
-                success_list.push_back(std::pair<uint32,ObjectGuid>(holder->GetId(),holder->GetCasterGuid()));
+                success_list.push_back(SuccessList::value_type(holder->GetId(),holder->GetCasterGuid()));
             else m_caster->SendSpellMiss(unitTarget, holder->GetSpellProto()->Id, SPELL_MISS_RESIST);
 
             // Remove buff from list for prevent doubles
@@ -11732,7 +11742,7 @@ void Spell::EffectRestoreItemCharges( SpellEffectIndex eff_idx )
     item->RestoreCharges();
 }
 
-void Spell::EffectRedirectThreat(SpellEffectIndex /*eff_idx*/)
+void Spell::EffectRedirectThreat(SpellEffectIndex eff_idx)
 {
     if (!unitTarget)
         return;
@@ -11781,7 +11791,7 @@ void Spell::EffectQuestStart(SpellEffectIndex eff_idx)
     }
 }
 
-void Spell::EffectWMODamage(SpellEffectIndex /*eff_idx*/)
+void Spell::EffectWMODamage(SpellEffectIndex eff_idx)
 {
     if (!gameObjTarget || gameObjTarget->GetGoType() != GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING || !gameObjTarget->GetHealth())
     {
@@ -11813,7 +11823,7 @@ void Spell::EffectWMODamage(SpellEffectIndex /*eff_idx*/)
     gameObjTarget->SendMessageToSet(&data, false);
 }
 
-void Spell::EffectWMORepair(SpellEffectIndex /*eff_idx*/)
+void Spell::EffectWMORepair(SpellEffectIndex eff_idx)
 {
     if (gameObjTarget && gameObjTarget->GetGoType() == GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING)
     {
@@ -11857,7 +11867,7 @@ void Spell::EffectCancelAura(SpellEffectIndex eff_idx)
     unitTarget->RemoveAurasDueToSpell(spellId);
 }
 
-void Spell::EffectServerSide(SpellEffectIndex /*eff_idx*/)
+void Spell::EffectServerSide(SpellEffectIndex eff_idx)
 {
 
     if (!unitTarget)

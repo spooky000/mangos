@@ -216,8 +216,6 @@ Unit::Unit() :
 
     m_castCounter = 0;
 
-    m_addDmgOnce = 0;
-
     //m_Aura = NULL;
     //m_AurasCheck = 2000;
     //m_removeAuraTimer = 4;
@@ -399,6 +397,67 @@ void Unit::Update( uint32 update_diff, uint32 p_time )
     ModifyAuraState(AURA_STATE_HEALTH_ABOVE_75_PERCENT, GetHealth() > GetMaxHealth()*0.75f);
     UpdateSplineMovement(p_time);
     i_motionMaster.UpdateMotion(p_time);
+}
+
+bool Unit::UpdateMeleeAttackingState()
+{
+    Unit *victim = getVictim();
+    if (!victim || IsNonMeleeSpellCasted(false))
+        return false;
+
+    if (!isAttackReady(BASE_ATTACK) && !(isAttackReady(OFF_ATTACK) && haveOffhandWeapon()))
+        return false;
+
+    uint8 swingError = 0;
+    if (!CanReachWithMeleeAttack(victim))
+    {
+        setAttackTimer(BASE_ATTACK,100);
+        setAttackTimer(OFF_ATTACK,100);
+        swingError = 1;
+    }
+    //120 degrees of radiant range
+    else if (!HasInArc(2*M_PI_F/3, victim))
+    {
+        setAttackTimer(BASE_ATTACK,100);
+        setAttackTimer(OFF_ATTACK,100);
+        swingError = 2;
+    }
+    else
+    {
+        if (isAttackReady(BASE_ATTACK))
+        {
+            // prevent base and off attack in same time, delay attack at 0.2 sec
+            if (haveOffhandWeapon())
+            {
+                if (getAttackTimer(OFF_ATTACK) < ATTACK_DISPLAY_DELAY)
+                    setAttackTimer(OFF_ATTACK,ATTACK_DISPLAY_DELAY);
+            }
+            AttackerStateUpdate(victim, BASE_ATTACK);
+            resetAttackTimer(BASE_ATTACK);
+        }
+        if (haveOffhandWeapon() && isAttackReady(OFF_ATTACK))
+        {
+            // prevent base and off attack in same time, delay attack at 0.2 sec
+            uint32 base_att = getAttackTimer(BASE_ATTACK);
+            if (base_att < ATTACK_DISPLAY_DELAY)
+                setAttackTimer(BASE_ATTACK,ATTACK_DISPLAY_DELAY);
+            // do attack
+            AttackerStateUpdate(victim, OFF_ATTACK);
+            resetAttackTimer(OFF_ATTACK);
+        }
+    }
+
+    Player* player = (GetTypeId() == TYPEID_PLAYER ? (Player*)this : NULL);
+    if (player && swingError != player->LastSwingErrorMsg())
+    {
+        if (swingError == 1)
+            player->SendAttackSwingNotInRange();
+        else if (swingError == 2)
+            player->SendAttackSwingBadFacingAttack();
+        player->SwingErrorMsg(swingError);
+    }
+
+    return swingError == 0;
 }
 
 bool Unit::haveOffhandWeapon() const
@@ -5132,16 +5191,22 @@ void Unit::RemoveAurasDueToItemSpell(Item* castItem,uint32 spellId)
 
 void Unit::RemoveAurasWithInterruptFlags(uint32 flags, uint32 spellId)
 {
-    for (SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end(); )
+    std::set<uint32> spellsToRemove;
     {
-        SpellAuraHolderPtr holder = iter->second;
-        if (holder && holder->GetSpellProto()->AuraInterruptFlags & flags && !(flags == AURA_INTERRUPT_FLAG_DAMAGE && iter->second->GetId() == spellId))
+        MAPLOCK_READ(this,MAP_LOCK_TYPE_AURAS);
+        SpellAuraHolderMap const& holdersMap = GetSpellAuraHolderMap();
+        for (SpellAuraHolderMap::const_iterator iter = holdersMap.begin(); iter != holdersMap.end(); ++iter)
         {
-            RemoveSpellAuraHolder(holder);
-            iter = m_spellAuraHolders.begin();
+            SpellAuraHolderPtr holder = iter->second;
+            if (holder && !holder->IsDeleted() && (holder->GetSpellProto()->AuraInterruptFlags & flags) && !(flags == AURA_INTERRUPT_FLAG_DAMAGE && holder->GetId() == spellId))
+                spellsToRemove.insert(iter->first);
         }
-        else
-            ++iter;
+    }
+
+    if (!spellsToRemove.empty())
+    {
+        for(std::set<uint32>::const_iterator i = spellsToRemove.begin(); i != spellsToRemove.end(); ++i)
+            RemoveAurasDueToSpell(*i);
     }
 }
 
@@ -6952,7 +7017,7 @@ void Unit::EnergizeBySpell(Unit *pVictim, uint32 SpellID, uint32 Damage, Powers 
 int32 Unit::SpellBonusWithCoeffs(SpellEntry const *spellProto, int32 total, int32 benefit, int32 ap_benefit,  DamageEffectType damagetype, bool donePart, float defCoeffMod)
 {
     // Distribute Damage over multiple effects, reduce by AoE
-    float coeff = 1.0f;
+    float coeff;
 
     // Not apply this to creature casted spells
     if (GetTypeId()==TYPEID_UNIT && !((Creature*)this)->IsPet())
@@ -9596,42 +9661,45 @@ void Unit::AddThreat(Unit* pVictim, float threat /*= 0.0f*/, bool crit /*= false
     {
         if (threatSpell && pVictim && pVictim->GetTypeId() == TYPEID_PLAYER)
         {
-            float bonus=1.0f;
-            switch (threatSpell->SpellFamilyName)
+            if (threatSpell && pVictim && pVictim->GetTypeId() == TYPEID_PLAYER)
             {
-            case SPELLFAMILY_WARRIOR:
+                float bonus=1.0f;
+                switch (threatSpell->SpellFamilyName)
                 {
-                    // Heroic Throw
-                    if (threatSpell->Id==57755)
-                        bonus=1.5f;
-                    //Thunder Clap
-                    if (threatSpell->SpellFamilyFlags.test<CF_WARRIOR_THUNDER_CLAP>())
-                        bonus=1.85f;
+                    case SPELLFAMILY_WARRIOR:
+                    {
+                        // Heroic Throw
+                        if (threatSpell->Id==57755)
+                            bonus=1.5f;
+                        //Thunder Clap
+                        if (threatSpell->SpellFamilyFlags.test<CF_WARRIOR_THUNDER_CLAP>())
+                            bonus=1.85f;
+                    };
+                    break;
+                case SPELLFAMILY_DEATHKNIGHT:
+                    {
+                        //Rune Strike
+                        if (threatSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_RUNE_STRIKE>())
+                            bonus=1.75f;
+                        // Death and Decay
+                        if (threatSpell->Id==52212)
+                            bonus=1.9f;
+                        // Icy Touch in Frost Presence
+                        if (pVictim->HasAura(48263) && threatSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_ICY_TOUCH_TALONS>())
+                            bonus=7.0f;
+                    };
+                    break;
+                case SPELLFAMILY_DRUID:
+                    {
+                        // Dire Bear form
+                        if (pVictim->HasAura(9635))
+                            bonus=2.0735f;
+                    };
+                    break;
                 };
-                break;
-            case SPELLFAMILY_DEATHKNIGHT:
-                {
-                    //Rune Strike
-                    if (threatSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_RUNE_STRIKE>())
-                        bonus=1.75f;
-                    // Death and Decay
-                    if (threatSpell->Id==52212)
-                        bonus=1.9f;
-                    // Icy Touch in Frost Presence
-                    if (pVictim->HasAura(48263) && threatSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_ICY_TOUCH_TALONS>())
-                        bonus=7.0f;
-                };
-                break;
-            case SPELLFAMILY_DRUID:
-                {
-                    // Dire Bear form
-                    if (pVictim->HasAura(9635))
-                        bonus=2.0735f;
-                };
-                break;
-            };
 
-            threat*=bonus;
+                threat*=bonus;
+            }
         }
 
         m_ThreatManager.addThreat(pVictim, threat, crit, schoolMask, threatSpell);
@@ -9645,7 +9713,6 @@ void Unit::DeleteThreatList()
     if (CanHaveThreatList() && !m_ThreatManager.isThreatListEmpty())
         SendThreatClear();
 
-    MAPLOCK_WRITE(this, MAP_LOCK_TYPE_DEFAULT);
     m_ThreatManager.clearReferences();
 }
 
@@ -11020,7 +11087,7 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
     Creature* pet = dynamic_cast<Creature*>(this);
 
     // auto target selection for some pet spells
-    if (spellInfo->IsFitToFamily<SPELLFAMILY_WARLOCK, CF_WARLOCK_VOIDWALKER_SPELLS>() && spellInfo->SpellIconID == 693)
+    if ((spellInfo->IsFitToFamily<SPELLFAMILY_WARLOCK, CF_WARLOCK_VOIDWALKER_SPELLS>() && spellInfo->SpellIconID == 693) || spellInfo->Id == 58875)
         targets->setUnitTarget((Unit*)owner);
 
     Unit* unit_target = targets ? targets->getUnitTarget() : NULL;
@@ -12090,7 +12157,7 @@ void Unit::MonsterMoveWithSpeed(float x, float y, float z, float speed)
     init.Launch();
 }
 
-void Unit::MonsterMoveJump(float x, float y, float z, float speed, float height, bool isKnockBack)
+void Unit::MonsterMoveJump(float x, float y, float z, float o, float speed, float height, bool isKnockBack)
 {
     MaNGOS::NormalizeMapCoord(x);
     MaNGOS::NormalizeMapCoord(y);
@@ -12101,7 +12168,7 @@ void Unit::MonsterMoveJump(float x, float y, float z, float speed, float height,
         InterruptNonMeleeSpells(false);
     }
 
-    GetMotionMaster()->MoveJump(x, y, z, speed, height, 0, isKnockBack);
+    GetMotionMaster()->MoveJump(x, y, z, speed, height, 0);
 }
 
 struct SetPvPHelper
@@ -12535,7 +12602,7 @@ void Unit::_AddAura(uint32 spellID, uint32 duration, Unit * caster)
                     spellInfo->Effect[i] == SPELL_EFFECT_APPLY_AURA  ||
                     spellInfo->Effect[i] == SPELL_EFFECT_PERSISTENT_AREA_AURA )
                 {
-                    holder->CreateAura(spellInfo, SpellEffectIndex(i), NULL, holder, this, NULL, NULL);
+                    Aura *aura = holder->CreateAura(spellInfo, SpellEffectIndex(i), NULL, holder, this, NULL, NULL);
                     holder->SetAuraDuration(duration);
                     DEBUG_FILTER_LOG(LOG_FILTER_SPELL_CAST, "Manually adding aura of spell %u, index %u, duration %u ms", spellID, i, duration);
                 }
@@ -12595,7 +12662,7 @@ public:
         {
             MaNGOS::PlayerRelocationNotifier notify((Player&)m_owner);
             Cell::VisitAllObjects(&m_owner,notify,radius);
-        }
+        } 
         else //if(m_owner.GetTypeId() == TYPEID_UNIT)
         {
             MaNGOS::CreatureRelocationNotifier notify((Creature&)m_owner);

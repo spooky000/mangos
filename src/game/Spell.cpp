@@ -2151,7 +2151,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                         next = itr;
                         ++next;
 
-                        if (!(*itr)->HasInArc(M_PI_F, caster))
+                        if (!(*itr)->HasInArc(M_PI_F/2, caster))
                             targetUnitMap.erase(itr);
                     }
                 }
@@ -6158,11 +6158,10 @@ SpellCastResult Spell::CheckCast(bool strict)
             case SPELL_EFFECT_LEAP:
             case SPELL_EFFECT_TELEPORT_UNITS_FACE_CASTER:
             {
-                // Not used yet...
-                /*float direction = (m_spellInfo->Effect[i] == SPELL_EFFECT_LEAP_BACK ? M_PI + m_caster->GetOrientation() : m_caster->GetOrientation());
+                float direction = (m_spellInfo->Effect[i] == SPELL_EFFECT_LEAP_BACK ? M_PI + m_caster->GetOrientation() : m_caster->GetOrientation());
                 float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[i]));
                 float fx = m_caster->GetPositionX() + dis * cos(direction);
-                float fy = m_caster->GetPositionY() + dis * sin(direction);*/
+                float fy = m_caster->GetPositionY() + dis * sin(direction);
 
                 // simple check for avoid falling under map
                 /*if (!m_caster->GetTerrain()->IsNextZcoordOK(fx, fy, m_caster->GetPositionZ(), 40.0f))
@@ -6222,6 +6221,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                     case 40856:                             // Wrangling Rope
                         if (target && target->GetHealthPercent() > 40)
                             return SPELL_FAILED_BAD_TARGETS;
+                        break;
                     case 34026:                             // Kill Command
                         if (!m_caster->GetPet())
                             return SPELL_FAILED_NO_PET;
@@ -6747,9 +6747,7 @@ SpellCastResult Spell::CheckRange(bool strict)
     switch(m_spellInfo->rangeIndex)
     {
         // self cast doesn't need range checking -- also for Starshards fix
-        // spells that can be cast anywhere also need no check
         case SPELL_RANGE_IDX_SELF_ONLY:
-        case SPELL_RANGE_IDX_ANYWHERE:
             return SPELL_CAST_OK;
         // combat range spells are treated differently
         case SPELL_RANGE_IDX_COMBAT:

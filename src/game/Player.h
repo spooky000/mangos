@@ -564,7 +564,8 @@ enum AtLoginFlags
     AT_LOGIN_FIRST             = 0x20,
     AT_LOGIN_CHANGE_FACTION    = 0x40,
     AT_LOGIN_CHANGE_RACE       = 0x80,
-    AT_LOGIN_CHECK_TITLES      = 0x100
+    AT_LOGIN_CHECK_TITLES      = 0x100,
+    CUSTOMFLAG_DOUBLE_RATE     = 0x200
 };
 
 typedef std::map<uint32, QuestStatusData> QuestStatusMap;
@@ -1837,6 +1838,9 @@ class MANGOS_DLL_SPEC Player : public Unit
         void DestroyForPlayer( Player *target, bool anim = false ) const;
         void SendLogXPGain(uint32 GivenXP,Unit* victim,uint32 RestXP);
 
+        uint8 LastSwingErrorMsg() const { return m_swingErrorMsg; }
+        void SwingErrorMsg(uint8 val) { m_swingErrorMsg = val; }
+
         // notifiers
         void SendAttackSwingCantAttack();
         void SendAttackSwingCancelAttack();
@@ -2624,7 +2628,9 @@ class MANGOS_DLL_SPEC Player : public Unit
         Runes *m_runes;
         EquipmentSets m_EquipmentSets;
 
-        /// class dependent melee diminishing constant for dodge/parry/missed chances
+        uint8 m_GrantableLevelsCount;
+
+        // class dependent melee diminishing constant for dodge/parry/missed chances
         static const float m_diminishing_k[MAX_CLASSES];
 
     private:

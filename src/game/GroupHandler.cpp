@@ -739,7 +739,6 @@ void WorldSession::BuildPartyMemberStatsChangedPacket(Player *player, WorldPacke
 
     if (mask & GROUP_UPDATE_FLAG_AURAS)
     {
-        MAPLOCK_READ(player,MAP_LOCK_TYPE_AURAS);
         const uint64& auramask = player->GetAuraUpdateMask();
         *data << uint64(auramask);
         for(uint32 i = 0; i < MAX_AURAS; ++i)
@@ -816,7 +815,6 @@ void WorldSession::BuildPartyMemberStatsChangedPacket(Player *player, WorldPacke
     {
         if(pet)
         {
-            MAPLOCK_READ(pet,MAP_LOCK_TYPE_AURAS);
             const uint64& auramask = pet->GetAuraUpdateMask();
             *data << uint64(auramask);
             for(uint32 i = 0; i < MAX_AURAS; ++i)
@@ -909,7 +907,6 @@ void WorldSession::HandleRequestPartyMemberStatsOpcode( WorldPacket &recv_data )
     data << uint64(auramask);                               // placeholder
     for(uint8 i = 0; i < MAX_AURAS; ++i)
     {
-        MAPLOCK_READ(player,MAP_LOCK_TYPE_AURAS);
         if(uint32 aura = player->GetVisibleAura(i))
         {
             auramask |= (uint64(1) << i);
@@ -936,7 +933,6 @@ void WorldSession::HandleRequestPartyMemberStatsOpcode( WorldPacket &recv_data )
         data << uint64(petauramask);                        // placeholder
         for(uint8 i = 0; i < MAX_AURAS; ++i)
         {
-            MAPLOCK_READ(pet,MAP_LOCK_TYPE_AURAS);
             if(uint32 petaura = pet->GetVisibleAura(i))
             {
                 petauramask |= (uint64(1) << i);

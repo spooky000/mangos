@@ -1148,7 +1148,7 @@ bool AuctionBotSeller::Initialize()
                         continue;
                 }
 
-                if ((prototype->BagFamily & BAG_FAMILY_MASK_INSCRIPTION_SUPP) && (prototype->Class & ITEM_CLASS_QUEST))
+                if ((prototype->BagFamily & BAG_FAMILY_MASK_INSCRIPTION_SUPP) && (prototype->Class == ITEM_CLASS_QUEST))
                 {
                     // skip darkmoon cards if disabled
                     if (!sAuctionBotConfig.getConfig(CONFIG_BOOL_AHBOT_DM_CARDS_ENABLED))
@@ -1493,7 +1493,7 @@ bool AuctionBotSeller::getRandomArray( AHB_Seller_Config& config, RandomArray& r
 }
 
 // Set items price. All important value are passed by address.
-void AuctionBotSeller::SetPricesOfItem(ItemPrototype const * /*itemProto*/, AHB_Seller_Config& config, uint32& buyp, uint32& bidp, uint32 stackcnt, ItemQualities itemQuality)
+void AuctionBotSeller::SetPricesOfItem(ItemPrototype const *itemProto, AHB_Seller_Config& config, uint32& buyp, uint32& bidp, uint32 stackcnt, ItemQualities itemQuality)
 {
     double temp_buyp = buyp * stackcnt *
         (itemQuality < MAX_AUCTION_QUALITY ? config.GetPriceRatioPerQuality(AuctionQuality(itemQuality)) : 1) ;

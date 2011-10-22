@@ -22,6 +22,7 @@
 #include "Player.h"
 #include "Opcodes.h"
 #include "Chat.h"
+#include "GossipDef.h"
 #include "ObjectAccessor.h"
 #include "Language.h"
 #include "AccountMgr.h"
@@ -241,5 +242,43 @@ bool ChatHandler::HandleAccountLockCommand(char* args)
 bool ChatHandler::HandleServerMotdCommand(char* /*args*/)
 {
     PSendSysMessage(LANG_MOTD_CURRENT, sWorld.GetMotd());
+    return true;
+}
+
+/// Display the gossip of rate changer
+bool ChatHandler::HandleRatesCommand(char* /*args*/)
+{
+    Player * player = m_session->GetPlayer();
+
+    uint32 text = 110100;
+
+    bool hasXPIncreased = player->HasAtLoginFlag(CUSTOMFLAG_DOUBLE_RATE);
+
+    if (hasXPIncreased)
+        text = 110102;
+
+    if(player->getLevel() >= 60)
+        text = 110101;
+
+    player->PlayerTalkClass->ClearMenus();
+
+    if (text != 110101) // If we havent enough level dont process items
+    {
+        if (hasXPIncreased)
+            player->PlayerTalkClass->GetGossipMenu().AddMenuItem(GOSSIP_ICON_BATTLE, "Change leveling rates to 1x", 1 , 10000,"",0);
+        else
+            player->PlayerTalkClass->GetGossipMenu().AddMenuItem(GOSSIP_ICON_BATTLE, "Change leveling rates to 2x", 1, 10001,"",0);
+
+        player->PlayerTalkClass->GetGossipMenu().AddMenuItem(GOSSIP_ICON_DOT, "Close.", 1, 10002,"",0);
+    }
+
+    // If gossip is not empty, close it before adding news one
+    if (!player->PlayerTalkClass->GetGossipMenu().Empty())
+        player->PlayerTalkClass->CloseGossip();
+
+    player->PlayerTalkClass->SendTalking(text);
+
+    player->PlayerTalkClass->SendGossipMenu(text, player->GetObjectGuid());
+
     return true;
 }
