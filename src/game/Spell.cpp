@@ -1971,7 +1971,9 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 if(!prev->IsWithinDist(*next, CHAIN_SPELL_JUMP_RADIUS))
                     break;
 
-                if(!prev->IsWithinLOSInMap(*next) || ((m_spellInfo->AttributesEx6 & SPELL_ATTR_EX6_IGNORE_CCED_TARGETS) && !(*next)->CanFreeMove()))
+                if(!prev->IsWithinLOSInMap(*next)
+                    || ((m_spellInfo->AttributesEx6 & SPELL_ATTR_EX6_IGNORE_CCED_TARGETS) && !(*next)->CanFreeMove())
+                    || (*next)->GetCreatureType() == CREATURE_TYPE_CRITTER)
                 {
                     ++next;
                     continue;
@@ -2149,7 +2151,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                         next = itr;
                         ++next;
 
-                        if (!(*itr)->HasInArc(M_PI_F, caster))
+                        if (!(*itr)->HasInArc(M_PI_F/2, caster))
                             targetUnitMap.erase(itr);
                     }
                 }
@@ -6219,6 +6221,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                     case 40856:                             // Wrangling Rope
                         if (target && target->GetHealthPercent() > 40)
                             return SPELL_FAILED_BAD_TARGETS;
+                        break;
                     case 34026:                             // Kill Command
                         if (!m_caster->GetPet())
                             return SPELL_FAILED_NO_PET;
@@ -6442,8 +6445,8 @@ SpellCastResult Spell::CheckPetCast(Unit* target)
                 need = true;
                 if(!target)
                 {
-                    return SPELL_FAILED_BAD_IMPLICIT_TARGETS;
                     DEBUG_LOG("Charmed creature attempt to cast spell %u, but no required target",m_spellInfo->Id);
+                    return SPELL_FAILED_BAD_IMPLICIT_TARGETS;
                 }
                 break;
             }

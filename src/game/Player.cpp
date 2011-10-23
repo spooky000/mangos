@@ -387,7 +387,7 @@ Player::Player (WorldSession *session): Unit(), m_mover(this), m_camera(this), m
 
     m_valuesCount = PLAYER_END;
 
-    m_isActiveObject = true;                                // player is always active object
+    SetActiveObjectState(true);                                // player is always active object
 
     m_session = session;
 
@@ -553,6 +553,9 @@ Player::Player (WorldSession *session): Unit(), m_mover(this), m_camera(this), m
 
     m_lastFallTime = 0;
     m_lastFallZ = 0;
+
+    // Refer-A-Friend
+    m_GrantableLevelsCount = 0;
 
     SetPendingBind(NULL, 0);
     m_LFGState = new LFGPlayerState(this);
@@ -1237,71 +1240,11 @@ void Player::Update( uint32 update_diff, uint32 p_time )
 
     if (hasUnitState(UNIT_STAT_MELEE_ATTACKING))
     {
-        Unit *pVictim = (getVictim() && getVictim()->IsInWorld()) ? getVictim() : NULL;
+        UpdateMeleeAttackingState();
+
+        Unit *pVictim = getVictim();
         if (pVictim && !IsNonMeleeSpellCasted(false))
         {
-            // default combat reach 10
-            // TODO add weapon,skill check
-
-            if (isAttackReady(BASE_ATTACK))
-            {
-                if (!CanReachWithMeleeAttack(pVictim, 0.0f))
-                {
-                    setAttackTimer(BASE_ATTACK,100);
-                    if (m_swingErrorMsg != 1)               // send single time (client auto repeat)
-                    {
-                        SendAttackSwingNotInRange();
-                        m_swingErrorMsg = 1;
-                    }
-                }
-                //120 degrees of radiant range
-                else if (!HasInArc(2*M_PI_F/3, pVictim))
-                {
-                    setAttackTimer(BASE_ATTACK,100);
-                    if (m_swingErrorMsg != 2)               // send single time (client auto repeat)
-                    {
-                        SendAttackSwingBadFacingAttack();
-                        m_swingErrorMsg = 2;
-                    }
-                }
-                else
-                {
-                    m_swingErrorMsg = 0;                    // reset swing error state
-
-                    // prevent base and off attack in same time, delay attack at 0.2 sec
-                    if (haveOffhandWeapon())
-                    {
-                        uint32 off_att = getAttackTimer(OFF_ATTACK);
-                        if(off_att < ATTACK_DISPLAY_DELAY)
-                            setAttackTimer(OFF_ATTACK,ATTACK_DISPLAY_DELAY);
-                    }
-                    AttackerStateUpdate(pVictim, BASE_ATTACK);
-                    resetAttackTimer(BASE_ATTACK);
-                }
-            }
-
-            if (haveOffhandWeapon() && isAttackReady(OFF_ATTACK))
-            {
-                if (!CanReachWithMeleeAttack(pVictim, 0.0f))
-                {
-                    setAttackTimer(OFF_ATTACK,100);
-                }
-                else if (!HasInArc(2*M_PI_F/3, pVictim))
-                {
-                    setAttackTimer(OFF_ATTACK,100);
-                }
-                else
-                {
-                    // prevent base and off attack in same time, delay attack at 0.2 sec
-                    uint32 base_att = getAttackTimer(BASE_ATTACK);
-                    if(base_att < ATTACK_DISPLAY_DELAY)
-                        setAttackTimer(BASE_ATTACK,ATTACK_DISPLAY_DELAY);
-                    // do attack
-                    AttackerStateUpdate(pVictim, OFF_ATTACK);
-                    resetAttackTimer(OFF_ATTACK);
-                }
-            }
-
             Player *vOwner = pVictim->GetCharmerOrOwnerPlayerOrPlayerItself();
             if (vOwner && vOwner->IsPvP() && !IsInDuelWith(vOwner))
             {
@@ -1684,41 +1627,37 @@ bool Player::BuildEnumData( QueryResult * result, WorldPacket * p_data )
     return true;
 }
 
-bool Player::ToggleAFK()
+void Player::ToggleAFK()
 {
     ToggleFlag(PLAYER_FLAGS, PLAYER_FLAGS_AFK);
 
-    bool state = HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_AFK);
-
     // afk player not allowed in battleground
-    if (state && InBattleGround() && !InArena())
+    if (isAFK() && InBattleGround() && !InArena())
         LeaveBattleground();
-
-    return state;
 }
 
-bool Player::ToggleDND()
+void Player::ToggleDND()
 {
     ToggleFlag(PLAYER_FLAGS, PLAYER_FLAGS_DND);
-
-    return HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_DND);
 }
 
 uint8 Player::chatTag() const
 {
     // it's bitmask
-    // 0x8 - ??
-    // 0x4 - gm
-    // 0x2 - dnd
     // 0x1 - afk
-    if(isGMChat())
+    // 0x2 - dnd
+    // 0x4 - gm
+    // 0x8 - ??
+
+    if (isGMChat())                                         // Always show GM icons if activated
         return 4;
-    else if(isDND())
-        return 3;
-    if(isAFK())
+
+    if (isAFK())
         return 1;
-    else
-        return 0;
+    if (isDND())
+        return 3;
+
+    return 0;
 }
 
 bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientation, uint32 options)
@@ -2568,6 +2507,14 @@ void Player::GiveXP(uint32 xp, Unit* victim)
     // XP to money conversion processed in Player::RewardQuest
     if(level >= sWorld.getConfig(CONFIG_UINT32_MAX_PLAYER_LEVEL))
         return;
+
+    if(HasAtLoginFlag(CUSTOMFLAG_DOUBLE_RATE))
+    {
+        if(level < 60)
+            xp *= 2;
+        else
+            RemoveAtLoginFlag(CUSTOMFLAG_DOUBLE_RATE);
+    }
 
     if(victim)
     {
@@ -4661,11 +4608,6 @@ void Player::KillPlayer()
     UpdateCorpseReclaimDelay();                             // dependent at use SetDeathPvP() call before kill
 
     // don't create corpse at this moment, player might be falling
-    if (InBattleGround())
-    {
-        if (BattleGround* bg = GetBattleGround())
-            bg->HandlePlayerResurrect(this);
-    }
 
     // update visibility
     UpdateObjectVisibility();
@@ -7546,8 +7488,6 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
 
 void Player::_ApplyWeaponDependentAuraMods(Item *item,WeaponAttackType attackType,bool apply)
 {
-    MAPLOCK_READ(this,MAP_LOCK_TYPE_AURAS);
-
     AuraList const& auraCritList = GetAurasByType(SPELL_AURA_MOD_CRIT_PERCENT);
     for(AuraList::const_iterator itr = auraCritList.begin(); itr!=auraCritList.end();++itr)
         _ApplyWeaponDependentAuraCritMod(item,attackType,*itr,apply);
@@ -15631,7 +15571,7 @@ void Player::SendQuestReward( Quest const *pQuest, uint32 XP, Object * questGive
     else
     {
         data << uint32(0);
-        data << uint32(pQuest->GetRewOrReqMoney() + int32(pQuest->GetRewMoneyMaxLevel() * sWorld.getConfig(CONFIG_FLOAT_RATE_DROP_MONEY)));
+        data << uint32(int32(pQuest->GetRewMoneyMaxLevel() * sWorld.getConfig(CONFIG_FLOAT_RATE_DROP_MONEY)));
     }
 
     data << uint32(10*MaNGOS::Honor::hk_honor_at_level(getLevel(), pQuest->GetRewHonorAddition()));
@@ -15879,8 +15819,8 @@ bool Player::LoadFromDB(ObjectGuid guid, SqlQueryHolder *holder )
     //"resettalents_time, trans_x, trans_y, trans_z, trans_o, transguid, extra_flags, stable_slots, at_login, zone, online, death_expire_time, taxi_path, dungeon_difficulty,"
     // 39           40                41                42                    43          44          45              46           47               48              49
     //"arenaPoints, totalHonorPoints, todayHonorPoints, yesterdayHonorPoints, totalKills, todayKills, yesterdayKills, chosenTitle, knownCurrencies, watchedFaction, drunk,"
-    // 50      51      52      53      54      55      56      57      58         59          60             61              62      63           64
-    //"health, power1, power2, power3, power4, power5, power6, power7, specCount, activeSpec, exploredZones, equipmentCache, ammoId, knownTitles, actionBars  FROM characters WHERE guid = '%u'", GUID_LOPART(m_guid));
+    // 50      51      52      53      54      55      56      57      58         59          60             61              62      63           64          65
+    //"health, power1, power2, power3, power4, power5, power6, power7, specCount, activeSpec, exploredZones, equipmentCache, ammoId, knownTitles, actionBars, grantableLevels  FROM characters WHERE guid = '%u'", GUID_LOPART(m_guid));
     QueryResult *result = holder->GetResult(PLAYER_LOGIN_QUERY_LOADFROM);
 
     if(!result)
@@ -16303,6 +16243,8 @@ bool Player::LoadFromDB(ObjectGuid guid, SqlQueryHolder *holder )
 
     m_specsCount = fields[58].GetUInt8();
     m_activeSpec = fields[59].GetUInt8();
+
+    m_GrantableLevelsCount = fields[65].GetUInt32();
 
     _LoadGlyphs(holder->GetResult(PLAYER_LOGIN_QUERY_LOADGLYPHS));
 
@@ -17890,7 +17832,7 @@ void Player::SaveToDB()
         "trans_x, trans_y, trans_z, trans_o, transguid, extra_flags, stable_slots, at_login, zone, "
         "death_expire_time, taxi_path, arenaPoints, totalHonorPoints, todayHonorPoints, yesterdayHonorPoints, totalKills, "
         "todayKills, yesterdayKills, chosenTitle, knownCurrencies, watchedFaction, drunk, health, power1, power2, power3, "
-        "power4, power5, power6, power7, specCount, activeSpec, exploredZones, equipmentCache, ammoId, knownTitles, actionBars) "
+        "power4, power5, power6, power7, specCount, activeSpec, exploredZones, equipmentCache, ammoId, knownTitles, actionBars, grantableLevels) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
         "?, ?, ?, ?, ?, ?, "
         "?, ?, ?, "
@@ -17898,7 +17840,7 @@ void Player::SaveToDB()
         "?, ?, ?, ?, ?, ?, ?, ?, ?, "
         "?, ?, ?, ?, ?, ?, ?, "
         "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ");
+        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ");
 
     uberInsert.addUInt32(GetGUIDLow());
     uberInsert.addUInt32(GetSession()->GetAccountId());
@@ -18025,6 +17967,8 @@ void Player::SaveToDB()
     uberInsert.addString(ss);
 
     uberInsert.addUInt32(uint32(GetByteValue(PLAYER_FIELD_BYTES, 2)));
+
+    uberInsert.addUInt32(uint32(m_GrantableLevelsCount));
 
     uberInsert.Execute();
 
@@ -19077,40 +19021,29 @@ void Player::Whisper(const std::string& text, uint32 language, ObjectGuid receiv
 
     Player *rPlayer = sObjectMgr.GetPlayer(receiver);
 
-    // when player you are whispering to is dnd, he cannot receive your message, unless you are in gm mode
-    if(!rPlayer->isDND() || isGameMaster())
-    {
-        WorldPacket data(SMSG_MESSAGECHAT, 200);
-        BuildPlayerChat(&data, CHAT_MSG_WHISPER, text, language);
-        rPlayer->GetSession()->SendPacket(&data);
+    WorldPacket data(SMSG_MESSAGECHAT, 200);
+    BuildPlayerChat(&data, CHAT_MSG_WHISPER, text, language);
+    rPlayer->GetSession()->SendPacket(&data);
 
-        // not send confirmation for addon messages
-        if (language != LANG_ADDON)
-        {
-            data.Initialize(SMSG_MESSAGECHAT, 200);
-            rPlayer->BuildPlayerChat(&data, CHAT_MSG_WHISPER_INFORM, text, language);
-            GetSession()->SendPacket(&data);
-        }
-    }
-    else
+    // not send confirmation for addon messages
+    if (language != LANG_ADDON)
     {
-        // announce to player that player he is whispering to is dnd and cannot receive his message
-        ChatHandler(this).PSendSysMessage(LANG_PLAYER_DND, rPlayer->GetName(), rPlayer->dndMsg.c_str());
+        data.Initialize(SMSG_MESSAGECHAT, 200);
+        rPlayer->BuildPlayerChat(&data, CHAT_MSG_WHISPER_INFORM, text, language);
+        GetSession()->SendPacket(&data);
     }
 
-    if(!isAcceptWhispers())
+    if (!isAcceptWhispers())
     {
         SetAcceptWhispers(true);
         ChatHandler(this).SendSysMessage(LANG_COMMAND_WHISPERON);
     }
 
-    // announce to player that player he is whispering to is afk
-    if(rPlayer->isAFK())
-        ChatHandler(this).PSendSysMessage(LANG_PLAYER_AFK, rPlayer->GetName(), rPlayer->afkMsg.c_str());
-
-    // if player whisper someone, auto turn of dnd to be able to receive an answer
-    if(isDND() && !rPlayer->isGameMaster())
-        ToggleDND();
+    // announce afk or dnd message
+    if (rPlayer->isAFK())
+        ChatHandler(this).PSendSysMessage(LANG_PLAYER_AFK, rPlayer->GetName(), rPlayer->autoReplyMsg.c_str());
+    else if (rPlayer->isDND())
+        ChatHandler(this).PSendSysMessage(LANG_PLAYER_DND, rPlayer->GetName(), rPlayer->autoReplyMsg.c_str());
 }
 
 void Player::PetSpellInitialize()
@@ -21253,7 +21186,6 @@ void Player::SendAurasForTarget(Unit *target)
     WorldPacket data(SMSG_AURA_UPDATE_ALL);
     data << target->GetPackGUID();
 
-    MAPLOCK_READ(target,MAP_LOCK_TYPE_AURAS);
     Unit::VisibleAuraMap const& visibleAuras = target->GetVisibleAuras();
     for (Unit::VisibleAuraMap::const_iterator itr = visibleAuras.begin(); itr != visibleAuras.end(); ++itr)
     {
@@ -23537,6 +23469,65 @@ void Player::DeleteEquipmentSet(uint64 setGuid)
     }
 }
 
+void Player::RemoveBuffsAtSpecChange()
+{
+    for(SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end();)
+    {
+        SpellAuraHolderPtr AuraPtr = iter->second;
+
+        const SpellEntry * pSpell = AuraPtr->GetSpellProto();
+        if (!(pSpell->AttributesEx4 & SPELL_ATTR_EX4_UNK21) &&  // don't remove stances, shadowform, pally/hunter auras
+            !AuraPtr->IsPassive() &&                       // don't remove passive auras
+            (!(pSpell->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY) ||
+            !(AuraPtr->GetSpellProto()->Attributes & SPELL_ATTR_HIDE_IN_COMBAT_LOG)) &&
+            AuraPtr->GetCaster() == this && AuraPtr->IsPositive() && // don't remove other player and negative auras
+            AuraPtr->GetSpellProto()->SpellFamilyName != SPELLFAMILY_POTION && // don't remove potion buffs
+            // not unaffected by invulnerability auras or not having that unknown flag (that seemed the most probable)
+            AuraPtr->GetId() != SPELL_ARENA_PREPARATION && AuraPtr->GetId() != SPELL_PREPARATION)        // remove positive buffs on enter, negative buffs on leave
+        {
+            RemoveSpellAuraHolder(AuraPtr);
+            iter = m_spellAuraHolders.begin();
+        }
+        else
+            ++iter;
+    }
+
+    Group * group = GetGroup();
+    if (!group)
+        return;
+
+    for(GroupReference *itr = group->GetFirstMember(); itr != NULL; itr = itr->next())
+    {
+        if (Player *pGroupGuy = itr->getSource())
+        {
+            // dont remove my auras from myself (already done outside the group loop)
+            if (pGroupGuy->GetObjectGuid() == GetObjectGuid())
+                continue;
+
+            for(SpellAuraHolderMap::iterator iter = pGroupGuy->GetSpellAuraHolderMap().begin(); iter != pGroupGuy->GetSpellAuraHolderMap().end();)
+            {
+                SpellAuraHolderPtr AuraPtr = iter->second;
+
+                const SpellEntry * pSpell = AuraPtr->GetSpellProto();
+                if (!(pSpell->AttributesEx4 & SPELL_ATTR_EX4_UNK21) &&  // don't remove stances, shadowform, pally/hunter auras
+                    !AuraPtr->IsPassive() &&                       // don't remove passive auras
+                    (!(pSpell->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY) ||
+                    !(AuraPtr->GetSpellProto()->Attributes & SPELL_ATTR_HIDE_IN_COMBAT_LOG)) &&
+                    AuraPtr->GetCaster() == this && AuraPtr->IsPositive() && // don't remove other player and negative auras
+                    AuraPtr->GetSpellProto()->SpellFamilyName != SPELLFAMILY_POTION && // don't remove potion buffs
+                    // not unaffected by invulnerability auras or not having that unknown flag (that seemed the most probable)
+                    AuraPtr->GetId() != SPELL_ARENA_PREPARATION && AuraPtr->GetId() != SPELL_PREPARATION)        // remove positive buffs on enter, negative buffs on leave
+                {
+                    pGroupGuy->RemoveSpellAuraHolder(AuraPtr);
+                    iter = pGroupGuy->GetSpellAuraHolderMap().begin();
+                }
+                else
+                    ++iter;
+            }
+        }
+    }
+}
+
 void Player::ActivateSpec(uint8 specNum)
 {
     if(GetActiveSpec() == specNum)
@@ -23554,7 +23545,7 @@ void Player::ActivateSpec(uint8 specNum)
     ClearComboPointHolders();
     ClearAllReactives();
     RemoveAllEnchantments(TEMP_ENCHANTMENT_SLOT);
-    RemoveArenaAuras();
+    RemoveBuffsAtSpecChange();
 
     // prevent deletion of action buttons by client at spell unlearn or by player while spec change in progress
     SendLockActionButtons();

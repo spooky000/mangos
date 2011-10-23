@@ -54,7 +54,6 @@
 #include "InstanceData.h"
 #include "CreatureEventAIMgr.h"
 #include "DBCEnums.h"
-#include "GossipDef.h"
 #include "AuctionHouseBot/AuctionHouseBot.h"
 
 static uint32 ahbotQualityIds[MAX_AUCTION_QUALITY] =
@@ -5296,65 +5295,6 @@ bool ChatHandler::HandleServerIdleShutDownCommand(char* args)
         return false;
 
     sWorld.ShutdownServ(delay, SHUTDOWN_MASK_IDLE, exitcode);
-    return true;
-}
-
-bool ChatHandler::HandleNewsGossipCommand(char* args)
-{
-    Player* player;
-    ObjectGuid target_guid;
-
-    if (!ExtractPlayerTarget(&args,&player,&target_guid))
-        return false;
-    if (!player)
-        return false;
-
-    char* cId = strtok(NULL, " ");
-    uint32 entry;
-
-    cId ? entry = atol(cId) : 0;
-
-    player->PlayerTalkClass->ClearMenus();
-    uint32 textId = 110001;
-    for( std::multimap<uint32,GCNewsData>::iterator itr = sObjectMgr.mGCNewsMap.begin(); itr != sObjectMgr.mGCNewsMap.end(); ++itr )
-    {
-        GCNewsData const& news = (*itr).second;
-        if(news.parent == entry)
-            switch (news.type)
-            {
-                case 3:
-                {
-                    // we add a level up item for that we need to know the parents parent.
-                    std::multimap<uint32,GCNewsData>::iterator itr2 = sObjectMgr.mGCNewsMap.find(entry);
-                    // if there actually is a parent
-                    if( itr2 != sObjectMgr.mGCNewsMap.end() )
-                        player->PlayerTalkClass->GetGossipMenu().AddMenuItem(GOSSIP_ICON_BATTLE,news.textstring,1,(*itr2).second.parent,"",0);
-                    break;
-                }
-                case 2:
-                    // we add a icon that can be clicked
-                    player->PlayerTalkClass->GetGossipMenu().AddMenuItem(GOSSIP_ICON_INTERACT_1,news.textstring,1,(*itr).first,"",0);
-                    break;
-                case 1:
-                    // we add normal text, on click it will lead to same menu.
-                    player->PlayerTalkClass->GetGossipMenu().AddMenuItem(GOSSIP_ICON_DOT,news.textstring,1,entry,"",0);
-                    break;
-                case 0:
-                    // we set the correct text
-                    textId = atoi(news.textstring.c_str());
-                    break;
-            }
-    }
-    player->PlayerTalkClass->SendTalking(textId);
-
-    if (player->PlayerTalkClass->GetGossipMenu().Empty())
-        player->PlayerTalkClass->CloseGossip();
-    else 
-    {
-        player->PlayerTalkClass->SendGossipMenu(textId, player->GetObjectGuid());
-        player->PlayerTalkClass->SendGossipMenu(textId, player->GetObjectGuid());
-        PSendSysMessage("Sending News Gossip nr. %u to player GUID: %s",entry,target_guid.GetString().c_str());
-    }
     return true;
 }
 

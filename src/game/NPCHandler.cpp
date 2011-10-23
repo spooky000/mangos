@@ -361,6 +361,18 @@ void WorldSession::HandleGossipSelectOptionOpcode( WorldPacket & recv_data )
     if (guid.IsPlayer())
     {
         uint32 gossipOptionId = _player->PlayerTalkClass->GetGossipMenu().GetItem(gossipListId).m_gOptionId;
+
+        if (gossipOptionId == 10000)
+        {
+            _player->RemoveAtLoginFlag(CUSTOMFLAG_DOUBLE_RATE);
+            SendAreaTriggerMessage("Experience rates are now set to 1x");
+        }
+        if (gossipOptionId == 10001)
+        {
+             _player->SetAtLoginFlag(CUSTOMFLAG_DOUBLE_RATE);
+             SendAreaTriggerMessage("Experience rates are now set to 2x");
+        }
+
         uint32 textId = 110001;
         _player->PlayerTalkClass->ClearMenus();
         sLog.outDetail("WORLD: HandleGossipSelectOptionOpcode - Sent from player (GC News handler) menuId %i gossip list %i and id is %i ", menuId, gossipListId, gossipOptionId);

@@ -2068,10 +2068,9 @@ void Aura::TriggerSpell()
             {
                 if( triggeredSpellInfo->Id == 54363 ) // If it triggers our hacky-moded spell
                 {
-                    uint32 irangeIndex;
-                    if( GetAuraDuration() > 50000 )
-                        irangeIndex = 7; // 2 yards
-                    else if( GetAuraDuration() > 40000 && GetAuraDuration() < 50000 )
+                    uint32 irangeIndex = 7; // 2 yards
+
+                    if( GetAuraDuration() > 40000 && GetAuraDuration() < 50000 )
                         irangeIndex = 8; // 5 yards
                     else if( GetAuraDuration() > 30000 && GetAuraDuration() < 40000 )
                         irangeIndex = 14; // 8 yards
@@ -2545,7 +2544,7 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                 if (GetSpellProto()->SpellFamilyFlags.test<CF_WARRIOR_OVERPOWER>())
                 {
                     // Must be casting target
-                    if (!target->IsNonMeleeSpellCasted(false))
+                    if (!target->IsNonMeleeSpellCasted(false, false, true, true))
                         return;
 
                     Unit* caster = GetCaster();
@@ -7636,7 +7635,7 @@ void Aura::HandleShapeshiftBoosts(bool apply)
                 SpellEntry const *spellInfo = sSpellStore.LookupEntry(itr->first);
                 if (!spellInfo || !IsPassiveSpell(spellInfo))
                     continue;
-                if ((spellInfo->AttributesEx2 & SPELL_ATTR_EX2_NOT_NEED_SHAPESHIFT) && spellInfo->StancesNot & (1<<(form-1)))
+                if ((spellInfo->AttributesEx2 & SPELL_ATTR_EX2_NOT_NEED_SHAPESHIFT) && spellInfo->StancesNot & (1<<(form-1)) || (spellInfo->Id == 66530 && form == FORM_DIREBEAR))
                     target->CastSpell(target, itr->first, true, NULL, this);
             }
         }
@@ -9904,8 +9903,7 @@ void SpellAuraHolder::_AddSpellAuraHolder()
 {
     if (!GetId())
         return;
-
-    if (!m_target)
+    if(!m_target)
         return;
 
     // Try find slot for aura
@@ -9914,7 +9912,6 @@ void SpellAuraHolder::_AddSpellAuraHolder()
     // Lookup free slot
     if (m_target->GetVisibleAurasCount() < MAX_AURAS)
     {
-        MAPLOCK_READ(m_target,MAP_LOCK_TYPE_AURAS);
         Unit::VisibleAuraMap const& visibleAuras = m_target->GetVisibleAuras();
         for(uint8 i = 0; i < MAX_AURAS; ++i)
         {
@@ -9932,7 +9929,7 @@ void SpellAuraHolder::_AddSpellAuraHolder()
     Unit* caster = GetCaster();
 
     // set infinity cooldown state for spells
-    if (caster && caster->GetTypeId() == TYPEID_PLAYER)
+    if(caster && caster->GetTypeId() == TYPEID_PLAYER)
     {
         if (m_spellProto->Attributes & SPELL_ATTR_DISABLED_WHILE_ACTIVE)
         {
@@ -9955,7 +9952,7 @@ void SpellAuraHolder::_AddSpellAuraHolder()
     if (IsNeedVisibleSlot(caster))
     {
         SetAuraSlot( slot );
-        if (slot < MAX_AURAS)                        // slot found send data to client
+        if(slot < MAX_AURAS)                        // slot found send data to client
         {
             SetVisibleAura(false);
             SendAuraUpdate(false);
@@ -10016,7 +10013,7 @@ void SpellAuraHolder::_RemoveSpellAuraHolder()
 {
     // Remove all triggered by aura spells vs unlimited duration
     // except same aura replace case
-    if (m_removeMode!=AURA_REMOVE_BY_STACK)
+    if(m_removeMode!=AURA_REMOVE_BY_STACK)
         CleanupTriggeredSpells();
 
     Unit* caster = GetCaster();
@@ -10033,19 +10030,16 @@ void SpellAuraHolder::_RemoveSpellAuraHolder()
 
     //passive auras do not get put in slots - said who? ;)
     // Note: but totem can be not accessible for aura target in time remove (to far for find in grid)
-    //if (m_isPassive && !(caster && caster->GetTypeId() == TYPEID_UNIT && ((Creature*)caster)->IsTotem()))
+    //if(m_isPassive && !(caster && caster->GetTypeId() == TYPEID_UNIT && ((Creature*)caster)->IsTotem()))
     //    return;
 
     uint8 slot = GetAuraSlot();
 
-    if (slot >= MAX_AURAS)                                   // slot not set
+    if(slot >= MAX_AURAS)                                   // slot not set
         return;
 
-    {
-        MAPLOCK_READ(m_target,MAP_LOCK_TYPE_AURAS);
-        if (m_target->GetVisibleAura(slot) == 0)
-            return;
-    }
+    if(m_target->GetVisibleAura(slot) == 0)
+        return;
 
     // unregister aura diminishing (and store last time)
     if (getDiminishGroup() != DIMINISHING_NONE )
@@ -10066,7 +10060,7 @@ void SpellAuraHolder::_RemoveSpellAuraHolder()
         // Update target aura state flag (at last aura remove)
         //*****************************************************
         // Enrage aura state
-        if (m_spellProto->Dispel == DISPEL_ENRAGE)
+        if(m_spellProto->Dispel == DISPEL_ENRAGE)
             m_target->ModifyAuraState(AURA_STATE_ENRAGE, false);
 
         // Bleeding aura state
@@ -10141,12 +10135,12 @@ void SpellAuraHolder::_RemoveSpellAuraHolder()
                 }
             }
             // this was last holder
-            if (!found)
+            if(!found)
                 m_target->ModifyAuraState(AuraState(removeState), false);
         }
 
         // reset cooldown state for spells
-        if (caster && caster->GetTypeId() == TYPEID_PLAYER)
+        if(caster && caster->GetTypeId() == TYPEID_PLAYER)
         {
             if ( GetSpellProto()->Attributes & SPELL_ATTR_DISABLED_WHILE_ACTIVE )
                 // note: item based cooldowns and cooldown spell mods with charges ignored (unknown existing cases)

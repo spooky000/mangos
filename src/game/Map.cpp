@@ -1097,9 +1097,11 @@ bool Map::ActiveObjectsNearGrid(uint32 x, uint32 y) const
 void Map::AddToActive( WorldObject* obj )
 {
     m_activeNonPlayers.insert(obj);
+    Cell cell = Cell(MaNGOS::ComputeCellPair(obj->GetPositionX(), obj->GetPositionY()));
+    EnsureGridLoaded(cell);
 
     // also not allow unloading spawn grid to prevent creating creature clone at load
-    if (obj->GetTypeId()==TYPEID_UNIT)
+    if (obj->GetTypeId() == TYPEID_UNIT)
     {
         Creature* c= (Creature*)obj;
 
@@ -3444,15 +3446,17 @@ void Map::MonsterYellToMap(CreatureInfo const* cinfo, int32 textId, uint32 langu
  * Function to play sound to all players in map
  *
  * @param soundId Played Sound
+ * @param zoneId Id of the Zone to which the sound should be restricted
  */
-void Map::PlayDirectSoundToMap(uint32 soundId)
+void Map::PlayDirectSoundToMap(uint32 soundId, uint32 zoneId /*=0*/)
 {
     WorldPacket data(SMSG_PLAY_SOUND, 4);
     data << uint32(soundId);
 
     Map::PlayerList const& pList = GetPlayers();
     for (PlayerList::const_iterator itr = pList.begin(); itr != pList.end(); ++itr)
-        itr->getSource()->SendDirectMessage(&data);
+        if (!zoneId || itr->getSource()->GetZoneId() == zoneId)
+            itr->getSource()->SendDirectMessage(&data);
 }
 
 void Map::AddAttackerFor(ObjectGuid targetGuid, ObjectGuid attackerGuid)

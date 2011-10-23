@@ -24,7 +24,7 @@ class BattleGround;
 #define BG_SA_GRY_MAX   4
 #define BG_SA_GATE_MAX  6
 #define BG_SA_MAX_WS    3
-#define BG_SA_EVENT_START_BATTLE_1      23748
+#define BG_SA_EVENT_START_BATTLE_1      23748       // Ally / Horde likely
 #define BG_SA_EVENT_START_BATTLE_2      21702
 
 enum BG_SA_WorldStates
@@ -222,7 +222,6 @@ class BattleGroundSA : public BattleGround
         virtual void StartingEventCloseDoors();
         virtual void StartingEventOpenDoors();
         virtual void EventPlayerDamageGO(Player *player, GameObject* target_obj, uint32 eventId, uint32 doneBy = 0);
-        virtual void EventSpawnGOSA(Player *owner, Creature* obj, float x, float y, float z);
         virtual void FillInitialWorldStates(WorldPacket& data, uint32& count);
         virtual void EventPlayerClickedOnFlag(Player *source, GameObject* target_obj);
         virtual void HandleKillUnit(Creature* unit, Player* killer);

@@ -354,7 +354,7 @@ void BattleGroundSA::StartingEventOpenDoors()
 {
     SpawnEvent(SA_EVENT_ADD_NPC, 0, true);
     ToggleTimer();
-    StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, (defender  == HORDE) ? BG_SA_EVENT_START_BATTLE_1 : BG_SA_EVENT_START_BATTLE_2);
+    StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, (defender  == HORDE) ? BG_SA_EVENT_START_BATTLE_2 : BG_SA_EVENT_START_BATTLE_1);
 }
 
 void BattleGroundSA::RemovePlayer(Player* /*plr*/, ObjectGuid /*guid*/)
@@ -630,11 +630,6 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
             case 1: SpawnEvent(SA_EVENT_ADD_VECH_W, 0, true);break;
         }
     }
-}
-
-void BattleGroundSA::EventSpawnGOSA(Player *owner, Creature* obj, float x, float y, float z)
-{
-    SendMessageToAll(LANG_BG_SA_INSTALL_BOMB, (defender == ALLIANCE) ? CHAT_MSG_BG_SYSTEM_HORDE : CHAT_MSG_BG_SYSTEM_ALLIANCE , owner);
 }
 
 void BattleGroundSA::SendMessageSA(Player *player, uint32 type, uint32 name)

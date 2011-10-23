@@ -489,12 +489,6 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         }
                         break;
                     }
-                    // Gargoyle Strike
-                    case 51963:
-                    {
-                        damage += m_caster->GetTotalAttackPowerValue(BASE_ATTACK);
-                        break;
-                    }
                     // Biting Cold
                     case 62188:
                     {
@@ -1087,7 +1081,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                         if (Creature * pThane = unitTarget->GetClosestCreatureWithEntry(unitTarget, 26405, 15))
                         {
                             pThane->AddThreat(m_caster, 1);
-                            pThane->RemoveAurasDueToSpell(47922);
+                            pThane->RemoveAurasDueToSpell(47922); // Remove immunity from Thane
                         }
                     }
                     return;
@@ -3754,7 +3748,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 }
 
                 //Any effect which causes you to lose control of your character will supress the starfall effect.
-                if (m_caster->hasUnitState(UNIT_STAT_NO_FREE_MOVE))
+                if (m_caster->hasUnitState(UNIT_STAT_NO_FREE_MOVE & ~ UNIT_STAT_ROOT))
                     return;
 
                 if (unitTarget->isVisibleForOrDetect(m_caster,m_caster,false))
@@ -4722,32 +4716,6 @@ void Spell::EffectTeleportUnits(SpellEffectIndex eff_idx)
     if(!unitTarget || unitTarget->IsTaxiFlying())
         return;
 
-    switch (m_spellInfo->Id)
-    {
-        case 66550: // teleports outside (Isle of Conquest)
-        {
-            if (Player* pTarget = ((Player*)unitTarget))
-            {
-                if (pTarget->GetTeamId() == TEAM_ALLIANCE)
-                    m_targets.setDestination(442.24f, -835.25f, 44.30f);
-                else
-                    m_targets.setDestination(1120.43f, -762.11f, 47.92f);
-            }
-            break;
-        }
-        case 66551: // teleports inside (Isle of Conquest)
-        {
-            if (Player* pTarget = ((Player*)unitTarget))
-            {
-                if (pTarget->GetTeamId() == TEAM_ALLIANCE)
-                    m_targets.setDestination(389.57f, -832.38f, 48.65f);
-                else
-                    m_targets.setDestination(1174.85f, -763.24f, 48.72f);
-            }
-            break;
-        }
-    }
-
     switch (m_spellInfo->EffectImplicitTargetB[eff_idx])
     {
         case TARGET_INNKEEPER_COORDINATES:
@@ -4961,10 +4929,13 @@ void Spell::EffectApplyAura(SpellEffectIndex eff_idx)
         {
             if (caster->HasSpell(aur->GetSpellProto()->EffectTriggerSpell[0]))
             {
-               duration *= 2.0f; // Increase duration by 2x
-               float amountMod;
-               switch(aur->GetId())
-               {
+                // do not exceed 2 hours duration (cause of ApplyAura effect triggered twiceapplied twice)
+                if(duration < 2 * HOUR * IN_MILLISECONDS)
+                    duration *= 2.0f; // Increase duration by 2x
+
+                float amountMod;
+                switch(aur->GetId())
+                {
                     case 53758: // Flask of Stoneblood
                         amountMod = 1.50f;
                     break;
@@ -4980,8 +4951,8 @@ void Spell::EffectApplyAura(SpellEffectIndex eff_idx)
                     default:
                         amountMod = 1.3f;
                         break;
-               }
-               aur->GetModifier()->m_amount *= amountMod;
+                }
+                aur->GetModifier()->m_amount *= amountMod;
             }
         }
     }
@@ -9327,8 +9298,8 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!pCaster)
                         return;
 
-                    Unit * pOwner = pCaster->GetCharmer();
-                    if (!pOwner || pOwner->GetTypeId() != TYPEID_PLAYER)
+                    Player * pOwner = pCaster->GetCharmerOrOwnerPlayerOrPlayerItself();
+                    if (!pOwner)
                         return;
 
                     std::list<Creature*> creatureList;
@@ -11322,7 +11293,7 @@ void Spell::EffectTransmitted(SpellEffectIndex eff_idx)
             m_caster->GetNearPoint2D(fx, fy, dis, m_caster->GetOrientation() + angle_offset);
             float waterZ = m_caster->GetTerrain()->GetWaterOrGroundLevel(fx, fy, m_caster->GetPositionZ());
             GridMapLiquidData liqData;
-            if (!m_caster->GetTerrain()->IsInWater(fx, fy, waterZ, &liqData))
+            if (!m_caster->GetTerrain()->IsInWater(fx, fy, waterZ, &liqData, 0.5f))
             {
                 SendCastResult(SPELL_FAILED_NOT_FISHABLE);
                 SendChannelUpdate(0);
@@ -11520,18 +11491,28 @@ void Spell::EffectStealBeneficialBuff(SpellEffectIndex eff_idx)
 
             int32 miss_chance = 0;
             // Apply dispel mod from aura caster
-            if (Unit *caster = holder->GetCaster())
+
+            Unit * caster = holder->GetCaster();
+            Unit * target = holder->GetTarget();
+            if(!caster || !target)
+                continue;
+
+            if (Player* modOwner = caster->GetSpellModOwner())
+                modOwner->ApplySpellMod(holder->GetSpellProto()->Id, SPELLMOD_RESIST_DISPEL_CHANCE, miss_chance, this);
+
+            if(caster == target)
+                miss_chance += caster->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
+            else
             {
-                if (Player* modOwner = caster->GetSpellModOwner())
-                {
+                if (Player* modOwner = target->GetSpellModOwner())
                     modOwner->ApplySpellMod(holder->GetSpellProto()->Id, SPELLMOD_RESIST_DISPEL_CHANCE, miss_chance, this);
-                    miss_chance += modOwner->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
-                }
+
+                miss_chance += target->GetTotalAuraModifier(SPELL_AURA_MOD_DISPEL_RESIST);
             }
 
             // Try dispel
             if (!roll_chance_i(miss_chance))
-                success_list.push_back(std::pair<uint32,ObjectGuid>(holder->GetId(),holder->GetCasterGuid()));
+                success_list.push_back(SuccessList::value_type(holder->GetId(),holder->GetCasterGuid()));
             else m_caster->SendSpellMiss(unitTarget, holder->GetSpellProto()->Id, SPELL_MISS_RESIST);
 
             // Remove buff from list for prevent doubles

@@ -31,6 +31,6 @@
 #endif
 
 class SpellAuraHolder;
-MANGOS_DLL_SPEC OBJECT_HANDLER(SpellAuraHolder,SpellAuraHolderPtr);
+OBJECT_HANDLER(SpellAuraHolder,SpellAuraHolderPtr);
 
 #endif

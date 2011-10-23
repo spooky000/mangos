@@ -201,7 +201,7 @@ enum UnitRename
     UNIT_CAN_BE_ABANDONED   = 0x02,
 };
 
-#define CREATURE_MAX_SPELLS     8
+#define CREATURE_MAX_SPELLS     4
 
 enum Swing
 {
@@ -371,8 +371,7 @@ enum DeathState
     CORPSE         = 2,                                     // corpse state, for player this also meaning that player not leave corpse
     DEAD           = 3,                                     // for creature despawned state (corpse despawned), for player CORPSE/DEAD not clear way switches (FIXME), and use m_deathtimer > 0 check for real corpse state
     JUST_ALIVED    = 4,                                     // temporary state at resurrection, for creature auto converted to ALIVE, for player at next update call
-    CORPSE_FALLING = 5,                                     // corpse state in case when corpse still falling to ground
-    GHOULED        = 6
+    GHOULED        = 5
 };
 
 // internal state flags for some auras and movement generators, other.
@@ -1178,6 +1177,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         uint32 getAttackTimer(WeaponAttackType type) const { return m_attackTimer[type]; }
         bool isAttackReady(WeaponAttackType type = BASE_ATTACK) const { return m_attackTimer[type] == 0; }
         bool haveOffhandWeapon() const;
+        bool UpdateMeleeAttackingState();
         bool CanUseEquippedWeapon(WeaponAttackType attackType) const
         {
             if (IsInFeralForm())
@@ -1484,8 +1484,6 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void SendThreatRemove(HostileReference* pHostileReference);
         void SendThreatUpdate();
 
-        virtual void MoveOutOfRange(Player &) {  };
-
         bool isAlive() const { return (m_deathState == ALIVE); };
         bool isDead() const { return ( m_deathState == DEAD || m_deathState == CORPSE ); };
         DeathState getDeathState() const { return m_deathState; };
@@ -1662,7 +1660,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         // set withDelayed to true to account delayed spells as casted
         // delayed+channeled spells are always accounted as casted
         // we can skip channeled or delayed checks using flags
-        bool IsNonMeleeSpellCasted(bool withDelayed, bool skipChanneled = false, bool skipAutorepeat = false) const;
+        bool IsNonMeleeSpellCasted(bool withDelayed, bool skipChanneled = false, bool skipAutorepeat = false, bool skipInstant = false) const;
 
         // set withDelayed to true to interrupt delayed spells too
         // delayed+channeled spells are always interrupted
@@ -1674,7 +1672,6 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         bool CheckAndIncreaseCastCounter();
         void DecreaseCastCounter() { if (m_castCounter) --m_castCounter; }
 
-        uint32 m_addDmgOnce;
         ObjectGuid m_ObjectSlotGuid[4];
         uint32 m_detectInvisibilityMask;
         uint32 m_invisibilityMask;
@@ -1777,8 +1774,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         }
         void SetVisibleAura(uint8 slot, uint32 spellid)
         {
-            MAPLOCK_WRITE(this,MAP_LOCK_TYPE_AURAS);
-            if (spellid == 0)
+            if(spellid == 0)
                 m_visibleAuras.erase(slot);
             else
                 m_visibleAuras[slot] = spellid;
