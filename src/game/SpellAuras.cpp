@@ -442,6 +442,25 @@ m_isPersistent(false), m_in_use(0), m_spellAuraHolder(holder)
     if (!(spellproto->AttributesEx5 & SPELL_ATTR_EX5_START_PERIODIC_AT_APPLY))
         m_periodicTimer = m_modifier.periodictime;
 
+	// some spells that should also tick at apply
+	switch (spellproto->Id)
+	{
+        case 5728: // Stoneclaw Totem
+        case 6397:
+        case 6398:
+        case 6399:
+        case 10425:
+        case 10426:
+        case 25513:
+        case 58583:
+        case 58584:
+        case 58585:
+        case 63298:
+        case 6474: // Earthbind Totem
+        case 8145: // Tremor Totem
+            m_periodicTimer = 0;
+	}
+
     m_stacking = IsEffectStacking();
 
     switch (type)
