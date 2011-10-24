@@ -710,6 +710,7 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
         case 39289:                                         // Kargath's Executioner
         case 39290:                                         // Kargath's Executioner
         case 42786:                                         // Echo Of Ymiron
+        case 42966:                                         // Upset Tummy
         case 55126:                                         // Sladran Snake Trap
         case 56266:                                         // Vortex
         case 57508:                                         // Volazj Insanity Phase 1
