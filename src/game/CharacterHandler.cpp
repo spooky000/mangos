@@ -838,8 +838,9 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
             while (result->NextRow());
         }
 
+        pCurrChar->HandleRatesWindow();
+
         pCurrChar->RemoveAtLoginFlag(AT_LOGIN_CHECK_TITLES);
-        // Check titles
     }
 
     delete holder;
