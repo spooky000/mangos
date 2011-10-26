@@ -24278,7 +24278,7 @@ uint32 Player::GetModelForForm(SpellShapeshiftFormEntry const* ssEntry) const
     return modelid;
 }
 
-void HandleRatesWindow()
+void Player::HandleRatesWindow()
 {
     Player * player = this;
 
