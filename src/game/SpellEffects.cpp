@@ -510,6 +510,34 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     case 67485:
                         damage += uint32(0.5f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
                         break;
+                    //Magic Bane normal (Forge of Souls - Bronjahm)
+                    case 68793:
+                    {
+                        damage += uint32(unitTarget->GetMaxPower(POWER_MANA) / 2);
+                        damage = std::min(damage, 10000);
+                        break;
+                    }
+                    //Magic Bane heroic (Forge of Souls - Bronjahm)
+                    case 69050:
+                    {
+                        damage += uint32(unitTarget->GetMaxPower(POWER_MANA) / 2);
+                        damage = std::min(damage, 15000);
+                        break;
+                    }
+                    // Empowered Flare (Blood Council encounter)
+                    case 71708:
+                    {
+                        // aura doesn't want to proc, so hacked...
+                        if (SpellAuraHolderPtr holder = m_caster->GetSpellAuraHolder(71756))
+                        {
+                            if (holder->GetStackAmount() <= 1)
+                                m_caster->RemoveSpellAuraHolder(holder);
+                            else
+                                holder->ModStackAmount(-1);
+                        }
+
+                        break;
+                    }
                     // Defile damage depending from scale.
                     case 72754:
                     case 73708:
@@ -535,6 +563,14 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     {
                         float distance = unitTarget->GetDistance2d(m_caster); 
                         damage *= exp(-distance/(10.0f));
+                        break;
+                    }
+                    // Shadow Prison
+                    case 72999:
+                    {
+                        if (Aura *aur = unitTarget->GetDummyAura(m_spellInfo->Id))
+                            damage += (aur->GetStackAmount() - 1) * aur->GetModifier()->m_amount;
+
                         break;
                     }
                     case 74607:
@@ -586,20 +622,6 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                             return;
                         float distance = m_caster->GetDistance2d(unitTarget);
                         damage = (distance > radius) ? 0 : int32(m_spellInfo->EffectBasePoints[0]*distance);
-                        break;
-                    }
-                    //Magic Bane normal (Forge of Souls - Bronjahm)
-                    case 68793:
-                    {
-                        damage += uint32(unitTarget->GetMaxPower(POWER_MANA) / 2);
-                        damage = std::min(damage, 10000);
-                        break;
-                    }
-                    //Magic Bane heroic (Forge of Souls - Bronjahm)
-                    case 69050:
-                    {
-                        damage += uint32(unitTarget->GetMaxPower(POWER_MANA) / 2);
-                        damage = std::min(damage, 15000);
                         break;
                     }
                 }
@@ -3462,6 +3484,13 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     if (needRemove)
                         unitTarget->RemoveAurasDueToSpell(71340);
+                    break;
+                }
+                case 71718:                                 // Conjure Flame
+                case 72040:                                 // Conjure Empowered Flame
+                {
+                    if (unitTarget)
+                        unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
                     break;
                 }
                 case 72202:                                 // Blade power
@@ -8015,6 +8044,15 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     // Feeding Rock Falcon
                     unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true, NULL, NULL, unitTarget->GetObjectGuid(), m_spellInfo);
                     return;
+                }
+                case 44436:                                 // Tricky Treat
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    // 50% chance to get the Upset Tummy debuff
+                    if (roll_chance_i(50))
+                        m_caster->CastSpell(m_caster, 42966, true);
                 }
                 case 44455:                                 // Character Script Effect Reverse Cast
                 {

@@ -143,6 +143,12 @@ enum BG_IC_GoId
     GO_HORDE_FRONT     = 195491
 };
 
+enum BG_IC_GUNSHIPS
+{
+    GO_HORDE_GUNSHIP = 195276,
+    GO_ALLIANCE_GUNSHIP =  195121
+};
+
 /* do NOT change the order, else wrong behaviour */
 enum BG_IC_Nodes
 {

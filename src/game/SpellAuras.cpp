@@ -351,7 +351,7 @@ pAuraHandler AuraHandler[TOTAL_AURAS]=
     &Aura::HandleNULL,                                      //297 1 spell (counter spell school?)
     &Aura::HandleUnused,                                    //298 unused (3.2.2a)
     &Aura::HandleUnused,                                    //299 unused (3.2.2a)
-    &Aura::HandleNULL,                                      //300 3 spells (share damage?)
+    &Aura::HandleAuraShareDamage,                           //300 3 spells, share damage (in percent) with aura owner and aura target. implemented in Unit::DealDamage
     &Aura::HandleNULL,                                      //301 SPELL_AURA_HEAL_ABSORB 5 spells
     &Aura::HandleUnused,                                    //302 unused (3.2.2a)
     &Aura::HandleNULL,                                      //303 17 spells
@@ -441,6 +441,25 @@ m_isPersistent(false), m_in_use(0), m_spellAuraHolder(holder)
     // Start periodic on next tick or at aura apply
     if (!(spellproto->AttributesEx5 & SPELL_ATTR_EX5_START_PERIODIC_AT_APPLY))
         m_periodicTimer = m_modifier.periodictime;
+
+	// some spells that should also tick at apply
+	switch (spellproto->Id)
+	{
+        case 5728: // Stoneclaw Totem
+        case 6397:
+        case 6398:
+        case 6399:
+        case 10425:
+        case 10426:
+        case 25513:
+        case 58583:
+        case 58584:
+        case 58585:
+        case 63298:
+        case 6474: // Earthbind Totem
+        case 8145: // Tremor Totem
+            m_periodicTimer = 0;
+	}
 
     m_stacking = IsEffectStacking();
 
@@ -1765,8 +1784,22 @@ void Aura::TriggerSpell()
 //                    case 71110: break;
 //                    // Aura of Darkness
 //                    case 71111: break;
-//                    // Ball of Flames Visual
-//                    case 71706: break;
+                    // Ball of Flames Visual
+                    case 71706:
+                    {
+                        // don't "proc" on heroic
+                        if (triggerTarget->GetMap()->GetDifficulty() <= RAID_DIFFICULTY_25MAN_NORMAL)
+                        {
+                            if (SpellAuraHolderPtr holder = triggerTarget->GetSpellAuraHolder(71756))
+                            {
+                                if (holder->GetStackAmount() <= 1)
+                                    triggerTarget->RemoveSpellAuraHolder(holder);
+                                else
+                                    holder->ModStackAmount(-1);
+                            }
+                        }
+                        break;
+                    }
 //                    // Summon Broken Frostmourne
 //                    case 74081: break;
                     default:
@@ -2318,6 +2351,9 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         }
                         return;
                     }
+                    case 47977:                             // Magic Broom
+                        Spell::SelectMountByAreaAndSkill(target, GetSpellProto(), 42680, 42683, 42667, 42668, 0);
+                        return;
                     case 48025:                             // Headless Horseman's Mount
                         Spell::SelectMountByAreaAndSkill(target, GetSpellProto(), 51621, 48024, 51617, 48023, 0);
                         return;
@@ -2416,6 +2452,12 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         return;
                     case 71563:                             // Deadly Precision
                         target->CastSpell(target, 71564, true, NULL, this);
+                        return;
+                    case 72087:                             // Kinetic Bomb Knockback
+                        float x, y, z;
+                        target->GetPosition(x, y, z);
+                        target->GetMotionMaster()->Clear();
+                        target->GetMotionMaster()->MovePoint(0, x, y, z + 6.0f * GetStackAmount());
                         return;
                     case 72286:                             // Invincible
                         Spell::SelectMountByAreaAndSkill(target, GetSpellProto(), 72281, 72282, 72283, 72284, 0);
@@ -3014,6 +3056,15 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                 target->CastSpell(target, 68848, true, NULL, this);
                 // Draw Corrupted Soul
                 target->CastSpell(target, 68846, true, NULL, this);
+                return;
+            }
+            case 72087:                                     // Kinetic Bomb Knockback
+            {
+                float x, y, z;
+                target->GetPosition(x, y, z);
+                z = target->GetTerrain()->GetHeight(x, y, z, true, MAX_FALL_DISTANCE);
+                target->GetMotionMaster()->Clear();
+                target->GetMotionMaster()->MovePoint(0, x, y, z);
                 return;
             }
         }
@@ -5745,6 +5796,13 @@ void Aura::HandleAuraProcTriggerSpell(bool apply, bool Real)
             else
                 target->getHostileRefManager().ResetThreatRedirection();
             break;
+        case 72059:                                         // Unstable (Kinetic Bomb - Blood Council encounter)
+            if (!apply)
+            {
+                if (target->GetTypeId() == TYPEID_UNIT)
+                    ((Creature*)target)->ForcedDespawn();
+            }
+            break;
         default:
             break;
     }
@@ -6000,54 +6058,46 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
 
                     break;
                 }
-                case 69008:                                 // Soulstorm (OOC aura)
-                case 68870:                                 // Soulstorm
+                case 63050:                                   // Sanity (Yogg Saron - Ulduar)
                 {
-                    uint32 triggerSpells[8] = {68898, 68904, 68886, 68905, 68896, 68906, 68897, 68907};
-                    target->CastSpell(target, triggerSpells[GetAuraTicks() % 8], true);
-                    return;
-                }
-                case 67574:                                // Trial Of Crusader (Spike Aggro Aura - Anub'arak)
-                {
-                    if (!target->GetMap()->Instanceable())
-                        return;
-
-                    if (InstanceData* data = target->GetInstanceData())
+                                                              // here is the special handling of Sanity
+                    Unit *caster = GetCaster();
+                    if (!caster)
                     {
-                        if (Creature* pSpike = target->GetMap()->GetCreature(data->GetData64(34660)))
-                            pSpike->AddThreat(target, 1000000.0f);
+                        target->RemoveAurasDueToSpell(63050);
+                        return;
                     }
+
+                    if (!caster->isAlive())
+                    {
+                        target->RemoveAurasDueToSpell(63050);
+                        return;
+                    }
+
+                    uint32 stacks = GetHolder()->GetStackAmount();
+
+                    if ((stacks < 30) && !(target->HasAura(63752)))
+                        target->CastSpell(target, 63752, true);
+
+                    if ((stacks > 30) && (target->HasAura(63752)))
+                        target->RemoveAurasDueToSpell(63752);
+
+                    if (target->HasAura(64169))               // sanity well Aura
+                        GetHolder()->ModStackAmount(20);
                     return;
                 }
-                case 66118:                                 // Leeching Swarm 10 man
-                case 68646:
+                case 63276:                                   // Mark of the Faceless (General Vezax - Ulduar)
                 {
-                    int32 damage = (m_modifier.m_amount * target->GetHealth()) / 100;
-                    if (damage < 250)
-                        damage = 250;
-                    int32 heal = damage * 68 / 100;
-                    target->CastCustomSpell(target, 66240, &damage, NULL, NULL, true, NULL, this);
-                    if (Unit* caster = GetCaster())
-                        target->CastCustomSpell(caster, 66125, &heal, NULL, NULL, true, NULL, this);
+                    Unit *caster = GetCaster();
+
+                    if (caster && target)
+                        caster->CastCustomSpell(target, 63278, 0, &(spell->EffectBasePoints[0]), 0, false, 0, 0, caster->GetObjectGuid() , spell);
                     return;
                 }
-                case 67630:                                 // Leeching Swarm 25 man
-                case 68647:
-                {
-                    int32 damage = (m_modifier.m_amount * target->GetHealth()) / 100;
-                    if (damage < 250)
-                        damage = 250;
-                    int32 heal = damage * 155 / 100;
-                    target->CastCustomSpell(target, 66240, &damage, NULL, NULL, true, NULL, this);
-                    if (Unit* caster = GetCaster())
-                        target->CastCustomSpell(caster, 66125, &heal, NULL, NULL, true, NULL, this);
-                    return;
-                }
-                case 70069:                                   // Ooze Flood Periodic Trigger (Rotface)
+                case 73001:                                   // Shadow Prison
                 {
                     if (target)
-                        target->CastSpell(target, spell->CalculateSimpleValue(GetEffIndex()), true);
-                    return;
+                        target->CastSpell(target, 72998, true);
                 }
             }
         }
@@ -9038,34 +9088,6 @@ void Aura::PeriodicDummyTick()
                     }
                     return;
                 }
-				case 63050:                                 // Sanity (Yogg Saron - Ulduar)
-                {
-                    // here is the special handling of Sanity
-                    Unit *caster = GetCaster();
-                    if (!caster)
-                    {
-                        target->RemoveAurasDueToSpell(63050);
-                        return;
-                    }
-                    if (!caster->isAlive())
-                    {
-                        target->RemoveAurasDueToSpell(63050);
-                        return;
-                    }
-
-                    uint32 stacks = GetHolder()->GetStackAmount();
-
-                    if ((stacks < 30) && !(target->HasAura(63752)))
-                        target->CastSpell(target, 63752, true);
-
-                    if ((stacks > 30) && (target->HasAura(63752)))
-                        target->RemoveAurasDueToSpell(63752);
-
-                    if (target->HasAura(64169))             // sanity well Aura
-                        GetHolder()->ModStackAmount(20);
-
-                    return;
-                }
                 case 63276:                                 // Mark of the Faceless (General Vezax - Ulduar)
                 {
                     Unit *caster = GetCaster();
@@ -9155,6 +9177,49 @@ void Aura::PeriodicDummyTick()
                     target->CastSpell(target, 62593, true);
                     return;
                 }*/
+                case 67574:                                // Trial Of Crusader (Spike Aggro Aura - Anub'arak)
+                {
+                    if (!target->GetMap()->Instanceable())
+                        return;
+
+                    if (InstanceData* data = target->GetInstanceData())
+                    {
+                        if (Creature* pSpike = target->GetMap()->GetCreature(data->GetData64(34660)))
+                            pSpike->AddThreat(target, 1000000.0f);
+                    }
+                    return;
+                }
+                case 66118:                                 // Leeching Swarm 10 man
+                case 68646:
+                {
+                    int32 damage = (m_modifier.m_amount * target->GetHealth()) / 100;
+                    if (damage < 250)
+                        damage = 250;
+                    int32 heal = damage * 68 / 100;
+                    target->CastCustomSpell(target, 66240, &damage, NULL, NULL, true, NULL, this);
+                    if (Unit* caster = GetCaster())
+                        target->CastCustomSpell(caster, 66125, &heal, NULL, NULL, true, NULL, this);
+                    return;
+                }
+                case 67630:                                 // Leeching Swarm 25 man
+                case 68647:
+                {
+                    int32 damage = (m_modifier.m_amount * target->GetHealth()) / 100;
+                    if (damage < 250)
+                        damage = 250;
+                    int32 heal = damage * 155 / 100;
+                    target->CastCustomSpell(target, 66240, &damage, NULL, NULL, true, NULL, this);
+                    if (Unit* caster = GetCaster())
+                        target->CastCustomSpell(caster, 66125, &heal, NULL, NULL, true, NULL, this);
+                    return;
+                }
+                case 69008:                                 // Soulstorm (OOC aura)
+                case 68870:                                 // Soulstorm
+                {
+                    uint32 triggerSpells[8] = {68898, 68904, 68886, 68905, 68896, 68906, 68897, 68907};
+                    target->CastSpell(target, triggerSpells[GetAuraTicks() % 8], true);
+                    return;
+                }
                 case 68875:                                 // Wailing Souls
                 case 68876:                                 // Wailing Souls
                 {
@@ -9167,6 +9232,20 @@ void Aura::PeriodicDummyTick()
 
                     // Should actually be SMSG_SPELL_START, too
                     target->CastSpell(target, 68873, true);
+                    return;
+                }
+                case 70069:                                   // Ooze Flood Periodic Trigger (Rotface)
+                {
+                    if (target)
+                        target->CastSpell(target, spell->CalculateSimpleValue(GetEffIndex()), true);
+                    return;
+                }
+                case 73001:                                   // Shadow Prison (Blood Council)
+                {
+                    // cast dmg spell when moving
+                    if (target->GetTypeId() == TYPEID_PLAYER && ((Player*)target)->isMoving())
+                        target->CastSpell(target, 72999, true);
+
                     return;
                 }
             // Exist more after, need add later
@@ -11887,4 +11966,39 @@ uint32 Aura::CalculateCrowdControlBreakDamage()
         }
     }
     return damageCap;
+}
+
+void Aura::HandleAuraShareDamage(bool apply, bool Real)
+{
+    // Invocation of Blood
+    // not sure if all spells should work like that
+    switch (GetId())
+    {
+        case 70952:
+        case 70981:
+        case 70982:
+        {
+            Unit *pTarget = GetTarget();
+
+            if (!pTarget)
+                return;
+
+            if (apply)
+            {
+                Unit *pCaster = GetCaster();
+
+                if (!pCaster)
+                    return;
+
+                pTarget->SetHealthPercent(pCaster->GetHealthPercent());
+            }
+            else
+            {
+                if (pTarget->isAlive())
+                    pTarget->SetHealth(1);
+            }
+
+            break;
+        }
+    }
 }
