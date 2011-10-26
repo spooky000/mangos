@@ -216,6 +216,10 @@ void BattleGroundIC::Update(uint32 diff)
                         SendMessage2ToAll(LANG_BG_IC_TEAM_HAS_TAKEN_NODE,CHAT_MSG_BG_SYSTEM_HORDE,NULL,LANG_BG_HORDE,_GetNodeNameId(node));
                         PlaySoundToAll(BG_IC_SOUND_NODE_CAPTURED_HORDE);
                     }
+
+                    // starting the gunship
+                    if (node == BG_IC_NODE_HANGAR)
+                        (teamIndex == BG_TEAM_ALLIANCE ? gunshipAlliance : gunshipHorde)->BuildStartMovePacket(GetBgMap());
                 }
             }
         }
@@ -271,7 +275,8 @@ void BattleGroundIC::AddPlayer(Player *plr)
 
     m_PlayerScores[plr->GetObjectGuid()] = sc;
 
-    //SendTransportInit(plr);
+    SendTransportInit(plr);
+
     if (GetStatus() == STATUS_IN_PROGRESS)
     {
         uint32 objEvent = MAKE_PAIR32(IC_EVENT_ADD_TELEPORT, 0);
@@ -379,14 +384,14 @@ void BattleGroundIC::FillInitialWorldStates(WorldPacket& data, uint32& count)
 
 bool BattleGroundIC::SetupBattleGround()
 {
-    /*gunshipHorde = CreateTransport(GO_HORDE_GUNSHIP,TRANSPORT_PERIOD_TIME);
+    gunshipHorde = CreateTransport(GO_HORDE_GUNSHIP,TRANSPORT_PERIOD_TIME);
     gunshipAlliance = CreateTransport(GO_ALLIANCE_GUNSHIP,TRANSPORT_PERIOD_TIME);
 
     if (!gunshipAlliance || !gunshipHorde)
     {
         sLog.outError("Isle of Conquest: There was an error creating gunships!");
         return false;
-    }*/
+    }
 
     //Send transport init packet to all player in map
     for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end();itr++)
@@ -562,6 +567,9 @@ void BattleGroundIC::EventPlayerClickedOnFlag(Player *source, GameObject* target
             SendMessage2ToAll(LANG_BG_IC_NODE_ASSAULTED,CHAT_MSG_BG_SYSTEM_HORDE, source, _GetNodeNameId(node));
 
         sound = (teamIndex == BG_TEAM_ALLIANCE) ? BG_IC_SOUND_NODE_ASSAULTED_ALLIANCE : BG_IC_SOUND_NODE_ASSAULTED_HORDE;
+
+        if (node == BG_IC_NODE_HANGAR)
+            (teamIndex == BG_TEAM_ALLIANCE ? gunshipHorde : gunshipAlliance)->BuildStopMovePacket(GetBgMap());
     }
     PlaySoundToAll(sound);
 }
