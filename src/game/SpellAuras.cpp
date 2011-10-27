@@ -351,7 +351,7 @@ pAuraHandler AuraHandler[TOTAL_AURAS]=
     &Aura::HandleNULL,                                      //297 1 spell (counter spell school?)
     &Aura::HandleUnused,                                    //298 unused (3.2.2a)
     &Aura::HandleUnused,                                    //299 unused (3.2.2a)
-    &Aura::HandleNULL,                                      //300 3 spells (share damage?)
+    &Aura::HandleAuraShareDamage,                           //300 3 spells, share damage (in percent) with aura owner and aura target. implemented in Unit::DealDamage
     &Aura::HandleNULL,                                      //301 SPELL_AURA_HEAL_ABSORB 5 spells
     &Aura::HandleUnused,                                    //302 unused (3.2.2a)
     &Aura::HandleNULL,                                      //303 17 spells
@@ -11909,4 +11909,39 @@ uint32 Aura::CalculateCrowdControlBreakDamage()
         }
     }
     return damageCap;
+}
+
+void Aura::HandleAuraShareDamage(bool apply, bool Real)
+{
+    // Invocation of Blood
+    // not sure if all spells should work like that
+    switch (GetId())
+    {
+        case 70952:
+        case 70981:
+        case 70982:
+        {
+            Unit *pTarget = GetTarget();
+
+            if (!pTarget)
+                return;
+
+            if (apply)
+            {
+                Unit *pCaster = GetCaster();
+
+                if (!pCaster)
+                    return;
+
+                pTarget->SetHealthPercent(pCaster->GetHealthPercent());
+            }
+            else
+            {
+                if (pTarget->isAlive())
+                    pTarget->SetHealth(1);
+            }
+
+            break;
+        }
+    }
 }
