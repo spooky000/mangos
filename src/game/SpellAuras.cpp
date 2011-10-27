@@ -1784,8 +1784,22 @@ void Aura::TriggerSpell()
 //                    case 71110: break;
 //                    // Aura of Darkness
 //                    case 71111: break;
-//                    // Ball of Flames Visual
-//                    case 71706: break;
+                    // Ball of Flames Visual
+                    case 71706:
+                    {
+                        // don't "proc" on heroic
+                        if (triggerTarget->GetMap()->GetDifficulty() <= RAID_DIFFICULTY_25MAN_NORMAL)
+                        {
+                            if (SpellAuraHolderPtr holder = triggerTarget->GetSpellAuraHolder(71756))
+                            {
+                                if (holder->GetStackAmount() <= 1)
+                                    triggerTarget->RemoveSpellAuraHolder(holder);
+                                else
+                                    holder->ModStackAmount(-1);
+                            }
+                        }
+                        break;
+                    }
 //                    // Summon Broken Frostmourne
 //                    case 74081: break;
                     default:
@@ -2439,6 +2453,12 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                     case 71563:                             // Deadly Precision
                         target->CastSpell(target, 71564, true, NULL, this);
                         return;
+                    case 72087:                             // Kinetic Bomb Knockback
+                        float x, y, z;
+                        target->GetPosition(x, y, z);
+                        target->GetMotionMaster()->Clear(true, true);
+                        target->GetMotionMaster()->MovePoint(0, x, y, z + 3.0f * GetStackAmount(), false);
+                        return;
                     case 72286:                             // Invincible
                         Spell::SelectMountByAreaAndSkill(target, GetSpellProto(), 72281, 72282, 72283, 72284, 0);
                         return;
@@ -3036,6 +3056,16 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                 target->CastSpell(target, 68848, true, NULL, this);
                 // Draw Corrupted Soul
                 target->CastSpell(target, 68846, true, NULL, this);
+                return;
+            }
+            case 72087:                                     // Kinetic Bomb Knockback
+            {
+                if (Unit *creator = target->GetCreator())
+                {
+                    target->GetMotionMaster()->Clear(true, true);
+                    target->GetMotionMaster()->MoveChase(creator);
+                }
+
                 return;
             }
         }
@@ -5766,6 +5796,13 @@ void Aura::HandleAuraProcTriggerSpell(bool apply, bool Real)
             }
             else
                 target->getHostileRefManager().ResetThreatRedirection();
+            break;
+        case 72059:                                         // Unstable (Kinetic Bomb - Blood Council encounter)
+            if (!apply)
+            {
+                if (target->GetTypeId() == TYPEID_UNIT)
+                    ((Creature*)target)->ForcedDespawn();
+            }
             break;
         default:
             break;
