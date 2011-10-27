@@ -537,6 +537,14 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         damage *= exp(-distance/(10.0f));
                         break;
                     }
+                    // Shadow Prison
+                    case 72999:
+                    {
+                        if (Aura *aur = unitTarget->GetDummyAura(m_spellInfo->Id))
+                            damage += aur->GetStackAmount() * aur->GetModifier()->m_amount;
+
+                        break;
+                    }
                     case 74607:
                     // SPELL_FIERY_COMBUSTION_EXPLODE - Ruby sanctum boss Halion,
                     // damage proportional number of mark (74567, dummy)
