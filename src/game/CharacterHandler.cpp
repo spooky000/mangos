@@ -1331,7 +1331,7 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
         {
             Quest * qinfo = iter->second;
 
-            if (qinfo->GetRequiredRaces() & (team == BG_TEAM_ALLIANCE) ?  RACEMASK_ALLIANCE : RACEMASK_HORDE)
+            if (qinfo->GetRequiredRaces() & ((team == BG_TEAM_ALLIANCE) ?  RACEMASK_HORDE : RACEMASK_ALLIANCE))
                 quests << uint32(qinfo->GetQuestId()) << ',';
         }
 
@@ -1339,7 +1339,7 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
         questsStr = questsStr.substr(0, questsStr.length() - 1);
 
         if (!questsStr.empty())
-            CharacterDatabase.PExecute("DELETE FROM `character_queststatus` WHERE guid = '%u' AND quest IN '%s'", guid.GetCounter(), questsStr.c_str());
+            CharacterDatabase.PExecute("DELETE FROM character_queststatus WHERE guid = '%u' AND quest IN (%s)", guid.GetCounter(), questsStr.c_str());
 
         // Reset guild
         if (uint32 guildId = Player::GetGuildIdFromDB(guid))
