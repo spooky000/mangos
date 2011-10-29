@@ -841,6 +841,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder *holder)
         pCurrChar->HandleRatesWindow();
 
         pCurrChar->RemoveAtLoginFlag(AT_LOGIN_CHECK_TITLES);
+        // Check titles
     }
 
     delete holder;
@@ -1177,6 +1178,46 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
     std::string newname;
     uint8 gender, skin, face, hairStyle, hairColor, facialHair, race;
     recv_data >> guid;
+
+    int old_base_rep[14];
+    int f = 0;
+
+    QueryResult *oldRace = CharacterDatabase.PQuery("SELECT race FROM characters WHERE guid = '%u'", guid.GetCounter());
+    if (oldRace)
+    {
+        Field *fields2 = oldRace->Fetch();
+        uint32 old_race = fields2[0].GetUInt32();
+
+        // Search each faction is targeted
+        BattleGroundTeamIndex team = BG_TEAM_ALLIANCE;
+        switch(old_race)
+        {
+            case RACE_ORC:
+            case RACE_TAUREN:
+            case RACE_UNDEAD:
+            case RACE_TROLL:
+            case RACE_BLOODELF:
+            //case RACE_GOBLIN: for cataclysm
+                team = BG_TEAM_HORDE;
+                break;
+            default: break;
+        }
+
+        if(QueryResult *result2 = WorldDatabase.Query("SELECT alliance_id, horde_id FROM player_factionchange_reputations"))
+        {
+            do
+            {
+                Field *fields3 = result2->Fetch();
+                uint32 reputation_alliance = fields3[0].GetUInt32();
+                uint32 reputation_horde = fields3[1].GetUInt32();
+                FactionEntry const* factionEntry = sFactionStore.LookupEntry(team == BG_TEAM_ALLIANCE ? reputation_alliance : reputation_horde);
+                old_base_rep[f] = factionEntry->BaseRepValue[0];
+                f++;
+            }
+            while( result2->NextRow() );
+        }
+    }
+
     recv_data >> newname;
     recv_data >> gender >> skin >> hairColor >> hairStyle >> facialHair >> face >> race;
 
@@ -1242,6 +1283,17 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
         }
     }
 
+    // The player was uninvited already on logout so just remove from group
+    // immediately remove from group before start change process
+    QueryResult* resultGroup = CharacterDatabase.PQuery("SELECT groupId FROM group_member WHERE memberGuid='%u'", guid.GetCounter());
+    if (resultGroup)
+    {
+        uint32 groupId = (*resultGroup)[0].GetUInt32();
+        delete resultGroup;
+        if (Group* group = sObjectMgr.GetGroupById(groupId))
+            Player::RemoveFromGroup(group, guid);
+    }
+
     CharacterDatabase.escape_string(newname);
     Player::Customize(guid, gender, skin, face, hairStyle, hairColor, facialHair);
     CharacterDatabase.BeginTransaction();
@@ -1251,10 +1303,46 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
 
     if (recv_data.GetOpcode() == CMSG_CHAR_FACTION_CHANGE)
     {
+        // Search each faction is targeted
+        BattleGroundTeamIndex team = BG_TEAM_ALLIANCE;
+        switch(race)
+        {
+            case RACE_ORC:
+            case RACE_TAUREN:
+            case RACE_UNDEAD:
+            case RACE_TROLL:
+            case RACE_BLOODELF:
+            //case RACE_GOBLIN: for cataclysm
+                team = BG_TEAM_HORDE;
+                break;
+            default: break;
+        }
+
         // Delete all Flypaths
-        CharacterDatabase.PExecute("UPDATE characters set taxi_path = '' WHERE guid ='%u'", guid.GetCounter());
+        CharacterDatabase.PExecute("UPDATE characters SET taxi_path = '' WHERE guid ='%u'", guid.GetCounter());
+        // Give all flight paths
+        CharacterDatabase.PExecute("UPDATE characters SET taximask = '%s' WHERE guid ='%u'", 
+            team == BG_TEAM_ALLIANCE ? "3456411898 2148078929 805356359 2605711384 2283799553 29622376 1052676 1551368194 0 2150596833 33792 0 0 0" :
+            "830150144 315656864 449720 3869245476 2153780226 3758358560 1052672 2877292546 15 2150596833 66560 2147483648 0 0", guid.GetCounter());
         // Delete all current quests
-        CharacterDatabase.PExecute("DELETE FROM `character_queststatus` WHERE `status` = 3 AND guid ='%u'", guid.GetCounter());
+        CharacterDatabase.PExecute("DELETE FROM `character_queststatus` WHERE `status` = 3 AND guid = '%u'", guid.GetCounter());
+        // Delete old-faction only quests
+        std::ostringstream quests;
+        ObjectMgr::QuestMap const& qTemplates = sObjectMgr.GetQuestTemplates();
+        for (ObjectMgr::QuestMap::const_iterator iter = qTemplates.begin(); iter != qTemplates.end(); ++iter)
+        {
+            Quest * qinfo = iter->second;
+
+            if (qinfo->GetRequiredRaces() & ((team == BG_TEAM_ALLIANCE) ?  RACEMASK_HORDE : RACEMASK_ALLIANCE))
+                quests << uint32(qinfo->GetQuestId()) << ',';
+        }
+
+        std::string questsStr = quests.str();
+        questsStr = questsStr.substr(0, questsStr.length() - 1);
+
+        if (!questsStr.empty())
+            CharacterDatabase.PExecute("DELETE FROM character_queststatus WHERE guid = '%u' AND quest IN (%s)", guid.GetCounter(), questsStr.c_str());
+
         // Reset guild
         if (uint32 guildId = Player::GetGuildIdFromDB(guid))
             if (Guild* guild = sGuildMgr.GetGuildById(guildId))
@@ -1309,30 +1397,6 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
         CharacterDatabase.PExecute("DELETE FROM petition_sign WHERE ownerguid = '%u'", guid.GetCounter());
         // Reset Language (will be added automatically after faction change)
         CharacterDatabase.PExecute("DELETE FROM `character_spell` WHERE `spell` IN (668, 7340, 671, 672, 814, 29932, 17737, 816, 7341, 669, 813, 670) AND guid ='%u'", guid.GetCounter());
-        // The player was uninvited already on logout so just remove from group
-        QueryResult *resultGroup = CharacterDatabase.PQuery("SELECT groupId FROM group_member WHERE memberGuid='%u'", guid.GetCounter());
-        if (resultGroup)
-        {
-            uint32 groupId = (*resultGroup)[0].GetUInt32();
-            delete resultGroup;
-            if (Group* group = sObjectMgr.GetGroupById(groupId))
-                Player::RemoveFromGroup(group, guid);
-        }
-
-        // Search each faction is targeted
-        BattleGroundTeamIndex team = BG_TEAM_ALLIANCE;
-        switch(race)
-        {
-            case RACE_ORC:
-            case RACE_TAUREN:
-            case RACE_UNDEAD:
-            case RACE_TROLL:
-            case RACE_BLOODELF:
-            //case RACE_GOBLIN: for cataclysm
-                team = BG_TEAM_HORDE;
-                break;
-            default: break;
-        }
 
         // Reset homebind
         CharacterDatabase.PExecute("DELETE FROM `character_homebind` WHERE guid = '%u'", guid.GetCounter());
@@ -1349,7 +1413,6 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
                 Field *fields2 = result2->Fetch();
                 uint32 achiev_alliance = fields2[0].GetUInt32();
                 uint32 achiev_horde = fields2[1].GetUInt32();
-
                 CharacterDatabase.PExecute("UPDATE IGNORE `character_achievement` set achievement = '%u' where achievement = '%u' AND guid = '%u'",
                     team == BG_TEAM_ALLIANCE ? achiev_alliance : achiev_horde, team == BG_TEAM_ALLIANCE ? achiev_horde : achiev_alliance, guid.GetCounter());
             }
@@ -1387,6 +1450,10 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
             while( result2->NextRow() );
         }
 
+        int new_base_rep[14];
+        int rep_diff = 0;
+        int f = 0;
+
         // Reputation conversion
         if(QueryResult *result2 = WorldDatabase.Query("SELECT alliance_id, horde_id FROM player_factionchange_reputations"))
         {
@@ -1395,9 +1462,24 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
                 Field *fields2 = result2->Fetch();
                 uint32 reputation_alliance = fields2[0].GetUInt32();
                 uint32 reputation_horde = fields2[1].GetUInt32();
+
+                FactionEntry const* factionEntry = sFactionStore.LookupEntry(team == BG_TEAM_ALLIANCE ? reputation_alliance : reputation_horde);
+                new_base_rep[f] = factionEntry->BaseRepValue[0];
+                rep_diff = old_base_rep[f] - new_base_rep[f];
+                f++;
+
+                QueryResult *result3 = CharacterDatabase.PQuery("SELECT standing FROM character_reputation WHERE faction = '%u' AND guid = '%u'", 
+                    team == BG_TEAM_ALLIANCE ? reputation_horde : reputation_alliance, guid.GetCounter());
+
+                if (result3)
+                {
+                    Field *fields3 = result3->Fetch();
+                    int32 standing = fields3[0].GetInt32();                
+
                 CharacterDatabase.PExecute("DELETE FROM character_reputation WHERE faction = '%u' AND guid = '%u'",team == BG_TEAM_ALLIANCE ? reputation_alliance : reputation_horde, guid.GetCounter());
-                CharacterDatabase.PExecute("UPDATE IGNORE `character_reputation` set faction = '%u' where faction = '%u' AND guid = '%u'",
-                    team == BG_TEAM_ALLIANCE ? reputation_alliance : reputation_horde, team == BG_TEAM_ALLIANCE ? reputation_horde : reputation_alliance, guid.GetCounter());
+                CharacterDatabase.PExecute("UPDATE IGNORE `character_reputation` set faction = '%u', standing = '%i' WHERE faction = '%u' AND guid = '%u'",
+                    team == BG_TEAM_ALLIANCE ? reputation_alliance : reputation_horde, standing + rep_diff, team == BG_TEAM_ALLIANCE ? reputation_horde : reputation_alliance, guid.GetCounter());
+                }
             }
             while( result2->NextRow() );
         }
