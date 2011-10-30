@@ -25,7 +25,7 @@ class BattleGround;
 #include "BattleGround.h"
 
 #define BG_IC_SCORE_INITIAL_POINTS          300
-#define BG_IC_GATE_MAX                      8
+#define BG_IC_GATE_MAX                      6
 #define BG_IC_GRY_MAX                       6
 #define BG_IC_NODES_MAX                     7
 #define BG_IC_MAX_RESOURCE_NODES            2  // you get resources only by owning quarry or refinery
@@ -37,7 +37,7 @@ enum BG_IC_WorldStates
     BG_TEAM_ALLIANCE_REINFORC          = 4226,
     BG_TEAM_HORDE_REINFORC             = 4227,
 
-    BG_IC_GATE_FRONT_H_WS_CLOSED    = 4317,
+    /*BG_IC_GATE_FRONT_H_WS_CLOSED    = 4317,
     BG_IC_GATE_WEST_H_WS_CLOSED     = 4318,
     BG_IC_GATE_EAST_H_WS_CLOSED     = 4319,
     BG_IC_GATE_FRONT_A_WS_CLOSED    = 4328,
@@ -50,7 +50,7 @@ enum BG_IC_WorldStates
     BG_IC_GATE_WEST_A_WS_OPEN       = 4324,
     BG_IC_GATE_EAST_A_WS_OPEN       = 4325,
 
-    /*BG_IC_DOCKS_UNCONTROLLED        = 4301,
+    BG_IC_DOCKS_UNCONTROLLED        = 4301,
     BG_IC_DOCKS_CONFLICT_A          = 4305,
     BG_IC_DOCKS_CONFLICT_H          = 4302,
     BG_IC_DOCKS_CONTROLLED_A        = 4304,
@@ -114,6 +114,16 @@ const uint32 BG_IC_NodeWorldStates[BG_IC_NODES_MAX][4] =
     {4347, 4348, 4344, 4345}
 };
 
+const uint32 BG_IC_GateStatus[BG_IC_GATE_MAX][2] = 
+{
+    {4327, 4324},   // alli west gate {closed, open gate}
+    {4326, 4325},   // alli east
+    {4328, 4323},   // alli front
+    {4318, 4321},   // horde west
+    {4319, 4320},   // horde east
+    {4317, 4322}    // horde front
+};
+
 enum BG_IC_GateStatus
 {
     BG_IC_GO_GATES_NORMAL               = 1,
@@ -131,16 +141,32 @@ enum BG_IC_Spells
 
 enum BG_IC_GoId
 {
-    GO_ALLIANCE_GATE_1 = 195699, // west
-    GO_ALLIANCE_GATE_2 = 195698, // east
-    GO_ALLIANCE_GATE_3 = 195700, // front
+    BG_IC_GO_ALLIANCE_GATE_1 = 195699, // west
+    BG_IC_GO_ALLIANCE_GATE_2 = 195698, // east
+    BG_IC_GO_ALLIANCE_GATE_3 = 195700, // front
 
-    GO_HORDE_GATE_1    = 195496, // west
-    GO_HORDE_GATE_2    = 195495, // east
-    GO_HORDE_GATE_3    = 195494, // front
+    BG_IC_GO_HORDE_GATE_1    = 195496, // west
+    BG_IC_GO_HORDE_GATE_2    = 195495, // east
+    BG_IC_GO_HORDE_GATE_3    = 195494, // front
 
-    GO_ALLIANCE_FRONT  = 195703, // the actual gate that opens, without frame, needs to be spawned separately just at front gates
-    GO_HORDE_FRONT     = 195491
+    BG_IC_GO_ALLIANCE_FRONT  = 195703, // the actual gate that opens, without frame, needs to be spawned separately just at front gates
+    BG_IC_GO_HORDE_FRONT     = 195491
+};
+
+enum BG_IC_GoType
+{
+    BG_IC_GO_T_ALLIANCE_GATE_1  = 0,
+    BG_IC_GO_T_ALLIANCE_GATE_2  = 1,
+    BG_IC_GO_T_ALLIANCE_GATE_3  = 2,
+
+    BG_IC_GO_T_HORDE_GATE_1     = 3,
+    BG_IC_GO_T_HORDE_GATE_2     = 4,
+    BG_IC_GO_T_HORDE_GATE_3     = 5,
+
+    BG_IC_GO_T_ALLIANCE_FRONT   = 6,
+    BG_IC_GO_T_HORDE_FRONT      = 7,
+
+    BG_IC_MAXOBJ = 8,
 };
 
 enum BG_IC_GUNSHIPS
@@ -188,11 +214,13 @@ const uint32 BG_IC_GraveyardIds[7] = {1480, 1481, 1482, 1485, 1486, 1483, 1484};
 enum BG_IC_Events
 {
     IC_EVENT_ADD_TELEPORT       = 7,
-    IC_EVENT_ADD_NPC            = 8,  // rescue point spirit healers + keep cannons
-    IC_EVENT_ADD_A_BOSS_GATE    = 9,
-    IC_EVENT_ADD_H_BOSS_GATE    = 10,
-    IC_EVENT_ADD_A_BOSS         = 11,
-    IC_EVENT_ADD_H_BOSS         = 12,
+    IC_EVENT_ADD_VEH            = 8,  // keep cannons
+    IC_EVENT_OP_A_BOSS_GATE     = 9,
+    IC_EVENT_OP_H_BOSS_GATE     = 10,
+    IC_EVENT_ADD_A_GUARDS       = 11,
+    IC_EVENT_ADD_H_GUARDS       = 12,
+    IC_EVENT_ADD_A_BOSS         = 13,
+    IC_EVENT_ADD_H_BOSS         = 14,
 };
 
 struct BG_IC_BannerTimer
@@ -260,22 +288,6 @@ static float const BG_IC_GATELOCS[8][4] =
     {1150.9f,   -762.606f,  47.0f,      3.14159f}
 };
 
-enum BG_IC_Gates
-{
-    BG_IC_GO_ALLIANCE_GATE_1 = 0,
-    BG_IC_GO_ALLIANCE_GATE_2 = 1,
-    BG_IC_GO_ALLIANCE_GATE_3 = 2,
-
-    BG_IC_GO_HORDE_GATE_1 = 3,
-    BG_IC_GO_HORDE_GATE_2 = 4,
-    BG_IC_GO_HORDE_GATE_3 = 5,
-
-    BG_IC_GO_A_FRONT      = 6,
-    BG_IC_GO_H_FRONT      = 7,
-
-    BG_IC_MAXOBJ = 8
-};
-
 class BattleGroundICScore : public BattleGroundScore
 {
     public:
@@ -317,7 +329,6 @@ class BattleGroundIC : public BattleGround
 
         /* Scorekeeping */
         void UpdatePlayerScore(Player *Source, uint32 type, uint32 value, bool doAddHonor = true);
-        //uint32 GetNodeState(uint8 node) { return (uint8)m_Nodes[node]; }
 
         static BattleGroundTeamIndex GetTeamIndexByTeamId(Team team) { return team == ALLIANCE ? BG_TEAM_ALLIANCE : BG_TEAM_HORDE; }
 
@@ -328,16 +339,16 @@ class BattleGroundIC : public BattleGround
 
         int32 GetGateStatus(int32 Type) const { return GateStatus[Type]; }
 
+        // Transports
         Transport* gunshipAlliance;
         Transport* gunshipHorde;
-
         Transport* CreateTransport(uint32 goEntry,uint32 period);
         void SendTransportInit(Player* player);
+
         void HandleBuffs();
 
         void _CreateBanner(uint8 node, uint8 type, uint8 teamIndex, bool delay);
         void _SendNodeUpdate(uint8 node);
-
         int32 _GetNodeNameId(uint8 node);
 
         /* Nodes info:
