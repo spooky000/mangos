@@ -101,12 +101,6 @@ enum BG_SA_GateStatus
     BG_SA_GO_GATES_DESTROY              = 3
 };
 
-enum BG_SA_TeamIndex
-{
-    BG_SA_ALLIANCE                      = 0,
-    BG_SA_HORDE                         = 1
-};
-
 enum BG_SA_GoId
 {
     BG_SA_GO_GATES_ROOM_ANCIENT_SHRINE  = 192549,

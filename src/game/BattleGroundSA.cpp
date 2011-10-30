@@ -89,32 +89,16 @@ BattleGroundSA::~BattleGroundSA()
 
 void BattleGroundSA::FillInitialWorldStates(WorldPacket& data, uint32& count)
 {
-    if (GetDefender() == HORDE)
-    {
-        UpdateWorldState(BG_SA_ALLY_ATTACKS, 1);
-        UpdateWorldState(BG_SA_HORDE_ATTACKS, 0);
+    UpdateWorldState(BG_SA_ALLY_ATTACKS, (GetDefender() == HORDE) ? 1 : 0);
+    UpdateWorldState(BG_SA_HORDE_ATTACKS, (GetDefender() == HORDE) ? 0 : 1);
 
-        UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_ALL, 1);
-        UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_ALL, 1);
-        UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_HRD, 0);
-        UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_HRD, 0);
-        
-        UpdateWorldState(BG_SA_HORDE_DEFENCE_TOKEN,1);
-        UpdateWorldState(BG_SA_ALLIANCE_DEFENCE_TOKEN,0);
-    }
-    else
-    {
-        UpdateWorldState(BG_SA_ALLY_ATTACKS, 0);
-        UpdateWorldState(BG_SA_HORDE_ATTACKS, 1);
+    UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_ALL, (GetDefender() == HORDE) ? 1 : 0);
+    UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_ALL, (GetDefender() == HORDE) ? 1 : 0);
+    UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_HRD, (GetDefender() == HORDE) ? 0 : 1);
+    UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_HRD, (GetDefender() == HORDE) ? 0 : 1);
 
-        UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_ALL, 0);
-        UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_ALL, 0);
-        UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_HRD, 1);
-        UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_HRD, 1);
-
-        UpdateWorldState(BG_SA_HORDE_DEFENCE_TOKEN,0);
-        UpdateWorldState(BG_SA_ALLIANCE_DEFENCE_TOKEN,1);
-    }
+    UpdateWorldState(BG_SA_HORDE_DEFENCE_TOKEN, (GetDefender() == HORDE) ? 1 : 0);
+    UpdateWorldState(BG_SA_ALLIANCE_DEFENCE_TOKEN, (GetDefender() == HORDE) ? 0 : 1);
 
     for (uint32 z = 0; z <= BG_SA_GATE_MAX; ++z)
         FillInitialWorldState(data, count, BG_SA_GateStatus[z], GateStatus[z]);
@@ -302,32 +286,16 @@ void BattleGroundSA::Update(uint32 diff)
 
 void BattleGroundSA::ResetWorldStates()
 {
-    if (GetDefender() == HORDE)
-    {
-        UpdateWorldState(BG_SA_ALLY_ATTACKS, 1);
-        UpdateWorldState(BG_SA_HORDE_ATTACKS, 0);
+    UpdateWorldState(BG_SA_ALLY_ATTACKS, (GetDefender() == HORDE) ? 1 : 0);
+    UpdateWorldState(BG_SA_HORDE_ATTACKS, (GetDefender() == HORDE) ? 0 : 1);
 
-        UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_ALL, 1);
-        UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_ALL, 1);
-        UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_HRD, 0);
-        UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_HRD, 0);
+    UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_ALL, (GetDefender() == HORDE) ? 1 : 0);
+    UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_ALL, (GetDefender() == HORDE) ? 1 : 0);
+    UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_HRD, (GetDefender() == HORDE) ? 0 : 1);
+    UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_HRD, (GetDefender() == HORDE) ? 0 : 1);
 
-        UpdateWorldState(BG_SA_HORDE_DEFENCE_TOKEN,1);
-        UpdateWorldState(BG_SA_ALLIANCE_DEFENCE_TOKEN,0);
-    }
-    else
-    {
-        UpdateWorldState(BG_SA_HORDE_ATTACKS, 1);
-        UpdateWorldState(BG_SA_ALLY_ATTACKS, 0);
-
-        UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_ALL, 0);
-        UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_ALL, 0);
-        UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_HRD, 1);
-        UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_HRD, 1);
-
-        UpdateWorldState(BG_SA_HORDE_DEFENCE_TOKEN,0);
-        UpdateWorldState(BG_SA_ALLIANCE_DEFENCE_TOKEN,1);
-    }
+    UpdateWorldState(BG_SA_HORDE_DEFENCE_TOKEN, (GetDefender() == HORDE) ? 1 : 0);
+    UpdateWorldState(BG_SA_ALLIANCE_DEFENCE_TOKEN, (GetDefender() == HORDE) ? 0 : 1);
 
     UpdateWorldState(BG_SA_PURPLE_GATEWS, 1);
     UpdateWorldState(BG_SA_RED_GATEWS, 1);
