@@ -37,8 +37,8 @@
 */
 
 static uint32 const BG_SA_GateStatus[6] = {3849, 3623, 3620, 3614, 3617, 3638};
-static uint32 const BG_SA_WorldStatusA[3] = {3630, 3627, 3626};
-static uint32 const BG_SA_WorldStatusH[3] = {3631, 3628, 3629};
+static uint32 const BG_SA_WorldStatusA[4] = {4352, 3631, 3627, 3626};         // alliance attacking
+static uint32 const BG_SA_WorldStatusH[4] = {4353, 3630, 3628, 3629};         // horde attacking
 
 // WorldSafeLocs ids for 5 gyd, and for ally, and horde starting location
 static uint32 const BG_SA_GraveyardIdsPhase[3] = {1347, 1346, 1348};
@@ -75,8 +75,8 @@ BattleGroundSA::BattleGroundSA()
     isDemolisherDestroyed[1] = false; // HORDE
     shipsTimer = BG_SA_BOAT_START;
     pillarOpenTimer = BG_SA_PILLAR_START;
-    for (int32 i = 0; i <= BG_SA_GATE_MAX; ++i)
-        GateStatus[i] = 1;
+    for (int32 i = 0; i < BG_SA_GATE_MAX; ++i)
+        GateStatus[i] = BG_SA_GO_GATES_NORMAL;
     TimerEnabled = false;
     TimeST2Round = 120000;
     Round_timer = 0;
@@ -89,18 +89,21 @@ BattleGroundSA::~BattleGroundSA()
 
 void BattleGroundSA::FillInitialWorldStates(WorldPacket& data, uint32& count)
 {
-    UpdateWorldState(BG_SA_ALLY_ATTACKS, (GetDefender() == HORDE) ? 1 : 0);
-    UpdateWorldState(BG_SA_HORDE_ATTACKS, (GetDefender() == HORDE) ? 0 : 1);
+    for (uint8 i = 0; i < BG_SA_GRY_MAX; ++i)
+    {
+        if (m_Gyd[i] == BG_SA_GARVE_STATUS_HORDE_OCCUPIED || m_Gyd[i] == BG_SA_GARVE_STATUS_HORDE_CONTESTED)
+            _GydOccupied(i, HORDE);
+        else if (m_Gyd[i] == BG_SA_GARVE_STATUS_ALLY_OCCUPIED || m_Gyd[i] == BG_SA_GARVE_STATUS_ALLY_CONTESTED)
+            _GydOccupied(i, ALLIANCE);
+    }
 
-    UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_ALL, (GetDefender() == HORDE) ? 1 : 0);
-    UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_ALL, (GetDefender() == HORDE) ? 1 : 0);
-    UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_HRD, (GetDefender() == HORDE) ? 0 : 1);
-    UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_HRD, (GetDefender() == HORDE) ? 0 : 1);
+    for (uint8 i = 0; i < BG_SA_MAX_WS; ++i)
+    {
+        FillInitialWorldState(data, count, BG_SA_WorldStatusA[i], (GetDefender() == HORDE) ? 1 : 0);
+        FillInitialWorldState(data, count, BG_SA_WorldStatusH[i], (GetDefender() == HORDE) ? 0 : 1);
+    }
 
-    UpdateWorldState(BG_SA_HORDE_DEFENCE_TOKEN, (GetDefender() == HORDE) ? 1 : 0);
-    UpdateWorldState(BG_SA_ALLIANCE_DEFENCE_TOKEN, (GetDefender() == HORDE) ? 0 : 1);
-
-    for (uint32 z = 0; z <= BG_SA_GATE_MAX; ++z)
+    for (uint32 z = 0; z < BG_SA_GATE_MAX; ++z)
         FillInitialWorldState(data, count, BG_SA_GateStatus[z], GateStatus[z]);
 
     //Time will be sent on first update...
@@ -108,14 +111,6 @@ void BattleGroundSA::FillInitialWorldStates(WorldPacket& data, uint32& count)
     FillInitialWorldState(data, count, BG_SA_TIMER_MINUTES, uint32(0));
     FillInitialWorldState(data, count, BG_SA_TIMER_10SEC, uint32(0));
     FillInitialWorldState(data, count, BG_SA_TIMER_SEC, uint32(0));
-
-    UpdateWorldState(BG_SA_RIGHT_GY_HORDE , ((m_Gyd[0] == BG_SA_GARVE_STATUS_HORDE_CONTESTED) || (m_Gyd[0] == BG_SA_GARVE_STATUS_HORDE_OCCUPIED)) ? 1 : 0);
-    UpdateWorldState(BG_SA_LEFT_GY_HORDE , ((m_Gyd[1] == BG_SA_GARVE_STATUS_HORDE_CONTESTED) || (m_Gyd[1] == BG_SA_GARVE_STATUS_HORDE_OCCUPIED)) ? 1 : 0);
-    UpdateWorldState(BG_SA_CENTER_GY_HORDE , ((m_Gyd[2] == BG_SA_GARVE_STATUS_HORDE_CONTESTED) || (m_Gyd[2] == BG_SA_GARVE_STATUS_HORDE_OCCUPIED)) ? 1 : 0);
-
-    UpdateWorldState(BG_SA_RIGHT_GY_ALLIANCE , ((m_Gyd[0] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[0] == BG_SA_GARVE_STATUS_ALLY_OCCUPIED)) ? 1 : 0);
-    UpdateWorldState(BG_SA_LEFT_GY_ALLIANCE , ((m_Gyd[1] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[1] == BG_SA_GARVE_STATUS_ALLY_OCCUPIED)) ? 1 : 0);
-    UpdateWorldState(BG_SA_CENTER_GY_ALLIANCE , ((m_Gyd[2] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[2] == BG_SA_GARVE_STATUS_ALLY_OCCUPIED)) ? 1 : 0);
 }
 
 void BattleGroundSA::StartShips()
@@ -286,24 +281,25 @@ void BattleGroundSA::Update(uint32 diff)
 
 void BattleGroundSA::ResetWorldStates()
 {
-    UpdateWorldState(BG_SA_ALLY_ATTACKS, (GetDefender() == HORDE) ? 1 : 0);
-    UpdateWorldState(BG_SA_HORDE_ATTACKS, (GetDefender() == HORDE) ? 0 : 1);
+    for (uint8 i = 0; i < BG_SA_GRY_MAX; ++i)
+    {
+        if (m_Gyd[i] == BG_SA_GARVE_STATUS_HORDE_OCCUPIED || m_Gyd[i] == BG_SA_GARVE_STATUS_HORDE_CONTESTED)
+            _GydOccupied(i, HORDE);
+        else if (m_Gyd[i] == BG_SA_GARVE_STATUS_ALLY_OCCUPIED || m_Gyd[i] == BG_SA_GARVE_STATUS_ALLY_CONTESTED)
+            _GydOccupied(i, ALLIANCE);
+    }
 
-    UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_ALL, (GetDefender() == HORDE) ? 1 : 0);
-    UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_ALL, (GetDefender() == HORDE) ? 1 : 0);
-    UpdateWorldState(BG_SA_RIGHT_ATT_TOKEN_HRD, (GetDefender() == HORDE) ? 0 : 1);
-    UpdateWorldState(BG_SA_LEFT_ATT_TOKEN_HRD, (GetDefender() == HORDE) ? 0 : 1);
+    _GydOccupied(3, (GetDefender() == HORDE) ? ALLIANCE : HORDE);
 
-    UpdateWorldState(BG_SA_HORDE_DEFENCE_TOKEN, (GetDefender() == HORDE) ? 1 : 0);
-    UpdateWorldState(BG_SA_ALLIANCE_DEFENCE_TOKEN, (GetDefender() == HORDE) ? 0 : 1);
+    // Reset world-state of gates
+    for (uint32 z = 0; z <= BG_SA_GATE_MAX; ++z)
+        UpdateWorldState(BG_SA_GateStatus[z], GateStatus[z]);
 
-    UpdateWorldState(BG_SA_PURPLE_GATEWS, 1);
-    UpdateWorldState(BG_SA_RED_GATEWS, 1);
-    UpdateWorldState(BG_SA_BLUE_GATEWS, 1);
-    UpdateWorldState(BG_SA_GREEN_GATEWS, 1);
-    UpdateWorldState(BG_SA_YELLOW_GATEWS, 1);
-    UpdateWorldState(BG_SA_ANCIENT_GATEWS, 1);
-
+    for (uint8 i = 0; i < BG_SA_MAX_WS; ++i)
+    {
+        UpdateWorldState(BG_SA_WorldStatusA[i], (GetDefender() == HORDE) ? 1 : 0);
+        UpdateWorldState(BG_SA_WorldStatusH[i], (GetDefender() == HORDE) ? 0 : 1);
+    }
 }
 
 void BattleGroundSA::UpdateTimer()
@@ -374,7 +370,7 @@ void BattleGroundSA::ResetBattle(uint32 winner, Team teamDefending)
     pillarOpenTimer = 90000;
     shipsStarted = false;
     
-    for (int32 i = 0; i <= BG_SA_GATE_MAX; ++i)
+    for (int32 i = 0; i < BG_SA_GATE_MAX; ++i)
         GateStatus[i] = 1;
 
     SetStartTime(0);
@@ -451,7 +447,6 @@ void BattleGroundSA::UpdatePhase()
     // Spawn bombs at start
     SpawnEvent(SA_EVENT_ADD_BOMB, (GetDefender() == ALLIANCE ? 1 : 0), true);
 
-    _GydOccupied(4, (GetDefender() == HORDE) ? ALLIANCE : HORDE);
     m_ActiveEvents[5] = (GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED;
 
     // Spawn banners and graveyards
@@ -464,16 +459,11 @@ void BattleGroundSA::UpdatePhase()
         SpawnEvent(i, (GetDefender() == ALLIANCE ? 1 : 2), true);
         m_Gyd[i] = ((GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED);
         m_ActiveEvents[i] = ((GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED);
-        _GydOccupied(i, GetDefender());
     }
 
     // (Re)spawn graveyard at the beach.
     SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_HORDE_CONTESTED, GetDefender() == ALLIANCE ? false : true);
     SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_ALLY_CONTESTED, GetDefender() == ALLIANCE ? true : false);
-
-    // Reset world-state of gates
-    for (uint32 z = 0; z <= BG_SA_GATE_MAX; ++z)
-        UpdateWorldState(BG_SA_GateStatus[z], GateStatus[z]);
 
     SpawnEvent(SA_EVENT_ADD_GO, 0, false);
     SpawnEvent(SA_EVENT_ADD_GO, 0, true);
@@ -493,9 +483,6 @@ bool BattleGroundSA::SetupShips()
             if (Player* plr = sObjectMgr.GetPlayer(itr->first))
                 SendTransportsRemove(plr);
         }
-
-        if (Phase == SA_ROUND_TWO)
-            DelObject(i);
     }
 
     for (uint8 i = BG_SA_BOAT_ONE; i <= BG_SA_BOAT_TWO; ++i)
@@ -901,17 +888,17 @@ WorldSafeLocsEntry const* BattleGroundSA::GetClosestGraveYard(Player* player)
 
 void BattleGroundSA::_GydOccupied(uint8 node, Team team)
 {
-    if (node >= 0 && node < 4)
+    if (node >= 0 && node < 3)
     {
         UpdateWorldState(GrraveYardWS[node][0], team == HORDE ? 0 : 1);
         UpdateWorldState(GrraveYardWS[node][1], team == HORDE ? 1 : 0);
     }
-    else if (node == 4)
+    else if (node == 3)
     {
-        for (int8 i = 0; i <= BG_SA_MAX_WS; ++i)
+        for (int8 i = 0; i < BG_SA_MAX_WS; ++i)
         {
-            UpdateWorldState(BG_SA_WorldStatusH[i], team == HORDE ? 1 : 0);
-            UpdateWorldState(BG_SA_WorldStatusA[i], team == HORDE ? 0 : 1);
+            UpdateWorldState(BG_SA_WorldStatusH[i], (team == HORDE) ? 1 : 0);
+            UpdateWorldState(BG_SA_WorldStatusA[i], (team == HORDE) ? 1 : 0);
         }
     }
 }

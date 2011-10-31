@@ -21,9 +21,9 @@
 
 class BattleGround;
 
-#define BG_SA_GRY_MAX   4
+#define BG_SA_GRY_MAX   3
 #define BG_SA_GATE_MAX  6
-#define BG_SA_MAX_WS    3
+#define BG_SA_MAX_WS    4
 #define BG_SA_EVENT_START_BATTLE_1      23748       // Ally / Horde likely
 #define BG_SA_EVENT_START_BATTLE_2      21702
 
@@ -41,7 +41,6 @@ enum BG_SA_WorldStates
     BG_SA_GREEN_GATEWS          = 3623,
     BG_SA_YELLOW_GATEWS         = 3638,
     BG_SA_ANCIENT_GATEWS        = 3849,
-
 
     BG_SA_LEFT_GY_ALLIANCE      = 3635,
     BG_SA_RIGHT_GY_ALLIANCE     = 3636,
