@@ -493,6 +493,9 @@ bool BattleGroundSA::SetupShips()
             if (Player* plr = sObjectMgr.GetPlayer(itr->first))
                 SendTransportsRemove(plr);
         }
+
+        if (Phase == SA_ROUND_TWO)
+            DelObject(i);
     }
 
     for (uint8 i = BG_SA_BOAT_ONE; i <= BG_SA_BOAT_TWO; ++i)
