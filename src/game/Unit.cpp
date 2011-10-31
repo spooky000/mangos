@@ -7653,8 +7653,8 @@ int32 Unit::SpellBaseDamageBonusTaken(SpellSchoolMask schoolMask)
 
 bool Unit::IsSpellCrit(Unit *pVictim, SpellEntry const *spellProto, SpellSchoolMask schoolMask, WeaponAttackType attackType)
 {
-    // creatures (except totems) can't crit with spells at all ( for creatures not sure - /dev/rsa)
-    if (GetObjectGuid().IsCreature() && !((Creature*)this)->IsTotem())
+    // creatures (except totems) and vehicles can't crit with spells at all ( for creatures not sure - /dev/rsa)
+    if ((GetObjectGuid().IsCreature() && !((Creature*)this)->IsTotem()) || GetObjectGuid().IsVehicle())
         return false;
 
     // not critting spell
