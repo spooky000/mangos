@@ -1405,6 +1405,12 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
         else
             CharacterDatabase.PExecute("INSERT INTO `character_homebind` VALUES ('%u','1','1637','1633.33','-4439.11','15.7588')", guid.GetCounter());
 
+        // Teleport to new homebind
+        if (team == BG_TEAM_ALLIANCE)
+            CharacterDatabase.PExecute("UPDATE IGNORE `characters` SET position_x = '-8867.68', position_y = '673.373', position_z = '97.9034', map = '0' WHERE guid = '%u'", guid.GetCounter());
+        else
+            CharacterDatabase.PExecute("UPDATE IGNORE `characters` SET position_x = '1633.33', position_y = '-4439.11', position_z = '15.7588', map = '1' WHERE guid = '%u'", guid.GetCounter());
+
         // Achievement conversion
         if (QueryResult *result2 = WorldDatabase.Query("SELECT alliance_id, horde_id FROM player_factionchange_achievements"))
         {
