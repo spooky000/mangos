@@ -83,6 +83,7 @@ enum BG_SA_GraveYard
     BG_SA_GARVE_E                       = 0,
     BG_SA_GARVE_W                       = 1,
     BG_SA_GARVE_S                       = 2,
+    BG_SA_GARVE_A                       = 3,    // Last defender graveyard, at the ancient shrine
     BG_SA_GARVE_ERROR                   = 255
 };
 

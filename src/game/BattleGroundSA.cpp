@@ -447,8 +447,6 @@ void BattleGroundSA::UpdatePhase()
     // Spawn bombs at start
     SpawnEvent(SA_EVENT_ADD_BOMB, (GetDefender() == ALLIANCE ? 1 : 0), true);
 
-    m_ActiveEvents[5] = (GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED;
-
     // Spawn banners and graveyards
     for (uint8 i = 0; i < BG_SA_GRY_MAX; ++i)
     {
@@ -456,14 +454,13 @@ void BattleGroundSA::UpdatePhase()
             SpawnEvent(i, z, false);
 
         m_BannerTimers[i].timer = 0;
-        SpawnEvent(i, (GetDefender() == ALLIANCE ? 1 : 2), true);
+        SpawnEvent(i, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED), true);
         m_Gyd[i] = ((GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED);
-        m_ActiveEvents[i] = ((GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED);
     }
 
     // (Re)spawn graveyard at the beach.
-    SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_HORDE_CONTESTED, GetDefender() == ALLIANCE ? false : true);
-    SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_ALLY_CONTESTED, GetDefender() == ALLIANCE ? true : false);
+    SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_HORDE_CONTESTED, GetDefender() == ALLIANCE ? true : false);
+    SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_ALLY_CONTESTED, GetDefender() == ALLIANCE ? false : true);
 
     SpawnEvent(SA_EVENT_ADD_GO, 0, false);
     SpawnEvent(SA_EVENT_ADD_GO, 0, true);
@@ -476,12 +473,15 @@ bool BattleGroundSA::SetupBattleGround()
 
 bool BattleGroundSA::SetupShips()
 {
-    for (uint8 i = BG_SA_BOAT_ONE; i <= BG_SA_BOAT_TWO; ++i)
+    if (Phase == SA_ROUND_TWO)
     {
-        for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+        for (uint8 i = BG_SA_BOAT_ONE; i <= BG_SA_BOAT_TWO; ++i)
         {
-            if (Player* plr = sObjectMgr.GetPlayer(itr->first))
-                SendTransportsRemove(plr);
+            for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+            {
+                if (Player* plr = sObjectMgr.GetPlayer(itr->first))
+                    SendTransportsRemove(plr);
+            }
         }
     }
 
