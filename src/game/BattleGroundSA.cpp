@@ -75,8 +75,10 @@ BattleGroundSA::BattleGroundSA()
     isDemolisherDestroyed[1] = false; // HORDE
     shipsTimer = BG_SA_BOAT_START;
     pillarOpenTimer = BG_SA_PILLAR_START;
+
     for (int32 i = 0; i < BG_SA_GATE_MAX; ++i)
         GateStatus[i] = BG_SA_GO_GATES_NORMAL;
+
     TimerEnabled = false;
     TimeST2Round = 120000;
     Round_timer = 0;
@@ -104,7 +106,11 @@ void BattleGroundSA::FillInitialWorldStates(WorldPacket& data, uint32& count)
     }
 
     for (uint32 z = 0; z < BG_SA_GATE_MAX; ++z)
+    {
         FillInitialWorldState(data, count, BG_SA_GateStatus[z], GateStatus[z]);
+        if ((z == 0) && (GetDefender() == HORDE))                                               // Ancient gate changes color depending on the defender
+            FillInitialWorldState(data, count, BG_SA_GateStatus[z], (GateStatus[z] + 3));
+    }
 
     //Time will be sent on first update...
     FillInitialWorldState(data, count, BG_SA_ENABLE_TIMER, TimerEnabled ? uint32(1) : uint32(0));
@@ -191,7 +197,7 @@ void BattleGroundSA::Update(uint32 diff)
     {
         if (Round_timer >= BG_SA_ROUNDLENGTH)
         {
-            if(Phase == SA_ROUND_ONE) // Timeout of first round
+            if (Phase == SA_ROUND_ONE) // Timeout of first round
             {
                 PlaySoundToAll(BG_SA_SOUND_GYD_VICTORY);
                 SendMessageToAll(defender == ALLIANCE ? LANG_BG_SA_ALLIANCE_TIMEOUT_END_1ROUND : LANG_BG_SA_HORDE_TIMEOUT_END_1ROUND, CHAT_MSG_BG_SYSTEM_NEUTRAL, NULL);
@@ -269,6 +275,7 @@ void BattleGroundSA::Update(uint32 diff)
         {
             Phase = 2;
             SpawnEvent(SA_EVENT_ADD_NPC, 0, true);
+            SpawnEvent(SA_EVENT_ADD_BOMB, (GetDefender() == ALLIANCE ? 1 : 0), true);
             ToggleTimer();
             SetStatus(STATUS_IN_PROGRESS); // Start round two
             PlaySoundToAll(SOUND_BG_START);
@@ -292,8 +299,12 @@ void BattleGroundSA::ResetWorldStates()
     _GydOccupied(3, (GetDefender() == HORDE) ? ALLIANCE : HORDE);
 
     // Reset world-state of gates
-    for (uint32 z = 0; z <= BG_SA_GATE_MAX; ++z)
+    for (uint32 z = 0; z < BG_SA_GATE_MAX; ++z)
+    {
         UpdateWorldState(BG_SA_GateStatus[z], GateStatus[z]);
+        if ((z == 0) && (GetDefender() == HORDE))
+            UpdateWorldState(BG_SA_GateStatus[z], (GateStatus[z] + 3));
+    }
 
     for (uint8 i = 0; i < BG_SA_MAX_WS; ++i)
     {
@@ -317,6 +328,7 @@ void BattleGroundSA::StartingEventCloseDoors()
 void BattleGroundSA::StartingEventOpenDoors()
 {
     SpawnEvent(SA_EVENT_ADD_NPC, 0, true);
+    SpawnEvent(SA_EVENT_ADD_BOMB, (GetDefender() == ALLIANCE ? 1 : 0), true);
     ToggleTimer();
     StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, (defender  == HORDE) ? BG_SA_EVENT_START_BATTLE_2 : BG_SA_EVENT_START_BATTLE_1);
 }
@@ -371,7 +383,7 @@ void BattleGroundSA::ResetBattle(uint32 winner, Team teamDefending)
     shipsStarted = false;
     
     for (int32 i = 0; i < BG_SA_GATE_MAX; ++i)
-        GateStatus[i] = 1;
+        GateStatus[i] = BG_SA_GO_GATES_NORMAL;
 
     SetStartTime(0);
     defender = (teamDefending  == ALLIANCE) ?  HORDE : ALLIANCE;
@@ -444,9 +456,6 @@ void BattleGroundSA::UpdatePhase()
         SendMessageToAll(LANG_BG_SA_START_TWO_MINUTE, CHAT_MSG_BG_SYSTEM_NEUTRAL, NULL);
     }
 
-    // Spawn bombs at start
-    SpawnEvent(SA_EVENT_ADD_BOMB, (GetDefender() == ALLIANCE ? 1 : 0), true);
-
     // Spawn banners and graveyards
     for (uint8 i = 0; i < BG_SA_GRY_MAX; ++i)
     {
@@ -459,8 +468,10 @@ void BattleGroundSA::UpdatePhase()
     }
 
     // (Re)spawn graveyard at the beach.
-    SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_HORDE_CONTESTED, GetDefender() == ALLIANCE ? true : false);
-    SpawnEvent(SA_EVENT_ADD_SPIR, BG_SA_GARVE_STATUS_ALLY_CONTESTED, GetDefender() == ALLIANCE ? false : true);
+    SpawnEvent(SA_EVENT_ADD_SPIR, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_HORDE_CONTESTED : BG_SA_GARVE_STATUS_ALLY_CONTESTED), true);
+
+    // spirit healers at the relic
+    SpawnEvent(BG_SA_GARVE_A, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED), true);
 
     SpawnEvent(SA_EVENT_ADD_GO, 0, false);
     SpawnEvent(SA_EVENT_ADD_GO, 0, true);
@@ -553,6 +564,7 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
     uint8 objectEvent = (sBattleGroundMgr.GetGameObjectEventIndex(target_obj->GetGUIDLow())).event1;
     if (objectEvent >= BG_SA_GRY_MAX)                           // not a node
         return;
+
     BG_SA_GraveYard gyd = BG_SA_GraveYard(objectEvent);
 
     BattleGroundTeamIndex teamIndex = GetTeamIndexByTeamId(source->GetTeam());
@@ -564,7 +576,7 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
     if ((m_Gyd[gyd] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[gyd] == BG_SA_GARVE_STATUS_HORDE_CONTESTED))
     {
         //make the new banner not capturable by defenders
-        m_Gyd[gyd] += (GetDefender() == ALLIANCE) ? 3 : 1;
+        m_Gyd[gyd] += (GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_OCCUPIED : BG_SA_GARVE_STATUS_ALLY_CONTESTED;
         // create new occupied banner (attacker one, not clickable by anyone)
         _CreateBanner(gyd, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_HORDE_OCCUPIED : BG_SA_GARVE_STATUS_ALLY_OCCUPIED), teamIndex, true);
         _GydOccupied(gyd,(teamIndex == 0) ? ALLIANCE:HORDE);
@@ -626,11 +638,13 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                     break;
                 case 19836:
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type);
-                    UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DAMAGE);
+                    UpdateWorldState(BG_SA_GateStatus[type], (GetDefender() == HORDE) ? 5 : 2);
+                    GateStatus[type] = BG_SA_GO_GATES_DAMAGE;
                     break;
                 case 19837:
                     SendWarningToAllSA(NULL, NULL, TEAM_NONE, true, type, true);
-                    UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DESTROY);
+                    UpdateWorldState(BG_SA_GateStatus[type], (GetDefender() == HORDE) ? 6 : 3);
+                    GateStatus[type] = BG_SA_GO_GATES_DESTROY;
                     UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
                     RewardHonorToTeam(100, (teamIndex == 0) ? ALLIANCE:HORDE);
                     relicGateDestroyed = true;
@@ -742,7 +756,7 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
         {
             if (eventId == 22097 && player->GetTeam() != GetDefender())
             {
-                if(!relicGateDestroyed)
+                if (!relicGateDestroyed)
                 {
                     player->GetSession()->KickPlayer();
                     sLog.outError("Player %s has clicked SOTA Relic without Relic gate being destroyed", player->GetName());
@@ -757,9 +771,8 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                             plr->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 65246);
                 }
 
-                if(Phase == SA_ROUND_ONE) // Victory at first round
+                if (Phase == SA_ROUND_ONE) // Victory at first round
                 {
-
                     RoundScores[0].winner = GetDefender() == ALLIANCE ? HORDE : ALLIANCE;
                     RoundScores[0].time = Round_timer;
                     PlaySoundToAll(BG_SA_SOUND_GYD_VICTORY);
@@ -791,10 +804,10 @@ void BattleGroundSA::HandleKillPlayer(Player* player, Player* killer)
 
 void BattleGroundSA::HandleKillUnit(Creature* unit, Player* killer)
 {
-    if(!unit)
+    if (!unit)
         return;
 
-    if(unit->GetEntry() == 28781)  //Demolisher
+    if (unit->GetEntry() == 28781)  //Demolisher
     {
         UpdatePlayerScore(killer, SCORE_DEMOLISHERS_DESTROYED, 1);
         isDemolisherDestroyed[killer->GetTeam() == HORDE ? 0 : 1] = true;
@@ -805,6 +818,7 @@ int32 BattleGroundSA::_GatesName(GameObject* obj)
 {
     if (!obj)
         return 0;
+
     switch (obj->GetEntry())
     {
         case BG_SA_GO_GATES_ROOM_ANCIENT_SHRINE:  return LANG_BG_SA_GATE_ROOM_ANCIENT_SHRINE;
@@ -823,9 +837,9 @@ int32 BattleGroundSA::_GydName(uint8 gyd)
 {
     switch (gyd)
     {
-        case 0:  return LANG_BG_SA_EAST_GRAVEYARD;
-        case 1:  return LANG_BG_SA_WEST_GRAVEYARD;
-        case 2:  return LANG_BG_SA_SOUTH_GRAVEYARD;
+        case 0: return LANG_BG_SA_EAST_GRAVEYARD;
+        case 1: return LANG_BG_SA_WEST_GRAVEYARD;
+        case 2: return LANG_BG_SA_SOUTH_GRAVEYARD;
         default:
             MANGOS_ASSERT(0);
     }
@@ -840,7 +854,7 @@ WorldSafeLocsEntry const* BattleGroundSA::GetClosestGraveYard(Player* player)
     std::vector<uint8> gyd;
     for (uint8 i = 0; i < BG_SA_GRY_MAX; ++i)
         // players should be able to ressurect at their faction's contested/occupied graveyards too
-        if ((m_Gyd[i] == teamIndex + 1) || (m_Gyd[i] == teamIndex + 3)) 
+        if ((m_Gyd[i] == teamIndex + BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[i] == teamIndex + BG_SA_GARVE_STATUS_ALLY_OCCUPIED))
             gyd.push_back(i);
 
     WorldSafeLocsEntry const* good_entry = NULL;
@@ -854,8 +868,10 @@ WorldSafeLocsEntry const* BattleGroundSA::GetClosestGraveYard(Player* player)
         for (uint8 i = 0; i < gyd.size(); ++i)
         {
             WorldSafeLocsEntry const*entry = sWorldSafeLocsStore.LookupEntry(BG_SA_GraveyardIdsPhase[gyd[i]]);
+
             if (!entry)
                 continue;
+
             float dist = (entry->x - plr_x)*(entry->x - plr_x)+(entry->y - plr_y)*(entry->y - plr_y);
             if (mindist > dist)
             {
@@ -888,7 +904,7 @@ WorldSafeLocsEntry const* BattleGroundSA::GetClosestGraveYard(Player* player)
 
 void BattleGroundSA::_GydOccupied(uint8 node, Team team)
 {
-    if (node >= 0 && node < 3)
+    if (node >= 0 && node < BG_SA_GRY_MAX)
     {
         UpdateWorldState(GrraveYardWS[node][0], team == HORDE ? 0 : 1);
         UpdateWorldState(GrraveYardWS[node][1], team == HORDE ? 1 : 0);

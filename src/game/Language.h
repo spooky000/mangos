@@ -1029,6 +1029,7 @@ enum MangosStrings
     LANG_BG_SA_ALLIANCE_TIMEOUT_END_2ROUND        = 20042,
 
     LANG_BG_SA_END_1ROUND                         = 20043,
+    LANG_BG_WIN_NONE                              = 20044,
 
     // Isle of Conquest
     LANG_BG_IC_START_TWO_MINUTES        = 20080,

@@ -763,6 +763,7 @@ void BattleGround::EndBattleGround(Team winner)
     else
     {
         SetWinner(3);
+        winmsg_id = LANG_BG_WIN_NONE;
     }
 
     SetStatus(STATUS_WAIT_LEAVE);
