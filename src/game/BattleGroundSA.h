@@ -124,6 +124,7 @@ enum BG_SA_GoType
 
 enum BG_SA_Events
 {
+    SA_EVENT_ADD_SPIR_A     = 3,        // ancient relic area
     SA_EVENT_ADD_SPIR       = 5,
     SA_EVENT_ADD_BOMB       = 6,
     SA_EVENT_ADD_NPC        = 7,

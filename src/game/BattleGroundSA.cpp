@@ -433,6 +433,7 @@ void BattleGroundSA::Reset()
     m_ActiveEvents[SA_EVENT_ADD_GO] = BG_EVENT_NONE;
     m_ActiveEvents[SA_EVENT_ADD_NPC] = BG_EVENT_NONE;
     m_ActiveEvents[SA_EVENT_ADD_SPIR] = BG_EVENT_NONE;
+    m_ActiveEvents[SA_EVENT_ADD_SPIR_A] = BG_EVENT_NONE;
     m_ActiveEvents[SA_EVENT_ADD_BOMB] = BG_EVENT_NONE;
     m_ActiveEvents[SA_EVENT_ADD_VECH_E] = BG_EVENT_NONE;
     m_ActiveEvents[SA_EVENT_ADD_VECH_W] = BG_EVENT_NONE;
@@ -471,7 +472,7 @@ void BattleGroundSA::UpdatePhase()
     SpawnEvent(SA_EVENT_ADD_SPIR, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_HORDE_CONTESTED : BG_SA_GARVE_STATUS_ALLY_CONTESTED), true);
 
     // spirit healers at the relic
-    SpawnEvent(BG_SA_GARVE_A, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED), true);
+    SpawnEvent(SA_EVENT_ADD_SPIR_A, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED), true);
 
     SpawnEvent(SA_EVENT_ADD_GO, 0, false);
     SpawnEvent(SA_EVENT_ADD_GO, 0, true);
