@@ -1407,9 +1407,9 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
 
         // Teleport to new homebind
         if (team == BG_TEAM_ALLIANCE)
-            CharacterDatabase.PExecute("UPDATE IGNORE `characters` SET position_x = '-8867.68', position_y = '673.373', position_z = '97.9034', map = '0' WHERE guid = '%u'", guid.GetCounter());
+            CharacterDatabase.PExecute("UPDATE IGNORE `characters` SET position_x = '-8867.68', position_y = '673.373', position_z = '97.9034', map = '0', orientation = '5.204' WHERE guid = '%u'", guid.GetCounter());
         else
-            CharacterDatabase.PExecute("UPDATE IGNORE `characters` SET position_x = '1633.33', position_y = '-4439.11', position_z = '15.7588', map = '1' WHERE guid = '%u'", guid.GetCounter());
+            CharacterDatabase.PExecute("UPDATE IGNORE `characters` SET position_x = '1633.33', position_y = '-4439.11', position_z = '15.75', map = '1', orientation = '2.718' WHERE guid = '%u'", guid.GetCounter());
 
         // Achievement conversion
         if (QueryResult *result2 = WorldDatabase.Query("SELECT alliance_id, horde_id FROM player_factionchange_achievements"))
@@ -1484,7 +1484,8 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
 
                 CharacterDatabase.PExecute("DELETE FROM character_reputation WHERE faction = '%u' AND guid = '%u'",team == BG_TEAM_ALLIANCE ? reputation_alliance : reputation_horde, guid.GetCounter());
                 CharacterDatabase.PExecute("UPDATE IGNORE `character_reputation` set faction = '%u', standing = '%i' WHERE faction = '%u' AND guid = '%u'",
-                    team == BG_TEAM_ALLIANCE ? reputation_alliance : reputation_horde, standing + rep_diff, team == BG_TEAM_ALLIANCE ? reputation_horde : reputation_alliance, guid.GetCounter());
+                    team == BG_TEAM_ALLIANCE ? reputation_alliance : reputation_horde, ((reputation_alliance == 1050) || (reputation_horde == 1085)) ? standing :
+                    standing + rep_diff, team == BG_TEAM_ALLIANCE ? reputation_horde : reputation_alliance, guid.GetCounter());
                 }
             }
             while( result2->NextRow() );
