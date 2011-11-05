@@ -703,6 +703,7 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
     {
         case 12042:                                         // Arcane Power
         case 24732:                                         // Bat Costume
+        case 43730:                                         // Electrified
         case 64844:                                         // Divine Hymn
         case 64904:                                         // Hymn of Hope
             return true;
