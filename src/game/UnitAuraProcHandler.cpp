@@ -3510,8 +3510,17 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 case 38164:
                 {
                     // Do not summont our knights if we arent fighting specific enemy
-                    if( GetTypeId() != TYPEID_PLAYER || pVictim->GetEntry() != 19457)
+                    if (GetTypeId() != TYPEID_PLAYER || pVictim->GetEntry() != 19457)
                         return SPELL_AURA_PROC_FAILED;
+                    break;
+                }
+                // Deflection
+                case 52420:
+                {
+                    int32 health35 = int32(GetMaxHealth() * 35 / 100);
+                    if (int32(GetHealth()) - int32(damage) >= health35 || int32(GetHealth()) < health35)
+                        return SPELL_AURA_PROC_FAILED;
+                    break;
                 }
                 case 51121: // Time Bomb
                 case 59376:
@@ -3552,6 +3561,7 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 basepoints[0] = damage * 15 / 100;
                 target = pVictim;
                 trigger_spell_id = 26470;
+                break;
             }
             else if(auraSpellInfo->Id == 71761)             // Deep Freeze Immunity State
             {
@@ -3692,7 +3702,7 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
             // Cheat Death
             else if (auraSpellInfo->Id == 28845)
             {
-                // When your health drops below 20% ....
+                // When your health drops below 20%
                 int32 health20 = int32(GetMaxHealth()) / 5;
                 if (int32(GetHealth()) - int32(damage) >= health20 || int32(GetHealth()) < health20)
                     return SPELL_AURA_PROC_FAILED;
