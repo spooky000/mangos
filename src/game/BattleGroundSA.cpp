@@ -458,7 +458,7 @@ void BattleGroundSA::UpdatePhase()
     }
 
     // Spawn banners and graveyards
-    for (uint8 i = 0; i <= BG_SA_GRY_MAX; ++i)
+    for (uint8 i = 0; i < BG_SA_GRY_MAX; ++i)
     {
         for (uint8 z = 1; z < 5; ++z)
             SpawnEvent(i, z, false);
@@ -467,6 +467,10 @@ void BattleGroundSA::UpdatePhase()
         SpawnEvent(i, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED), true);
         m_Gyd[i] = ((GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED);
     }
+
+    // spirit healers at the relic
+    SpawnEvent(SA_EVENT_ADD_SPIR_A, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED), true);
+    m_Gyd[BG_SA_GARVE_A] = ((GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED);
 
     // (Re)spawn graveyard at the beach.
     SpawnEvent(SA_EVENT_ADD_SPIR, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_HORDE_CONTESTED : BG_SA_GARVE_STATUS_ALLY_CONTESTED), true);
