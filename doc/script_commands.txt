@@ -233,8 +233,8 @@ spell_scripts
 
 29 SCRIPT_COMMAND_MODIFY_NPC_FLAGS          source=worldobject or target=worldobject (datalong1==0), else source or target = creature
                                             * datalong=NPCFlags
-                                            * datalong1=creature entry
-                                            * datalong2=search radius
+                                            * datalong2=creature entry
+                                            * datalong3=search radius
                                             * data_flags = 0x00=toggle, 0x01=add, 0x02=remove
 
 30 SCRIPT_COMMAND_ADD_QUEST_COUNT           source = any, target = player, datalong = quest_id, datalong2 = quest_field, dataint = increment value

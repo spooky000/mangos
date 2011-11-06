@@ -3227,6 +3227,8 @@ void Map::ScriptsProcess()
                     else
                         pBuddy->SetFlag(UNIT_NPC_FLAGS, step.script->npcFlag.flag);
                 }
+
+                break;
             }
             default:
                 sLog.outError("Unknown SCRIPT_COMMAND_ %u called for script id %u.", step.script->command, step.script->id);
