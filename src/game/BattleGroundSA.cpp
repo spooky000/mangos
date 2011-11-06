@@ -458,7 +458,7 @@ void BattleGroundSA::UpdatePhase()
     }
 
     // Spawn banners and graveyards
-    for (uint8 i = 0; i < BG_SA_GRY_MAX; ++i)
+    for (uint8 i = 0; i <= BG_SA_GRY_MAX; ++i)
     {
         for (uint8 z = 1; z < 5; ++z)
             SpawnEvent(i, z, false);
@@ -470,9 +470,6 @@ void BattleGroundSA::UpdatePhase()
 
     // (Re)spawn graveyard at the beach.
     SpawnEvent(SA_EVENT_ADD_SPIR, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_HORDE_CONTESTED : BG_SA_GARVE_STATUS_ALLY_CONTESTED), true);
-
-    // spirit healers at the relic
-    SpawnEvent(SA_EVENT_ADD_SPIR_A, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED), true);
 
     SpawnEvent(SA_EVENT_ADD_GO, 0, false);
     SpawnEvent(SA_EVENT_ADD_GO, 0, true);
@@ -853,7 +850,7 @@ WorldSafeLocsEntry const* BattleGroundSA::GetClosestGraveYard(Player* player)
 
     // Is there any occupied node for this team?
     std::vector<uint8> gyd;
-    for (uint8 i = 0; i < BG_SA_GRY_MAX; ++i)
+    for (uint8 i = 0; i <= BG_SA_GRY_MAX; ++i)
         // players should be able to ressurect at their faction's contested/occupied graveyards too
         if ((m_Gyd[i] == teamIndex + BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[i] == teamIndex + BG_SA_GARVE_STATUS_ALLY_OCCUPIED))
             gyd.push_back(i);
