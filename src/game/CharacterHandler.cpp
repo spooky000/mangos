@@ -1179,45 +1179,42 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
     uint8 gender, skin, face, hairStyle, hairColor, facialHair, race;
     recv_data >> guid;
 
-    if (recv_data.GetOpcode() == CMSG_CHAR_FACTION_CHANGE)
+    int old_base_rep[14];
+    int f = 0;
+
+    QueryResult *oldRace = CharacterDatabase.PQuery("SELECT race FROM characters WHERE guid = '%u'", guid.GetCounter());
+    if (oldRace)
     {
-        int old_base_rep[14];
-        int f = 0;
+        Field *fields2 = oldRace->Fetch();
+        uint32 old_race = fields2[0].GetUInt32();
 
-        QueryResult *oldRace = CharacterDatabase.PQuery("SELECT race FROM characters WHERE guid = '%u'", guid.GetCounter());
-        if (oldRace)
+        // Search each faction is targeted
+        BattleGroundTeamIndex team = BG_TEAM_ALLIANCE;
+        switch(old_race)
         {
-            Field *fields2 = oldRace->Fetch();
-            uint32 old_race = fields2[0].GetUInt32();
+            case RACE_ORC:
+            case RACE_TAUREN:
+            case RACE_UNDEAD:
+            case RACE_TROLL:
+            case RACE_BLOODELF:
+            //case RACE_GOBLIN: for cataclysm
+                team = BG_TEAM_HORDE;
+                break;
+            default: break;
+        }
 
-            // Search each faction is targeted
-            BattleGroundTeamIndex team = BG_TEAM_ALLIANCE;
-            switch(old_race)
+        if(QueryResult *result2 = WorldDatabase.Query("SELECT alliance_id, horde_id FROM player_factionchange_reputations"))
+        {
+            do
             {
-                case RACE_ORC:
-                case RACE_TAUREN:
-                case RACE_UNDEAD:
-                case RACE_TROLL:
-                case RACE_BLOODELF:
-                //case RACE_GOBLIN: for cataclysm
-                    team = BG_TEAM_HORDE;
-                    break;
-                default: break;
+                Field *fields3 = result2->Fetch();
+                uint32 reputation_alliance = fields3[0].GetUInt32();
+                uint32 reputation_horde = fields3[1].GetUInt32();
+                FactionEntry const* factionEntry = sFactionStore.LookupEntry(team == BG_TEAM_ALLIANCE ? reputation_alliance : reputation_horde);
+                old_base_rep[f] = factionEntry->BaseRepValue[0];
+                f++;
             }
-
-            if(QueryResult *result2 = WorldDatabase.Query("SELECT alliance_id, horde_id FROM player_factionchange_reputations"))
-            {
-                do
-                {
-                    Field *fields3 = result2->Fetch();
-                    uint32 reputation_alliance = fields3[0].GetUInt32();
-                    uint32 reputation_horde = fields3[1].GetUInt32();
-                    FactionEntry const* factionEntry = sFactionStore.LookupEntry(team == BG_TEAM_ALLIANCE ? reputation_alliance : reputation_horde);
-                    old_base_rep[f] = factionEntry->BaseRepValue[0];
-                    f++;
-                }
-                while( result2->NextRow() );
-            }
+            while( result2->NextRow() );
         }
     }
 
