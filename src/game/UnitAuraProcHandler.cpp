@@ -3539,6 +3539,26 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
 
                     return SPELL_AURA_PROC_OK;
                 }
+                case 71494:                                 // Vengeful Blast
+                {
+                    // despawn Vengeful Shade after proc
+                    if  (GetTypeId() == TYPEID_UNIT)
+                        ((Creature*)this)->ForcedDespawn(1000);
+                    break;
+                }
+                case 72178:                                 // Blood link Saurfang aura
+                {
+                    target = this;
+                    trigger_spell_id = 72195;
+                    break;
+                }
+                case 72408:                                 // Rune of Blood (Saurfang)
+                {
+                    // Proc on targets with dummy aura (debuff cast by Saurfang)
+                    if (pVictim && !pVictim->HasAura(72410))
+                        return SPELL_AURA_PROC_FAILED;
+                    break;
+                }
             }
             break;
         case SPELLFAMILY_MAGE:

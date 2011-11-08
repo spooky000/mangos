@@ -3282,6 +3282,18 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     return;
                 }
+                case 45607:                                 // Q: Kaganishu
+                {
+                    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+                        ((Player*)m_caster)->KilledMonsterCredit(25425);
+                    return;
+                }
+                case 45923:                                 // Q: Foolish Endeavors
+                {
+                    if (unitTarget->HasAura(45924))
+                        unitTarget->CastSpell(unitTarget, 45922, true);
+                    return;
+                }
                 case 47530:                                 // Q: Strengthen the Ancients
                 {
                     if (m_caster->GetTypeId() == TYPEID_PLAYER && unitTarget->GetTypeId() != TYPEID_PLAYER && unitTarget->GetEntry() == 26321)
@@ -3391,16 +3403,22 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->GetMotionMaster()->MovementExpired();
                     return;
                 }
-                case 45923:                                 // Q: Foolish Endeavors
+                case 69675:                                 // Ice Tomb (Sindragosa)
                 {
-                    if (unitTarget->HasAura(45924))
-                        unitTarget->CastSpell(unitTarget, 45922, true);
+                    if (unitTarget)
+                        m_caster->CastSpell(unitTarget, 70157, true, 0, 0, ObjectGuid(), m_spellInfo);
+
                     return;
                 }
-                case 45607:                                 // Q: Kaganishu
+                case 69712:                                 // Ice Tomb (Sindragosa)
                 {
-                    if (m_caster->GetTypeId() == TYPEID_PLAYER)
-                        ((Player*)m_caster)->KilledMonsterCredit(25425);
+                    // trigger spheres to targets with Frost Beacon mark
+                    if (unitTarget)
+                    {
+                        if (unitTarget->HasAura(70126, EFFECT_INDEX_0))
+                            m_caster->CastSpell(unitTarget, 69675, true, 0, 0, ObjectGuid(), m_spellInfo);
+                    }
+
                     return;
                 }
                 case 69922:                                 // Temper Quel'Delar
