@@ -38,6 +38,7 @@
 #include "Common.h"
 #include "ObjectGuid.h"
 #include "Policies/Singleton.h"
+#include <functional>
 
 class Creature;
 class Unit;

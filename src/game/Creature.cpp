@@ -835,7 +835,7 @@ bool Creature::Create(uint32 guidlow, CreatureCreatePos& cPos, CreatureInfo cons
         cPos.GetMap()->GetCreatureLinkingHolder()->AddMasterToHolder(this);
     }
 
-    LoadCreatureAddon();
+    LoadCreatureAddon(false, cPos.GetMap());
 
     return true;
 }
@@ -1943,7 +1943,7 @@ CreatureDataAddon const* Creature::GetCreatureAddon() const
 }
 
 //creature_addon table
-bool Creature::LoadCreatureAddon(bool reload)
+bool Creature::LoadCreatureAddon(bool reload /*= false*/, Map* map /*= NULL*/)
 {
     CreatureDataAddon const *cainfo = GetCreatureAddon();
     if(!cainfo)
@@ -1997,7 +1997,14 @@ bool Creature::LoadCreatureAddon(bool reload)
                 continue;
             }
 
-            CastSpell(this, *cAura, true);
+            SpellEntry const* spellInfo = sSpellStore.LookupEntry(*cAura);  // Already checked on load
+
+            // Get Difficulty mode for initial case (npc not yet added to map)
+            if (spellInfo->SpellDifficultyId && !reload && map && map->IsDungeon())
+                if (SpellEntry const* spellEntry = GetSpellEntryByDifficulty(spellInfo->SpellDifficultyId, map->GetDifficulty(), map->IsRaid()))
+                    spellInfo = spellEntry;
+
+            CastSpell(this, spellInfo, true);
         }
     }
     return true;
