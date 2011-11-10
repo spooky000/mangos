@@ -114,6 +114,7 @@ enum BattleGroundTimeIntervals
     BUFF_RESPAWN_TIME               = 180,                  // secs
     ARENA_SPAWN_BUFF_OBJECTS        = 90000,                // ms - 90sec after start
     ARENA_TIME_LIMIT                = 2820000,              // ms - 47 minutes after start
+    ARENA_TIME_LIMIT_POINTS_LOSS    = -16,
 };
 
 enum BattleGroundStartTimeIntervals
@@ -485,10 +486,12 @@ class BattleGround
         // used for rated arena battles
         void SetArenaTeamIdForTeam(Team team, uint32 ArenaTeamId) { m_ArenaTeamIds[GetTeamIndexByTeamId(team)] = ArenaTeamId; }
         uint32 GetArenaTeamIdForTeam(Team team) const             { return m_ArenaTeamIds[GetTeamIndexByTeamId(team)]; }
-        void SetArenaTeamRatingChangeForTeam(Team team, int32 RatingChange) { m_ArenaTeamRatingChanges[GetTeamIndexByTeamId(team)] = RatingChange; }
-        int32 GetArenaTeamRatingChangeForTeam(Team team) const    { return m_ArenaTeamRatingChanges[GetTeamIndexByTeamId(team)]; }
-        void SetArenaTeamMMRChangeForTeam(Team team, int32 MMRChange) { m_ArenaTeamMMRChanges[GetTeamIndexByTeamId(team)] = MMRChange; }
-        int32 GetArenaTeamMMRChangeForTeam(Team team) const    { return m_ArenaTeamMMRChanges[GetTeamIndexByTeamId(team)]; }
+        void SetArenaTeamRatingChangeForTeam(Team Team, int32 RatingChange) { m_ArenaTeamRatingChanges[GetTeamIndexByTeamId(Team)] = RatingChange; }
+        int32 GetArenaTeamRatingChangeForTeam(Team Team) const    { return m_ArenaTeamRatingChanges[GetTeamIndexByTeamId(Team)]; }
+        int32 GetArenaTeamRatingChangeByIndex(uint32 index) const   { return m_ArenaTeamRatingChanges[index]; }
+        void SetArenaMatchmakerRating(Team Team, uint32 MMR){ m_ArenaTeamMMR[GetTeamIndexByTeamId(Team)] = MMR; }
+        uint32 GetArenaMatchmakerRating(Team Team) const          { return m_ArenaTeamMMR[GetTeamIndexByTeamId(Team)]; }
+        uint32 GetArenaMatchmakerRatingByIndex(uint32 index) const  { return m_ArenaTeamMMR[index]; }
         void CheckArenaWinConditions();
         void UpdateArenaWorldState();
 
@@ -648,7 +651,7 @@ class BattleGround
         uint32 m_ArenaTeamIds[BG_TEAMS_COUNT];
 
         int32 m_ArenaTeamRatingChanges[BG_TEAMS_COUNT];
-        int32 m_ArenaTeamMMRChanges[BG_TEAMS_COUNT];
+        uint32 m_ArenaTeamMMR[BG_TEAMS_COUNT];
 
         /* Limits */
         uint32 m_LevelMin;

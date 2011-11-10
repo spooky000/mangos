@@ -148,7 +148,7 @@ bool BattleGroundQueue::SelectionPool::AddGroup(GroupQueueInfo *ginfo, uint32 de
 /*********************************************************/
 
 // add group or player (grp == NULL) to bg queue with the given leader and bg specifications
-GroupQueueInfo * BattleGroundQueue::AddGroup(Player *leader, Group* grp, BattleGroundTypeId BgTypeId, PvPDifficultyEntry const*  bracketEntry, ArenaType arenaType, bool isRated, bool isPremade, uint32 arenaRating, uint32 arenateamid)
+GroupQueueInfo * BattleGroundQueue::AddGroup(Player *leader, Group* grp, BattleGroundTypeId BgTypeId, PvPDifficultyEntry const*  bracketEntry, ArenaType arenaType, bool isRated, bool isPremade, uint32 arenaRating, uint32 matchmakerRating, uint32 arenateamid)
 {
     BattleGroundBracketId bracketId =  bracketEntry->GetBracketId();
 
@@ -163,6 +163,9 @@ GroupQueueInfo * BattleGroundQueue::AddGroup(Player *leader, Group* grp, BattleG
     ginfo->RemoveInviteTime          = 0;
     ginfo->GroupTeam                 = leader->GetTeam();
     ginfo->ArenaTeamRating           = arenaRating;
+    ginfo->ArenaMatchmakerRating     = matchmakerRating;
+    ginfo->OpponentsTeamRating       = 0;
+    ginfo->OpponentsMatchmakerRating = 0;
     ginfo->OpponentsTeamRating       = 0;
 
     ginfo->Players.clear();
@@ -910,30 +913,24 @@ void BattleGroundQueue::Update(BattleGroundTypeId bgTypeId, BattleGroundBracketI
             if (!m_QueuedGroups[bracket_id][BG_QUEUE_PREMADE_ALLIANCE].empty())
             {
                 front1 = m_QueuedGroups[bracket_id][BG_QUEUE_PREMADE_ALLIANCE].front();
-                arenaRating = front1->ArenaTeamRating;
+                arenaRating = front1->ArenaMatchmakerRating;
             }
             if (!m_QueuedGroups[bracket_id][BG_QUEUE_PREMADE_HORDE].empty())
             {
                 front2 = m_QueuedGroups[bracket_id][BG_QUEUE_PREMADE_HORDE].front();
-                arenaRating = front2->ArenaTeamRating;
+                arenaRating = front2->ArenaMatchmakerRating;
             }
             if (front1 && front2)
             {
                 if (front1->JoinTime < front2->JoinTime)
-                    arenaRating = front1->ArenaTeamRating;
+                    arenaRating = front1->ArenaMatchmakerRating;
             }
             else if (!front1 && !front2)
                 return; //queues are empty
         }
 
-        //set rating range
-        uint32 arenaMinRating = 0;
-        uint32 arenaMaxRating = 1000 + sBattleGroundMgr.GetMaxRatingDifference();
-        if(arenaRating > 1000)
-        {
-            arenaMinRating = (arenaRating <= sBattleGroundMgr.GetMaxRatingDifference()) ? 0 : arenaRating - sBattleGroundMgr.GetMaxRatingDifference();
-            arenaMaxRating = arenaRating + sBattleGroundMgr.GetMaxRatingDifference();
-        }
+        uint32 arenaMinRating = (arenaRating <= sBattleGroundMgr.GetMaxRatingDifference()) ? 0 : arenaRating - sBattleGroundMgr.GetMaxRatingDifference();
+        uint32 arenaMaxRating = arenaRating + sBattleGroundMgr.GetMaxRatingDifference();
         // if max rating difference is set and the time past since server startup is greater than the rating discard time
         // (after what time the ratings aren't taken into account when making teams) then
         // the discard time is current_time - time_to_discard, teams that joined after that, will have their ratings taken into account
@@ -974,7 +971,7 @@ void BattleGroundQueue::Update(BattleGroundTypeId bgTypeId, BattleGroundBracketI
             for(; itr_team[BG_TEAM_ALLIANCE] != m_QueuedGroups[bracket_id][BG_QUEUE_PREMADE_HORDE].end(); ++(itr_team[BG_TEAM_ALLIANCE]))
             {
                 if( !(*itr_team[BG_TEAM_ALLIANCE])->IsInvitedToBGInstanceGUID
-                    && (((*itr_team[BG_TEAM_ALLIANCE])->ArenaTeamRating >= arenaMinRating && (*itr_team[BG_TEAM_ALLIANCE])->ArenaTeamRating <= arenaMaxRating)
+                    && (((*itr_team[BG_TEAM_ALLIANCE])->ArenaMatchmakerRating >= arenaMinRating && (*itr_team[BG_TEAM_ALLIANCE])->ArenaMatchmakerRating <= arenaMaxRating)
                         || (*itr_team[BG_TEAM_ALLIANCE])->JoinTime < discardTime) )
                 {
                     m_SelectionPools[BG_TEAM_ALLIANCE].AddGroup((*itr_team[BG_TEAM_ALLIANCE]), MaxPlayersPerTeam);
@@ -1028,6 +1025,9 @@ void BattleGroundQueue::Update(BattleGroundTypeId bgTypeId, BattleGroundBracketI
                 m_QueuedGroups[bracket_id][BG_QUEUE_PREMADE_ALLIANCE].erase(itr_team[BG_TEAM_HORDE]);
                 itr_team[BG_TEAM_HORDE] = m_QueuedGroups[bracket_id][BG_QUEUE_PREMADE_HORDE].begin();
             }
+
+            arena->SetArenaMatchmakerRating(ALLIANCE, (*(itr_team[BG_TEAM_ALLIANCE]))->ArenaMatchmakerRating);
+            arena->SetArenaMatchmakerRating(HORDE, (*(itr_team[BG_TEAM_HORDE]))->ArenaMatchmakerRating);
 
             InviteGroupToBG(*(itr_team[BG_TEAM_ALLIANCE]), arena, ALLIANCE);
             InviteGroupToBG(*(itr_team[BG_TEAM_HORDE]), arena, HORDE);
@@ -1176,12 +1176,12 @@ void BattleGroundMgr::Update(uint32 diff)
 
         for (uint8 i = 0; i < scheduled.size(); i++)
         {
-            uint32 arenaRating = scheduled[i] >> 32;
+            uint32 arenaMMRating = scheduled[i] >> 32;
             ArenaType arenaType = ArenaType(scheduled[i] >> 24 & 255);
             BattleGroundQueueTypeId bgQueueTypeId = BattleGroundQueueTypeId(scheduled[i] >> 16 & 255);
             BattleGroundTypeId bgTypeId = BattleGroundTypeId((scheduled[i] >> 8) & 255);
             BattleGroundBracketId bracket_id = BattleGroundBracketId(scheduled[i] & 255);
-            m_BattleGroundQueues[bgQueueTypeId].Update(bgTypeId, bracket_id, arenaType, arenaRating > 0, arenaRating);
+            m_BattleGroundQueues[bgQueueTypeId].Update(bgTypeId, bracket_id, arenaType, arenaMMRating > 0, arenaMMRating);
         }
     }
 
@@ -1280,12 +1280,15 @@ void BattleGroundMgr::BuildPvpLogDataPacket(WorldPacket *data, BattleGround *bg)
         // it seems this must be according to BG_WINNER_A/H and _NOT_ BG_TEAM_A/H
         for(int i = 1; i >= 0; --i)
         {
-            uint32 pointsLost = bg->m_ArenaTeamRatingChanges[i] < 0 ? abs(bg->m_ArenaTeamRatingChanges[i]) : 0;
-            uint32 pointsGained = bg->m_ArenaTeamRatingChanges[i] > 0 ? bg->m_ArenaTeamRatingChanges[i] : 0;
+            int32 rating_change = bg->GetArenaTeamRatingChangeByIndex(i);
+
+            uint32 pointsLost = rating_change < 0 ? -rating_change : 0;
+            uint32 pointsGained = rating_change > 0 ? rating_change : 0;
+            uint32 matchmakerRating = bg->GetArenaMatchmakerRatingByIndex(i);
 
             *data << uint32(pointsLost);                        // Rating Lost
             *data << uint32(pointsGained);                      // Rating gained
-            *data << uint32(bg->m_ArenaTeamMMRChanges[i]);      // Matchmaking Value
+            *data << uint32(matchmakerRating);      // Matchmaking Value
             DEBUG_LOG("rating change: %d", bg->m_ArenaTeamRatingChanges[i]);
         }
         for(int i = 1; i >= 0; --i)

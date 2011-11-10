@@ -100,7 +100,7 @@ struct ArenaTeamMember
     uint32 matchmaker_rating;
 
     void ModifyPersonalRating(Player* plr, int32 mod, uint32 slot);
-    void ModifyMatchmakerRating(Player* plr, int32 mod, ArenaType type);
+    void ModifyMatchmakerRating(int32 mod, uint32 slot);
 };
 
 struct ArenaTeamStats
@@ -134,7 +134,9 @@ class ArenaTeam
         std::string GetName() const       { return m_Name; }
         const ArenaTeamStats& GetStats() const { return m_stats; }
         void SetStats(uint32 stat_type, uint32 value);
+
         uint32 GetRating() const          { return m_stats.rating; }
+        uint32 GetAverageMMR(Group* group) const;
 
         uint32 GetEmblemStyle() const     { return m_EmblemStyle; }
         uint32 GetEmblemColor() const     { return m_EmblemColor; }
@@ -195,12 +197,14 @@ class ArenaTeam
         void InspectStats(WorldSession *session, ObjectGuid guid);
 
         uint32 GetPoints(uint32 MemberRating);
-        float GetChanceAgainst(uint32 own_rating, uint32 enemy_rating);
-        int32 WonAgainst(uint32 againstRating);
-        void MemberWon(Player * plr, uint32 againstRating);
-        int32 LostAgainst(uint32 againstRating);
-        void MemberLost(Player * plr, uint32 againstRating);
-        void OfflineMemberLost(ObjectGuid guid, uint32 againstRating);
+        int32  GetMatchmakerRatingMod(uint32 ownRating, uint32 opponentRating, bool won);
+        int32  GetRatingMod(uint32 ownRating, uint32 opponentRating, bool won);
+        float  GetChanceAgainst(uint32 ownRating, uint32 opponentRating);
+        int32  WonAgainst(uint32 Own_MMRating, uint32 Opponent_MMRating, int32& rating_change);
+        void   MemberWon(Player* plr, uint32 againstMatchmakerRating, int32 MatchmakerRatingChange);
+        int32  LostAgainst(uint32 Own_MMRating, uint32 Opponent_MMRating, int32& rating_change);
+        void   MemberLost(Player* plr, uint32 againstMatchmakerRating, int32 MatchmakerRatingChange = -12);
+        void   OfflineMemberLost(ObjectGuid guid, uint32 againstMatchmakerRating, int32 MatchmakerRatingChange = -12);
 
         void UpdateArenaPointsHelper(std::map<uint32, uint32> & PlayerPoints);
 
@@ -208,8 +212,6 @@ class ArenaTeam
 
         void FinishWeek();
         void FinishGame(int32 mod);
-
-        uint32 GetAverageMMR(Group *group) const;
 
     protected:
 
