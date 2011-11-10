@@ -10622,7 +10622,7 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                     return;
                 break;
             }
-            else if (m_spellProto->IsFitToFamilyMask(0x1LL, 0x8))
+            else if (m_spellProto->SpellFamilyFlags.test<CF_MAGE_FIREBALL>() && GetSpellProto()->SpellVisual[0] == 67)
             {
                 // Glyph of Fireball
                 if (Unit * caster = GetCaster())
