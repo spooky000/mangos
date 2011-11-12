@@ -215,12 +215,12 @@ enum BG_IC_Events
 {
     IC_EVENT_ADD_TELEPORT       = 7,
     IC_EVENT_ADD_VEH            = 8,  // keep cannons
-    IC_EVENT_OP_A_BOSS_GATE     = 9,
-    IC_EVENT_OP_H_BOSS_GATE     = 10,
-    IC_EVENT_ADD_A_GUARDS       = 11,
-    IC_EVENT_ADD_H_GUARDS       = 12,
-    IC_EVENT_ADD_A_BOSS         = 13,
-    IC_EVENT_ADD_H_BOSS         = 14,
+    IC_EVENT_ADD_A_GUARDS       = 9,
+    IC_EVENT_ADD_H_GUARDS       = 10,
+    IC_EVENT_ADD_A_BOSS         = 11,
+    IC_EVENT_ADD_H_BOSS         = 12,
+    // IC_EVENT_BOSS_A 251 - alli boss gate
+    // IC_EVENT_BOSS_H 252
 };
 
 struct BG_IC_BannerTimer
@@ -332,10 +332,15 @@ class BattleGroundIC : public BattleGround
 
         static BattleGroundTeamIndex GetTeamIndexByTeamId(Team team) { return team == ALLIANCE ? BG_TEAM_ALLIANCE : BG_TEAM_HORDE; }
 
+        uint32 GetVehicleFaction(uint8 vehicleType) const { return GetCorrectFactionIC(vehicleType); }
+        uint32 GetCorrectFactionIC(uint8 vehicleType) const;
+
     private:
         uint32 closeFortressDoorsTimer;
         uint32 m_resource_Timer[BG_IC_MAX_RESOURCE_NODES];
         bool doorsClosed;
+        bool aOpen;
+        bool hOpen;
 
         int32 GetGateStatus(int32 Type) const { return GateStatus[Type]; }
 

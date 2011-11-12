@@ -55,6 +55,8 @@ void BattleGroundIC::Reset()
 
     closeFortressDoorsTimer = CLOSE_DOORS_TIME;
     doorsClosed = false;
+    aOpen = false;
+    hOpen = false;
 
     for (uint8 i = 0; i < BG_TEAMS_COUNT; ++i)
     {
@@ -87,8 +89,8 @@ void BattleGroundIC::Reset()
 
     SpawnEvent(IC_EVENT_ADD_TELEPORT, 0, true);
     SpawnEvent(IC_EVENT_ADD_VEH, 0, false);
-    SpawnEvent(IC_EVENT_OP_A_BOSS_GATE, 0, true);
-    SpawnEvent(IC_EVENT_OP_H_BOSS_GATE, 0, true);
+    SpawnEvent(IC_EVENT_BOSS_H, 0, true);
+    SpawnEvent(IC_EVENT_BOSS_A, 0, true);
     SpawnEvent(IC_EVENT_ADD_A_BOSS, 0, false);
     SpawnEvent(IC_EVENT_ADD_A_GUARDS, 0, false);
     SpawnEvent(IC_EVENT_ADD_H_BOSS, 0, false);
@@ -608,11 +610,15 @@ void BattleGroundIC::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                 UpdateWorldState(BG_IC_GateStatus[type][0], 0);             // needed for removing the old icon
                 UpdateWorldState(BG_IC_GateStatus[type][1], 1);
                 GateStatus[type] = BG_IC_GO_GATES_DAMAGE;                   // correct icon is at "damage" state, not "destroy"
-                UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
                 RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
-                OpenDoorEvent(IC_EVENT_OP_A_BOSS_GATE);
                 SpawnEvent(IC_EVENT_ADD_A_BOSS, 0, true);
                 SpawnEvent(IC_EVENT_ADD_A_GUARDS, 0, true);
+
+                if (aOpen == false)
+                {
+                    OpenDoorEvent(IC_EVENT_BOSS_A);
+                    aOpen = true;
+                }
             }
             break;
         }
@@ -625,11 +631,15 @@ void BattleGroundIC::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                 UpdateWorldState(BG_IC_GateStatus[type][0], 0);
                 UpdateWorldState(BG_IC_GateStatus[type][1], 1);
                 GateStatus[type] = BG_IC_GO_GATES_DAMAGE;
-                UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
                 RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
-                OpenDoorEvent(IC_EVENT_OP_A_BOSS_GATE);
                 SpawnEvent(IC_EVENT_ADD_A_BOSS, 0, true);
                 SpawnEvent(IC_EVENT_ADD_A_GUARDS, 0, true);
+
+                if (aOpen == false)
+                {
+                    OpenDoorEvent(IC_EVENT_BOSS_A);
+                    aOpen = true;
+                }
             }
             break;
         }
@@ -642,11 +652,15 @@ void BattleGroundIC::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                 UpdateWorldState(BG_IC_GateStatus[type][0], 0);
                 UpdateWorldState(BG_IC_GateStatus[type][1], 1);
                 GateStatus[type] = BG_IC_GO_GATES_DAMAGE;
-                UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
                 RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
-                OpenDoorEvent(IC_EVENT_OP_A_BOSS_GATE);
                 SpawnEvent(IC_EVENT_ADD_A_BOSS, 0, true);
                 SpawnEvent(IC_EVENT_ADD_A_GUARDS, 0, true);
+
+                if (aOpen == false)
+                {
+                    OpenDoorEvent(IC_EVENT_BOSS_A);
+                    aOpen = true;
+                }
             }
             break;
         }
@@ -659,11 +673,15 @@ void BattleGroundIC::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                 UpdateWorldState(BG_IC_GateStatus[type][0], 0);
                 UpdateWorldState(BG_IC_GateStatus[type][1], 1);
                 GateStatus[type] = BG_IC_GO_GATES_DAMAGE;
-                UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
                 RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
-                OpenDoorEvent(IC_EVENT_OP_H_BOSS_GATE);
                 SpawnEvent(IC_EVENT_ADD_H_BOSS, 0, true);
                 SpawnEvent(IC_EVENT_ADD_H_GUARDS, 0, true);
+
+                if (hOpen == false)
+                {
+                    OpenDoorEvent(IC_EVENT_BOSS_H);
+                    hOpen = true;
+                }
             }
             break;
         }
@@ -676,11 +694,15 @@ void BattleGroundIC::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                 UpdateWorldState(BG_IC_GateStatus[type][0], 0);
                 UpdateWorldState(BG_IC_GateStatus[type][1], 1);
                 GateStatus[type] = BG_IC_GO_GATES_DAMAGE;
-                UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
                 RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
-                OpenDoorEvent(IC_EVENT_OP_H_BOSS_GATE);
                 SpawnEvent(IC_EVENT_ADD_H_BOSS, 0, true);
                 SpawnEvent(IC_EVENT_ADD_H_GUARDS, 0, true);
+
+                if (hOpen == false)
+                {
+                    OpenDoorEvent(IC_EVENT_BOSS_H);
+                    hOpen = true;
+                }
             }
             break;
         }
@@ -693,11 +715,15 @@ void BattleGroundIC::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                 UpdateWorldState(BG_IC_GateStatus[type][0], 0);
                 UpdateWorldState(BG_IC_GateStatus[type][1], 1);
                 GateStatus[type] = BG_IC_GO_GATES_DAMAGE;
-                UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
                 RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
-                OpenDoorEvent(IC_EVENT_OP_H_BOSS_GATE);
                 SpawnEvent(IC_EVENT_ADD_H_BOSS, 0, true);
                 SpawnEvent(IC_EVENT_ADD_H_GUARDS, 0, true);
+
+                if (hOpen == false)
+                {
+                    OpenDoorEvent(IC_EVENT_BOSS_H);
+                    hOpen = true;
+                }
             }
             break;
         }
@@ -822,4 +848,33 @@ void BattleGroundIC::HandleBuffs()
                 plr->CastSpell(plr, SPELL_PARACHUTE, true);
         }
     }
+}
+
+uint32 BattleGroundIC::GetCorrectFactionIC(uint8 vehicleType) const
+{
+    if (GetStatus() != STATUS_WAIT_JOIN)
+    {
+        switch (vehicleType)
+        {
+            case VEHICLE_DEMOLISHER:
+            {
+                if (m_Nodes[BG_IC_NODE_WORKSHOP] == BG_IC_NODE_STATUS_ALLY_OCCUPIED)
+                    return VEHICLE_FACTION_ALLIANCE;
+
+                else if (m_Nodes[BG_IC_NODE_WORKSHOP] == BG_IC_NODE_STATUS_HORDE_OCCUPIED)
+                    return VEHICLE_FACTION_HORDE;
+            }
+            case VEHICLE_IC_CATAPULT:
+            {
+                if (m_Nodes[BG_IC_NODE_DOCKS] == BG_IC_NODE_STATUS_ALLY_OCCUPIED)
+                    return VEHICLE_FACTION_ALLIANCE;
+
+                else if (m_Nodes[BG_IC_NODE_DOCKS] == BG_IC_NODE_STATUS_HORDE_OCCUPIED)
+                    return VEHICLE_FACTION_HORDE;
+            }
+            default:
+                return VEHICLE_FACTION_NEUTRAL;
+        }
+    }
+    return VEHICLE_FACTION_NEUTRAL;
 }
