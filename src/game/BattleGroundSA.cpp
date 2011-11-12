@@ -995,6 +995,11 @@ void BattleGroundSA::TeleportPlayerToCorrectLoc(Player *plr, bool resetBattle)
             plr->SpawnCorpseBones();
         }
 
+        if (plr->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_CONFUSED))
+            plr->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_CONFUSED);
+
+        plr->GetMotionMaster()->MovementExpired(false);
+
         plr->RemoveArenaAuras(true);
         plr->SetHealth(plr->GetMaxHealth());
         plr->SetPower(POWER_MANA, plr->GetMaxPower(POWER_MANA));
