@@ -21,9 +21,9 @@
 
 class BattleGround;
 
-#define BG_SA_GRY_MAX   4
+#define BG_SA_GRY_MAX   3
 #define BG_SA_GATE_MAX  6
-#define BG_SA_MAX_WS    3
+#define BG_SA_MAX_WS    4
 #define BG_SA_EVENT_START_BATTLE_1      23748       // Ally / Horde likely
 #define BG_SA_EVENT_START_BATTLE_2      21702
 
@@ -41,7 +41,6 @@ enum BG_SA_WorldStates
     BG_SA_GREEN_GATEWS          = 3623,
     BG_SA_YELLOW_GATEWS         = 3638,
     BG_SA_ANCIENT_GATEWS        = 3849,
-
 
     BG_SA_LEFT_GY_ALLIANCE      = 3635,
     BG_SA_RIGHT_GY_ALLIANCE     = 3636,
@@ -84,6 +83,7 @@ enum BG_SA_GraveYard
     BG_SA_GARVE_E                       = 0,
     BG_SA_GARVE_W                       = 1,
     BG_SA_GARVE_S                       = 2,
+    BG_SA_GARVE_A                       = 3,    // Last defender graveyard, at the ancient shrine
     BG_SA_GARVE_ERROR                   = 255
 };
 
@@ -99,12 +99,6 @@ enum BG_SA_GateStatus
     BG_SA_GO_GATES_NORMAL               = 1,
     BG_SA_GO_GATES_DAMAGE               = 2,
     BG_SA_GO_GATES_DESTROY              = 3
-};
-
-enum BG_SA_TeamIndex
-{
-    BG_SA_ALLIANCE                      = 0,
-    BG_SA_HORDE                         = 1
 };
 
 enum BG_SA_GoId
@@ -130,6 +124,7 @@ enum BG_SA_GoType
 
 enum BG_SA_Events
 {
+    SA_EVENT_ADD_SPIR_A     = 3,        // ancient relic area
     SA_EVENT_ADD_SPIR       = 5,
     SA_EVENT_ADD_BOMB       = 6,
     SA_EVENT_ADD_NPC        = 7,
@@ -165,26 +160,12 @@ enum BG_SA_type_gyd_attack
     STATUS_CONQUESTED       = 1
 };
 
-enum VehicleFactions
-{
-    VEHICLE_FACTION_NEUTRAL  = 35,
-    VEHICLE_FACTION_ALLIANCE = 3,
-    VEHICLE_FACTION_HORDE    = 6
-};
-
 enum BG_SA_Boat
 {
     BG_SA_BOAT_ONE_A = 193182,
     BG_SA_BOAT_TWO_H = 193183,
     BG_SA_BOAT_ONE_H = 193184,
     BG_SA_BOAT_TWO_A = 193185
-};
-
-enum VehicleTypes
-{
-    VEHICLE_UNK           = 0,
-    VEHICLE_SA_DEMOLISHER = 1,
-    VEHICLE_SA_CANNON     = 2
 };
 
 enum BG_SA_Phase
@@ -231,7 +212,6 @@ class BattleGroundSA : public BattleGround
 
         Team GetDefender() const { return defender; }
         uint8 GetGydController(uint8 gyd) const { return m_Gyd[gyd]; }
-        uint32 GetVehicleFaction(uint8 vehicleType) const { return GetCorrectFactionSA(vehicleType); }
         int32 GetGateStatus(int32 Type) const { return GateStatus[Type]; }
         void RemovePlayer(Player *plr, ObjectGuid guid);
         void HandleAreaTrigger(Player *Source, uint32 Trigger);
@@ -261,6 +241,7 @@ class BattleGroundSA : public BattleGround
         /* For SendWarningToAll */
         void SendWarningToAllSA(uint8 gyd, int status, Team team, bool isDoor = false, int door = NULL, bool destroyed = false);
         /* For vehicle's faction*/
+        uint32 GetVehicleFaction(uint8 vehicleType) const { return GetCorrectFactionSA(vehicleType); }
         uint32 GetCorrectFactionSA(uint8 vehicleType) const;
         /* This teleports player to correct loc in function of BG status and it resurects player if necesary */
         void TeleportPlayerToCorrectLoc(Player *player, bool resetBattle = false);

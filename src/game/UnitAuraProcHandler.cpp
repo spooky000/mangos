@@ -1352,8 +1352,8 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
             // Second Wind
             if (dummySpell->SpellIconID == 1697)
             {
-                // only for spells and hit/crit (trigger start always) and not start from self casted spells (5530 Mace Stun Effect for example)
-                if (procSpell == 0 || !(procEx & (PROC_EX_NORMAL_HIT|PROC_EX_CRITICAL_HIT)) || this == pVictim)
+                // only for spells and hit/crit (trigger start always)
+                if (procSpell == 0 || !(procEx & (PROC_EX_NORMAL_HIT|PROC_EX_CRITICAL_HIT)))
                     return SPELL_AURA_PROC_FAILED;
                 // Need stun or root mechanic
                 if (!(GetAllSpellMechanicMask(procSpell) & IMMUNE_TO_ROOT_AND_STUN_MASK))
@@ -1817,31 +1817,9 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 // Glyph of Shred
                 case 54815:
                 {
-                    if (Aura* aura = target->GetAura(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, CF_DRUID_SHRED, 0, GetObjectGuid()))
-                    {
-                        // Rip's max duration, note: spells which modifies Rip's duration also counted like Glyph of Rip
-                        uint32 countMin = aura->GetAuraMaxDuration();
-
-                        // just Rip's max duration without other spells
-                        uint32 countMax = GetSpellMaxDuration(aura->GetSpellProto());
-
-                        // add possible auras and Glyph of Shred's max duration
-                        countMax += 3 * triggerAmount * 1000;       // Glyph of Shred               -> +6 seconds
-                        countMax += HasAura(54818) ? 4 * 1000 : 0;  // Glyph of Rip                 -> +4 seconds
-                        countMax += HasAura(60141) ? 4 * 1000 : 0;  // Rip Duration/Lacerate Damage -> +4 seconds
-
-                        // if min < max -> that means caster didn't cast 3 shred yet
-                        // so set Rip's duration and max duration
-                        if (countMin < countMax)
-                        {
-                            aura->GetHolder()->SetAuraDuration(aura->GetAuraDuration() + triggerAmount * 1000);
-                            aura->GetHolder()->SetAuraMaxDuration(countMin + triggerAmount * 1000);
-                            aura->GetHolder()->SendAuraUpdate(false);
-                            return SPELL_AURA_PROC_OK;
-                        }
-                    }
-                    // if not found Rip
-                    return SPELL_AURA_PROC_FAILED;
+                    basepoints[1] = triggerAmount;
+                    triggered_spell_id = 63974;
+                    break;
                 }
                 // Glyph of Rake
                 case 54821:
@@ -3510,8 +3488,17 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 case 38164:
                 {
                     // Do not summont our knights if we arent fighting specific enemy
-                    if( GetTypeId() != TYPEID_PLAYER || pVictim->GetEntry() != 19457)
+                    if (GetTypeId() != TYPEID_PLAYER || pVictim->GetEntry() != 19457)
                         return SPELL_AURA_PROC_FAILED;
+                    break;
+                }
+                // Deflection
+                case 52420:
+                {
+                    int32 health35 = int32(GetMaxHealth() * 35 / 100);
+                    if (int32(GetHealth()) - int32(damage) >= health35 || int32(GetHealth()) < health35)
+                        return SPELL_AURA_PROC_FAILED;
+                    break;
                 }
                 case 51121: // Time Bomb
                 case 59376:
@@ -3529,6 +3516,26 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                         CastCustomSpell(caster, 69034, &basepoints, NULL, NULL, true, NULL, triggeredByAura, GetObjectGuid());
 
                     return SPELL_AURA_PROC_OK;
+                }
+                case 71494:                                 // Vengeful Blast
+                {
+                    // despawn Vengeful Shade after proc
+                    if  (GetTypeId() == TYPEID_UNIT)
+                        ((Creature*)this)->ForcedDespawn(1000);
+                    break;
+                }
+                case 72178:                                 // Blood link Saurfang aura
+                {
+                    target = this;
+                    trigger_spell_id = 72195;
+                    break;
+                }
+                case 72408:                                 // Rune of Blood (Saurfang)
+                {
+                    // Proc on targets with dummy aura (debuff cast by Saurfang)
+                    if (pVictim && !pVictim->HasAura(72410))
+                        return SPELL_AURA_PROC_FAILED;
+                    break;
                 }
             }
             break;
@@ -3552,6 +3559,7 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 basepoints[0] = damage * 15 / 100;
                 target = pVictim;
                 trigger_spell_id = 26470;
+                break;
             }
             else if(auraSpellInfo->Id == 71761)             // Deep Freeze Immunity State
             {
@@ -3692,7 +3700,7 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
             // Cheat Death
             else if (auraSpellInfo->Id == 28845)
             {
-                // When your health drops below 20% ....
+                // When your health drops below 20%
                 int32 health20 = int32(GetMaxHealth()) / 5;
                 if (int32(GetHealth()) - int32(damage) >= health20 || int32(GetHealth()) < health20)
                     return SPELL_AURA_PROC_FAILED;
@@ -3839,19 +3847,6 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 // Check for Lock and Load Marker
                 if (HasAura(67544))
                     return SPELL_AURA_PROC_FAILED;
-            }
-            // Cobra strike
-            else if (auraSpellInfo->SpellIconID == 2936)
-            {
-                if (Pet* pet = GetPet())
-                {
-                    if (pet->isAlive())
-                    {
-                        pet->CastSpell(pet,trigger_spell_id,true);
-                        return SPELL_AURA_PROC_OK;
-                    }
-                }
-                return SPELL_AURA_PROC_FAILED;
             }
             // Item - Hunter T9 4P Bonus
             else if (auraSpellInfo->Id == 67151)
@@ -4562,15 +4557,18 @@ SpellAuraProcResult Unit::HandleAddFlatModifierAuraProc(Unit* pVictim, uint32 /*
         case 53257:                             // Cobra strike
         case 55166:                             // Tidal Force
         {
-            SpellAuraHolderPtr holder = triggeredByAura->GetHolder();
-            if (!holder || holder->IsDeleted() || holder->GetStackAmount() < 1)
-                return SPELL_AURA_PROC_FAILED;
+                SpellAuraHolderPtr holder = triggeredByAura->GetHolder();
+                if (!holder || holder->IsDeleted())
+                    return SPELL_AURA_PROC_FAILED;
 
-            if (holder->ModStackAmount(-1))
-                return SPELL_AURA_PROC_OK;
-            else
-                return SPELL_AURA_PROC_CANT_TRIGGER;
-            break;
+                if (holder->ModStackAmount(-1))
+                {
+                    RemoveSpellAuraHolder(holder);
+                    return SPELL_AURA_PROC_OK;
+                }
+                else
+                    return SPELL_AURA_PROC_CANT_TRIGGER;
+                break;
         }
         case 31656:                             // Empowered Fire
         case 31657:

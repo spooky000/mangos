@@ -256,9 +256,6 @@ BattleGround::BattleGround()
     m_ArenaTeamRatingChanges[BG_TEAM_ALLIANCE]  = 0;
     m_ArenaTeamRatingChanges[BG_TEAM_HORDE]     = 0;
 
-    m_ArenaTeamMMRChanges[BG_TEAM_ALLIANCE]     = 0;
-    m_ArenaTeamMMRChanges[BG_TEAM_HORDE]        = 0;
-
     m_BgRaids[BG_TEAM_ALLIANCE]         = NULL;
     m_BgRaids[BG_TEAM_HORDE]            = NULL;
 
@@ -739,8 +736,14 @@ void BattleGround::EndBattleGround(Team winner)
 
     ArenaTeam * winner_arena_team = NULL;
     ArenaTeam * loser_arena_team = NULL;
-    uint32 loser_rating = 0;
-    uint32 winner_rating = 0;
+    uint32 loser_team_rating = 0;
+    uint32 loser_matchmaker_rating = 0;
+    int32  loser_change = 0;
+    int32  loser_matchmaker_change = 0;
+    uint32 winner_team_rating = 0;
+    uint32 winner_matchmaker_rating = 0;
+    int32  winner_change = 0;
+    int32  winner_matchmaker_change = 0;
     WorldPacket data;
     int32 winmsg_id = 0;
 
@@ -763,6 +766,7 @@ void BattleGround::EndBattleGround(Team winner)
     else
     {
         SetWinner(3);
+        winmsg_id = LANG_BG_WIN_NONE;
     }
 
     SetStatus(STATUS_WAIT_LEAVE);
@@ -774,46 +778,38 @@ void BattleGround::EndBattleGround(Team winner)
     {
         winner_arena_team = sObjectMgr.GetArenaTeamById(GetArenaTeamIdForTeam(winner));
         loser_arena_team = sObjectMgr.GetArenaTeamById(GetArenaTeamIdForTeam(GetOtherTeam(winner)));
-        if (winner_arena_team && loser_arena_team)
+        if (winner_arena_team && loser_arena_team && winner_arena_team != loser_arena_team)
         {
-            loser_rating = loser_arena_team->GetAverageMMR(GetBgRaid(GetOtherTeam(winner)));
-            winner_rating = winner_arena_team->GetAverageMMR(GetBgRaid(winner));
-            int32 winner_change = winner_arena_team->WonAgainst(loser_rating);
-            int32 loser_change = loser_arena_team->LostAgainst(winner_rating);
-
-            DEBUG_LOG("--- Winner rating: %u, Loser rating: %u, Winner change: %i, Loser change: %i ---", winner_rating, loser_rating, winner_change, loser_change);
-
-            std::string winner_ids = "";
-            std::string loser_ids = "";
-            for(BattleGroundPlayerMap::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+            if (winner != WINNER_NONE)
             {
-                Player *plr = sObjectMgr.GetPlayer(itr->first);
-                if (plr == NULL)
-                    continue;
+                loser_team_rating = loser_arena_team->GetRating();
+                loser_matchmaker_rating = GetArenaMatchmakerRating(GetOtherTeam(winner));
 
-                char _buf[32];
-                sprintf(_buf, ":%d", plr->GetGUIDLow());
+                winner_team_rating = winner_arena_team->GetRating();
+                winner_matchmaker_rating = GetArenaMatchmakerRating(winner);
 
-                if (itr->second.PlayerTeam == winner)
-                    winner_ids += _buf;
-                else
-                    loser_ids += _buf;
+                winner_matchmaker_change = winner_arena_team->WonAgainst(winner_matchmaker_rating, loser_matchmaker_rating, winner_change);
+                loser_matchmaker_change = loser_arena_team->LostAgainst(loser_matchmaker_rating, winner_matchmaker_rating, loser_change);
+
+                SetArenaMatchmakerRating(winner, winner_matchmaker_rating + winner_matchmaker_change);
+                SetArenaMatchmakerRating(GetOtherTeam(winner), loser_matchmaker_rating + loser_matchmaker_change);
+
+                SetArenaTeamRatingChangeForTeam(winner, winner_change);
+                SetArenaTeamRatingChangeForTeam(GetOtherTeam(winner), loser_change);
             }
-
-            CharacterDatabase.PExecute("INSERT INTO `arena_logs` (`team1`,`team1_members`,`team1_rating_change`,`team2`,`team2_members`,`team2_rating_change`,`winner`,`timestamp`) VALUES ('%u','%s','%i','%u','%s','%i','%u','%u')",
-                                        winner_arena_team->GetId(), winner_ids.c_str(), winner_change,
-                                        loser_arena_team->GetId(), loser_ids.c_str(), loser_change,
-                                        winner_arena_team->GetId(), time(NULL) );
-
-            SetArenaTeamRatingChangeForTeam(winner, winner_change);
-            SetArenaTeamRatingChangeForTeam(GetOtherTeam(winner), loser_change);
+            // Deduct 16 points from each teams arena-rating if there are no winners after 45+2 minutes
+            else
+            {
+                SetArenaTeamRatingChangeForTeam(ALLIANCE, ARENA_TIME_LIMIT_POINTS_LOSS);
+                SetArenaTeamRatingChangeForTeam(HORDE, ARENA_TIME_LIMIT_POINTS_LOSS);
+                winner_arena_team->FinishGame(ARENA_TIME_LIMIT_POINTS_LOSS);
+                loser_arena_team->FinishGame(ARENA_TIME_LIMIT_POINTS_LOSS);
+            }
         }
         else
         {
             SetArenaTeamRatingChangeForTeam(ALLIANCE, 0);
             SetArenaTeamRatingChangeForTeam(HORDE, 0);
-            SetArenaTeamMMRChangeForTeam(ALLIANCE, 0);
-            SetArenaTeamMMRChangeForTeam(HORDE, 0);
         }
     }
 
@@ -824,12 +820,12 @@ void BattleGround::EndBattleGround(Team winner)
         if (itr->second.OfflineRemoveTime)
         {
             //if rated arena match - make member lost!
-            if (isArena() && isRated() && winner_arena_team && loser_arena_team)
+            if (isArena() && isRated() && winner_arena_team && loser_arena_team && winner_arena_team != loser_arena_team)
             {
                 if (team == winner)
-                    winner_arena_team->OfflineMemberLost(itr->first, loser_rating);
+                    winner_arena_team->OfflineMemberLost(itr->first, loser_matchmaker_rating, winner_matchmaker_change);
                 else
-                    loser_arena_team->OfflineMemberLost(itr->first, winner_rating);
+                    loser_arena_team->OfflineMemberLost(itr->first, winner_matchmaker_rating, loser_matchmaker_change);
             }
             continue;
         }
@@ -873,7 +869,7 @@ void BattleGround::EndBattleGround(Team winner)
                     plr->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_WIN_ARENA, 1);
                 }
 
-                winner_arena_team->MemberWon(plr,loser_rating);
+                winner_arena_team->MemberWon(plr, loser_matchmaker_rating, winner_matchmaker_change);
 
                 if (member)
                 {
@@ -883,7 +879,7 @@ void BattleGround::EndBattleGround(Team winner)
             }
             else
             {
-                loser_arena_team->MemberLost(plr,winner_rating);
+                loser_arena_team->MemberLost(plr, winner_matchmaker_rating, loser_matchmaker_change);
 
                 // Arena lost => reset the win_rated_arena having the "no_loose" condition
                 plr->GetAchievementMgr().ResetAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_WIN_RATED_ARENA, ACHIEVEMENT_CRITERIA_CONDITION_NO_LOOSE);
@@ -892,7 +888,7 @@ void BattleGround::EndBattleGround(Team winner)
 
         uint32 win_kills = plr->GetRandomWinner() ? BG_REWARD_WINNER_HONOR_LAST : BG_REWARD_WINNER_HONOR_FIRST;
         uint32 loos_kills = plr->GetRandomWinner() ? BG_REWARD_LOOSER_HONOR_LAST : BG_REWARD_LOOSER_HONOR_FIRST;
-        //uint32 win_arena = plr->GetRandomWinner() ? BG_REWARD_WINNER_ARENA_LAST : BG_REWARD_WINNER_ARENA_FIRST;
+        uint32 win_arena = plr->GetRandomWinner() ? BG_REWARD_WINNER_ARENA_LAST : BG_REWARD_WINNER_ARENA_FIRST;
 
         if (team == winner)
         {
@@ -902,7 +898,7 @@ void BattleGround::EndBattleGround(Team winner)
             if (IsRandom() || BattleGroundMgr::IsBGWeekend(GetTypeID()))
             {
                 UpdatePlayerScore(plr, SCORE_BONUS_HONOR, GetBonusHonorFromKill(win_kills));
-                //plr->ModifyArenaPoints(win_arena); // CHANGE ME: When AP from BG will be enabled
+                plr->ModifyArenaPoints(win_arena);
                 if(!plr->GetRandomWinner())
                     plr->SetRandomWinner(true);
             }
@@ -1246,6 +1242,8 @@ void BattleGround::Reset()
 
     // door-event2 is always 0
     m_ActiveEvents[BG_EVENT_DOOR] = 0;
+    m_ActiveEvents[IC_EVENT_BOSS_A] = 0;
+    m_ActiveEvents[IC_EVENT_BOSS_H] = 0;
     if (isArena())
     {
         m_ActiveEvents[ARENA_BUFF_EVENT] = BG_EVENT_NONE;
@@ -1678,7 +1676,7 @@ void BattleGround::OnObjectDBLoad(GameObject* obj)
 
 bool BattleGround::IsDoor(uint8 event1, uint8 event2)
 {
-    if (event1 == BG_EVENT_DOOR)
+    if (event1 == BG_EVENT_DOOR || event1 == IC_EVENT_BOSS_A || event1 == IC_EVENT_BOSS_H)
     {
         if (event2 > 0)
         {

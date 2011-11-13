@@ -701,15 +701,18 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
 
     switch(spellproto->Id)
     {
+        case 12042:                                         // Arcane Power
+        case 24732:                                         // Bat Costume
+        case 43730:                                         // Electrified
         case 64844:                                         // Divine Hymn
         case 64904:                                         // Hymn of Hope
-        case 12042:                                         // Arcane Power
             return true;
         case 37675:                                         // Chaos Blast
         case 39288:                                         // Kargath's Executioner
         case 39289:                                         // Kargath's Executioner
         case 39290:                                         // Kargath's Executioner
         case 42786:                                         // Echo Of Ymiron
+        case 42966:                                         // Upset Tummy
         case 55126:                                         // Sladran Snake Trap
         case 56266:                                         // Vortex
         case 57508:                                         // Volazj Insanity Phase 1
@@ -722,6 +725,7 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
         case 63138:                                         // Sara's Fervor
         case 63355:                                         // Crunch Armor
         case 64002:                                         // Crunch Armor
+        case 66271:                                         // Carrying Seaforium (IoC)
         case 66406:                                         // Snobolled! (Trial of the Crusader, Gormok the Impaler encounter)
         case 68377:                                         // Carrying Huge Seaforium (IoC)
         case 71010:                                         // Web Wrap (Icecrown Citadel, trash mob Nerub'ar Broodkeeper)

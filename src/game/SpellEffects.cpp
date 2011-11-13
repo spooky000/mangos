@@ -510,6 +510,34 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     case 67485:
                         damage += uint32(0.5f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
                         break;
+                    //Magic Bane normal (Forge of Souls - Bronjahm)
+                    case 68793:
+                    {
+                        damage += uint32(unitTarget->GetMaxPower(POWER_MANA) / 2);
+                        damage = std::min(damage, 10000);
+                        break;
+                    }
+                    //Magic Bane heroic (Forge of Souls - Bronjahm)
+                    case 69050:
+                    {
+                        damage += uint32(unitTarget->GetMaxPower(POWER_MANA) / 2);
+                        damage = std::min(damage, 15000);
+                        break;
+                    }
+                    // Empowered Flare (Blood Council encounter)
+                    case 71708:
+                    {
+                        // aura doesn't want to proc, so hacked...
+                        if (SpellAuraHolderPtr holder = m_caster->GetSpellAuraHolder(71756))
+                        {
+                            if (holder->GetStackAmount() <= 1)
+                                m_caster->RemoveSpellAuraHolder(holder);
+                            else
+                                holder->ModStackAmount(-1);
+                        }
+
+                        break;
+                    }
                     // Defile damage depending from scale.
                     case 72754:
                     case 73708:
@@ -535,6 +563,14 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     {
                         float distance = unitTarget->GetDistance2d(m_caster); 
                         damage *= exp(-distance/(10.0f));
+                        break;
+                    }
+                    // Shadow Prison
+                    case 72999:
+                    {
+                        if (Aura *aur = unitTarget->GetDummyAura(m_spellInfo->Id))
+                            damage += (aur->GetStackAmount() - 1) * aur->GetModifier()->m_amount;
+
                         break;
                     }
                     case 74607:
@@ -586,20 +622,6 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                             return;
                         float distance = m_caster->GetDistance2d(unitTarget);
                         damage = (distance > radius) ? 0 : int32(m_spellInfo->EffectBasePoints[0]*distance);
-                        break;
-                    }
-                    //Magic Bane normal (Forge of Souls - Bronjahm)
-                    case 68793:
-                    {
-                        damage += uint32(unitTarget->GetMaxPower(POWER_MANA) / 2);
-                        damage = std::min(damage, 10000);
-                        break;
-                    }
-                    //Magic Bane heroic (Forge of Souls - Bronjahm)
-                    case 69050:
-                    {
-                        damage += uint32(unitTarget->GetMaxPower(POWER_MANA) / 2);
-                        damage = std::min(damage, 15000);
                         break;
                     }
                 }
@@ -3260,6 +3282,18 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     return;
                 }
+                case 45607:                                 // Q: Kaganishu
+                {
+                    if (m_caster->GetTypeId() == TYPEID_PLAYER)
+                        ((Player*)m_caster)->KilledMonsterCredit(25425);
+                    return;
+                }
+                case 45923:                                 // Q: Foolish Endeavors
+                {
+                    if (unitTarget->HasAura(45924))
+                        unitTarget->CastSpell(unitTarget, 45922, true);
+                    return;
+                }
                 case 47530:                                 // Q: Strengthen the Ancients
                 {
                     if (m_caster->GetTypeId() == TYPEID_PLAYER && unitTarget->GetTypeId() != TYPEID_PLAYER && unitTarget->GetEntry() == 26321)
@@ -3369,16 +3403,22 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->GetMotionMaster()->MovementExpired();
                     return;
                 }
-                case 45923:                                 // Q: Foolish Endeavors
+                case 69675:                                 // Ice Tomb (Sindragosa)
                 {
-                    if (unitTarget->HasAura(45924))
-                        unitTarget->CastSpell(unitTarget, 45922, true);
+                    if (unitTarget)
+                        m_caster->CastSpell(unitTarget, 70157, true, 0, 0, ObjectGuid(), m_spellInfo);
+
                     return;
                 }
-                case 45607:                                 // Q: Kaganishu
+                case 69712:                                 // Ice Tomb (Sindragosa)
                 {
-                    if (m_caster->GetTypeId() == TYPEID_PLAYER)
-                        ((Player*)m_caster)->KilledMonsterCredit(25425);
+                    // trigger spheres to targets with Frost Beacon mark
+                    if (unitTarget)
+                    {
+                        if (unitTarget->HasAura(70126, EFFECT_INDEX_0))
+                            m_caster->CastSpell(unitTarget, 69675, true, 0, 0, ObjectGuid(), m_spellInfo);
+                    }
+
                     return;
                 }
                 case 69922:                                 // Temper Quel'Delar
@@ -3462,6 +3502,13 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     if (needRemove)
                         unitTarget->RemoveAurasDueToSpell(71340);
+                    break;
+                }
+                case 71718:                                 // Conjure Flame
+                case 72040:                                 // Conjure Empowered Flame
+                {
+                    if (unitTarget)
+                        unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
                     break;
                 }
                 case 72202:                                 // Blade power
@@ -8016,6 +8063,15 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true, NULL, NULL, unitTarget->GetObjectGuid(), m_spellInfo);
                     return;
                 }
+                case 44436:                                 // Tricky Treat
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    // 50% chance to get the Upset Tummy debuff
+                    if (roll_chance_i(50))
+                        m_caster->CastSpell(m_caster, 42966, true);
+                }
                 case 44455:                                 // Character Script Effect Reverse Cast
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
@@ -10395,6 +10451,9 @@ void Spell::DoSummonTotem(SpellEffectIndex eff_idx, uint8 slot_dbc)
     if (m_spellInfo->Id == 16190)
         damage = m_caster->GetMaxHealth() * m_spellInfo->CalculateSimpleValue(EFFECT_INDEX_1) / 100;
 
+    if (m_spellInfo->Id == 51052) // Anti-Magic Zone
+        damage += m_caster->GetTotalAttackPowerValue(BASE_ATTACK) * 2; //AP bonus;
+
     if (damage)                                             // if not spell info, DB values used
     {
         pTotem->SetMaxHealth(damage);
@@ -11875,7 +11934,7 @@ void Spell::EffectServerSide(SpellEffectIndex eff_idx)
 
     if (!m_triggeredBySpellInfo && !m_triggeredByAuraSpell)
     {
-        sLog.outError("Spell::EffectServerSide: spell %u if triggered, but not have trigger info!", m_spellInfo->Id);
+        sLog.outError("Spell::EffectServerSide: spell %u must be triggered, but not have trigger info!", m_spellInfo->Id);
         return;
     }
 
@@ -11910,6 +11969,21 @@ void Spell::EffectServerSide(SpellEffectIndex eff_idx)
                 }
                 default:
                     break;
+            }
+            break;
+        }
+        case 63974: // Synthetic spell for Glyph of shred
+        {
+            if (SpellAuraHolderPtr holder = GetCaster()->GetSpellAuraHolder(m_spellInfo->Id))
+                if (holder->GetStackAmount() > 3)
+                    return;
+
+            if (Aura* aura = unitTarget->GetAura(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, ClassFamilyMask::create<CF_DRUID_RIP>(), GetCaster()->GetObjectGuid()))
+            {
+                uint32 maxDuration = aura->GetAuraMaxDuration() + (GetCaster()->HasAura(54818) ? 4 * IN_MILLISECONDS : 0) + (GetCaster()->HasAura(60141) ? 4 * IN_MILLISECONDS : 0);
+                uint32 duration    = aura->GetAuraDuration() + damage * IN_MILLISECONDS;
+                aura->GetHolder()->SetAuraDuration(duration < maxDuration ? duration : maxDuration);
+                aura->GetHolder()->SendAuraUpdate(false);
             }
             break;
         }

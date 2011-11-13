@@ -23,21 +23,6 @@
 #include "World.h"
 #include "Player.h"
 
-void ArenaTeamMember::ModifyMatchmakerRating(Player* plr, int32 mod, ArenaType type)
-{
-    if (int32(matchmaker_rating) + mod < 0)
-            matchmaker_rating =  0;
-        else
-            matchmaker_rating += mod;
-
-    if (type == ARENA_TYPE_2v2)
-        CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating2 = '%u' WHERE guid = '%u'", matchmaker_rating, plr->GetObjectGuid().GetCounter());
-    else if (type == ARENA_TYPE_3v3)
-        CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating3 = '%u' WHERE guid = '%u'", matchmaker_rating, plr->GetObjectGuid().GetCounter());
-    else if (type == ARENA_TYPE_5v5)
-        CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating5 = '%u' WHERE guid = '%u'", matchmaker_rating, plr->GetObjectGuid().GetCounter());
-}
-
 void ArenaTeamMember::ModifyPersonalRating(Player* plr, int32 mod, uint32 slot)
 {
     if (int32(personal_rating) + mod < 0)
@@ -46,6 +31,14 @@ void ArenaTeamMember::ModifyPersonalRating(Player* plr, int32 mod, uint32 slot)
         personal_rating += mod;
     if(plr)
         plr->SetArenaTeamInfoField(slot, ARENA_TEAM_PERSONAL_RATING, personal_rating);
+}
+
+void ArenaTeamMember::ModifyMatchmakerRating(int32 mod, uint32 /*slot*/)
+{
+    if (int32(matchmaker_rating) + mod < 0)
+        matchmaker_rating = 0;
+    else
+        matchmaker_rating += mod;
 }
 
 ArenaTeam::ArenaTeam()
@@ -635,15 +628,96 @@ uint32 ArenaTeam::GetPoints(uint32 MemberRating)
     return (uint32) points;
 }
 
-float ArenaTeam::GetChanceAgainst(uint32 own_rating, uint32 enemy_rating)
+uint32 ArenaTeam::GetAverageMMR(Group* group) const
 {
-    // returns the chance to win against a team with the given rating, used in the rating adjustment calculation
+    if (!group)
+        return 0;
+
+    uint32 matchMakerRating = 0;
+    uint32 playerDivider = 0;
+    for (MemberList::const_iterator itr = m_members.begin(); itr != m_members.end(); ++itr)
+    {
+        // Skip if player is not online
+        if (!ObjectAccessor::FindPlayer(itr->guid))
+            continue;
+
+        // Skip if player is not member of group
+        if (!group->IsMember(itr->guid))
+            continue;
+
+        matchMakerRating += itr->matchmaker_rating;
+        ++playerDivider;
+    }
+
+    // x/0 = crash
+    if (playerDivider == 0)
+        playerDivider = 1;
+
+    matchMakerRating /= playerDivider;
+
+    return matchMakerRating;
+}
+
+float ArenaTeam::GetChanceAgainst(uint32 ownRating, uint32 opponentRating)
+{
+    // Returns the chance to win against a team with the given rating, used in the rating adjustment calculation
     // ELO system
 
     if (sWorld.getConfig(CONFIG_UINT32_ARENA_SEASON_ID) >= 6)
-        if (enemy_rating < 1000)
-            enemy_rating = 1000;
-    return 1.0f/(1.0f+exp(log(10.0f)*(float)((float)enemy_rating - (float)own_rating)/400.0f));
+        if (opponentRating < 1000)
+            opponentRating = 1000;
+
+    return 1.0f / (1.0f + exp(log(10.0f) * (float)((float)opponentRating - (float)ownRating) / 650.0f));
+}
+
+int32 ArenaTeam::GetMatchmakerRatingMod(uint32 ownRating, uint32 opponentRating, bool won /*, float& confidence_factor*/)
+{
+    // 'Chance' calculation - to beat the opponent
+    // This is a simulation. Not much info on how it really works
+    float chance = GetChanceAgainst(ownRating, opponentRating);
+    float won_mod = (won) ? 1.0f : 0.0f;
+    float mod = won_mod - chance;
+
+    // Work in progress:
+    /*
+    // This is a simulation, as there is not much info on how it really works
+    float confidence_mod = min(1.0f - fabs(mod), 0.5f);
+
+    // Apply confidence factor to the mod:
+    mod *= confidence_factor
+
+    // And only after that update the new confidence factor
+    confidence_factor -= ((confidence_factor - 1.0f) * confidence_mod) / confidence_factor;
+    */
+
+    // Real rating modification
+    mod *= 24.0f;
+
+    return (int32)ceil(mod);
+}
+
+int32 ArenaTeam::GetRatingMod(uint32 ownRating, uint32 opponentRating, bool won /*, float confidence_factor*/)
+{
+    // 'Chance' calculation - to beat the opponent
+    // This is a simulation. Not much info on how it really works
+    float chance = GetChanceAgainst(ownRating, opponentRating);
+    float won_mod = (won) ? 1.0f : 0.0f;
+
+    // Calculate the rating modification
+    float mod;
+
+    // TODO: Replace this hack with using the confidence factor (limiting the factor to 2.0f)
+    if (won && ownRating < 1300)
+    {
+        if (ownRating < 1000)
+            mod = 48.0f * (won_mod - chance);
+        else
+            mod = (24.0f + (24.0f * (1300.0f - float(ownRating)) / 300.0f)) * (won_mod - chance);
+    }
+    else
+        mod = 24.0f * (won_mod - chance);
+
+    return (int32)ceil(mod);
 }
 
 void ArenaTeam::FinishGame(int32 mod)
@@ -665,67 +739,60 @@ void ArenaTeam::FinishGame(int32 mod)
     }
 }
 
-int32 ArenaTeam::WonAgainst(uint32 againstRating)
+int32 ArenaTeam::WonAgainst(uint32 Own_MMRating, uint32 Opponent_MMRating, int32& rating_change)
 {
-    // called when the team has won
-    // 'chance' calculation - to beat the opponent
-    float chance = GetChanceAgainst(m_stats.rating, againstRating);
-    float K = (m_stats.rating < 1000) ? 48.0f : 32.0f;
-    // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
-    int32 mod = (int32)floor(K* (1.0f - chance));
-    // modify the team stats accordingly
-    FinishGame(mod);
+    // Called when the team has won
+    // Change in Matchmaker rating
+    int32 mod = GetMatchmakerRatingMod(Own_MMRating, Opponent_MMRating, true);
+
+    // Change in Team Rating
+    rating_change = GetRatingMod(m_stats.rating, Opponent_MMRating, true);
+
+    // Modify the team stats accordingly
+    FinishGame(rating_change);
+
+    // Update number of wins per season and week
     m_stats.wins_week += 1;
     m_stats.wins_season += 1;
 
-    // return the rating change, used to display it on the results screen
+    // Return the rating change, used to display it on the results screen
     return mod;
 }
 
-int32 ArenaTeam::LostAgainst(uint32 againstRating)
+int32 ArenaTeam::LostAgainst(uint32 Own_MMRating, uint32 Opponent_MMRating, int32& rating_change)
 {
-    // called when the team has lost
-    //'chance' calculation - to loose to the opponent
-    float chance = GetChanceAgainst(m_stats.rating, againstRating);
-    float K = (m_stats.rating < 1000) ? 48.0f : 32.0f;
-    // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
-    int32 mod = (int32)ceil(K * (0.0f - chance));
-    // modify the team stats accordingly
+    // Called when the team has lost
+    // Change in Matchmaker Rating
+    int32 mod = GetMatchmakerRatingMod(Own_MMRating, Opponent_MMRating, false);
 
-    FinishGame(mod);
+    // Change in Team Rating
+    rating_change = GetRatingMod(m_stats.rating, Opponent_MMRating, false);
+
+    // Modify the team stats accordingly
+    FinishGame(rating_change);
 
     // return the rating change, used to display it on the results screen
     return mod;
 }
 
-void ArenaTeam::MemberLost(Player * plr, uint32 againstRating)
+void ArenaTeam::MemberLost(Player* plr, uint32 againstMatchmakerRating, int32 MatchmakerRatingChange)
 {
     // called for each participant of a match after losing
     for(MemberList::iterator itr = m_members.begin(); itr !=  m_members.end(); ++itr)
     {
         if (itr->guid == plr->GetObjectGuid())
         {
-            // update personal rating
-            float chance = GetChanceAgainst(itr->personal_rating, againstRating);
-            float K = (itr->personal_rating < 1000) ? 48.0f : 32.0f;
-            // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
-            int32 mod = (int32)ceil(K * (0.0f - chance));
-
+            // Update personal rating
+            int32 mod = GetRatingMod(itr->personal_rating, againstMatchmakerRating, false);
             itr->ModifyPersonalRating(plr, mod, GetSlot());
 
-            // update matchmaker rating
-            chance = GetChanceAgainst(itr->matchmaker_rating, againstRating);
-            K = (itr->matchmaker_rating < 1000) ? 48.0f : 32.0f;
-            // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
-            mod = (int32)ceil(K * (0.0f - chance));
-            itr->ModifyMatchmakerRating(plr,mod,GetType());
+            // Update matchmaker rating
+            itr->ModifyMatchmakerRating(MatchmakerRatingChange, GetSlot());
 
-            if (BattleGround * bg = plr->GetBattleGround())
-                bg->SetArenaTeamMMRChangeForTeam(plr->GetTeam(), mod);
+            // Update personal played stats
+            itr->games_week +=1;
+            itr->games_season +=1;
 
-            // update personal played stats
-            itr->games_week += 1;
-            itr->games_season += 1;
             // update the unit fields
             plr->SetArenaTeamInfoField(GetSlot(), ARENA_TEAM_GAMES_WEEK,  itr->games_week);
             plr->SetArenaTeamInfoField(GetSlot(), ARENA_TEAM_GAMES_SEASON,  itr->games_season);
@@ -734,7 +801,7 @@ void ArenaTeam::MemberLost(Player * plr, uint32 againstRating)
     }
 }
 
-void ArenaTeam::OfflineMemberLost(ObjectGuid guid, uint32 againstRating)
+void ArenaTeam::OfflineMemberLost(ObjectGuid guid, uint32 againstMatchmakerRating, int32 MatchmakerRatingChange)
 {
     // called for offline player after ending rated arena match!
     for(MemberList::iterator itr = m_members.begin(); itr !=  m_members.end(); ++itr)
@@ -742,30 +809,11 @@ void ArenaTeam::OfflineMemberLost(ObjectGuid guid, uint32 againstRating)
         if (itr->guid == guid)
         {
             // update personal rating
-            float chance = GetChanceAgainst(itr->personal_rating, againstRating);
-            float K = (itr->personal_rating < 1000) ? 48.0f : 32.0f;
-            // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
-            int32 mod = (int32)ceil(K * (0.0f - chance));
-            if (int32(itr->personal_rating) + mod < 0)
-                itr->personal_rating = 0;
-            else
-                itr->personal_rating += mod;
+            int32 mod = GetRatingMod(itr->personal_rating, againstMatchmakerRating, false);
+            itr->ModifyPersonalRating(NULL, mod, GetSlot());
 
             // update matchmaker rating
-            chance = GetChanceAgainst(itr->matchmaker_rating, againstRating);
-            K = (itr->matchmaker_rating < 1000) ? 48.0f : 32.0f;
-            mod = (int32)ceil(K * (0.0f - chance));
-            if (int32(itr->matchmaker_rating) + mod < 0)
-                itr->matchmaker_rating = 0;
-            else
-                itr->matchmaker_rating += mod;
-
-            if(GetType() == ARENA_TYPE_2v2)
-                CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating2 = '%u' WHERE guid = '%u'", itr->matchmaker_rating, guid.GetCounter());
-            else if(GetType() == ARENA_TYPE_3v3)
-                CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating3 = '%u' WHERE guid = '%u'", itr->matchmaker_rating, guid.GetCounter());
-            else if(GetType() == ARENA_TYPE_5v5)
-                CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating5 = '%u' WHERE guid = '%u'", itr->matchmaker_rating, guid.GetCounter());
+            itr->ModifyMatchmakerRating(MatchmakerRatingChange, GetSlot());
 
             // update personal played stats
             itr->games_week += 1;
@@ -775,7 +823,7 @@ void ArenaTeam::OfflineMemberLost(ObjectGuid guid, uint32 againstRating)
     }
 }
 
-void ArenaTeam::MemberWon(Player * plr, uint32 againstRating)
+void ArenaTeam::MemberWon(Player* plr, uint32 againstMatchmakerRating, int32 MatchmakerRatingChange)
 {
     // called for each participant after winning a match
     for(MemberList::iterator itr = m_members.begin(); itr !=  m_members.end(); ++itr)
@@ -783,25 +831,15 @@ void ArenaTeam::MemberWon(Player * plr, uint32 againstRating)
         if (itr->guid == plr->GetObjectGuid())
         {
             // update personal rating
-            float chance = GetChanceAgainst(itr->personal_rating, againstRating);
-            float K = (itr->personal_rating < 1000) ? 48.0f : 32.0f;
-            // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
-            int32 mod = (int32)floor(K* (1.0f - chance));
+            int32 mod = GetRatingMod(itr->personal_rating, againstMatchmakerRating, true);
             itr->ModifyPersonalRating(plr, mod, GetSlot());
 
             // update matchmaker rating
-            chance = GetChanceAgainst(itr->matchmaker_rating, againstRating);
-            K = (itr->matchmaker_rating < 1000) ? 48.0f : 32.0f;
-            mod = (int32)ceil(K * (1.0f - chance));
-            // calculate the rating modification (ELO system with k=32 or k=48 if rating<1000)
-            itr->ModifyMatchmakerRating(plr, mod, GetType());
-
-            if (BattleGround * bg = plr->GetBattleGround())
-                bg->SetArenaTeamMMRChangeForTeam(plr->GetTeam(), mod);
+            itr->ModifyMatchmakerRating(MatchmakerRatingChange, GetSlot());
 
             // update personal stats
-            itr->games_week += 1;
-            itr->games_season += 1;
+            itr->games_week +=1;
+            itr->games_season +=1;
             itr->wins_season += 1;
             itr->wins_week += 1;
             // update unit fields
@@ -850,7 +888,15 @@ void ArenaTeam::SaveToDB()
     for(MemberList::const_iterator itr = m_members.begin(); itr !=  m_members.end(); ++itr)
     {
         CharacterDatabase.PExecute("UPDATE arena_team_member SET played_week = '%u', wons_week = '%u', played_season = '%u', wons_season = '%u', personal_rating = '%u' WHERE arenateamid = '%u' AND guid = '%u'", itr->games_week, itr->wins_week, itr->games_season, itr->wins_season, itr->personal_rating, m_TeamId, itr->guid.GetCounter());
+
+        if (GetType() == ARENA_TYPE_2v2)
+            CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating2 = '%u' WHERE guid = '%u'", itr->matchmaker_rating, itr->guid.GetCounter());
+        else if (GetType() == ARENA_TYPE_3v3)
+            CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating3 = '%u' WHERE guid = '%u'", itr->matchmaker_rating, itr->guid.GetCounter());
+        else if (GetType() == ARENA_TYPE_5v5)
+            CharacterDatabase.PExecute("UPDATE arena_hidden_rating SET rating5 = '%u' WHERE guid = '%u'", itr->matchmaker_rating, itr->guid.GetCounter());
     }
+
     CharacterDatabase.CommitTransaction();
 }
 
@@ -876,21 +922,4 @@ bool ArenaTeam::IsFighting() const
         }
     }
     return false;
-}
-
-uint32 ArenaTeam::GetAverageMMR(Group* group) const
-{
-    if (!group) //should never happen
-        return 0;
-
-    uint32 matchmakerrating = 0;
-    for (MemberList::const_iterator itr = m_members.begin(); itr != m_members.end(); ++itr)
-    {
-        if (group->IsMember(itr->guid))
-            matchmakerrating += itr->matchmaker_rating;
-    }
-
-    matchmakerrating /= GetType();
-
-    return matchmakerrating;
 }

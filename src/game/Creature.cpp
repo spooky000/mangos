@@ -835,7 +835,7 @@ bool Creature::Create(uint32 guidlow, CreatureCreatePos& cPos, CreatureInfo cons
         cPos.GetMap()->GetCreatureLinkingHolder()->AddMasterToHolder(this);
     }
 
-    LoadCreatureAddon();
+    LoadCreatureAddon(false);
 
     return true;
 }
@@ -1989,7 +1989,7 @@ bool Creature::LoadCreatureAddon(bool reload)
     {
         for (uint32 const* cAura = cainfo->auras; *cAura; ++cAura)
         {
-            if (HasAura(*cAura))
+            if (HasAuraOfDifficulty(*cAura))
             {
                 if (!reload)
                     sLog.outErrorDb("Creature (GUIDLow: %u Entry: %u) has spell %u in `auras` field, but aura is already applied.", GetGUIDLow(), GetEntry(), *cAura);
@@ -1997,7 +1997,14 @@ bool Creature::LoadCreatureAddon(bool reload)
                 continue;
             }
 
-            CastSpell(this, *cAura, true);
+            SpellEntry const* spellInfo = sSpellStore.LookupEntry(*cAura);  // Already checked on load
+
+            // Get Difficulty mode for initial case (npc not yet added to world)
+            if (spellInfo->SpellDifficultyId && !reload && GetMap()->IsDungeon())
+                if (SpellEntry const* spellEntry = GetSpellEntryByDifficulty(spellInfo->SpellDifficultyId, GetMap()->GetDifficulty(), GetMap()->IsRaid()))
+                    spellInfo = spellEntry;
+
+            CastSpell(this, spellInfo, true);
         }
     }
     return true;
@@ -2050,80 +2057,100 @@ void Creature::SetInCombatWithZone()
     }
 }
 
-Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position, bool playerOnly, float minRange) const
+bool Creature::MeetsSelectAttackingRequirement(Unit* pTarget, SpellEntry const* pSpellInfo, uint32 selectFlags) const
+{
+    if (selectFlags & SELECT_FLAG_PLAYER && pTarget->GetTypeId() != TYPEID_PLAYER)
+        return false;
+
+    if (selectFlags & SELECT_FLAG_POWER_MANA && pTarget->getPowerType() != POWER_MANA)
+        return false;
+    else if (selectFlags & SELECT_FLAG_POWER_RAGE && pTarget->getPowerType() != POWER_RAGE)
+        return false;
+    else if (selectFlags & SELECT_FLAG_POWER_ENERGY && pTarget->getPowerType() != POWER_ENERGY)
+        return false;
+    else if (selectFlags & SELECT_FLAG_POWER_RUNIC && pTarget->getPowerType() != POWER_RUNIC_POWER)
+        return false;
+
+    if (selectFlags & SELECT_FLAG_IN_MELEE_RANGE && !CanReachWithMeleeAttack(pTarget))
+        return false;
+
+    if (selectFlags & SELECT_FLAG_IN_LOS && !IsWithinLOSInMap(pTarget))
+        return false;
+
+    if (pSpellInfo)
+    {
+        switch (pSpellInfo->rangeIndex)
+        {
+            case SPELL_RANGE_IDX_SELF_ONLY: return false;
+            case SPELL_RANGE_IDX_ANYWHERE:  return true;
+            case SPELL_RANGE_IDX_COMBAT:    return CanReachWithMeleeAttack(pTarget);
+        }
+
+        SpellRangeEntry const* srange = sSpellRangeStore.LookupEntry(pSpellInfo->rangeIndex);
+        float max_range = GetSpellMaxRange(srange);
+        float min_range = GetSpellMinRange(srange);
+        float dist = GetCombatDistance(pTarget);
+
+        return dist < max_range && dist >= min_range;
+    }
+
+    return true;
+}
+
+Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position, uint32 uiSpellEntry, uint32 selectFlags) const
+{
+    return SelectAttackingTarget(target, position, sSpellStore.LookupEntry(uiSpellEntry), selectFlags);
+}
+
+Unit* Creature::SelectAttackingTarget(AttackingTarget target, uint32 position, SpellEntry const* pSpellInfo /*= NULL*/, uint32 selectFlags/*= 0*/) const
 {
     if (!CanHaveThreatList())
         return NULL;
 
-    //ThreatList m_threatlist;
+    // ThreatList m_threatlist;
     ThreatList const& threatlist = getThreatManager().getThreatList();
-    ThreatList::const_iterator i = threatlist.begin();
-    ThreatList::const_reverse_iterator r = threatlist.rbegin();
+    ThreatList::const_iterator itr = threatlist.begin();
+    ThreatList::const_reverse_iterator ritr = threatlist.rbegin();
 
     if (position >= threatlist.size() || !threatlist.size())
         return NULL;
 
-    // Used for targets filtration
-    Unit* pTarget = NULL;
-    std::vector<Unit *> target_list;
-
-    if (playerOnly || minRange > 0)
-    {
-        for (i; i != threatlist.end(); ++i)
-        {
-            if(pTarget = GetMap()->GetUnit((*i)->getUnitGuid()))
-            {
-                if ((playerOnly && pTarget->GetTypeId() != TYPEID_PLAYER) || (minRange && pTarget->IsWithinDist(this, minRange, false)))
-                    continue;
-
-                target_list.push_back(pTarget);
-            }
-        }
-    }
-
-    // Set iterator back to begin and unit to NULL after end of checks
-    std::vector<Unit*>::const_iterator v_i = target_list.begin();
-    i = threatlist.begin();
-    pTarget = NULL;
-
-    switch(target)
+    switch (target)
     {
         case ATTACKING_TARGET_RANDOM:
         {
-            if (target_list.size() && position < target_list.size()) // If we have filtered units available
-            {
-                advance(v_i, position + (rand() % (target_list.size() - position)));
-                if (pTarget = *v_i)
-                    return pTarget;
-            }
+            std::vector<Unit*> suitableUnits;
+            suitableUnits.reserve(threatlist.size() - position);
+            advance(itr, position);
+            for (itr; itr != threatlist.end(); ++itr)
+                if (Unit* pTarget = GetMap()->GetUnit((*itr)->getUnitGuid()))
+                    if (!selectFlags || MeetsSelectAttackingRequirement(pTarget, pSpellInfo, selectFlags))
+                        suitableUnits.push_back(pTarget);
 
-            advance(i, position + (rand() % (threatlist.size() - position)));
-            return GetMap()->GetUnit((*i)->getUnitGuid());
+            if (!suitableUnits.empty())
+                return suitableUnits[urand(0, suitableUnits.size()-1)];
+
+            break;
         }
         case ATTACKING_TARGET_TOPAGGRO:
         {
-            if (target_list.size() && position < target_list.size()) // If we have filtered units available
-            {
-                advance(v_i, position);
-                if (pTarget = *v_i)
-                    return pTarget;
-            }
+            advance(itr, position);
+            for (itr; itr != threatlist.end(); ++itr)
+                if (Unit* pTarget = GetMap()->GetUnit((*itr)->getUnitGuid()))
+                    if (!selectFlags || MeetsSelectAttackingRequirement(pTarget, pSpellInfo, selectFlags))
+                        return pTarget;
 
-            advance(i, position);
-            return GetMap()->GetUnit((*i)->getUnitGuid());
+            break;
         }
         case ATTACKING_TARGET_BOTTOMAGGRO:
         {
-            if (target_list.size() && position < target_list.size()) // If we have filtered units available
-            {
-                std::vector<Unit*>::const_reverse_iterator r_v = target_list.rbegin();
-                advance(r_v, position);
-                if (pTarget = *r_v)
-                    return pTarget;
-            }
+            advance(ritr, position);
+            for (ritr; ritr != threatlist.rend(); ++ritr)
+                if (Unit* pTarget = GetMap()->GetUnit((*itr)->getUnitGuid()))
+                    if (!selectFlags || MeetsSelectAttackingRequirement(pTarget, pSpellInfo, selectFlags))
+                        return pTarget;
 
-            advance(r, position);
-            return GetMap()->GetUnit((*r)->getUnitGuid());
+            break;
         }
     }
 

@@ -3265,6 +3265,9 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit *pVictim, SpellEntry const *spell)
         // only if in front or special ability
         if (!from_behind || pVictim->HasAuraType(SPELL_AURA_MOD_PARRY_FROM_BEHIND_PERCENT))
         {
+            if (spell->AttributesEx3 & SPELL_ATTR_EX3_CANT_MISS)
+                return SPELL_MISS_NONE;
+
             int32 deflect_chance = pVictim->GetTotalAuraModifier(SPELL_AURA_DEFLECT_SPELLS)*100;
 
             //if (from_behind) -- only 100% currently and not 100% sure way value apply
@@ -7489,6 +7492,11 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
     // Done fixed damage bonus auras
     int32 DoneAdvertisedBenefit = SpellBaseDamageBonusDone(GetSpellSchoolMask(spellProto));
 
+    // very ugly hack for 71708 and 71756
+    // no idea how this should work, but mod shouldn't affect this spell...
+    if (spellProto->Id == 71708)
+        DoneAdvertisedBenefit = 0;
+
     // apply ap bonus and benefit affected by spell power implicit coeffs and spell level penalties
     DoneTotal = SpellBonusWithCoeffs(spellProto, DoneTotal, DoneAdvertisedBenefit, 0, damagetype, true);
 
@@ -7648,8 +7656,8 @@ int32 Unit::SpellBaseDamageBonusTaken(SpellSchoolMask schoolMask)
 
 bool Unit::IsSpellCrit(Unit *pVictim, SpellEntry const *spellProto, SpellSchoolMask schoolMask, WeaponAttackType attackType)
 {
-    // creatures (except totems) can't crit with spells at all ( for creatures not sure - /dev/rsa)
-    if (GetObjectGuid().IsCreature() && !((Creature*)this)->IsTotem())
+    // creatures (except totems) and vehicles can't crit with spells at all ( for creatures not sure - /dev/rsa)
+    if ((GetObjectGuid().IsCreature() && !((Creature*)this)->IsTotem()) || GetObjectGuid().IsVehicle())
         return false;
 
     // not critting spell
@@ -11086,10 +11094,6 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
 
     Creature* pet = dynamic_cast<Creature*>(this);
 
-    // auto target selection for some pet spells
-    if ((spellInfo->IsFitToFamily<SPELLFAMILY_WARLOCK, CF_WARLOCK_VOIDWALKER_SPELLS>() && spellInfo->SpellIconID == 693) || spellInfo->Id == 58875)
-        targets->setUnitTarget((Unit*)owner);
-
     Unit* unit_target = targets ? targets->getUnitTarget() : NULL;
     if (!unit_target)
     {
@@ -11100,6 +11104,11 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
     spell->m_cast_count = cast_count;                       // probably pending spell cast
 
     Unit* unit_target2 = spell->m_targets.getUnitTarget();
+
+    // auto target selection for some pet spells (voidwalker sacrifice, feral spirits sprint, call of the wild, Roar of recovery, furious howl)
+    if ((spellInfo->IsFitToFamily<SPELLFAMILY_WARLOCK, CF_WARLOCK_VOIDWALKER_SPELLS>() && spellInfo->SpellIconID == 693) || spellInfo->Id == 58875 || spellInfo->Id == 53434
+        || spellInfo->Id == 53434 || spellInfo->Id == 64494)
+        targets->setUnitTarget((Unit*)owner);
 
     SpellCastResult result = spell->CheckPetCast(unit_target);
 

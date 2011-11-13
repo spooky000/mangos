@@ -318,7 +318,7 @@ Spell::Spell( Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid o
     MANGOS_ASSERT( caster != NULL && info != NULL );
     MANGOS_ASSERT( info == sSpellStore.LookupEntry( info->Id ) && "`info` must be pointer to sSpellStore element");
 
-    if (info->SpellDifficultyId && caster->GetTypeId() != TYPEID_PLAYER && caster->IsInWorld() && caster->GetMap()->IsDungeon())
+    if (info->SpellDifficultyId && caster->IsInWorld() && caster->GetMap()->IsDungeon())
     {
         if (SpellEntry const* spellEntry = GetSpellEntryByDifficulty(info->SpellDifficultyId, caster->GetMap()->GetDifficulty(), caster->GetMap()->IsRaid()))
             m_spellInfo = spellEntry;
@@ -740,12 +740,17 @@ void Spell::prepareDataForTriggerSystem()
                 break;
             case SPELLFAMILY_PALADIN:
                 // For Judgements (all) / Holy Shock triggers need do it
-                if (m_spellInfo->SpellFamilyFlags.test<CF_PALADIN_JUDGEMENT_OF_RIGHT, CF_PALADIN_JUDGEMENT_OF_WISDOM_LIGHT, CF_PALADIN_JUDGEMENT_OF_JUSTICE, CF_PALADIN_HOLY_SHOCK1, CF_PALADIN_JUDGEMENT_ACTIVATE, CF_PALADIN_JUDGEMENT_OF_LIGHT, CF_PALADIN_JUDGEMENT_OF_BLOOD_MARTYR, CF_PALADIN_HOLY_SHOCK>())
+                if (m_spellInfo->SpellFamilyFlags.test<CF_PALADIN_JUDGEMENT_OF_RIGHT, CF_PALADIN_JUDGEMENT_OF_WISDOM_LIGHT, CF_PALADIN_JUDGEMENT_OF_JUSTICE, CF_PALADIN_HOLY_SHOCK1, CF_PALADIN_JUDGEMENT_ACTIVATE, CF_PALADIN_JUDGEMENT_OF_LIGHT, CF_PALADIN_JUDGEMENT_OF_BLOOD_MARTYR, CF_PALADIN_HOLY_SHOCK, CF_PALADIN_STUN>())
                     m_canTrigger = true;
                 break;
             case SPELLFAMILY_WARRIOR:
                 //For Whirlwind triggers need do it
                 if (m_spellInfo->Id== 50622)
+                    m_canTrigger = true;
+                break;
+            case SPELLFAMILY_SHAMAN:
+                // Earthgrab, Entangling Roots
+                if (m_spellInfo->Id == 64695 || m_spellInfo->SpellFamilyFlags & UI64LIT(0x0000000000000200))
                     m_canTrigger = true;
                 break;
             default:
@@ -1351,7 +1356,7 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
 
     // Get Data Needed for Diminishing Returns, some effects may have multiple auras, so this must be done on spell hit, not aura add
     // Diminishing must not affect spells, casted on self
-    if (realCaster && unit && realCaster != unit)
+    if (realCaster && unit && realCaster != unit || (m_spellFlags & SPELL_FLAG_REFLECTED))
     {
         m_diminishGroup = GetDiminishingReturnsGroupForSpell(m_spellInfo,m_triggeredByAuraSpell);
         m_diminishLevel = unit->GetDiminishing(m_diminishGroup);
@@ -1909,6 +1914,9 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
             {
                 // caster included here?
                 FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_ALL);
+
+                if (targetUnitMap.empty())
+                    targetUnitMap.push_back(m_caster);
             }
             else if (IsPositiveSpell(m_spellInfo->Id))
                     targetUnitMap.push_back(m_caster);
@@ -2151,7 +2159,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                         next = itr;
                         ++next;
 
-                        if (!(*itr)->HasInArc(M_PI_F/2, caster))
+                        if (!(*itr)->HasInArc(M_PI_F/2, caster) || (*itr)->GetTypeId() != TYPEID_PLAYER)
                             targetUnitMap.erase(itr);
                     }
                 }
@@ -6747,7 +6755,9 @@ SpellCastResult Spell::CheckRange(bool strict)
     switch(m_spellInfo->rangeIndex)
     {
         // self cast doesn't need range checking -- also for Starshards fix
+        // spells that can be cast anywhere also need no check
         case SPELL_RANGE_IDX_SELF_ONLY:
+        case SPELL_RANGE_IDX_ANYWHERE:
             return SPELL_CAST_OK;
         // combat range spells are treated differently
         case SPELL_RANGE_IDX_COMBAT:
@@ -8543,6 +8553,20 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
 
             break;
         }
+        case 69762: // Unchained Magic (Sindragosa)
+        {
+            UnitList tempTargetUnitMap;
+            FillAreaTargets(tempTargetUnitMap, radius, PUSH_SELF_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            if (!tempTargetUnitMap.empty())
+            {
+                for (UnitList::const_iterator iter = tempTargetUnitMap.begin(); iter != tempTargetUnitMap.end(); ++iter)
+                {
+                    if ((*iter)->getPowerType() == POWER_MANA)
+                        targetUnitMap.push_back(*iter);
+                }
+            }
+            break;
+        }
         case 69832: // Unstable Ooze Explosion (Rotface)
         {
             UnitList tempTargetUnitMap;
@@ -8592,6 +8616,37 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
 
             break;
         }
+        case 70127: // Mystic Buffet (Sindragosa)
+        case 72528:
+        case 72529:
+        case 72530:
+        {
+            FillAreaTargets(targetUnitMap, radius, PUSH_SELF_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            targetUnitMap.remove(m_caster);
+            break;
+        }
+        case 71075: // Invocation of Blood (V) Move
+        case 71079: // Invocation of Blood (K) Move
+        case 71082: // Invocation of Blood (T) Move
+        {
+            UnitList tempTargetUnitMap;
+            FillAreaTargets(tempTargetUnitMap, radius, PUSH_SELF_CENTER, SPELL_TARGETS_ALL);
+            if (!tempTargetUnitMap.empty())
+            {
+                for (UnitList::const_iterator iter = tempTargetUnitMap.begin(); iter != tempTargetUnitMap.end(); ++iter)
+                {
+                    // target the one with Invocation of Blood aura
+                    if ((*iter)->HasAura(70952) ||
+                        (*iter)->HasAura(70981) ||
+                        (*iter)->HasAura(70982))
+                    {
+                        targetUnitMap.push_back(*iter);
+                        break;
+                    }
+                }
+            }
+            break;
+        }
         case 71307: // Vile Gas (Festergut)
         case 71908:
         case 72270:
@@ -8626,6 +8681,14 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
                 }
             }
             break;
+        }
+        case 72038: // Empowered Shock Vortex (Blood Council)
+        case 72815:
+        case 72816:
+        case 72817:
+        {
+            FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            targetUnitMap.remove(m_caster);
         }
         case 72378: // Blood Nova
         case 73058:

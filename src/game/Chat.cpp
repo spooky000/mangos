@@ -825,6 +825,7 @@ ChatCommand * ChatHandler::getCommandTable()
         { "news",           SEC_GAMEMASTER,     true,  &ChatHandler::HandleNewsGossipCommand,          "", NULL },
         { "rates",          SEC_PLAYER,         false, &ChatHandler::HandleRatesCommand,               "", NULL },
         { "quit",           SEC_CONSOLE,        true,  &ChatHandler::HandleQuitCommand,                "", NULL },
+        { "gearscore",      SEC_ADMINISTRATOR,  false, &ChatHandler::HandleShowGearScoreCommand,       "", NULL },
 
         { NULL,             0,                  false, NULL,                                           "", NULL }
     };
