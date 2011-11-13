@@ -4185,7 +4185,7 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
                 return DIMINISHING_DISORIENT;
             // Scattering Shot
             else if(spellproto->Id == 37506)
-                DIMINISHING_DBREATH_SCATTER
+                return DIMINISHING_DBREATH_SCATTER;
             break;
         }
         case SPELLFAMILY_WARLOCK:
