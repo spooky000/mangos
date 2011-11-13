@@ -1817,31 +1817,9 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 // Glyph of Shred
                 case 54815:
                 {
-                    if (Aura* aura = target->GetAura(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DRUID, CF_DRUID_SHRED, 0, GetObjectGuid()))
-                    {
-                        // Rip's max duration, note: spells which modifies Rip's duration also counted like Glyph of Rip
-                        uint32 countMin = aura->GetAuraMaxDuration();
-
-                        // just Rip's max duration without other spells
-                        uint32 countMax = GetSpellMaxDuration(aura->GetSpellProto());
-
-                        // add possible auras and Glyph of Shred's max duration
-                        countMax += 3 * triggerAmount * 1000;       // Glyph of Shred               -> +6 seconds
-                        countMax += HasAura(54818) ? 4 * 1000 : 0;  // Glyph of Rip                 -> +4 seconds
-                        countMax += HasAura(60141) ? 4 * 1000 : 0;  // Rip Duration/Lacerate Damage -> +4 seconds
-
-                        // if min < max -> that means caster didn't cast 3 shred yet
-                        // so set Rip's duration and max duration
-                        if (countMin < countMax)
-                        {
-                            aura->GetHolder()->SetAuraDuration(aura->GetAuraDuration() + triggerAmount * 1000);
-                            aura->GetHolder()->SetAuraMaxDuration(countMin + triggerAmount * 1000);
-                            aura->GetHolder()->SendAuraUpdate(false);
-                            return SPELL_AURA_PROC_OK;
-                        }
-                    }
-                    // if not found Rip
-                    return SPELL_AURA_PROC_FAILED;
+                    basepoints[1] = triggerAmount;
+                    triggered_spell_id = 63974;
+                    break;
                 }
                 // Glyph of Rake
                 case 54821:
