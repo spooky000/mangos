@@ -4160,7 +4160,7 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
         case SPELLFAMILY_MAGE:
             // Dragon's Breath
             if  (spellproto->SpellIconID == 1548)
-                return DIMINISHING_DISORIENT;
+                return DIMINISHING_DBREATH_SCATTER;
             break;
         case SPELLFAMILY_ROGUE:
         {
@@ -4183,6 +4183,9 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
             // Freezing Trap & Freezing Arrow & Wyvern Sting
             if  (spellproto->SpellIconID == 180 || spellproto->SpellIconID == 1721)
                 return DIMINISHING_DISORIENT;
+            // Scattering Shot
+            else if(spellproto->Id == 37506)
+                DIMINISHING_DBREATH_SCATTER
             break;
         }
         case SPELLFAMILY_WARLOCK:

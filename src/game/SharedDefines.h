@@ -2661,6 +2661,7 @@ enum DiminishingGroup
     DIMINISHING_FEAR_CHARM_BLIND,                           // Fears & charm and Blind
     DIMINISHING_DISORIENT,
     DIMINISHING_HORROR,
+    DIMINISHING_DBREATH_SCATTER,
     // Druid Specific
     DIMINISHING_CYCLONE,
     DIMINISHING_CHEAPSHOT_POUNCE,
