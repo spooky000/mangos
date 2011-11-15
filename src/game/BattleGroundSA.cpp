@@ -995,11 +995,6 @@ void BattleGroundSA::TeleportPlayerToCorrectLoc(Player *plr, bool resetBattle)
             plr->SpawnCorpseBones();
         }
 
-        if (plr->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_CONFUSED))
-            plr->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_CONFUSED);
-
-        plr->GetMotionMaster()->MovementExpired(false);
-
         plr->RemoveArenaAuras(true);
         plr->SetHealth(plr->GetMaxHealth());
         plr->SetPower(POWER_MANA, plr->GetMaxPower(POWER_MANA));
@@ -1060,14 +1055,12 @@ void BattleGroundSA::SendTransportsRemove(Player * player)
             boat1->BuildOutOfRangeUpdateBlock(&transData);
             boat1->SetRespawnTime(0);
             boat1->Delete();
-            DelObject(BG_SA_BOAT_ONE);
         }
         if (GameObject * boat2 = GetBGObject(BG_SA_BOAT_TWO))
         {
             boat2->BuildOutOfRangeUpdateBlock(&transData);
             boat2->SetRespawnTime(0);
             boat2->Delete();
-            DelObject(BG_SA_BOAT_TWO);
         }
         WorldPacket packet;
         transData.BuildPacket(&packet);
