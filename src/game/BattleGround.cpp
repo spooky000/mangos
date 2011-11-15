@@ -796,6 +796,28 @@ void BattleGround::EndBattleGround(Team winner)
 
                 SetArenaTeamRatingChangeForTeam(winner, winner_change);
                 SetArenaTeamRatingChangeForTeam(GetOtherTeam(winner), loser_change);
+
+                std::string winner_ids = "";
+                std::string loser_ids = "";
+                for(BattleGroundPlayerMap::iterator itr = m_Players.begin(); itr != m_Players.end(); ++itr)
+                {
+                    Player *plr = sObjectMgr.GetPlayer(itr->first);
+                    if (plr == NULL)
+                        continue;
+
+                    char _buf[32];
+                    sprintf(_buf, ":%d", plr->GetGUIDLow());
+
+                    if (itr->second.PlayerTeam == winner)
+                        winner_ids += _buf;
+                    else
+                        loser_ids += _buf;
+                }
+
+                CharacterDatabase.PExecute("INSERT INTO `arena_logs` (`team1`,`team1_members`,`team1_rating_change`,`team2`,`team2_members`,`team2_rating_change`,`winner`,`timestamp`) VALUES ('%u','%s','%i','%u','%s','%i','%u','%u')",
+                                        winner_arena_team->GetId(), winner_ids.c_str(), winner_change,
+                                        loser_arena_team->GetId(), loser_ids.c_str(), loser_change,
+                                        winner_arena_team->GetId(), time(NULL) );
             }
             // Deduct 16 points from each teams arena-rating if there are no winners after 45+2 minutes
             else
