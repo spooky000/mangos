@@ -280,6 +280,12 @@ void BattleGroundSA::Update(uint32 diff)
             SetStatus(STATUS_IN_PROGRESS); // Start round two
             PlaySoundToAll(SOUND_BG_START);
             SendWarningToAll(LANG_BG_SA_HAS_BEGUN);
+
+            for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+            {
+                if (Player* plr = sObjectMgr.GetPlayer(itr->first))
+                    plr->RemoveAurasDueToSpell(SPELL_PREPARATION);
+            }
         }
         else
             TimeST2Round -= diff;
@@ -442,6 +448,13 @@ void BattleGroundSA::UpdatePhase()
         Round_timer = (BG_SA_ROUNDLENGTH - RoundScores[0].time);
         SetStatus(STATUS_WAIT_JOIN);
         SendMessageToAll(LANG_BG_SA_START_TWO_MINUTE, CHAT_MSG_BG_SYSTEM_NEUTRAL, NULL);
+
+        // adding Preparation buff for the 2nd round, has to be added in status STATUS_WAIT_JOIN
+        for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+        {
+            if (Player* plr = sObjectMgr.GetPlayer(itr->first))
+                plr->CastSpell(plr, SPELL_PREPARATION, true);
+        }
     }
 
     // Spawn banners and graveyards

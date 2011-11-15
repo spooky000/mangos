@@ -90,7 +90,7 @@ enum BG_SA_GraveYard
 enum BG_SA_Timers
 {
     BG_SA_ROUNDLENGTH                   = 600000,
-    BG_SA_BOAT_START                    = 65000,
+    BG_SA_BOAT_START                    = 70000,
     BG_SA_PILLAR_START                  = 90000
 };
 
