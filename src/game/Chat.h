@@ -155,6 +155,8 @@ class MANGOS_DLL_SPEC ChatHandler
         bool HandleAHBotReloadCommand(char* args);
         bool HandleAHBotStatusCommand(char* args);
 
+        bool HandleArenaQueueCommand(char * args);
+
         bool HandleAuctionAllianceCommand(char* args);
         bool HandleAuctionGoblinCommand(char* args);
         bool HandleAuctionHordeCommand(char* args);

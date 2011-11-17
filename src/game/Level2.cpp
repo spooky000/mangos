@@ -38,6 +38,8 @@
 #include "ScriptMgr.h"
 #include "SpellMgr.h"
 #include "MapPersistentStateMgr.h"
+#include "BattleGroundMgr.h"
+#include "ArenaTeam.h"
 #include "AccountMgr.h"
 #include "GMTicketMgr.h"
 #include "WaypointManager.h"
@@ -5384,6 +5386,114 @@ bool ChatHandler::HandleTitlesCurrentCommand(char* args)
     target->SetUInt32Value(PLAYER_CHOSEN_TITLE,titleInfo->bit_index);
 
     PSendSysMessage(LANG_TITLE_CURRENT_RES, id, titleInfo->name[GetSessionDbcLocale()], tNameLink.c_str());
+
+    return true;
+}
+
+bool ChatHandler::HandleArenaQueueCommand(char* args)
+{
+    uint32 arenaslot; // 1, 2, 3
+    if (!ExtractUInt32(&args, arenaslot))
+        return false;
+
+    Player* _player = m_session->GetPlayer();
+
+    ArenaType arenatype;
+
+    switch(arenaslot)
+    {
+        case 0:
+            arenatype = ARENA_TYPE_2v2;
+            break;
+        case 1:
+            arenatype = ARENA_TYPE_3v3;
+            break;
+        case 2:
+            arenatype = ARENA_TYPE_5v5;
+            break;
+        default:
+            sLog.outError("Unknown arena slot %u at HandleBattlemasterJoinArena()", arenaslot);
+            return false;
+    }
+
+    // check existence
+    BattleGround* bg = sBattleGroundMgr.GetBattleGroundTemplate(BATTLEGROUND_AA);
+    if (!bg)
+    {
+        sLog.outError("Battleground: template bg (all arenas) not found");
+        return false;
+    }
+
+    BattleGroundTypeId bgTypeId = bg->GetTypeID();
+    BattleGroundQueueTypeId bgQueueTypeId = BattleGroundMgr::BGQueueTypeId(bgTypeId, arenatype);
+    PvPDifficultyEntry const* bracketEntry = GetBattlegroundBracketByLevel(bg->GetMapId(),_player->getLevel());
+    if (!bracketEntry)
+    {
+        sLog.outError("Battleground: bracket entry (all arenas) not found");
+        return false;
+    }
+
+    uint32 ateamId = 0;
+    uint32 matchmakerRating = 0;
+    uint32 arenaRating = 0;
+
+    ateamId = _player->GetArenaTeamId(arenaslot);
+    // check real arena team existence only here (if it was moved to group->CanJoin .. () then we would have to get it twice)
+    ArenaTeam * at = sObjectMgr.GetArenaTeamById(ateamId);
+    if (!at)
+    {
+        _player->GetSession()->SendNotInArenaTeamPacket(arenatype);
+
+        sLog.outError("Battleground: no arena team found");
+        return false;
+    }
+
+    // get the team rating for queueing
+    arenaRating = at->GetRating();
+    matchmakerRating = at->GetAverageMMR(grp);
+    // the arenateam id must match for everyone in the group
+
+    if (matchmakerRating <= 0)
+        matchmakerRating = 1;
+
+    BattleGroundQueue &bgQueue = sBattleGroundMgr.m_BattleGroundQueues[bgQueueTypeId];
+
+    GroupJoinBattlegroundResult err = (GroupJoinBattlegroundResult)bg->GetTypeID();
+
+        uint32 avgTime = 0;
+
+    if(err > 0)
+    {
+        sLog.outError("Battleground: arena join as group start");
+        sLog.outError("Battleground: arena team id %u, leader %s queued with rating %u for type %u",_player->GetArenaTeamId(arenaslot),_player->GetName(),arenaRating,arenatype);
+
+            GroupQueueInfo * ginfo = bgQueue.AddGroup(_player, grp, bgTypeId, bracketEntry, arenatype, true, false, arenaRating, matchmakerRating, ateamId);
+            avgTime = bgQueue.GetAverageQueueWaitTime(ginfo, bracketEntry->GetBracketId());
+    }
+
+    Player *member = _player;
+
+    WorldPacket data;
+
+    if(err <= 0)
+    {
+        sBattleGroundMgr.BuildGroupJoinedBattlegroundPacket(&data, err);
+        member->GetSession()->SendPacket(&data);
+        sLog.outError("Battleground: template bg (all arenas) not found");
+        return false;
+    }
+
+    // add to queue
+    uint32 queueSlot = member->AddBattleGroundQueueId(bgQueueTypeId);
+
+    // send status packet (in queue)
+    sBattleGroundMgr.BuildBattleGroundStatusPacket(&data, bg, queueSlot, STATUS_WAIT_QUEUE, avgTime, 0, arenatype);
+    member->GetSession()->SendPacket(&data);
+    sBattleGroundMgr.BuildGroupJoinedBattlegroundPacket(&data, err);
+    member->GetSession()->SendPacket(&data);
+    sLog.outError("Battleground: player joined queue for arena as group bg queue type %u bg type %u: GUID %u, NAME %s", bgQueueTypeId, bgTypeId, member->GetGUIDLow(), member->GetName());
+
+    sBattleGroundMgr.ScheduleQueueUpdate(matchmakerRating, arenatype, bgQueueTypeId, bgTypeId, bracketEntry->GetBracketId());
 
     return true;
 }
