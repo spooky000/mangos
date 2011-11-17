@@ -5450,7 +5450,8 @@ bool ChatHandler::HandleArenaQueueCommand(char* args)
 
     // get the team rating for queueing
     arenaRating = at->GetRating();
-    matchmakerRating = at->GetAverageMMR(grp);
+    //matchmakerRating = at->GetAverageMMR(grp);
+    matchmakerRating = at->GetMember(_player->GetObjectGuid())->matchmaker_rating;
     // the arenateam id must match for everyone in the group
 
     if (matchmakerRating <= 0)
@@ -5467,7 +5468,7 @@ bool ChatHandler::HandleArenaQueueCommand(char* args)
         sLog.outError("Battleground: arena join as group start");
         sLog.outError("Battleground: arena team id %u, leader %s queued with rating %u for type %u",_player->GetArenaTeamId(arenaslot),_player->GetName(),arenaRating,arenatype);
 
-            GroupQueueInfo * ginfo = bgQueue.AddGroup(_player, grp, bgTypeId, bracketEntry, arenatype, true, false, arenaRating, matchmakerRating, ateamId);
+            GroupQueueInfo * ginfo = bgQueue.AddGroup(_player, NULL, bgTypeId, bracketEntry, arenatype, true, false, arenaRating, matchmakerRating, ateamId);
             avgTime = bgQueue.GetAverageQueueWaitTime(ginfo, bracketEntry->GetBracketId());
     }
 
