@@ -11105,11 +11105,6 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
 
     Unit* unit_target2 = spell->m_targets.getUnitTarget();
 
-    // auto target selection for some pet spells (voidwalker sacrifice, feral spirits sprint, call of the wild, Roar of recovery, furious howl)
-    if ((spellInfo->IsFitToFamily<SPELLFAMILY_WARLOCK, CF_WARLOCK_VOIDWALKER_SPELLS>() && spellInfo->SpellIconID == 693) || spellInfo->Id == 58875 || spellInfo->Id == 53434
-        || spellInfo->Id == 53434 || spellInfo->Id == 64494)
-        targets->setUnitTarget((Unit*)owner);
-
     SpellCastResult result = spell->CheckPetCast(unit_target);
 
     //auto turn to target unless possessed
@@ -11133,8 +11128,9 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
         result = SPELL_CAST_OK;
     }
 
-    if (targets)
-        spell->m_targets = *targets;
+    if (GetObjectGuid().IsVehicle())
+        if (targets)
+            spell->m_targets = *targets;
 
     clearUnitState(UNIT_STAT_MOVING);
 
