@@ -9180,13 +9180,13 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->RemoveAurasDueToSpell(m_spellInfo->EffectBasePoints[eff_idx]);
                     return;
                 }
-				case 62168:									// Algalon - Black Hole Damage
-				{
-					if (!unitTarget)
-						return;
-					unitTarget->CastSpell(unitTarget, 62169, true);
-					return;
-				}
+                case 62168:									// Algalon - Black Hole Damage
+                {
+                    if (!unitTarget)
+                        return;
+                    unitTarget->CastSpell(unitTarget, 62169, true);
+                    return;
+                }
                 /*  Feanor: CHECK LATER
                 case 62524:                                 // Attuned to Nature 2 Dose Reduction
                 case 62525:                                 // Attuned to Nature 10 Dose Reduction
