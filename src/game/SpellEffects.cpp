@@ -4581,7 +4581,25 @@ void Spell::EffectTriggerSpell(SpellEffectIndex effIndex)
             // Glyph of Mirror Image
             if (m_caster->HasAura(63093))
                 m_caster->CastSpell(m_caster, 65047, true); // Mirror Image
-            break;
+
+            std::list<Unit *> targets;
+            {
+                MaNGOS::AnyUnfriendlyUnitInObjectRangeCheck u_check(m_caster, m_caster, m_caster->GetMap()->GetVisibilityDistance());
+                MaNGOS::UnitListSearcher<MaNGOS::AnyUnfriendlyUnitInObjectRangeCheck> searcher(targets, u_check);
+                Cell::VisitAllObjects(m_caster, searcher, m_caster->GetMap()->GetVisibilityDistance());
+            }
+
+            for(std::list<Unit *>::iterator tIter = targets.begin(); tIter != targets.end(); ++tIter)
+                for(uint32 i = CURRENT_FIRST_NON_MELEE_SPELL; i < CURRENT_MAX_SPELL; ++i)
+                {
+                    if ((*tIter)->GetCurrentSpell(CurrentSpellTypes(i)) && (*tIter)->GetCurrentSpell(CurrentSpellTypes(i))->m_targets.getUnitTargetGuid() == unitTarget->GetObjectGuid())
+                        (*tIter)->InterruptSpell(CurrentSpellTypes(i), false);
+
+                    if((*tIter)->GetTargetGuid() == m_caster->GetObjectGuid())
+                        (*tIter)->SetTargetGuid(ObjectGuid());
+                }
+
+                break;
         }
         // Empower Rune Weapon
         case 53258:
@@ -9160,6 +9178,13 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!unitTarget)
                         return;
                     unitTarget->RemoveAurasDueToSpell(m_spellInfo->EffectBasePoints[eff_idx]);
+                    return;
+                }
+                case 62168:									// Algalon - Black Hole Damage
+                {
+                    if (!unitTarget)
+                        return;
+                    unitTarget->CastSpell(unitTarget, 62169, true);
                     return;
                 }
                 /*  Feanor: CHECK LATER

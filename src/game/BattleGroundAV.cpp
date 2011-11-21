@@ -583,6 +583,7 @@ void BattleGroundAV::EventPlayerDefendsPoint(Player* player, BG_AV_Nodes node)
         UpdatePlayerScore(player, SCORE_GRAVEYARDS_DEFENDED, 1);
     // update the statistic for the defending player
         PlaySoundToAll((teamIdx == BG_TEAM_ALLIANCE)?BG_AV_SOUND_ALLIANCE_GOOD:BG_AV_SOUND_HORDE_GOOD);
+        player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE,1,65);
     }
 }
 
@@ -837,4 +838,18 @@ void BattleGroundAV::Reset()
 
     InitNode(BG_AV_NODES_SNOWFALL_GRAVE, BG_AV_TEAM_NEUTRAL, false);                            // give snowfall neutral owner
 
+}
+
+bool BattleGroundAV::hasAllTowers(int8 team)
+{
+    // if the winner team captain is dead, no need to check further
+    if ((IsActiveEvent((team == BG_TEAM_ALLIANCE) ? BG_AV_NodeEventCaptainDead_A : BG_AV_NodeEventCaptainDead_H, 0)))
+        return false;
+
+    // all winner towers/bunkers have to be owned by the winners, enemy ones must be destroyed (none in conflict)
+    for (int i = BG_AV_NODES_DUNBALDAR_SOUTH; i <= BG_AV_NODES_FROSTWOLF_WTOWER; ++i)
+        if (m_Nodes[i].Owner != team || m_Nodes[i].State != POINT_CONTROLLED)
+            return false;
+
+    return true;
 }

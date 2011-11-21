@@ -83,7 +83,8 @@ void PetAI::AttackStart(Unit *u)
         // thus with the following clear the original TMG gets invalidated and crash, doh
         // hope it doesn't start to leak memory without this :-/
         //i_pet->Clear();
-        m_creature->GetMotionMaster()->MoveChase(u);
+        if (m_creature->GetEntry() != 510 && m_creature->GetEntry() != 1863 && m_creature->GetEntry() != 37994 && m_creature->GetEntry() != 416)
+            m_creature->GetMotionMaster()->MoveChase(u);
         inCombat = true;
     }
 }

@@ -770,11 +770,14 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
     //Get in CombatState
     if(pVictim != this && damagetype != DOT)
     {
-        SetInCombatWith(pVictim);
-        pVictim->SetInCombatWith(this);
+        if(!spellProto || !(spellProto->AttributesEx & SPELL_ATTR_EX_NO_THREAT))
+        {
+            SetInCombatWith(pVictim);
+            pVictim->SetInCombatWith(this);
 
-        if(Player* attackedPlayer = pVictim->GetCharmerOrOwnerPlayerOrPlayerItself())
-            SetContestedPvP(attackedPlayer);
+            if(Player* attackedPlayer = pVictim->GetCharmerOrOwnerPlayerOrPlayerItself())
+                SetContestedPvP(attackedPlayer);
+        }
     }
 
     // Rage from Damage made (only from direct weapon damage)
@@ -2124,7 +2127,7 @@ void Unit::CalculateDamageAbsorbAndResist(Unit *pCaster, SpellSchoolMask schoolM
     // Magic damage, check for resists
     if ((schoolMask & SPELL_SCHOOL_MASK_NORMAL)==0)
     {
-        float victimResistance = float(GetResistance(GetFirstSchoolInMask(schoolMask)));
+        float victimResistance = float(GetResistance(schoolMask));
         victimResistance += float(pCaster->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_TARGET_RESISTANCE, schoolMask));
         if(victimResistance < 0.0f)
             victimResistance = 0.0f;
@@ -2994,7 +2997,7 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst (const Unit *pVictim, WeaponAttack
         int32 maxskill = attackerMaxSkillValueForLevel;
         skill = (skill > maxskill) ? maxskill : skill;
 
-        tmp = (10 + 2*(victimDefenseSkill - skill)) * 100;
+        tmp = (10 + victimDefenseSkill - skill) * 100;
         tmp = tmp > 4000 ? 4000 : tmp;
         if (roll < (sum += tmp))
         {
@@ -12935,4 +12938,20 @@ void Unit::DisableSpline()
 {
     m_movementInfo.RemoveMovementFlag(MovementFlags(MOVEFLAG_SPLINE_ENABLED|MOVEFLAG_FORWARD));
     movespline->_Interrupt();
+}
+
+uint32 Unit::GetResistance(SpellSchoolMask schoolMask) const
+{
+    uint32 resistance = 0;
+
+    for (int i = SPELL_SCHOOL_NORMAL; i < MAX_SPELL_SCHOOL; ++i)
+    {
+        if (schoolMask & (1 << i))
+        {
+            if (resistance < GetResistance(SpellSchools(i)))
+                resistance = GetResistance(SpellSchools(i));
+                // by some sources, may be resistance += GetResistance(SpellSchools(i)), but i not sure (/dev/rsa)
+        }
+    }
+    return resistance;
 }

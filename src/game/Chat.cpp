@@ -142,6 +142,12 @@ ChatCommand * ChatHandler::getCommandTable()
         { NULL,             0,                  true,  NULL,                                           "", NULL }
     };
 
+    static ChatCommand arenaCommandTable[] =
+    {
+        { "queue",          SEC_GAMEMASTER,     false, &ChatHandler::HandleArenaQueueCommand,          "", NULL },
+        { NULL,             0,                  true,  NULL,                                           "", NULL }
+    };
+
     static ChatCommand auctionCommandTable[] =
     {
         { "alliance",       SEC_ADMINISTRATOR,  false, &ChatHandler::HandleAuctionAllianceCommand,     "", NULL },
@@ -735,6 +741,7 @@ ChatCommand * ChatHandler::getCommandTable()
         { "achievement",    SEC_ADMINISTRATOR,  true,  NULL,                                           "", achievementCommandTable },
         { "auction",        SEC_ADMINISTRATOR,  false, NULL,                                           "", auctionCommandTable  },
         { "ahbot",          SEC_ADMINISTRATOR,  true,  NULL,                                           "", ahbotCommandTable    },
+        { "arena",          SEC_GAMEMASTER,     true,  NULL,                                           "", arenaCommandTable    },
         { "cast",           SEC_ADMINISTRATOR,  false, NULL,                                           "", castCommandTable     },
         { "character",      SEC_GAMEMASTER,     true,  NULL,                                           "", characterCommandTable},
         { "debug",          SEC_MODERATOR,      true,  NULL,                                           "", debugCommandTable    },

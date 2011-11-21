@@ -280,6 +280,12 @@ void BattleGroundSA::Update(uint32 diff)
             SetStatus(STATUS_IN_PROGRESS); // Start round two
             PlaySoundToAll(SOUND_BG_START);
             SendWarningToAll(LANG_BG_SA_HAS_BEGUN);
+
+            for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+            {
+                if (Player* plr = sObjectMgr.GetPlayer(itr->first))
+                    plr->RemoveAurasDueToSpell(SPELL_PREPARATION);
+            }
         }
         else
             TimeST2Round -= diff;
@@ -378,8 +384,8 @@ void BattleGroundSA::UpdatePlayerScore(Player* Source, uint32 type, uint32 value
 void BattleGroundSA::ResetBattle(uint32 winner, Team teamDefending)
 {
     Phase = SA_ROUND_TWO;
-    shipsTimer = 60000;
-    pillarOpenTimer = 90000;
+    shipsTimer = BG_SA_BOAT_START;
+    pillarOpenTimer = BG_SA_PILLAR_START;
     shipsStarted = false;
     
     for (int32 i = 0; i < BG_SA_GATE_MAX; ++i)
@@ -403,19 +409,6 @@ void BattleGroundSA::ResetBattle(uint32 winner, Team teamDefending)
 
         if (plr->GetBGTeam() == defender && plr->GetItemByEntry(39213) != NULL)
             plr->DestroyItemCount(39213, 1, true);
-    }
-
-    uint32 npcEvent = MAKE_PAIR32(SA_EVENT_ADD_NPC, 0);
-    for(std::vector<ObjectGuid>::iterator itr = m_EventObjects[npcEvent].creatures.begin(); itr != m_EventObjects[npcEvent].creatures.end(); ++itr)
-    {
-        if(Creature * pEventCreature = GetBgMap()->GetCreature((*itr)))
-            if(pEventCreature->GetEntry() == 28781)
-            {
-                float x,y,z,o;
-                pEventCreature->DealDamage(pEventCreature, pEventCreature->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
-                pEventCreature->GetRespawnCoord(x,y,z,&o);
-                pEventCreature->NearTeleportTo(x,y,z,o);
-            }
     }
 
     UpdatePhase();
@@ -455,6 +448,13 @@ void BattleGroundSA::UpdatePhase()
         Round_timer = (BG_SA_ROUNDLENGTH - RoundScores[0].time);
         SetStatus(STATUS_WAIT_JOIN);
         SendMessageToAll(LANG_BG_SA_START_TWO_MINUTE, CHAT_MSG_BG_SYSTEM_NEUTRAL, NULL);
+
+        // adding Preparation buff for the 2nd round, has to be added in status STATUS_WAIT_JOIN
+        for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+        {
+            if (Player* plr = sObjectMgr.GetPlayer(itr->first))
+                plr->CastSpell(plr, SPELL_PREPARATION, true);
+        }
     }
 
     // Spawn banners and graveyards
@@ -995,11 +995,6 @@ void BattleGroundSA::TeleportPlayerToCorrectLoc(Player *plr, bool resetBattle)
             plr->SpawnCorpseBones();
         }
 
-        if (plr->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_CONFUSED))
-            plr->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_CONFUSED);
-
-        plr->GetMotionMaster()->MovementExpired(false);
-
         plr->RemoveArenaAuras(true);
         plr->SetHealth(plr->GetMaxHealth());
         plr->SetPower(POWER_MANA, plr->GetMaxPower(POWER_MANA));
@@ -1060,14 +1055,12 @@ void BattleGroundSA::SendTransportsRemove(Player * player)
             boat1->BuildOutOfRangeUpdateBlock(&transData);
             boat1->SetRespawnTime(0);
             boat1->Delete();
-            DelObject(BG_SA_BOAT_ONE);
         }
         if (GameObject * boat2 = GetBGObject(BG_SA_BOAT_TWO))
         {
             boat2->BuildOutOfRangeUpdateBlock(&transData);
             boat2->SetRespawnTime(0);
             boat2->Delete();
-            DelObject(BG_SA_BOAT_TWO);
         }
         WorldPacket packet;
         transData.BuildPacket(&packet);
