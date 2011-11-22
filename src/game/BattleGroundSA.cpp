@@ -337,6 +337,9 @@ void BattleGroundSA::StartingEventOpenDoors()
     SpawnEvent(SA_EVENT_ADD_BOMB, (GetDefender() == ALLIANCE ? 1 : 0), true);
     ToggleTimer();
     StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, (defender  == HORDE) ? BG_SA_EVENT_START_BATTLE_2 : BG_SA_EVENT_START_BATTLE_1);
+
+    if (Phase == SA_ROUND_ONE)
+        HandleInteractivity();
 }
 
 void BattleGroundSA::RemovePlayer(Player* /*plr*/, ObjectGuid /*guid*/)
@@ -385,7 +388,7 @@ void BattleGroundSA::ResetBattle(uint32 winner, Team teamDefending)
 {
     Phase = SA_ROUND_TWO;
     shipsTimer = BG_SA_BOAT_START;
-    pillarOpenTimer = BG_SA_PILLAR_START;
+    pillarOpenTimer = BG_SA_PILLAR_START;;
     shipsStarted = false;
     
     for (int32 i = 0; i < BG_SA_GATE_MAX; ++i)
@@ -428,6 +431,7 @@ void BattleGroundSA::Reset()
     m_ActiveEvents[SA_EVENT_ADD_SPIR] = BG_EVENT_NONE;
     m_ActiveEvents[SA_EVENT_ADD_SPIR_A] = BG_EVENT_NONE;
     m_ActiveEvents[SA_EVENT_ADD_BOMB] = BG_EVENT_NONE;
+    m_ActiveEvents[SA_EVENT_ADD_BOMB_ANC] = BG_EVENT_NONE;
     m_ActiveEvents[SA_EVENT_ADD_VECH_E] = BG_EVENT_NONE;
     m_ActiveEvents[SA_EVENT_ADD_VECH_W] = BG_EVENT_NONE;
     // spiritguides and flags not spawned at beginning
@@ -455,6 +459,7 @@ void BattleGroundSA::UpdatePhase()
             if (Player* plr = sObjectMgr.GetPlayer(itr->first))
                 plr->CastSpell(plr, SPELL_PREPARATION, true);
         }
+        HandleInteractivity();
     }
 
     // Spawn banners and graveyards
@@ -464,19 +469,24 @@ void BattleGroundSA::UpdatePhase()
             SpawnEvent(i, z, false);
 
         m_BannerTimers[i].timer = 0;
-        SpawnEvent(i, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED), true);
+        SpawnEvent(i, (GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED, true);
         m_Gyd[i] = ((GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED);
     }
 
     // spirit healers at the relic
     SpawnEvent(SA_EVENT_ADD_SPIR_A, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED), true);
-    m_Gyd[BG_SA_GARVE_A] = ((GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED);
 
     // (Re)spawn graveyard at the beach.
     SpawnEvent(SA_EVENT_ADD_SPIR, (GetDefender() == ALLIANCE ? BG_SA_GARVE_STATUS_HORDE_CONTESTED : BG_SA_GARVE_STATUS_ALLY_CONTESTED), true);
 
     SpawnEvent(SA_EVENT_ADD_GO, 0, false);
     SpawnEvent(SA_EVENT_ADD_GO, 0, true);
+}
+
+void BattleGroundSA::HandleInteractivity()
+{
+    for (int i = 0; i < BG_SA_GRY_MAX; i++)
+        MakeInteractive(i, (GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED, false);
 }
 
 bool BattleGroundSA::SetupBattleGround()
@@ -571,10 +581,6 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
 
     BattleGroundTeamIndex teamIndex = GetTeamIndexByTeamId(source->GetTeam());
 
-    if (gyd == 2)
-        if (GetGateStatus(BG_SA_GO_GATES_T_MAUVE_AMETHYST) != BG_SA_GO_GATES_DESTROY && GetGateStatus(BG_SA_GO_GATES_T_RED_SUN) != BG_SA_GO_GATES_DESTROY)
-            return;
-
     if ((m_Gyd[gyd] == BG_SA_GARVE_STATUS_ALLY_CONTESTED) || (m_Gyd[gyd] == BG_SA_GARVE_STATUS_HORDE_CONTESTED))
     {
         //make the new banner not capturable by defenders
@@ -600,6 +606,7 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
         {
             case 0: SpawnEvent(SA_EVENT_ADD_VECH_E, 0, true);break;
             case 1: SpawnEvent(SA_EVENT_ADD_VECH_W, 0, true);break;
+            case 2: SpawnEvent(SA_EVENT_ADD_BOMB_ANC, teamIndex + 3, true);break;
         }
     }
 }
@@ -670,6 +677,8 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DESTROY);
                     UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
                     RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
+                    for (int i = BG_SA_GARVE_E; i <= BG_SA_GARVE_W; i++)
+                        MakeInteractive(i, (GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED, true);
                     break;
             }
             break;
@@ -690,6 +699,8 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DESTROY);
                     UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
                     RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
+                    for (int i = BG_SA_GARVE_E; i <= BG_SA_GARVE_W; i++)
+                        MakeInteractive(i, (GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED, true);
                     break;
             }
             break;
@@ -710,6 +721,7 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DESTROY);
                     UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
                     RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
+                    MakeInteractive(BG_SA_GARVE_S, (GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED, true);
                     break;
             }
             break;
@@ -730,6 +742,7 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                     UpdateWorldState(BG_SA_GateStatus[type], GateStatus[type] = BG_SA_GO_GATES_DESTROY);
                     UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
                     RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
+                    MakeInteractive(BG_SA_GARVE_S, (GetDefender() == ALLIANCE) ? BG_SA_GARVE_STATUS_ALLY_CONTESTED : BG_SA_GARVE_STATUS_HORDE_CONTESTED, true);
                     break;
             }
             break;
