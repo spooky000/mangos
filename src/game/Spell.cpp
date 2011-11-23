@@ -1694,6 +1694,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 62016:                                 // Thorim charge orb
                 case 62042:                                 // Stormhammer
                 case 62488:                                 // Activate Construct (Ulduar - Ignis encounter)
+                case 62301:									// Cosmic Smash (10 man) Algalon
                 case 63018:                                 // Searing Light (10 man)
                 case 63024:                                 // Gravity Bomb (10 man)
                 case 63387:                                 // Rapid Burst
@@ -1758,6 +1759,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 54522:                                 // Summon Ghouls On Scarlet Crusade
                 case 60936:                                 // Surge of Power (25 man)
                 case 62477:                                 // Icicle (Hodir 25man)
+                case 64598:									// Cosmic Smash (25 man) Algalon
                 case 69055:                                 // Bone Slice (Icecrown Citadel, Lord Marrowgar, normal)
                 case 70814:                                 // Bone Slice (Icecrown Citadel, Lord Marrowgar, heroic)
                 case 70826:                                 // Bone Spike Graveyard (Icecrown Citadel, Lord Marrowgar encounter, 25N)
