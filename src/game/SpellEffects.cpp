@@ -3306,11 +3306,11 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 case 62301:									// Algalon Cosmic Smash
                 case 64598:
                 {
-	                if (!unitTarget)
-		                return;
+                    if (!unitTarget)
+                        return;
 
-	                unitTarget->CastSpell(unitTarget, 62295, true);
-	                return;
+                    unitTarget->CastSpell(unitTarget, 62295, true);
+                    return;
                 }
                 case 63984:                                 // Hate to Zero (Ulduar - Yogg Saron), if the player teleport into the "brain"
                 {

@@ -120,6 +120,8 @@ SpellCastTargets::SpellCastTargets()
     m_srcX = m_srcY = m_srcZ = m_destX = m_destY = m_destZ = 0.0f;
     m_strTarget = "";
     m_targetMask = 0;
+    m_elevation = 0.0f;
+    m_speed = 0.0f;
 }
 
 SpellCastTargets::~SpellCastTargets()
@@ -311,6 +313,26 @@ void SpellCastTargets::write( ByteBuffer& data ) const
 
     if( m_targetMask & TARGET_FLAG_STRING )
         data << m_strTarget;
+}
+
+void SpellCastTargets::ReadAdditionalData(ByteBuffer& data)
+{
+    data >> m_elevation;
+    data >> m_speed;
+
+    uint8 moveFlag;
+    data >> moveFlag;
+
+    if (moveFlag)
+    {
+        ObjectGuid guid;                                // unk guid (possible - active mover) - unused
+        MovementInfo movementInfo;                      // MovementInfo
+
+        data >> Unused<uint32>();                       // >> MSG_MOVE_STOP
+        data >> guid.ReadAsPacked();
+        data >> movementInfo;
+        setSource(movementInfo.GetPos()->x,movementInfo.GetPos()->y,movementInfo.GetPos()->z);
+    }
 }
 
 Spell::Spell( Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid originalCasterGUID, SpellEntry const* triggeredBy )
@@ -851,28 +873,41 @@ void Spell::AddUnitTarget(Unit* pVictim, SpellEffectIndex effIndex)
     target.targetGUID = targetGUID;                         // Store target GUID
     target.effectMask = immuned ? 0 : (1 << effIndex);      // Store index of effect if not immuned
     target.processed  = false;                              // Effects not apply on target
+
     // Calculate hit result
     target.missCondition = m_caster->SpellHitResult(pVictim, m_spellInfo, m_canReflect);
 
     // spell fly from visual cast object
     WorldObject* affectiveObject = GetAffectiveCasterObject();
 
+    // Spell have trajectory - need calculate incoming time
+    if (affectiveObject && m_targets.GetSpeed() > 0.0f)
+    {
+        float dist = 5.0f;
+        if (m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
+            dist = affectiveObject->GetDistance(m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ);
+        else
+            dist = affectiveObject->GetDistance(pVictim->GetPositionX(), pVictim->GetPositionY(), pVictim->GetPositionZ());
+        float speed = m_targets.GetSpeed() * cos(m_targets.GetElevation());
+
+        target.timeDelay = (uint64) floor(dist / speed * 1000.0f);
+    }
     // Spell have speed - need calculate incoming time
-    if (m_spellInfo->speed > 0.0f && affectiveObject && pVictim != affectiveObject)
+    else if (m_spellInfo->speed > 0.0f && affectiveObject && pVictim != affectiveObject)
     {
         // calculate spell incoming interval
         float dist = affectiveObject->GetDistance(pVictim->GetPositionX(), pVictim->GetPositionY(), pVictim->GetPositionZ());
         if (dist < 5.0f)
             dist = 5.0f;
-
         target.timeDelay = (uint64) floor(dist / m_spellInfo->speed * 1000.0f);
 
-        // Calculate minimum incoming time
-        if (m_delayMoment == 0 || m_delayMoment>target.timeDelay)
-            m_delayMoment = target.timeDelay;
     }
     else
         target.timeDelay = UI64LIT(0);
+
+    // Calculate minimum incoming time
+    if (m_delayMoment == 0 || m_delayMoment > target.timeDelay)
+        m_delayMoment = target.timeDelay;
 
     // If target reflect spell back to caster
     if (target.missCondition == SPELL_MISS_REFLECT)
@@ -1694,7 +1729,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 62016:                                 // Thorim charge orb
                 case 62042:                                 // Stormhammer
                 case 62488:                                 // Activate Construct (Ulduar - Ignis encounter)
-                case 62301:									// Cosmic Smash (10 man) Algalon
+                case 62301:                                 // Cosmic Smash (10 man) Algalon
                 case 63018:                                 // Searing Light (10 man)
                 case 63024:                                 // Gravity Bomb (10 man)
                 case 63387:                                 // Rapid Burst
@@ -1759,7 +1794,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 54522:                                 // Summon Ghouls On Scarlet Crusade
                 case 60936:                                 // Surge of Power (25 man)
                 case 62477:                                 // Icicle (Hodir 25man)
-                case 64598:									// Cosmic Smash (25 man) Algalon
+                case 64598:                                 // Cosmic Smash (25 man) Algalon
                 case 69055:                                 // Bone Slice (Icecrown Citadel, Lord Marrowgar, normal)
                 case 70814:                                 // Bone Slice (Icecrown Citadel, Lord Marrowgar, heroic)
                 case 70826:                                 // Bone Spike Graveyard (Icecrown Citadel, Lord Marrowgar encounter, 25N)
