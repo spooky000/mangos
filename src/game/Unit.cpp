@@ -8801,9 +8801,6 @@ void Unit::Mount(uint32 mount, uint32 spellId, uint32 vehicleId, uint32 creature
         {
             SetVehicleId(vehicleId);
             GetVehicleKit()->Reset();
-
-            // mounts can also have accessories
-            GetVehicleKit()->InstallAllAccessories(creatureEntry);
         }
 
         WorldPacket data(SMSG_MOVE_SET_COLLISION_HGT, GetPackGUID().size() + 4 + 4);
@@ -11110,7 +11107,7 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
     Creature* pet = dynamic_cast<Creature*>(this);
 
     Unit* unit_target = targets ? targets->getUnitTarget() : NULL;
-    if (!unit_target)
+    if (!unit_target && !(targets->m_targetMask & TARGET_FLAG_DEST_LOCATION))
     {
         DEBUG_LOG("DoPetCastSpell: %s guid %u tryed to cast spell %u without target!.",GetObjectGuid().IsPet() ? "Pet" : "Creature",GetObjectGuid().GetCounter(), spellInfo->Id);
     }

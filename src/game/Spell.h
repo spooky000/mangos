@@ -114,6 +114,8 @@ class SpellCastTargets
 
         SpellCastTargetsReader ReadForCaster(Unit* caster) { return SpellCastTargetsReader(*this,caster); }
 
+        void ReadAdditionalData(ByteBuffer& data);
+
         SpellCastTargets& operator=(const SpellCastTargets &target)
         {
             m_unitTarget = target.m_unitTarget;
@@ -140,6 +142,9 @@ class SpellCastTargets
             m_strTarget = target.m_strTarget;
 
             m_targetMask = target.m_targetMask;
+
+            m_elevation = target.m_elevation;
+            m_speed     = target.m_speed;
 
             return *this;
         }
@@ -179,6 +184,9 @@ class SpellCastTargets
         float m_destX, m_destY, m_destZ;
         std::string m_strTarget;
 
+        float GetElevation() const { return m_elevation; }
+        float GetSpeed()     const { return m_speed; }
+
         uint32 m_targetMask;
     private:
         // objects (can be used at spell creating and after Update at casting
@@ -194,6 +202,8 @@ class SpellCastTargets
         ObjectGuid m_srcTransportGUID;
         ObjectGuid m_destTransportGUID;
         uint32 m_itemTargetEntry;
+
+        float m_elevation, m_speed;
 };
 
 inline ByteBuffer& operator<< (ByteBuffer& buf, SpellCastTargets const& targets)
