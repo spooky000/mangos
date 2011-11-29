@@ -8836,8 +8836,8 @@ void Unit::Unmount(bool from_aura)
         /*WorldPacket data(SMSG_MOVE_SET_COLLISION_HGT, GetPackGUID().size() + 4 + 4);
         data << GetPackGUID();
         data << uint32(sWorld.GetGameTime());   // Packet counter
-        data << ((Player*)this)->GetCollisionHeight(false);*/
-        ((Player*)this)->GetSession()->SendPacket(&data);
+        data << ((Player*)this)->GetCollisionHeight(false);
+        ((Player*)this)->GetSession()->SendPacket(&data);*/
 
         if(Pet* pet = GetPet())
             pet->ApplyModeFlags(PET_MODE_DISABLE_ACTIONS,false);
