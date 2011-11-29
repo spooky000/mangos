@@ -738,7 +738,7 @@ struct CinematicSequencesEntry
 struct CreatureDisplayInfoEntry
 {
     uint32      Displayid;                                  // 0        m_ID
-    /*uint32      ModelId;*/                                // 1        m_modelID
+    uint32      ModelId;                                    // 1        m_modelID
                                                             // 2        m_soundID
     uint32      ExtendedDisplayInfoID;                      // 3        m_extendedDisplayInfoID -> CreatureDisplayInfoExtraEntry::DisplayExtraId
     float       scale;                                      // 4        m_creatureModelScale
@@ -784,7 +784,7 @@ struct CreatureFamilyEntry
                                                             // 27       m_iconFile
 };
 
-/*struct CreatureModelDataEntry
+struct CreatureModelDataEntry
 {
     uint32 Id;
     //uint32 Flags;
@@ -804,7 +804,7 @@ struct CreatureFamilyEntry
     float CollisionHeight;
     float MountHeight;                                       // Used in calculation of unit collision data when mounted
     //float Unks[11]
-};*/
+};
 
 #define MAX_CREATURE_SPELL_DATA_SLOT 4
 
