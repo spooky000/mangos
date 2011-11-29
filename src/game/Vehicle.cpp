@@ -355,6 +355,7 @@ void VehicleKit::RemovePassenger(Unit *passenger)
 
 void VehicleKit::Reset()
 {
+    RemoveAllPassengers();
     InstallAllAccessories(m_pBase->GetEntry());
     UpdateFreeSeatCount();
 }
