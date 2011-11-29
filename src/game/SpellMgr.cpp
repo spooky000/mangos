@@ -4186,6 +4186,9 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
             // Scattering Shot
             else if(spellproto->Id == 37506)
                 return DIMINISHING_DBREATH_SCATTER;
+            // Hunters Mark - limit to 2 minutes in PvP
+            else if (spellproto->SpellFamilyFlags.test<CF_HUNTER_HUNTERS_MARK>())
+                return DIMINISHING_LIMITONLY;
             break;
         }
         case SPELLFAMILY_WARLOCK:
@@ -4292,6 +4295,9 @@ int32 GetDiminishingReturnsLimitDuration(DiminishingGroup group, SpellEntry cons
             // Wyvern Sting
             if (spellproto->SpellFamilyFlags.test<CF_HUNTER_WYVERN_STING2>())
                 return 6000;
+            // Hunters Mark - limit to 2 minutes in PvP
+            else if (spellproto->SpellFamilyFlags.test<CF_HUNTER_HUNTERS_MARK>())
+                return 120000;
             break;
         }
         case SPELLFAMILY_PALADIN:

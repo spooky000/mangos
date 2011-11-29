@@ -72,19 +72,12 @@ enum BG_SA_Sounds
 
 enum BG_SA_GraveYardStatus
 {
-    BG_SA_GARVE_STATUS_ALLY_CONTESTED    = 1,   //Owned by the Allies, clickable for Horde
-    BG_SA_GARVE_STATUS_HORDE_CONTESTED   = 2,   //Owned by the Horde, clickable for Alliance
-    BG_SA_GARVE_STATUS_ALLY_OCCUPIED     = 3,   //Captured by the Allies, not clickable by anyone
-    BG_SA_GARVE_STATUS_HORDE_OCCUPIED    = 4    //Captured by the Horde, not clickable by anyone
-};
-
-enum BG_SA_GraveYard
-{
-    BG_SA_GARVE_E                       = 0,
-    BG_SA_GARVE_W                       = 1,
-    BG_SA_GARVE_S                       = 2,
-    BG_SA_GARVE_A                       = 3,    // Last defender graveyard, at the ancient shrine
-    BG_SA_GARVE_ERROR                   = 255
+    BG_SA_GRAVE_STATUS_CONTESTED         = 1,   // adding status_contested and status_occupied just to make some cases clearer
+    BG_SA_GRAVE_STATUS_ALLY_CONTESTED    = 1,   // Owned by the Allies, clickable for Horde
+    BG_SA_GRAVE_STATUS_HORDE_CONTESTED   = 2,   // Owned by the Horde, clickable for Alliance
+    BG_SA_GRAVE_STATUS_OCCUPIED          = 3,
+    BG_SA_GRAVE_STATUS_ALLY_OCCUPIED     = 3,   // Captured by the Allies, not clickable by anyone
+    BG_SA_GRAVE_STATUS_HORDE_OCCUPIED    = 4    // Captured by the Horde, not clickable by anyone
 };
 
 enum BG_SA_Timers
@@ -124,13 +117,20 @@ enum BG_SA_GoType
 
 enum BG_SA_Events
 {
-    SA_EVENT_ADD_SPIR_A     = 3,        // ancient relic area
-    SA_EVENT_ADD_SPIR       = 5,
-    SA_EVENT_ADD_BOMB       = 6,
-    SA_EVENT_ADD_NPC        = 7,
-    SA_EVENT_ADD_GO         = 8,
-    SA_EVENT_ADD_VECH_E     = 9,
-    SA_EVENT_ADD_VECH_W     = 10
+    SA_EVENT_ADD_GRAVE_E    = 0,        // east base spirit healers, flags
+    SA_EVENT_ADD_GRAVE_W    = 1,        // west base spirit healers, flags
+    SA_EVENT_ADD_GRAVE_C    = 2,        // central base spirit healers, flags
+    SA_EVENT_ADD_GRAVE_A    = 3,        // last defender graveyard, at the ancient shrine
+    SA_EVENT_ADD_GRAVE_B    = 4,        // beach spirit healers
+    SA_EVENT_ADD_BOMB_E     = 5,        // east base bombs
+    SA_EVENT_ADD_BOMB_W     = 6,        // west base bombs
+    SA_EVENT_ADD_BOMB_C     = 7,        // central base bombs (on both sides of the yellow gate)
+    SA_EVENT_ADD_BOMB_B     = 8,        // bombs on the beach
+    SA_EVENT_ADD_NPC        = 9,        // dock demolishers, factory npcs
+    SA_EVENT_ADD_CANNON     = 10,       // defender cannons
+    SA_EVENT_ADD_GO         = 11,       // flagpoles, defender portals
+    SA_EVENT_ADD_VECH_E     = 12,       // east base demolishers
+    SA_EVENT_ADD_VECH_W     = 13,       // west base demolishers
 };
 
 enum BG_SA_Boats
@@ -152,12 +152,6 @@ enum BG_SA_MessageType
     BG_SA_ATTACK            = 0,
     BG_SA_DAMAGE            = 1,
     BG_SA_DESTROY           = 2
-};
-
-enum BG_SA_type_gyd_attack
-{
-    STATUS_CLAIMED          = 0,
-    STATUS_CONQUESTED       = 1
 };
 
 enum BG_SA_Boat
@@ -226,6 +220,7 @@ class BattleGroundSA : public BattleGround
         uint32 Round_timer;
         uint32 TimeST2Round;
         bool shipsStarted;
+        bool shipsSpawned;
         bool relicGateDestroyed;
         uint32 shipsTimer;
         uint32 pillarOpenTimer;
@@ -239,7 +234,7 @@ class BattleGroundSA : public BattleGround
         // Send packet to player for destroy boats (client part)
         void SendTransportsRemove(Player * player);
         /* For SendWarningToAll */
-        void SendWarningToAllSA(uint8 gyd, int status, Team team, bool isDoor = false, int door = NULL, bool destroyed = false);
+        void SendWarningToAllSA(uint8 gyd, Team team, bool isDoor = false, int door = NULL, bool destroyed = false);
         /* For vehicle's faction*/
         uint32 GetVehicleFaction(uint8 vehicleType) const { return GetCorrectFactionSA(vehicleType); }
         uint32 GetCorrectFactionSA(uint8 vehicleType) const;
@@ -263,6 +258,7 @@ class BattleGroundSA : public BattleGround
         void _GydOccupied(uint8 node,Team team);
         void ToggleTimer();
         void ResetWorldStates();
+        void HandleInteractivity();
 };
 
 #endif

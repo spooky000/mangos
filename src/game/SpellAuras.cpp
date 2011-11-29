@@ -9215,7 +9215,7 @@ void Aura::PeriodicDummyTick()
 
                     if (InstanceData* data = target->GetInstanceData())
                     {
-                        if (Creature* pSpike = target->GetMap()->GetCreature(data->GetData64(34660)))
+                        if (Creature* pSpike = target->GetMap()->GetCreature(data->GetGuid(34660)))
                             pSpike->AddThreat(target, 1000000.0f);
                     }
                     return;
@@ -10633,8 +10633,9 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
                 if (Unit * caster = GetCaster())
                 {
                     // Remove missile barrage
-                    if (caster->HasAura(44401))
-                        caster->RemoveAurasByCasterSpell(44401, caster->GetObjectGuid());
+                    if (SpellAuraHolderPtr holder = caster->GetSpellAuraHolder(44401, caster->GetObjectGuid()))
+                        if (holder->DropAuraCharge())
+                            caster->RemoveSpellAuraHolder(holder);
 
                     // Remove Arcane Blast
                     if (caster->HasAura(36032))
