@@ -8801,9 +8801,6 @@ void Unit::Mount(uint32 mount, uint32 spellId, uint32 vehicleId, uint32 creature
         {
             SetVehicleId(vehicleId);
             GetVehicleKit()->Reset();
-
-            // mounts can also have accessories
-            GetVehicleKit()->InstallAllAccessories(creatureEntry);
         }
     }
 }

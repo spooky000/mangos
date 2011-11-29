@@ -1808,6 +1808,11 @@ void BattleGround::SpawnBGCreature(ObjectGuid guid, uint32 respawntime)
     {
         map->Add(obj);
         obj->SetRespawnDelay(respawntime);
+        if (obj->GetObjectGuid().IsVehicle())
+        {
+            if (obj->GetVehicleKit())
+                obj->GetVehicleKit()->RemoveAllPassengers();
+        }
         obj->SetDeathState(JUST_DIED);
         obj->RemoveCorpse();
 
