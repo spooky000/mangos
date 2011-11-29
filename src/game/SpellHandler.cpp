@@ -347,8 +347,8 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
     recvPacket >> unk_flags;                                // flags (if 0x02 - some additional data are received)
 
     // ignore for remote control state (for player case)
-    Unit* mover = _player->GetMover();
-    if (mover != _player && mover->GetTypeId()==TYPEID_PLAYER)
+    Unit* _mover = GetPlayer()->GetMover();
+    if (_mover != GetPlayer() && _mover->GetTypeId()==TYPEID_PLAYER)
     {
         recvPacket.rpos(recvPacket.wpos());                 // prevent spam at ignore packet
         return;
@@ -365,6 +365,25 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
         sLog.outError("WORLD: unknown spell id %u", spellId);
         recvPacket.rpos(recvPacket.wpos());                 // prevent spam at ignore packet
         return;
+    }
+
+    //  Players on vehicles may cast many simple spells (like knock) from self
+
+    Unit* mover = NULL;
+
+    if (spellInfo->AttributesEx6 & SPELL_ATTR_EX6_CASTABLE_ON_VEHICLE && _mover->IsCharmerOrOwnerPlayerOrPlayerItself())
+        mover = _mover->GetCharmerOrOwnerPlayerOrPlayerItself();
+    else
+        mover = _mover;
+
+    // casting own spells on some vehicles
+    if (mover->GetObjectGuid().IsVehicle() && mover->GetCharmerOrOwnerPlayerOrPlayerItself())
+    {
+        Player *plr = mover->GetCharmerOrOwnerPlayerOrPlayerItself();
+        if (mover->GetVehicleKit()->GetSeatInfo(plr) &&
+           (mover->GetVehicleKit()->GetSeatInfo(plr)->m_flags & SEAT_FLAG_CAN_ATTACK ||
+            mover->GetVehicleKit()->GetSeatInfo(plr)->m_flags & SEAT_FLAG_CAN_CAST ))
+            mover = plr;
     }
 
     bool triggered = false;
