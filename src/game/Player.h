@@ -2399,7 +2399,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         float GetAverageItemLevel();
 
         //! Return collision height sent to client
-        /*float GetCollisionHeight(bool mounted)
+        float GetCollisionHeight(bool mounted)
         {
             if (mounted)
             {
@@ -2430,7 +2430,7 @@ class MANGOS_DLL_SPEC Player : public Unit
 
                 return modelData->CollisionHeight;
             }
-        }*/
+        }
 
     protected:
 
