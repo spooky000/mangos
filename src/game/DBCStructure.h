@@ -784,7 +784,7 @@ struct CreatureFamilyEntry
                                                             // 27       m_iconFile
 };
 
-struct CreatureModelDataEntry
+/*struct CreatureModelDataEntry
 {
     uint32 Id;
     //uint32 Flags;
@@ -804,7 +804,7 @@ struct CreatureModelDataEntry
     float CollisionHeight;
     float MountHeight;                                       // Used in calculation of unit collision data when mounted
     //float Unks[11]
-};
+};*/
 
 #define MAX_CREATURE_SPELL_DATA_SLOT 4
 
