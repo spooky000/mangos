@@ -1580,7 +1580,7 @@ void Unit::DealSpellDamage(SpellNonMeleeDamage *damageInfo, bool durabilityLoss)
     DealDamage(pVictim, damageInfo->damage, &cleanDamage, SPELL_DIRECT_DAMAGE, damageInfo->schoolMask, spellProto, durabilityLoss);
 
     // Check if effect can trigger anything actually (is this a right ATTR ?)
-    if (spellProto->AttributesEx3 & SPELL_ATTR_EX3_UNK16)
+    if (spellProto->AttributesEx3 & SPELL_ATTR_EX3_CANT_TRIGGER_PROC)
         return;
 
     bool hasWeaponDmgEffect = false;
@@ -5474,14 +5474,15 @@ void Unit::HandleArenaPreparation(bool apply)
         SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
         SetPower(POWER_ENERGY, GetMaxPower(POWER_ENERGY));
 
-        // Remove all buffs with duration < 25 sec.
+        // Remove all buffs with duration < 30 sec.
         for(SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end();)
         {
             if (!(iter->second->GetSpellProto()->AttributesEx4 & SPELL_ATTR_EX4_UNK21) &&
                                                             // don't remove stances, shadowform, pally/hunter auras
             !iter->second->IsPassive() &&                   // don't remove passive auras
             iter->second->GetAuraMaxDuration() > 0 &&
-            iter->second->GetAuraMaxDuration() <= 30000)
+            iter->second->GetAuraMaxDuration() <= 30000 ||
+            iter->second->GetSpellProto()->AttributesEx5 & SPELL_ATTR_EX5_REMOVE_AT_ENTER_ARENA)
             {
                 RemoveSpellAuraHolder(iter->second, AURA_REMOVE_BY_CANCEL);
                 iter = m_spellAuraHolders.begin();
