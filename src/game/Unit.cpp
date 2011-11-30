@@ -8827,6 +8827,9 @@ void Unit::Mount(uint32 mount, uint32 spellId, uint32 vehicleId, uint32 creature
         {
             SetVehicleId(vehicleId);
             GetVehicleKit()->Reset();
+
+            // mounts can also have accessories
+            GetVehicleKit()->InstallAllAccessories(creatureEntry);
         }
         WorldPacket data(SMSG_MOVE_SET_COLLISION_HGT, GetPackGUID().size() + 4 + 4);
         data << GetPackGUID();
