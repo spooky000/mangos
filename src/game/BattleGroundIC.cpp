@@ -31,6 +31,16 @@
 #include "Object.h"
 #include "Util.h"
 
+/*
+* BattleGround Isle of Conquest:
+* TODO:
+*   - Fix Vehicles on Transports; teleporting from ground onto transports; transports disappearing after relog
+*   - Add scripts to bosses
+*   - Implement Siege Engine
+*   - If a base is owned by a team and a vehicle from the base IS being used, it should not disappear if the opposite team caps the base
+*   - Fix buffs from owning quarry / refinery for +15% siege dmg (they are given correctly, just dont work)
+*/
+
 BattleGroundIC::BattleGroundIC()
 {
     m_StartMessageIds[BG_STARTING_EVENT_FIRST]  = LANG_BG_IC_START_TWO_MINUTES;
@@ -54,22 +64,20 @@ void BattleGroundIC::Reset()
         GateStatus[i] = BG_IC_GO_GATES_NORMAL;
 
     closeFortressDoorsTimer = CLOSE_DOORS_TIME;
-    doorsClosed = false;
-    aOpen = false;
-    hOpen = false;
+    doorsClosed = false;        // main keep gates
+    aOpen = false;              // gate to the alli boss
+    hOpen = false;              // gate to the horde boss
 
     for (uint8 i = 0; i < BG_TEAMS_COUNT; ++i)
-    {
         m_TeamScores[i] = BG_IC_SCORE_INITIAL_POINTS;
-    }
 
     for (uint8 i = 0; i < BG_IC_NODES_MAX; ++i)
     {
         m_prevNodes[i] = 0;
         m_NodeTimers[i] = 0;
         m_BannerTimers[i].timer = 0;
-        
-        // all nodes except keeps are owned by neutral team at beginning
+
+        // all nodes except keeps are owned by neutral team at the beginning
         if (i < BG_IC_NODE_A_KEEP)
         {
             m_ActiveEvents[i] = BG_IC_NODE_TYPE_NEUTRAL;
@@ -77,6 +85,7 @@ void BattleGroundIC::Reset()
         }
     }
 
+    // you get reinforcements/honor just for owning quarry and refinery
     for (uint8 node = BG_IC_NODE_QUARRY; node <= BG_IC_NODE_REFINERY; node++)
     {
         m_resource_Timer[node] = BG_IC_RESOURCE_TICK_TIMER;
@@ -88,9 +97,11 @@ void BattleGroundIC::Reset()
     m_Nodes[BG_IC_NODE_H_KEEP] = BG_IC_NODE_STATUS_HORDE_OCCUPIED;
 
     SpawnEvent(IC_EVENT_ADD_TELEPORT, 0, true);
-    SpawnEvent(IC_EVENT_ADD_VEH, 0, false);
+    SpawnEvent(IC_EVENT_ADD_VEH, 0, true);
     SpawnEvent(IC_EVENT_BOSS_H, 0, true);
     SpawnEvent(IC_EVENT_BOSS_A, 0, true);
+
+    // spawn bosses and their guards just when one of the gates is destroyed, to prevent some abusing
     SpawnEvent(IC_EVENT_ADD_A_BOSS, 0, false);
     SpawnEvent(IC_EVENT_ADD_A_GUARDS, 0, false);
     SpawnEvent(IC_EVENT_ADD_H_BOSS, 0, false);
@@ -118,27 +129,6 @@ void BattleGroundIC::SendTransportInit(Player* player)
     player->GetSession()->SendPacket(&packet);
 }
 
-/*void BattleGroundIC::DoAction(uint32 action, Player *plr)
-{
-    if (action != ACTION_TELEPORT_PLAYER_TO_TRANSPORT)
-        return;
-
-    if (!plr || !gunshipAlliance || !gunshipHorde)
-        return;
-
-    float x, y, z;
-    if (plr->GetTeam() == BG_TEAM_ALLIANCE)
-    {
-        gunshipAlliance->GetPosition(x, y, z);
-        plr->TeleportTo(GetMapId(), x, y, (z + 25.0f), (plr->GetTeam() == BG_TEAM_ALLIANCE ? gunshipAlliance : gunshipHorde)->GetOrientation(), TELE_TO_NOT_LEAVE_TRANSPORT);
-    }
-    else
-    {
-        // This is not the correct way to do this, but it seems that horde gunship has a problem with waypoints that cause unexpected behaviour when following the path.
-        plr->TeleportTo(GetMapId(), 660.453003f, -1236.030151f, 288.643402f, 1.6f);
-    }
-}*/
-
 void BattleGroundIC::UpdateScore(BattleGroundTeamIndex teamIdx, int32 points )
 {
     // note: to remove reinforcements points must be negative, for adding reinforcements points must be positive
@@ -162,111 +152,102 @@ void BattleGroundIC::Update(uint32 diff)
 {
     BattleGround::Update(diff);
 
-    if (GetStatus() == STATUS_IN_PROGRESS)
+    if (GetStatus() != STATUS_IN_PROGRESS)
+        return;
+
+    if (!doorsClosed)
     {
-        if (!doorsClosed)
+        if (closeFortressDoorsTimer <= diff)
         {
-            if (closeFortressDoorsTimer <= diff)
-            {
-                GetBGObject(BG_IC_GO_T_ALLIANCE_GATE_3)->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED);
-                GetBGObject(BG_IC_GO_T_HORDE_GATE_3)->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED);
+            // correct visual of closed gates is at "damaged" flag
+            for (int i = BG_IC_GO_T_ALLIANCE_GATE_1; i <= BG_IC_GO_T_HORDE_GATE_3; ++i)
+                GetBGObject(i)->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED);
 
-                DelObject(BG_IC_GO_T_ALLIANCE_FRONT);
-                DelObject(BG_IC_GO_T_HORDE_FRONT);
+            for (int i = BG_IC_GO_T_ALLIANCE_WEST; i <= BG_IC_GO_T_HORDE_FRONT; ++i)
+                DelObject(i);
 
-                doorsClosed = true;
-            } else closeFortressDoorsTimer -= diff;
-        }
+            doorsClosed = true;
+        } else closeFortressDoorsTimer -= diff;
+    }
 
-        for (int node = 0; node < BG_IC_NODES_MAX; ++node)
+    for (int node = 0; node < BG_IC_NODES_MAX; ++node)
+    {
+        // 3 sec delay to spawn new banner instead previous despawned one
+        if (m_BannerTimers[node].timer)
         {
-            // 3 sec delay to spawn new banner instead previous despawned one
-            if (m_BannerTimers[node].timer)
+            if (m_BannerTimers[node].timer > diff)
+                m_BannerTimers[node].timer -= diff;
+            else
             {
-                if (m_BannerTimers[node].timer > diff)
-                    m_BannerTimers[node].timer -= diff;
-                else
-                {
-                    m_BannerTimers[node].timer = 0;
-                    _CreateBanner(node, m_BannerTimers[node].type, m_BannerTimers[node].teamIndex, false);
-                }
-            }
-
-            // 1-minute to occupy a node from contested state
-            if (m_NodeTimers[node])
-            {
-                if (m_NodeTimers[node] > diff)
-                    m_NodeTimers[node] -= diff;
-                else
-                {
-                    m_NodeTimers[node] = 0;
-                    // Change from contested to occupied !
-                    uint8 teamIndex = m_Nodes[node]-1;
-                    m_prevNodes[node] = m_Nodes[node];
-                    m_Nodes[node] += 2;
-                    // create new occupied banner
-                    _CreateBanner(node, BG_IC_NODE_TYPE_OCCUPIED, teamIndex, true);
-                    _SendNodeUpdate(node);
-                    // Message to chatlog
-                    if (teamIndex == BG_TEAM_ALLIANCE)
-                    {
-                        SendMessage2ToAll(LANG_BG_IC_NODE_TAKEN,CHAT_MSG_BG_SYSTEM_ALLIANCE,NULL,LANG_BG_ALLY,_GetNodeNameId(node));
-                        PlaySoundToAll(BG_IC_SOUND_NODE_CAPTURED_ALLIANCE);
-                    }
-                    else
-                    {
-                        SendMessage2ToAll(LANG_BG_IC_NODE_TAKEN,CHAT_MSG_BG_SYSTEM_HORDE,NULL,LANG_BG_HORDE,_GetNodeNameId(node));
-                        PlaySoundToAll(BG_IC_SOUND_NODE_CAPTURED_HORDE);
-                    }
-
-                    // gunship starting
-                    if (node == BG_IC_NODE_HANGAR)
-                        (teamIndex == BG_TEAM_ALLIANCE ? gunshipAlliance : gunshipHorde)->BuildStartMovePacket(GetBgMap());
-                }
+                m_BannerTimers[node].timer = 0;
+                _CreateBanner(node, m_BannerTimers[node].type, m_BannerTimers[node].teamIndex, false);
             }
         }
-        // add a point every 45 secs to quarry/refinery owner
-        for (uint8 node = BG_IC_NODE_QUARRY; node <= BG_IC_NODE_REFINERY; node++)
+
+        // 1-minute to occupy a node from contested state
+        if (m_NodeTimers[node])
         {
-            if (m_Nodes[node] >= BG_IC_NODE_TYPE_OCCUPIED)
+            if (m_NodeTimers[node] > diff)
+                m_NodeTimers[node] -= diff;
+            else
             {
-                if (m_resource_Timer[node] <= diff)
+                m_NodeTimers[node] = 0;
+                // Change from contested to occupied !
+                uint8 teamIndex = m_Nodes[node]-1;
+                m_prevNodes[node] = m_Nodes[node];
+                m_Nodes[node] += 2;
+                // create new occupied banner
+                _CreateBanner(node, BG_IC_NODE_TYPE_OCCUPIED, teamIndex, true);
+                _SendNodeUpdate(node);
+                // Message to chatlog
+                if (teamIndex == BG_TEAM_ALLIANCE)
                 {
-                    UpdateScore(BattleGroundTeamIndex(m_Nodes[node] - BG_IC_NODE_TYPE_OCCUPIED) , 1);
-                    RewardHonorToTeam(GetBonusHonorFromKill(1), (m_Nodes[node] - BG_IC_NODE_TYPE_OCCUPIED == 0 ? ALLIANCE : HORDE));
-                    m_resource_Timer[node] = BG_IC_RESOURCE_TICK_TIMER;
-                } 
-                else 
-                    m_resource_Timer[node] -= diff;
-            } 
+                    SendMessage2ToAll(LANG_BG_IC_NODE_TAKEN,CHAT_MSG_BG_SYSTEM_ALLIANCE,NULL,LANG_BG_ALLY,_GetNodeNameId(node));
+                    PlaySoundToAll(BG_IC_SOUND_NODE_CAPTURED_ALLIANCE);
+                }
+                else
+                {
+                    SendMessage2ToAll(LANG_BG_IC_NODE_TAKEN,CHAT_MSG_BG_SYSTEM_HORDE,NULL,LANG_BG_HORDE,_GetNodeNameId(node));
+                    PlaySoundToAll(BG_IC_SOUND_NODE_CAPTURED_HORDE);
+                }
+
+                // gunship starting
+                if (node == BG_IC_NODE_HANGAR)
+                    (teamIndex == BG_TEAM_ALLIANCE ? gunshipAlliance : gunshipHorde)->BuildStartMovePacket(GetBgMap());
+            }
         }
     }
 
+    // add a point every 45 secs to quarry/refinery owner
+    for (uint8 node = BG_IC_NODE_QUARRY; node <= BG_IC_NODE_REFINERY; node++)
+    {
+        if (m_Nodes[node] >= BG_IC_NODE_TYPE_OCCUPIED)
+        {
+            if (m_resource_Timer[node] <= diff)
+            {
+                UpdateScore(BattleGroundTeamIndex(m_Nodes[node] - BG_IC_NODE_TYPE_OCCUPIED) , 1);
+                RewardHonorToTeam(GetBonusHonorFromKill(1), (m_Nodes[node] - BG_IC_NODE_TYPE_OCCUPIED == 0 ? ALLIANCE : HORDE));
+                m_resource_Timer[node] = BG_IC_RESOURCE_TICK_TIMER;
+            }
+            else
+                m_resource_Timer[node] -= diff;
+        }
+    }
     HandleBuffs();
 }
 
 void BattleGroundIC::StartingEventCloseDoors()
 {
-    // Show Full Gate Displays
-    GetBGObject(BG_IC_GO_T_ALLIANCE_GATE_1)->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED);
-    GetBGObject(BG_IC_GO_T_ALLIANCE_GATE_2)->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED);
-    GetBGObject(BG_IC_GO_T_HORDE_GATE_1)->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED);
-    GetBGObject(BG_IC_GO_T_HORDE_GATE_2)->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED);
 }
 
 void BattleGroundIC::StartingEventOpenDoors()
 {
-    OpenDoorEvent(BG_EVENT_DOOR);                // used for activating teleport effects + opening tower gates
-    DoorOpen(m_BgObjects[BG_IC_GO_T_ALLIANCE_FRONT]);
-    DoorOpen(m_BgObjects[BG_IC_GO_T_HORDE_FRONT]);
-    SpawnEvent(IC_EVENT_ADD_VEH, 0, true);
+    OpenDoorEvent(BG_EVENT_DOOR);                        // used for activating teleport effects + opening tower gates
+    for (int i = BG_IC_GO_T_ALLIANCE_WEST; i <= BG_IC_GO_T_HORDE_FRONT; ++i)
+        DoorOpen(m_BgObjects[i]);
 
-    uint32 objEvent = MAKE_PAIR32(IC_EVENT_ADD_TELEPORT, 0);     // make teleporters clickable
-    for (std::vector<ObjectGuid>::iterator itr = m_EventObjects[objEvent].gameobjects.begin(); itr != m_EventObjects[objEvent].gameobjects.end(); ++itr)
-        if (GameObject * pEventGameObject = GetBgMap()->GetGameObject((*itr)))
-            if ((pEventGameObject->GetEntry() == 195313) || (pEventGameObject->GetEntry() == 195314) || (pEventGameObject->GetEntry() == 195315) || (pEventGameObject->GetEntry() == 195316))
-                if (pEventGameObject->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_NO_INTERACT))
-                    pEventGameObject->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_NO_INTERACT);
+    // make teleporters clickable
+    MakeInteractive(IC_EVENT_ADD_TELEPORT, 0, true);
 }
 
 void BattleGroundIC::AddPlayer(Player *plr)
@@ -279,18 +260,14 @@ void BattleGroundIC::AddPlayer(Player *plr)
 
     SendTransportInit(plr);
 
-    if (GetStatus() == STATUS_IN_PROGRESS)
-    {
-        uint32 objEvent = MAKE_PAIR32(IC_EVENT_ADD_TELEPORT, 0);
-        for (std::vector<ObjectGuid>::iterator itr = m_EventObjects[objEvent].gameobjects.begin(); itr != m_EventObjects[objEvent].gameobjects.end(); ++itr)
-            if (GameObject * pEventGameObject = GetBgMap()->GetGameObject((*itr)))
-                if ((pEventGameObject->GetEntry() == 195313) || (pEventGameObject->GetEntry() == 195314) || (pEventGameObject->GetEntry() == 195315) || (pEventGameObject->GetEntry() == 195316))
-                    if (pEventGameObject->HasFlag(GAMEOBJECT_FLAGS, GO_FLAG_NO_INTERACT))
-                        pEventGameObject->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_NO_INTERACT);
-    }
+    if (GetStatus() != STATUS_IN_PROGRESS)
+        MakeInteractive(IC_EVENT_ADD_TELEPORT, 0, false);
+    else
+        // default behaviour of teleports is "clickable", so this could be also skipped
+        MakeInteractive(IC_EVENT_ADD_TELEPORT, 0, true);
 }
 
-void BattleGroundIC::RemovePlayer(Player* plr, uint64 /*guid*/)
+void BattleGroundIC::RemovePlayer(Player* plr)
 {
     if (plr)
     {
@@ -299,11 +276,29 @@ void BattleGroundIC::RemovePlayer(Player* plr, uint64 /*guid*/)
     }
 }
 
-void BattleGroundIC::HandleAreaTrigger(Player * /*Source*/, uint32 /*Trigger*/)
+void BattleGroundIC::HandleAreaTrigger(Player * Source, uint32 Trigger)
 {
     // this is wrong way to implement these things. On official it done by gameobject spell cast.
     if (GetStatus() != STATUS_IN_PROGRESS)
         return;
+
+    switch (Trigger)
+    {
+        case 5535:
+            if (Source->GetTeam() == ALLIANCE && hOpen == false)
+                Source->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 68502);
+            break;
+        case 5555:
+            if (Source->GetTeam() == HORDE && aOpen == false)
+                Source->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 68502);
+            break;
+        case 5536:
+            break;
+        default:
+            sLog.outError("WARNING: Unhandled AreaTrigger in Battleground: %u", Trigger);
+            Source->GetSession()->SendAreaTriggerMessage("Warning: Unhandled AreaTrigger in Battleground: %u", Trigger);
+            break;
+    }
 }
 
 /*  type: 0-neutral, 1-contested, 3-occupied
@@ -408,23 +403,23 @@ bool BattleGroundIC::SetupBattleGround()
 
 void BattleGroundIC::SpawnGates()
 {
+    // is making arrays for spawning these worth it ?
     AddObject(BG_IC_GO_T_ALLIANCE_GATE_1, BG_IC_GO_ALLIANCE_GATE_1, BG_IC_GATELOCS[0][0], BG_IC_GATELOCS[0][1], BG_IC_GATELOCS[0][2], BG_IC_GATELOCS[0][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
     AddObject(BG_IC_GO_T_ALLIANCE_GATE_2, BG_IC_GO_ALLIANCE_GATE_2, BG_IC_GATELOCS[1][0], BG_IC_GATELOCS[1][1], BG_IC_GATELOCS[1][2], BG_IC_GATELOCS[1][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
     AddObject(BG_IC_GO_T_ALLIANCE_GATE_3, BG_IC_GO_ALLIANCE_GATE_3, BG_IC_GATELOCS[2][0], BG_IC_GATELOCS[2][1], BG_IC_GATELOCS[2][2], BG_IC_GATELOCS[2][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
     AddObject(BG_IC_GO_T_HORDE_GATE_1, BG_IC_GO_HORDE_GATE_1, BG_IC_GATELOCS[3][0], BG_IC_GATELOCS[3][1], BG_IC_GATELOCS[3][2], BG_IC_GATELOCS[3][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
     AddObject(BG_IC_GO_T_HORDE_GATE_2, BG_IC_GO_HORDE_GATE_2, BG_IC_GATELOCS[4][0], BG_IC_GATELOCS[4][1], BG_IC_GATELOCS[4][2], BG_IC_GATELOCS[4][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
     AddObject(BG_IC_GO_T_HORDE_GATE_3, BG_IC_GO_HORDE_GATE_3, BG_IC_GATELOCS[5][0], BG_IC_GATELOCS[5][1], BG_IC_GATELOCS[5][2], BG_IC_GATELOCS[5][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
-    AddObject(BG_IC_GO_T_ALLIANCE_FRONT, BG_IC_GO_ALLIANCE_FRONT, BG_IC_GATELOCS[6][0], BG_IC_GATELOCS[6][1], BG_IC_GATELOCS[6][2], BG_IC_GATELOCS[6][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
-    AddObject(BG_IC_GO_T_HORDE_FRONT, BG_IC_GO_HORDE_FRONT, BG_IC_GATELOCS[7][0], BG_IC_GATELOCS[7][1], BG_IC_GATELOCS[7][2], BG_IC_GATELOCS[7][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
 
-    SpawnBGObject(m_BgObjects[BG_IC_GO_T_ALLIANCE_GATE_1], RESPAWN_IMMEDIATELY);
-    SpawnBGObject(m_BgObjects[BG_IC_GO_T_ALLIANCE_GATE_2], RESPAWN_IMMEDIATELY);
-    SpawnBGObject(m_BgObjects[BG_IC_GO_T_ALLIANCE_GATE_3], RESPAWN_IMMEDIATELY);
-    SpawnBGObject(m_BgObjects[BG_IC_GO_T_HORDE_GATE_1], RESPAWN_IMMEDIATELY);
-    SpawnBGObject(m_BgObjects[BG_IC_GO_T_HORDE_GATE_2], RESPAWN_IMMEDIATELY);
-    SpawnBGObject(m_BgObjects[BG_IC_GO_T_HORDE_GATE_3], RESPAWN_IMMEDIATELY);
-    SpawnBGObject(m_BgObjects[BG_IC_GO_T_ALLIANCE_FRONT], RESPAWN_IMMEDIATELY);
-    SpawnBGObject(m_BgObjects[BG_IC_GO_T_HORDE_FRONT], RESPAWN_IMMEDIATELY);
+    AddObject(BG_IC_GO_T_ALLIANCE_WEST, BG_IC_GO_ALLIANCE_PORT, BG_IC_GATELOCS[0][0], BG_IC_GATELOCS[0][1], BG_IC_GATELOCS[0][2], BG_IC_GATELOCS[0][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
+    AddObject(BG_IC_GO_T_ALLIANCE_EAST, BG_IC_GO_ALLIANCE_PORT, BG_IC_GATELOCS[1][0], BG_IC_GATELOCS[1][1], BG_IC_GATELOCS[1][2], BG_IC_GATELOCS[1][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
+    AddObject(BG_IC_GO_T_ALLIANCE_FRONT, BG_IC_GO_ALLIANCE_PORT, BG_IC_GATELOCS[2][0], BG_IC_GATELOCS[2][1], BG_IC_GATELOCS[2][2], BG_IC_GATELOCS[2][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
+    AddObject(BG_IC_GO_T_HORDE_WEST, BG_IC_GO_HORDE_PORT, BG_IC_GATELOCS[3][0], BG_IC_GATELOCS[3][1], BG_IC_GATELOCS[3][2], BG_IC_GATELOCS[3][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
+    AddObject(BG_IC_GO_T_HORDE_EAST, BG_IC_GO_HORDE_PORT, BG_IC_GATELOCS[4][0], BG_IC_GATELOCS[4][1], BG_IC_GATELOCS[4][2], BG_IC_GATELOCS[4][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
+    AddObject(BG_IC_GO_T_HORDE_FRONT, BG_IC_GO_HORDE_PORT, BG_IC_GATELOCS[5][0], BG_IC_GATELOCS[5][1], BG_IC_GATELOCS[5][2], BG_IC_GATELOCS[5][3], 0.0f, 0.0f, 0.0f, 0.0f, RESPAWN_IMMEDIATELY);
+
+    for (int i = 0; i < BG_IC_MAXOBJ; ++i)
+        SpawnBGObject(m_BgObjects[i], RESPAWN_IMMEDIATELY);
 }
 
 void BattleGroundIC::HandleKillUnit(Creature *creature, Player *killer)
@@ -439,14 +434,18 @@ void BattleGroundIC::HandleKillUnit(Creature *creature, Player *killer)
     switch (event1)
     {
         case IC_EVENT_ADD_A_BOSS:
-            // RewardHonorToTeam(GetBonusHonorFromKill(BG_AV_KILL_BOSS), HORDE);
+            RewardHonorToTeam(GetBonusHonorFromKill(BG_IC_KILL_BOSS), HORDE);
             EndBattleGround(HORDE);
             break;
         case IC_EVENT_ADD_H_BOSS:
-            // RewardHonorToTeam(GetBonusHonorFromKill(BG_AV_KILL_BOSS), ALLIANCE);
+            RewardHonorToTeam(GetBonusHonorFromKill(BG_IC_KILL_BOSS), ALLIANCE);
             EndBattleGround(ALLIANCE);
             break;
     }
+
+    if (creature->IsVehicle())
+        // must be killing blow
+        killer->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 68357);
 }
 
 void BattleGroundIC::HandleKillPlayer(Player* player, Player* killer)
@@ -479,7 +478,7 @@ void BattleGroundIC::EndBattleGround(Team winner)
 void BattleGroundIC::_SendNodeUpdate(uint8 node)
 {
     // Needed to prevent client from bugging
-    UpdateWorldState(BG_IC_OP_NODEICONS[node], m_Nodes[node]==0);
+    UpdateWorldState(BG_IC_OP_NODEICONS[node], m_Nodes[node] == 0);
 
     // Send node owner state update to refresh map icons on client
     for (uint8 j = 0; j < 4; j++)
@@ -518,6 +517,7 @@ void BattleGroundIC::EventPlayerClickedOnFlag(Player *source, GameObject* target
     if (m_Nodes[node] == BG_IC_NODE_TYPE_NEUTRAL)
     {
         UpdatePlayerScore(source, SCORE_BASES_ASSAULTED, 1);
+        source->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE,1,245);
         m_prevNodes[node] = m_Nodes[node];
         m_Nodes[node] = teamIndex + 1;
         // create new contested banner
@@ -555,6 +555,7 @@ void BattleGroundIC::EventPlayerClickedOnFlag(Player *source, GameObject* target
         else
         {
             UpdatePlayerScore(source, SCORE_BASES_DEFENDED, 1);
+            source->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE,1,246);
             m_prevNodes[node] = m_Nodes[node];
             m_Nodes[node] = teamIndex + BG_IC_NODE_TYPE_OCCUPIED;
             // create new occupied banner
@@ -574,6 +575,7 @@ void BattleGroundIC::EventPlayerClickedOnFlag(Player *source, GameObject* target
     else
     {
         UpdatePlayerScore(source, SCORE_BASES_ASSAULTED, 1);
+        source->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BG_OBJECTIVE_CAPTURE,1,245);
         m_prevNodes[node] = m_Nodes[node];
         m_Nodes[node] = teamIndex + BG_IC_NODE_TYPE_CONTESTED;
         // create new contested banner
@@ -598,6 +600,14 @@ void BattleGroundIC::EventPlayerDamageGO(Player *player, GameObject* target_obj,
 {
     BattleGroundTeamIndex teamIndex = GetTeamIndexByTeamId(player->GetTeam());
 
+    // Seaforium Charge Explosion (A-bomb-inable)
+    if (doneBy == 66676)
+        player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_CAST_SPELL, 68366);
+
+    // Huge Seaforium Charge Explosion (A-bomb-ination)
+    if (doneBy == 66672)
+        player->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_CAST_SPELL, 68367);
+
     uint32 type = NULL;
     switch (target_obj->GetEntry())
     {
@@ -609,11 +619,12 @@ void BattleGroundIC::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                 SendMessage2ToAll(LANG_BG_IC_A_WEST_GATE_DESTROYED, CHAT_MSG_BG_SYSTEM_ALLIANCE, player, doneBy);
                 UpdateWorldState(BG_IC_GateStatus[type][0], 0);             // needed for removing the old icon
                 UpdateWorldState(BG_IC_GateStatus[type][1], 1);
-                GateStatus[type] = BG_IC_GO_GATES_DAMAGE;                   // correct icon is at "damage" state, not "destroy"
+                GateStatus[type] = BG_IC_GO_GATES_DAMAGE;                   // correct icon is at "damage" state (not flag), not "destroy"
                 RewardHonorToTeam(85, (teamIndex == 0) ? ALLIANCE:HORDE);
                 SpawnEvent(IC_EVENT_ADD_A_BOSS, 0, true);
                 SpawnEvent(IC_EVENT_ADD_A_GUARDS, 0, true);
 
+                // prevent closing of the boss gates by destroying another wall gate
                 if (aOpen == false)
                 {
                     OpenDoorEvent(IC_EVENT_BOSS_A);
@@ -686,7 +697,7 @@ void BattleGroundIC::EventPlayerDamageGO(Player *player, GameObject* target_obj,
             break;
         }
         case BG_IC_GO_HORDE_GATE_2:
-        { // WORKS
+        {
             type = BG_IC_GO_T_HORDE_GATE_2;
             if (eventId == 22083)
             {
@@ -809,9 +820,6 @@ Transport* BattleGroundIC::CreateTransport(uint32 goEntry, uint32 period)
 
     t->SetMap(GetBgMap());
 
-    //for (uint8 i = 0; i < 5; i++)
-        //t->AddNPCPassenger(0,(goEntry == GO_HORDE_GUNSHIP ? NPC_HORDE_GUNSHIP_CANNON : NPC_ALLIANCE_GUNSHIP_CANNON), (goEntry == GO_HORDE_GUNSHIP ? hordeGunshipPassengers[i].GetPositionX() : allianceGunshipPassengers[i].GetPositionX()) , (goEntry == GO_HORDE_GUNSHIP ? hordeGunshipPassengers[i].GetPositionY() : allianceGunshipPassengers[i].GetPositionY()),(goEntry == GO_HORDE_GUNSHIP ? hordeGunshipPassengers[i].GetPositionZ() : allianceGunshipPassengers[i].GetPositionZ()), (goEntry == GO_HORDE_GUNSHIP ? hordeGunshipPassengers[i].GetOrientation() : allianceGunshipPassengers[i].GetOrientation()));
-
     return t;
 }
 
@@ -835,7 +843,7 @@ void BattleGroundIC::HandleBuffs()
                 {
                     if (node == BG_IC_NODE_QUARRY)
                         plr->RemoveAurasDueToSpell(SPELL_QUARRY);
-                    else 
+                    else
                         plr->RemoveAurasDueToSpell(SPELL_REFINERY);
                 }
             }
@@ -852,29 +860,44 @@ void BattleGroundIC::HandleBuffs()
 
 uint32 BattleGroundIC::GetCorrectFactionIC(uint8 vehicleType) const
 {
-    if (GetStatus() != STATUS_WAIT_JOIN)
+    switch (vehicleType)
     {
-        switch (vehicleType)
+        case VEHICLE_BG_DEMOLISHER:
         {
-            case VEHICLE_DEMOLISHER:
-            {
-                if (m_Nodes[BG_IC_NODE_WORKSHOP] == BG_IC_NODE_STATUS_ALLY_OCCUPIED)
-                    return VEHICLE_FACTION_ALLIANCE;
+            if (m_Nodes[BG_IC_NODE_WORKSHOP] == BG_IC_NODE_STATUS_ALLY_OCCUPIED)
+                return VEHICLE_FACTION_ALLIANCE;
 
-                else if (m_Nodes[BG_IC_NODE_WORKSHOP] == BG_IC_NODE_STATUS_HORDE_OCCUPIED)
-                    return VEHICLE_FACTION_HORDE;
-            }
-            case VEHICLE_IC_CATAPULT:
-            {
-                if (m_Nodes[BG_IC_NODE_DOCKS] == BG_IC_NODE_STATUS_ALLY_OCCUPIED)
-                    return VEHICLE_FACTION_ALLIANCE;
-
-                else if (m_Nodes[BG_IC_NODE_DOCKS] == BG_IC_NODE_STATUS_HORDE_OCCUPIED)
-                    return VEHICLE_FACTION_HORDE;
-            }
-            default:
-                return VEHICLE_FACTION_NEUTRAL;
+            else if (m_Nodes[BG_IC_NODE_WORKSHOP] == BG_IC_NODE_STATUS_HORDE_OCCUPIED)
+                return VEHICLE_FACTION_HORDE;
         }
+        case VEHICLE_IC_CATAPULT:
+        {
+            if (m_Nodes[BG_IC_NODE_DOCKS] == BG_IC_NODE_STATUS_ALLY_OCCUPIED)
+                return VEHICLE_FACTION_ALLIANCE;
+
+            else if (m_Nodes[BG_IC_NODE_DOCKS] == BG_IC_NODE_STATUS_HORDE_OCCUPIED)
+                return VEHICLE_FACTION_HORDE;
+        }
+        default:
+            return VEHICLE_FACTION_NEUTRAL;
     }
     return VEHICLE_FACTION_NEUTRAL;
+}
+
+bool BattleGroundIC::hasAllNodes(int8 team)
+{
+    for (int i = BG_IC_NODE_DOCKS; i <= BG_IC_NODE_REFINERY; ++i)
+        if (m_Nodes[i] != BG_IC_NODE_TYPE_OCCUPIED + team)
+            return false;
+
+    return true;
+}
+
+bool BattleGroundIC::hasAllResNodes(int8 team)
+{
+    for (int i = BG_IC_NODE_QUARRY; i <= BG_IC_NODE_REFINERY; ++i)
+        if (m_Nodes[i] != BG_IC_NODE_TYPE_OCCUPIED + team)
+            return false;
+
+    return true;
 }

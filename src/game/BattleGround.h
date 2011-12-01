@@ -243,7 +243,7 @@ enum VehicleFactions
 enum VehicleTypes
 {
     VEHICLE_UNK = 0,
-    VEHICLE_DEMOLISHER = 1,
+    VEHICLE_BG_DEMOLISHER = 1,
     VEHICLE_SA_CANNON = 2,
     VEHICLE_IC_CATAPULT = 3,
 };
