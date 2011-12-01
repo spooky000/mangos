@@ -586,7 +586,15 @@ bool Unit::CanReachWithMeleeAttack(Unit* pVictim, float flat_mod /*= 0.0f*/) con
     float reach = GetFloatValue(UNIT_FIELD_COMBATREACH) + pVictim->GetFloatValue(UNIT_FIELD_COMBATREACH) +
         BASE_MELEERANGE_OFFSET + flat_mod;
 
-    return IsWithinDistInMap(pVictim, reach < ATTACK_DISTANCE ? ATTACK_DISTANCE : reach);
+    if (reach < ATTACK_DISTANCE)
+        reach = ATTACK_DISTANCE;
+
+    // This check is not related to bounding radius
+    float dx = GetPositionX() - pVictim->GetPositionX();
+    float dy = GetPositionY() - pVictim->GetPositionY();
+    float dz = GetPositionZ() - pVictim->GetPositionZ();
+
+    return dx*dx + dy*dy + dz*dz < reach*reach;
 }
 
 void Unit::RemoveSpellsCausingAura(AuraType auraType, bool negative, bool positive)
@@ -11795,41 +11803,17 @@ void Unit::SetDisplayId(uint32 modelId)
 
 void Unit::UpdateModelData()
 {
-    float boundingRadius, combatReach;
-
     if (CreatureModelInfo const* modelInfo = sObjectMgr.GetCreatureModelInfo(GetDisplayId()))
     {
-        if (GetTypeId() == TYPEID_PLAYER)
-        {
-            // Bounding radius and combat reach is normally modified by scale, but player is always 1.0 scale by default so no need to modify values here.
-            boundingRadius = modelInfo->bounding_radius;
-            combatReach = modelInfo->combat_reach;
-        }
-        else
-        {
-            // We expect values in database to be relative to scale = 1.0
-            float scaled_radius = GetObjectScale() * modelInfo->bounding_radius;
+        // we expect values in database to be relative to scale = 1.0
+        SetFloatValue(UNIT_FIELD_BOUNDINGRADIUS, GetObjectScale() * modelInfo->bounding_radius);
 
-            boundingRadius = scaled_radius < 2.0f ? scaled_radius : 2.0f;
-            combatReach = GetObjectScale() * (modelInfo->bounding_radius < 2.0 ? modelInfo->combat_reach : modelInfo->combat_reach / modelInfo->bounding_radius);
-        }
-    }
-    else
-    {
+        // never actually update combat_reach for player, it's always the same. Below player case is for initialization
         if (GetTypeId() == TYPEID_PLAYER)
-        {
-            boundingRadius = DEFAULT_WORLD_OBJECT_SIZE;
-            combatReach = 1.5f;
-        }
+            SetFloatValue(UNIT_FIELD_COMBATREACH, 1.5f);
         else
-        {
-            boundingRadius = GetObjectScale() * DEFAULT_WORLD_OBJECT_SIZE;
-            combatReach = GetObjectScale() * BASE_MELEERANGE_OFFSET;
-        }
+            SetFloatValue(UNIT_FIELD_COMBATREACH, GetObjectScale() * modelInfo->combat_reach);
     }
-
-    SetFloatValue(UNIT_FIELD_BOUNDINGRADIUS, boundingRadius);
-    SetFloatValue(UNIT_FIELD_COMBATREACH, combatReach);
 }
 
 void Unit::ClearComboPointHolders()
