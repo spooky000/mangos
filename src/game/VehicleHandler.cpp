@@ -202,9 +202,6 @@ void WorldSession::HandleEjectPassenger(WorldPacket &recv_data)
 
     VehicleKit* pVehicle = passenger->GetVehicle();
 
-    if (!pVehicle)
-        return;
-
     if (!pVehicle ||
        ((pVehicle != GetPlayer()->GetVehicleKit()) &&
         !(pVehicle->GetBase()->GetVehicleInfo()->GetEntry()->m_flags & (VEHICLE_FLAG_ACCESSORY))))
