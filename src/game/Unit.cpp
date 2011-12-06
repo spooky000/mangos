@@ -11216,7 +11216,8 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
     }
 
     for (uint32 i = 0; i < 3; ++i)
-        if (spellInfo->EffectImplicitTargetA[i] == TARGET_ALL_ENEMY_IN_AREA_INSTANT || spellInfo->EffectImplicitTargetB[i] == TARGET_ALL_ENEMY_IN_AREA_INSTANT)
+        if (spellInfo->EffectImplicitTargetA[i] == TARGET_ALL_ENEMY_IN_AREA_INSTANT || spellInfo->EffectImplicitTargetB[i] == TARGET_ALL_ENEMY_IN_AREA_INSTANT ||
+            spellInfo->EffectImplicitTargetA[i] == TARGET_DIRECTLY_FORWARD || spellInfo->EffectImplicitTargetB[i] == TARGET_DIRECTLY_FORWARD)
             if (targets)
                 spell->m_targets = *targets;
 
