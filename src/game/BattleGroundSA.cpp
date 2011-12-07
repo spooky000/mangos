@@ -428,7 +428,7 @@ void BattleGroundSA::Reset()
     defender = ((urand(0,1)) ? ALLIANCE : HORDE);
     relicGateDestroyed = false;
 
-    for (uint8 i = 0; i <= SA_EVENT_ADD_VECH_W; ++i)
+    for (uint8 i = 0; i <= SA_EVENT_ADD_RELIC; ++i)
         m_ActiveEvents[i] = BG_EVENT_NONE;
 
     UpdatePhase();
@@ -438,7 +438,7 @@ void BattleGroundSA::UpdatePhase()
 {
     if (Phase == SA_ROUND_TWO)
     {
-        for (uint8 i = 0; i <= SA_EVENT_ADD_VECH_W; ++i)
+        for (uint8 i = 0; i <= SA_EVENT_ADD_RELIC; ++i)
             for (uint8 j = 0; j < 5; ++j)
                 SpawnEvent(i, j, false);
 
@@ -471,6 +471,8 @@ void BattleGroundSA::UpdatePhase()
 
     SpawnEvent(SA_EVENT_ADD_GO, 0, true);
     SpawnEvent(SA_EVENT_ADD_CANNON, 0, true);
+    SpawnEvent(SA_EVENT_ADD_RELIC, (GetDefender() == ALLIANCE) ? 2 : 1, true);
+    MakeInteractive(SA_EVENT_ADD_RELIC, (GetDefender() == ALLIANCE) ? 2 : 1, false);
 }
 
 void BattleGroundSA::HandleInteractivity()
@@ -651,6 +653,7 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
                     GateStatus[type] = BG_SA_GO_GATES_DESTROY;
                     UpdatePlayerScore(player, SCORE_GATES_DESTROYED, 1);
                     RewardHonorToTeam(100, (teamIndex == 0) ? ALLIANCE:HORDE);
+                    MakeInteractive(SA_EVENT_ADD_RELIC, (GetDefender() == ALLIANCE) ? 2 : 1, true);
                     relicGateDestroyed = true;
                     break;
             }
@@ -766,9 +769,10 @@ void BattleGroundSA::EventPlayerDamageGO(Player *player, GameObject* target_obj,
             }
             break;
         }
-        case BG_SA_GO_TITAN_RELIC:
+        case BG_SA_GO_TITAN_RELIC_A:
+        case BG_SA_GO_TITAN_RELIC_H:
         {
-            if (eventId == 22097 && player->GetTeam() != GetDefender())
+            if (eventId == 20572  && player->GetTeam() != GetDefender())
             {
                 if (!relicGateDestroyed)
                 {
@@ -1083,7 +1087,7 @@ uint32 BattleGroundSA::GetCorrectFactionSA(uint8 vehicleType) const
 {
     switch(vehicleType)
     {
-        case VEHICLE_DEMOLISHER:
+        case VEHICLE_BG_DEMOLISHER:
         {
             if (GetDefender() == ALLIANCE)
                 return VEHICLE_FACTION_HORDE;

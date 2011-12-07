@@ -80,7 +80,7 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
     &Unit::HandleNULLProc,                                  // 45 SPELL_AURA_TRACK_RESOURCES
     &Unit::HandleNULLProc,                                  // 46 SPELL_AURA_46 (used in test spells 54054 and 54058, and spell 48050) (3.0.8a-3.2.2a)
     &Unit::HandleNULLProc,                                  // 47 SPELL_AURA_MOD_PARRY_PERCENT
-    &Unit::HandleNULLProc,                                  // 48 SPELL_AURA_48 spell Napalm (area damage spell with additional delayed damage effect)
+    &Unit::HandleNULLProc,                                  // 48 SPELL_AURA_PERIODIC_TRIGGER_BY_CLIENT (Client periodic trigger spell by self (3 spells in 3.3.5a))
     &Unit::HandleNULLProc,                                  // 49 SPELL_AURA_MOD_DODGE_PERCENT
     &Unit::HandleNULLProc,                                  // 50 SPELL_AURA_MOD_CRITICAL_HEALING_AMOUNT
     &Unit::HandleNULLProc,                                  // 51 SPELL_AURA_MOD_BLOCK_PERCENT
@@ -1045,6 +1045,27 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     // Cauterizing Heal or Searing Flame
                     triggered_spell_id = (procFlag & PROC_FLAG_SUCCESSFUL_POSITIVE_SPELL) ? 69733 : 69729;
                     break;
+                // Vampiric Might (Cult Fanatic, Icecrown Citadel, Lady Deathwhisper encounter)
+                case 70674:
+                {
+                    if (damage <= 0)
+                        return SPELL_AURA_PROC_FAILED;
+
+                    basepoints[0] = 3 * damage;
+                    triggered_spell_id = 70677;
+                    target = this;
+                    break;
+                }
+                // Essence of the Blood Queen
+                case 70871:
+                {
+                    triggered_spell_id = 70872;
+                    target = this;
+                    basepoints[0] = int32((damage * triggerAmount) / 100.0f);
+                    if (basepoints[0] < 0)
+                        return SPELL_AURA_PROC_FAILED;
+                    break;
+                }
                 case 71169:
                 {
                     // Shadow's Fate

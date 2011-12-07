@@ -1896,7 +1896,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     std::vector<Unit*> possibleTargets;
                     possibleTargets.reserve(m_UniqueTargetInfo.size());
-                    for (std::list<TargetInfo>::const_iterator itr = m_UniqueTargetInfo.begin(); itr != m_UniqueTargetInfo.end(); itr++)
+                    for (TargetList::const_iterator itr = m_UniqueTargetInfo.begin(); itr != m_UniqueTargetInfo.end(); ++itr)
                     {
                         // Skip Non-Players
                         if (!itr->targetGUID.IsPlayer())
@@ -1949,6 +1949,36 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(unitTarget, 44455, true, m_CastItem);
                     return;
                 }
+                case 44845:                                 // Spectral Realm
+                {
+                    if (!unitTarget)
+                        return;
+
+                    // teleport all targets which have the spectral realm aura
+                    if (unitTarget->HasAura(46021))
+                    {
+                        unitTarget->RemoveAurasDueToSpell(46021);
+                        unitTarget->CastSpell(unitTarget, 46020, true);
+                        unitTarget->CastSpell(unitTarget, 44867, true);
+                    }
+
+                    return;
+                }
+                case 44869:                                 // Spectral Blast
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    // If target has spectral exhaustion or spectral realm aura return
+                    if (unitTarget->HasAura(44867) || unitTarget->HasAura(46021))
+                        return;
+
+                    // Cast the spectral realm effect spell, visual spell and spectral blast rift summoning
+                    unitTarget->CastSpell(unitTarget, 44866, true, NULL, NULL, m_caster->GetObjectGuid());
+                    unitTarget->CastSpell(unitTarget, 46648, true, NULL, NULL, m_caster->GetObjectGuid());
+                    unitTarget->CastSpell(unitTarget, 44811, true);
+                    return;
+                }
                 /*case 44875:                                 // Complete Raptor Capture
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
@@ -1984,6 +2014,10 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     }
                     //Spawn
                     m_caster->CastSpell(m_caster, spellId, true);
+
+                    if (!unitTarget) 
+                        return;
+
                     //Arcane Prisoner Kill Credit
                     unitTarget->CastSpell(m_caster, 45456, true);
 
@@ -2066,6 +2100,28 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->RemoveAurasDueToSpell(45677);
                     m_caster->RemoveAurasDueToSpell(45681);
                     m_caster->RemoveAurasDueToSpell(45683);
+                    return;
+                }
+                case 45976:                                 // Open Portal
+                case 46177:                                 // Open All Portals
+                {
+                    if (!unitTarget)
+                        return;
+
+                    // portal visual
+                    unitTarget->CastSpell(unitTarget, 45977, true);
+
+                    // break in case additional procressing in scripting library required
+                    break;
+                }
+                case 45989:                                 // Summon Void Sentinel Summoner Visual
+                {
+                    if (!unitTarget)
+                        return;
+
+                    // summon void sentinel
+                    unitTarget->CastSpell(unitTarget, 45988, true);
+
                     return;
                 }
                 case 45990:                                 // Collect Oil
@@ -4790,6 +4846,11 @@ void Spell::EffectTeleportUnits(SpellEffectIndex eff_idx)
     if(!unitTarget || unitTarget->IsTaxiFlying())
         return;
 
+    // Target dependend on TargetB, if there is none provided, decide dependend on A
+    uint32 targetType = m_spellInfo->EffectImplicitTargetB[eff_idx];
+    if (!targetType)
+        targetType = m_spellInfo->EffectImplicitTargetA[eff_idx];
+
     switch (m_spellInfo->EffectImplicitTargetB[eff_idx])
     {
         case TARGET_INNKEEPER_COORDINATES:
@@ -5130,8 +5191,8 @@ void Spell::EffectPowerBurn(SpellEffectIndex eff_idx)
     if (damage < 0)
         return;
 
-    // burn x% of target's mana, up to maximum of 2x% of caster's mana (Mana Burn)
-    if (m_spellInfo->ManaCostPercentage)
+    // burn x% of target's mana, up to maximum of 2x% of caster's mana (Priest's Mana Burn)
+    if (m_spellInfo->SpellFamilyName == SPELLFAMILY_PRIEST)
     {
         int32 maxdamage = m_caster->GetMaxPower(powertype) * damage * 2 / 100;
         damage = unitTarget->GetMaxPower(powertype) * damage / 100;
@@ -5685,7 +5746,7 @@ void Spell::SendLoot(ObjectGuid guid, LootType loottype, LockType lockType)
                 break;
 
             case GAMEOBJECT_TYPE_TRAP:
-                if (lockType == LOCKTYPE_DISARM_TRAP || gameObjTarget->GetEntry() == 190752)
+                if (lockType == LOCKTYPE_DISARM_TRAP || gameObjTarget->GetEntry() == 190752 || gameObjTarget->GetEntry() == 195235 || gameObjTarget->GetEntry() == 195331)
                 {
                     gameObjTarget->SetLootState(GO_JUST_DEACTIVATED);
                     return;
@@ -8171,6 +8232,24 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     return;
                 }
+                case 44811:                                 // Spectral Realm
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    // If the player can't be teleported, send him a notification
+                    if (unitTarget->HasAura(44867))
+                    {
+                        ((Player*)unitTarget)->GetSession()->SendNotification(LANG_FAIL_ENTER_SPECTRAL_REALM);
+                        return;
+                    }
+
+                    // Teleport target to the spectral realm, add debuff and force faction
+                    unitTarget->CastSpell(unitTarget, 44852, true);
+                    unitTarget->CastSpell(unitTarget, 46019, true);
+                    unitTarget->CastSpell(unitTarget, 46021, true);
+                    return;
+                }
                 case 44876:                                 // Force Cast - Portal Effect: Sunwell Isle
                 {
                     if (!unitTarget)
@@ -8178,6 +8257,32 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     unitTarget->CastSpell(unitTarget, 44870, true);
                     break;
+                }
+                case 45141:                                 // Burn
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 46394, true, NULL, NULL, m_caster->GetObjectGuid());
+                    return;
+                }
+                case 45151:                                 // Burn
+                {
+                    if (!unitTarget || unitTarget->HasAura(46394))
+                        return;
+
+                    // Make the burn effect jump to another friendly target
+                    unitTarget->CastSpell(unitTarget, 46394, true);
+                    return;
+                }
+                case 45185:                                 // Stomp
+                {
+                    if (!unitTarget)
+                        return;
+
+                    // Remove the burn effect
+                    unitTarget->RemoveAurasDueToSpell(46394);
+                    return;
                 }
                 case 45206:                                 // Copy Off-hand Weapon
                 {
@@ -11158,6 +11263,9 @@ void Spell::EffectSendTaxi(SpellEffectIndex eff_idx)
 void Spell::EffectPlayerPull(SpellEffectIndex eff_idx)
 {
     if( !unitTarget || !unitTarget->isAlive())
+        return;
+
+    if (unitTarget->hasUnitState(UNIT_STAT_ROOT))
         return;
 
     float speedZ = (float)(m_caster->CalculateSpellDamage(unitTarget, m_spellInfo, eff_idx) / 10);

@@ -1317,6 +1317,15 @@ void Unit::CastSpell(Unit* Victim, SpellEntry const *spellInfo, bool triggered, 
 
         triggeredBy = triggeredByAura->GetSpellProto();
     }
+    else
+    {
+        triggeredByAura = GetTriggeredByClientAura(spellInfo->Id);
+        if (triggeredByAura)
+        {
+            triggered = true;
+            triggeredBy = triggeredByAura->GetSpellProto();
+        }
+    }
 
     Spell *spell = new Spell(this, spellInfo, triggered, originalCaster, triggeredBy);
 
@@ -1571,7 +1580,7 @@ void Unit::DealSpellDamage(SpellNonMeleeDamage *damageInfo, bool durabilityLoss)
     DealDamage(pVictim, damageInfo->damage, &cleanDamage, SPELL_DIRECT_DAMAGE, damageInfo->schoolMask, spellProto, durabilityLoss);
 
     // Check if effect can trigger anything actually (is this a right ATTR ?)
-    if (spellProto->AttributesEx3 & SPELL_ATTR_EX3_UNK16)
+    if (spellProto->AttributesEx3 & SPELL_ATTR_EX3_CANT_TRIGGER_PROC)
         return;
 
     bool hasWeaponDmgEffect = false;
@@ -4744,7 +4753,7 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder)
         next = i;
         ++next;
 
-        if (!i_holder) 
+        if (!i_holder)
             continue;
 
         SpellEntry const* i_spellProto = i_holder->GetSpellProto();
@@ -5465,14 +5474,16 @@ void Unit::HandleArenaPreparation(bool apply)
         SetPower(POWER_MANA, GetMaxPower(POWER_MANA));
         SetPower(POWER_ENERGY, GetMaxPower(POWER_ENERGY));
 
-        // Remove all buffs with duration < 25 sec.
+        // Remove all buffs with duration < 30 sec.
+        // and auras, which have SPELL_ATTR_EX5_REMOVE_AT_ENTER_ARENA (former SPELL_ATTR_EX5_UNK2 = 0x00000004).
         for(SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end();)
         {
-            if (!(iter->second->GetSpellProto()->AttributesEx4 & SPELL_ATTR_EX4_UNK21) &&
+            if ((!(iter->second->GetSpellProto()->AttributesEx4 & SPELL_ATTR_EX4_UNK21) &&
                                                             // don't remove stances, shadowform, pally/hunter auras
             !iter->second->IsPassive() &&                   // don't remove passive auras
-            iter->second->GetAuraMaxDuration() > 0 &&
-            iter->second->GetAuraMaxDuration() <= 30000)
+            ((iter->second->GetAuraMaxDuration() > 0 &&
+            iter->second->GetAuraDuration() <= 30000)) ||
+            iter->second->GetSpellProto()->AttributesEx5 & SPELL_ATTR_EX5_REMOVE_AT_ENTER_ARENA))
             {
                 RemoveSpellAuraHolder(iter->second, AURA_REMOVE_BY_CANCEL);
                 iter = m_spellAuraHolders.begin();
@@ -5583,6 +5594,29 @@ Aura* Unit::GetAura(AuraType type, SpellFamily family, ClassFamilyMask const& cl
             (!casterGuid || (*i)->GetCasterGuid() == casterGuid))
             return *i;
 
+    return NULL;
+}
+
+Aura* Unit::GetTriggeredByClientAura(uint32 spellId)
+{
+    if (spellId)
+    {
+        MAPLOCK_READ(this, MAP_LOCK_TYPE_AURAS);
+        AuraList const& auras = GetAurasByType(SPELL_AURA_PERIODIC_TRIGGER_BY_CLIENT);
+        if (!auras.empty())
+        {
+            for (AuraList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
+            {
+                SpellAuraHolderPtr holder = (*itr)->GetHolder();
+                if (!holder || holder->IsDeleted())
+                    continue;
+
+                if (holder->GetCasterGuid() == GetObjectGuid() &&
+                    holder->GetSpellProto()->EffectTriggerSpell[(*itr)->GetEffIndex()] == spellId)
+                    return *itr;
+            }
+        }
+    }
     return NULL;
 }
 
@@ -8801,6 +8835,9 @@ void Unit::Mount(uint32 mount, uint32 spellId, uint32 vehicleId, uint32 creature
         {
             SetVehicleId(vehicleId);
             GetVehicleKit()->Reset();
+
+            // mounts can also have accessories
+            GetVehicleKit()->InstallAllAccessories(creatureEntry);
         }
         WorldPacket data(SMSG_MOVE_SET_COLLISION_HGT, GetPackGUID().size() + 4 + 4);
         data << GetPackGUID();
@@ -9752,10 +9789,14 @@ void Unit::TauntApply(Unit* taunter)
     if (target && target == taunter)
         return;
 
-    SetInFront(taunter);
+    // Only attack taunter if this is a valid target
+    if (!hasUnitState(UNIT_STAT_STUNNED | UNIT_STAT_DIED) && !IsSecondChoiceTarget(taunter, true))
+    {
+        SetInFront(taunter);
 
-    if (((Creature*)this)->AI())
-        ((Creature*)this)->AI()->AttackStart(taunter);
+        if (((Creature*)this)->AI())
+            ((Creature*)this)->AI()->AttackStart(taunter);
+    }
 
     m_ThreatManager.tauntApply(taunter);
 }
@@ -9805,6 +9846,18 @@ void Unit::TauntFadeOut(Unit *taunter)
 
 //======================================================================
 
+bool Unit::IsSecondChoiceTarget(Unit* pTarget, bool checkThreatArea)
+{
+    MANGOS_ASSERT(pTarget && GetTypeId() == TYPEID_UNIT);
+
+    return
+        pTarget->IsImmunedToDamage(GetMeleeDamageSchoolMask()) ||
+        pTarget->hasNegativeAuraWithInterruptFlag(AURA_INTERRUPT_FLAG_DAMAGE) ||
+        checkThreatArea && ((Creature*)this)->IsOutOfThreatArea(pTarget);
+}
+
+//======================================================================
+
 bool Unit::SelectHostileTarget()
 {
     //function provides main threat functionality
@@ -9835,7 +9888,7 @@ bool Unit::SelectHostileTarget()
         {
             if ((caster = (*aura)->GetCaster()) && caster->IsInMap(this) &&
                 caster->isTargetableForAttack() && caster->isInAccessablePlaceFor((Creature*)this) &&
-                (!IsCombatStationary() || CanReachWithMeleeAttack(caster)))
+                !IsSecondChoiceTarget(caster, true))
             {
                 target = caster;
                 break;
@@ -11094,14 +11147,27 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
     if (GetCharmInfo() && GetCharmInfo()->GetGlobalCooldownMgr().HasGlobalCooldown(spellInfo))
         return;
 
-    // do not cast passive and not learned spells
-    if (IsPassiveSpell(spellInfo->Id))
-        return;
+    bool triggered = false;
+    SpellEntry const* triggeredBy = NULL;
 
-    if((GetObjectGuid().IsPet() && !((Pet*)this)->HasSpell(spellInfo->Id)))
-        return;
-    else if ((GetObjectGuid().IsCreatureOrVehicle() && !((Creature*)this)->HasSpell(spellInfo->Id)))
-        return;
+    Aura* triggeredByAura = GetTriggeredByClientAura(spellInfo->Id);
+    if (triggeredByAura)
+    {
+        triggered = true;
+        triggeredBy = triggeredByAura->GetSpellProto();
+        cast_count = 0;
+    }
+
+    if (!triggered)
+    {
+        // do not cast passive and not learned spells
+        if (IsPassiveSpell(spellInfo->Id))
+            return;
+        else if((GetObjectGuid().IsPet() && !((Pet*)this)->HasSpell(spellInfo->Id)))
+            return;
+        else if ((GetObjectGuid().IsCreatureOrVehicle() && !((Creature*)this)->HasSpell(spellInfo->Id)))
+            return;
+    }
 
     Creature* pet = dynamic_cast<Creature*>(this);
 
@@ -11110,8 +11176,13 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
     {
         DEBUG_LOG("DoPetCastSpell: %s guid %u tryed to cast spell %u without target!.",GetObjectGuid().IsPet() ? "Pet" : "Creature",GetObjectGuid().GetCounter(), spellInfo->Id);
     }
+    else if (targets && !unit_target && targets->m_targetMask & TARGET_FLAG_DEST_LOCATION)
+    {
+        DEBUG_LOG("Unit::DoPetCastSpell: %s tryed to cast spell %u with setted dest. location without target. Set unitTarget to caster.",GetObjectGuid().GetString().c_str(), spellInfo->Id);
+//        targets->setUnitTarget((Unit*)pet);
+    }
 
-    Spell* spell = new Spell(this, spellInfo, false);
+    Spell *spell = new Spell(this, spellInfo, triggered, GetObjectGuid(), triggeredBy);
     spell->m_cast_count = cast_count;                       // probably pending spell cast
 
     Unit* unit_target2 = spell->m_targets.getUnitTarget();
@@ -11121,7 +11192,7 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
         || spellInfo->Id == 53434 || spellInfo->Id == 64494)
         targets->setUnitTarget((Unit*)owner);
 
-    SpellCastResult result = spell->CheckPetCast(unit_target);
+    SpellCastResult result = triggered ? SPELL_CAST_OK : spell->CheckPetCast(unit_target);
 
     //auto turn to target unless possessed
     if (result == SPELL_FAILED_UNIT_NOT_INFRONT && !HasAuraType(SPELL_AURA_MOD_POSSESS))
@@ -11144,8 +11215,11 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
         result = SPELL_CAST_OK;
     }
 
-    if (targets)
-        spell->m_targets = *targets;
+    for (uint32 i = 0; i < 3; ++i)
+        if (spellInfo->EffectImplicitTargetA[i] == TARGET_ALL_ENEMY_IN_AREA_INSTANT || spellInfo->EffectImplicitTargetB[i] == TARGET_ALL_ENEMY_IN_AREA_INSTANT ||
+            spellInfo->EffectImplicitTargetA[i] == TARGET_DIRECTLY_FORWARD || spellInfo->EffectImplicitTargetB[i] == TARGET_DIRECTLY_FORWARD)
+            if (targets)
+                spell->m_targets = *targets;
 
     clearUnitState(UNIT_STAT_MOVING);
 
@@ -11177,7 +11251,7 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
             }
         }
 
-        spell->prepare(&(spell->m_targets));
+        spell->prepare(&(spell->m_targets), triggeredByAura);
     }
     else if (pet)
     {
@@ -11186,7 +11260,7 @@ void Unit::DoPetCastSpell( Player *owner, uint8 cast_count, SpellCastTargets* ta
         else
             SendPetCastFail(spellInfo->Id, result);
 
-        if (owner && !((Creature*)this)->HasSpellCooldown(spellInfo->Id))
+        if (owner && !((Creature*)this)->HasSpellCooldown(spellInfo->Id) && !triggered)
             owner->SendClearCooldown(spellInfo->Id, pet);
 
         spell->finish(false);
@@ -12267,7 +12341,7 @@ void Unit::ChangeSeat(int8 seatId, bool next)
 
 void Unit::EnterVehicle(VehicleKit *vehicle, int8 seatId)
 {
-    if (!isAlive() || GetVehicleKit() == vehicle)
+    if (!isAlive() || !vehicle || GetVehicleKit() == vehicle)
         return;
 
     if (m_pVehicle)
@@ -12281,6 +12355,14 @@ void Unit::EnterVehicle(VehicleKit *vehicle, int8 seatId)
         }
         else
             ExitVehicle();
+    }
+
+    if (seatId == -1)
+    {
+        if (vehicle->HasEmptySeat(-1))
+            seatId = vehicle->GetNextEmptySeat(0,true);
+        else
+            return;
     }
 
     InterruptNonMeleeSpells(false);

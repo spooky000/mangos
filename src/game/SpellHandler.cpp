@@ -347,8 +347,8 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
     recvPacket >> unk_flags;                                // flags (if 0x02 - some additional data are received)
 
     // ignore for remote control state (for player case)
-    Unit* mover = _player->GetMover();
-    if (mover != _player && mover->GetTypeId()==TYPEID_PLAYER)
+    Unit* _mover = GetPlayer()->GetMover();
+    if (_mover != GetPlayer() && _mover->GetTypeId()==TYPEID_PLAYER)
     {
         recvPacket.rpos(recvPacket.wpos());                 // prevent spam at ignore packet
         return;
@@ -367,12 +367,43 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
         return;
     }
 
+    //  Players on vehicles may cast many simple spells (like knock) from self
+
+    Unit* mover = NULL;
+
+    if (spellInfo->AttributesEx6 & SPELL_ATTR_EX6_CASTABLE_ON_VEHICLE && _mover->IsCharmerOrOwnerPlayerOrPlayerItself())
+        mover = _mover->GetCharmerOrOwnerPlayerOrPlayerItself();
+    else
+        mover = _mover;
+
+    // casting own spells on some vehicles
+    if (mover->GetObjectGuid().IsVehicle() && mover->GetCharmerOrOwnerPlayerOrPlayerItself())
+    {
+        Player *plr = mover->GetCharmerOrOwnerPlayerOrPlayerItself();
+        if (mover->GetVehicleKit()->GetSeatInfo(plr) &&
+           (mover->GetVehicleKit()->GetSeatInfo(plr)->m_flags & SEAT_FLAG_CAN_ATTACK ||
+            mover->GetVehicleKit()->GetSeatInfo(plr)->m_flags & SEAT_FLAG_CAN_CAST ))
+            mover = plr;
+    }
+
+    bool triggered = false;
+    SpellEntry const* triggeredBy = NULL;
+    Aura* triggeredByAura = mover->GetTriggeredByClientAura(spellId);
+    if (triggeredByAura)
+    {
+        triggered = true;
+        triggeredBy = triggeredByAura->GetSpellProto();
+        cast_count = 0;
+    }
+
     if (mover->GetTypeId()==TYPEID_PLAYER)
     {
-        // not have spell in spellbook or spell passive and not casted by client        // hack for Sota Seaforium disarming
-        if ((!((Player*)mover)->HasActiveSpell (spellId) || IsPassiveSpell(spellInfo)) && spellId != 1843)
+        // not have spell in spellbook or spell passive and not casted by client
+        if (((Player*)mover)->GetUInt16Value(PLAYER_FIELD_BYTES2, 0) == 0 &&
+            (!((Player*)mover)->HasActiveSpell(spellId) && !triggered)
+            || (IsPassiveSpell(spellInfo) && spellId != 1843))
         {
-            sLog.outError("World: Player %u casts spell %u which he shouldn't have", mover->GetGUIDLow(), spellId);
+            sLog.outError("WorldSession::HandleCastSpellOpcode: %s casts spell %u which he shouldn't have", mover->GetObjectGuid().GetString().c_str(), spellId);
             //cheater? kick? ban?
             recvPacket.rpos(recvPacket.wpos());                 // prevent spam at ignore packet
             return;
@@ -381,8 +412,10 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
     else
     {
         // not have spell in spellbook or spell passive and not casted by client
-        if (!((Creature*)mover)->HasSpell(spellId) || IsPassiveSpell(spellInfo))
+        if ((!((Creature*)mover)->HasSpell(spellId) && !triggered)
+        || IsPassiveSpell(spellInfo))
         {
+            sLog.outError("WorldSession::HandleCastSpellOpcode: %s try casts spell %u which he shouldn't have", mover->GetObjectGuid().GetString().c_str(), spellId);
             //cheater? kick? ban?
             recvPacket.rpos(recvPacket.wpos());                 // prevent spam at ignore packet
             return;
@@ -406,9 +439,9 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
             spellInfo = actualSpellInfo;
     }
 
-    Spell *spell = new Spell(mover, spellInfo, false);
+    Spell *spell = new Spell(mover, spellInfo, triggered, mover->GetObjectGuid(), triggeredBy);
     spell->m_cast_count = cast_count;                       // set count of casts
-    spell->prepare(&targets);
+    spell->prepare(&targets, triggeredByAura);
 }
 
 void WorldSession::HandleCancelCastOpcode(WorldPacket& recvPacket)

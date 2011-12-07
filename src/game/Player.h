@@ -1066,7 +1066,6 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         bool IsInWater() const { return m_isInWater; }
         bool IsUnderWater() const;
-        bool IsFalling() { return GetPositionZ() < m_lastFallZ; }
 
         void SendInitialPacketsBeforeAddToMap();
         void SendInitialPacketsAfterAddToMap();
@@ -1332,7 +1331,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         void SendPreparedGossip(WorldObject *pSource);
         void OnGossipSelect(WorldObject *pSource, uint32 gossipListId, uint32 menuId);
 
-        uint32 GetGossipTextId(uint32 menuId);
+        uint32 GetGossipTextId(uint32 menuId, WorldObject* pSource);
         uint32 GetGossipTextId(WorldObject *pSource);
         uint32 GetDefaultGossipMenuForSource(WorldObject *pSource);
 
@@ -1581,7 +1580,7 @@ class MANGOS_DLL_SPEC Player : public Unit
 
         bool HasSpell(uint32 spell) const;
         bool HasActiveSpell(uint32 spell) const;            // show in spellbook
-        TrainerSpellState GetTrainerSpellState(TrainerSpell const* trainer_spell) const;
+        TrainerSpellState GetTrainerSpellState(TrainerSpell const* trainer_spell, uint32 reqLevel) const;
         bool IsSpellFitByClassAndRace(uint32 spell_id, uint32* pReqlevel = NULL) const;
         bool IsNeedCastPassiveLikeSpellAtLearn(SpellEntry const* spellInfo) const;
         bool IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex index) const;
@@ -2399,38 +2398,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         float GetAverageItemLevel();
 
         //! Return collision height sent to client
-        float GetCollisionHeight(bool mounted)
-        {
-            if (mounted)
-            {
-                CreatureDisplayInfoEntry const* mountDisplayInfo = sCreatureDisplayInfoStore.LookupEntry(GetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID));
-                if (!mountDisplayInfo)
-                    return GetCollisionHeight(false);
-
-                CreatureModelDataEntry const* mountModelData = sCreatureModelDataStore.LookupEntry(mountDisplayInfo->ModelId);
-                if (!mountModelData)
-                    return GetCollisionHeight(false);
-
-                CreatureDisplayInfoEntry const* displayInfo = sCreatureDisplayInfoStore.LookupEntry(GetNativeDisplayId());
-                MANGOS_ASSERT(displayInfo);
-                CreatureModelDataEntry const* modelData = sCreatureModelDataStore.LookupEntry(displayInfo->ModelId);
-                MANGOS_ASSERT(modelData);
-
-                float scaleMod = GetFloatValue(OBJECT_FIELD_SCALE_X); // 99% sure about this
-
-                return scaleMod * mountModelData->MountHeight + modelData->CollisionHeight * 0.5f;
-            }
-            else
-            {
-                //! Dismounting case - use basic default model data
-                CreatureDisplayInfoEntry const* displayInfo = sCreatureDisplayInfoStore.LookupEntry(GetNativeDisplayId());
-                MANGOS_ASSERT(displayInfo);
-                CreatureModelDataEntry const* modelData = sCreatureModelDataStore.LookupEntry(displayInfo->ModelId);
-                MANGOS_ASSERT(modelData);
-
-                return modelData->CollisionHeight;
-            }
-        }
+        float GetCollisionHeight(bool mounted);
 
     protected:
 
@@ -2510,7 +2478,7 @@ class MANGOS_DLL_SPEC Player : public Unit
         void _SaveSkills();
         void _SaveSpells();
         void _SaveEquipmentSets();
-        void _SaveBGData();
+        void _SaveBGData(bool forceClean = false);
         void _SaveGlyphs();
         void _SaveTalents();
         void _SaveStats();

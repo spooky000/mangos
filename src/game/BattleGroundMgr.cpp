@@ -185,7 +185,7 @@ GroupQueueInfo * BattleGroundQueue::AddGroup(Player *leader, Group* grp, BattleG
     //announce world (this don't need mutex)
     if (isRated && sWorld.getConfig(CONFIG_BOOL_ARENA_QUEUE_ANNOUNCER_JOIN))
     {
-        sWorld.SendWorldText(LANG_ARENA_QUEUE_ANNOUNCE_WORLD_JOIN, ginfo->arenaType, ginfo->arenaType, ginfo->ArenaTeamRating);
+        sWorld.SendWorldText(LANG_ARENA_QUEUE_ANNOUNCE_WORLD_JOIN, ginfo->arenaType, ginfo->arenaType);
     }
 
     //add players from group to ginfo
@@ -1608,8 +1608,7 @@ BattleGround * BattleGroundMgr::CreateNewBattleGround(BattleGroundTypeId bgTypeI
     }
 
     // set before Map creating for let use proper difficulty
-    if (!(bg->GetMapId() == 607))
-        bg->SetBracket(bracketEntry);
+    bg->SetBracket(bracketEntry);
 
     // will also set m_bgMap, instanceid
     sMapMgr.CreateBgMap(bg->GetMapId(), bg);
@@ -1621,8 +1620,6 @@ BattleGround * BattleGroundMgr::CreateNewBattleGround(BattleGroundTypeId bgTypeI
 
     // start the joining of the bg
     bg->SetStatus(STATUS_WAIT_JOIN);
-    if (bg->GetMapId() == 607)
-        bg->SetBracket(bracketEntry);
     bg->SetArenaType(arenaType);
     bg->SetRated(isRated);
     bg->SetRandom(isRandom);

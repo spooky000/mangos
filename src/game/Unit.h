@@ -1757,6 +1757,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void AddThreat(Unit* pVictim, float threat = 0.0f, bool crit = false, SpellSchoolMask schoolMask = SPELL_SCHOOL_MASK_NONE, SpellEntry const *threatSpell = NULL);
         float ApplyTotalThreatModifier(float threat, SpellSchoolMask schoolMask = SPELL_SCHOOL_MASK_NORMAL);
         void DeleteThreatList();
+        bool IsSecondChoiceTarget(Unit* pTarget, bool checkThreatArea);
         bool SelectHostileTarget();
         void TauntApply(Unit* pVictim);
         void TauntFadeOut(Unit *taunter);
@@ -1796,6 +1797,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         }
 
         Aura* GetScalingAura(AuraType type, uint32 stat = 0);
+        Aura* GetTriggeredByClientAura(uint32 spellId);
 
         SpellAuraHolderPtr GetSpellAuraHolder(uint32 spellid) const;
         SpellAuraHolderPtr GetSpellAuraHolder(uint32 spellid, ObjectGuid casterGUID) const;
