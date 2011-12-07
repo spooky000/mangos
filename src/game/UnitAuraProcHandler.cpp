@@ -1045,6 +1045,27 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     // Cauterizing Heal or Searing Flame
                     triggered_spell_id = (procFlag & PROC_FLAG_SUCCESSFUL_POSITIVE_SPELL) ? 69733 : 69729;
                     break;
+                // Vampiric Might (Cult Fanatic, Icecrown Citadel, Lady Deathwhisper encounter)
+                case 70674:
+                {
+                    if (damage <= 0)
+                        return SPELL_AURA_PROC_FAILED;
+
+                    basepoints[0] = 3 * damage;
+                    triggered_spell_id = 70677;
+                    target = this;
+                    break;
+                }
+                // Essence of the Blood Queen
+                case 70871:
+                {
+                    triggered_spell_id = 70872;
+                    target = this;
+                    basepoints[0] = int32((damage * triggerAmount) / 100.0f);
+                    if (basepoints[0] < 0)
+                        return SPELL_AURA_PROC_FAILED;
+                    break;
+                }
                 case 71169:
                 {
                     // Shadow's Fate
