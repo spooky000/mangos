@@ -9712,7 +9712,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!unitTarget)
                         return;
 
-                    unitTarget->CastSpell(unitTarget, 71447, true);
+                    unitTarget->CastSpell(unitTarget, 71447, true, 0, 0, m_caster->GetObjectGuid(), m_spellInfo);
                     return;
                 }
                 case 71478:                                 // Twilight Bloodbolt 25N
