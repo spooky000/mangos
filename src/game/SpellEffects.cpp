@@ -9771,6 +9771,18 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(unitTarget, 71480, true);
                     return;
                 }
+                case 71952:                                 // Presence of the Darkfallen (Queen Lana'thel ICC)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    if (m_caster->GetMap()->GetDifficulty() == RAID_DIFFICULTY_10MAN_HEROIC ||
+                        m_caster->GetMap()->GetDifficulty() == RAID_DIFFICULTY_25MAN_HEROIC)
+                    {
+                        unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
+                    }
+                    return;
+                }
                 case 72034:                                 // Whiteout
                 case 72096:                                 // Whiteout (heroic)
                 {

@@ -2446,6 +2446,10 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                             caster->CastSpell(caster, 68899, false);
                         }
                         return;
+                    case 70871:                             // Essence of the Blood Queen (Queen Lana'thel ICC)
+                        if (Unit *pCaster = GetCaster())
+                            target->CastSpell(pCaster, 71952, true);
+                        return;
                     case 71342:                             // Big Love Rocket
                         Spell::SelectMountByAreaAndSkill(target, GetSpellProto(), 71344, 71345, 71346, 71347, 0);
                         return;
@@ -5932,11 +5936,33 @@ void Aura::HandlePeriodicTriggerSpell(bool apply, bool /*Real*/)
 
             return;
         }
+        case 71530:                                     // Essence of the Blood Queen (Queen Lana'thel)
+        case 71531:
+        case 71532:
+        case 71533:
+        case 71525:
+        case 71473:
+        case 70867:
+        case 70879:
         case 71265:                                     // Swarming Shadows (Queen Lana'thel)
         {
             if (apply)
             {
-                target->CastSpell(target, 70871, true); // add the buff same as for the Essence
+                target->CastSpell(target, 70871, true, 0, this, target->GetObjectGuid()); // add the buff for healing
+
+                if (Unit *pCaster = GetCaster())
+                {
+                    // if we were bitten then we remove Frenzied Bloodthirst aura
+                    SpellAuraHolderPtr holder = pCaster->GetSpellAuraHolder(70877);
+                    if (!holder)
+                        holder = pCaster->GetSpellAuraHolder(71474);
+
+                    if (holder)
+                    {
+                        pCaster->RemoveAurasDueToSpell(70877);
+                        pCaster->CastSpell(pCaster, GetId(), true, 0, 0, holder->GetCasterGuid());
+                    }
+                }
             }
             else
             {
@@ -9690,6 +9716,16 @@ void Aura::HandleAuraAddMechanicAbilities(bool apply, bool Real)
         for (int i = 0; i < MAX_OVERRIDE_SPELLS; i++)
             if (uint32 spellId = spellSet->Spells[i])
                 static_cast<Player*>(target)->removeSpell(spellId, false , false, false);
+
+        // Frenzied Bloodthirst (Queen Lana'thel - ICC encounter)
+        if (GetId() == 70877 || GetId() == 71474)
+        {
+            if (m_removeMode == AURA_REMOVE_BY_EXPIRE)
+            {
+                if (Unit *pCaster = GetCaster())
+                    pCaster->CastSpell(target, 70923, true); // cast Uncontrollable Frenzy
+            }
+        }
     }
 }
 
