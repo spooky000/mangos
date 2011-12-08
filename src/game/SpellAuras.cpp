@@ -8743,6 +8743,10 @@ void Aura::PeriodicTick()
             if (!target->isAlive())
                 return;
 
+            // don't energize isolated units (banished)
+            if (target->hasUnitState(UNIT_STAT_ISOLATED))
+                return;
+
             Powers pt = target->getPowerType();
             if(int32(pt) != m_modifier.m_miscvalue)
                 return;
