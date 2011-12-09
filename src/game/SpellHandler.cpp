@@ -401,7 +401,7 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
         // not have spell in spellbook or spell passive and not casted by client
         if (((Player*)mover)->GetUInt16Value(PLAYER_FIELD_BYTES2, 0) == 0 &&
             (!((Player*)mover)->HasActiveSpell(spellId) && !triggered)
-            || (IsPassiveSpell(spellInfo) && spellId != 1843))
+            || IsPassiveSpell(spellInfo) && spellId != 1843)
         {
             sLog.outError("WorldSession::HandleCastSpellOpcode: %s casts spell %u which he shouldn't have", mover->GetObjectGuid().GetString().c_str(), spellId);
             //cheater? kick? ban?
