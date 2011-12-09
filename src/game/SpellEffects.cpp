@@ -11303,9 +11303,6 @@ void Spell::EffectPlayerPull(SpellEffectIndex eff_idx)
     if( !unitTarget || !unitTarget->isAlive())
         return;
 
-    if (unitTarget->hasUnitState(UNIT_STAT_ROOT))
-        return;
-
     float speedZ = (float)(m_caster->CalculateSpellDamage(unitTarget, m_spellInfo, eff_idx) / 10);
     float speedXY = (float)(m_spellInfo->EffectMiscValue[eff_idx]/10);
 
