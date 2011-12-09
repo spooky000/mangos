@@ -565,6 +565,20 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         damage *= exp(-distance/(10.0f));
                         break;
                     }
+                    // Vampiric Bite (Queen Lana'thel)
+                    case 70946:
+                    case 71475:
+                    case 71476:
+                    case 71477:
+                    case 71726:
+                    case 71727:
+                    case 71728:
+                    case 71729:
+                    {
+                        // trigger Presence of the Darkfallen check
+                        unitTarget->CastSpell(unitTarget, 71952, true);
+                        break;
+                    }
                     // Shadow Prison
                     case 72999:
                     {
@@ -9776,8 +9790,8 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!unitTarget)
                         return;
 
-                    if (m_caster->GetMap()->GetDifficulty() == RAID_DIFFICULTY_10MAN_HEROIC ||
-                        m_caster->GetMap()->GetDifficulty() == RAID_DIFFICULTY_25MAN_HEROIC)
+                    if (unitTarget->GetMap()->GetDifficulty() == RAID_DIFFICULTY_10MAN_HEROIC ||
+                        unitTarget->GetMap()->GetDifficulty() == RAID_DIFFICULTY_25MAN_HEROIC)
                     {
                         unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
                     }
