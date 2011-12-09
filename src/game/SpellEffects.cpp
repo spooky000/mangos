@@ -579,6 +579,18 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         unitTarget->CastSpell(unitTarget, 71952, true);
                         break;
                     }
+                    // Mark of the Fallen Champion damage (Saurfang)
+                    case 72255:
+                    case 72444:
+                    case 72445:
+                    case 72446:
+                    {
+                        if (!unitTarget->HasAura(72293))
+                            damage = 0;
+                        else
+                            unitTarget->CastSpell(unitTarget, 72202, true); // Blood Link
+                        break;
+                    }
                     // Shadow Prison
                     case 72999:
                     {
