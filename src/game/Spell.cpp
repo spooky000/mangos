@@ -2801,12 +2801,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
         }
         case TARGET_DUELVSPLAYER:
         {
-            if (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN && m_spellInfo->SpellIconID == 276) // Stoneclaw Totem absorb has wrong target
-            {
-                targetUnitMap.push_back(m_caster);
-                break;
-            }
-
             Unit *target = m_targets.getUnitTarget();
             if(target)
             {
