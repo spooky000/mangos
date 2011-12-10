@@ -648,6 +648,16 @@ void Aura::Update(uint32 diff)
             PeriodicTick();
         }
     }
+    else
+    {
+        if (m_periodicTimer <= 0)
+        {
+            m_periodicTimer = SPELL_SPELL_CHANNEL_UPDATE_INTERVAL;
+            PeriodicCheck();
+        }
+        else
+            m_periodicTimer -= diff;
+    }
 }
 
 void Aura::AreaAuraUpdate(uint32 diff)
@@ -8140,6 +8150,13 @@ void Aura::PeriodicTick()
     if (!target || !spellProto)
         return;
 
+    if (target->IsImmuneToSpell(spellProto))
+    {
+        if (Unit* caster = GetCaster())
+            caster->SendSpellDamageImmune(target, spellProto->Id);
+        return;
+    }
+
     switch(m_modifier.m_auraname)
     {
         case SPELL_AURA_PERIODIC_DAMAGE:
@@ -8160,9 +8177,11 @@ void Aura::PeriodicTick()
                 pCaster->SpellHitResult(target, spellProto, false) != SPELL_MISS_NONE)
                 return;
 
-            // Check for immune (not use charges)
-            if(target->IsImmunedToDamage(GetSpellSchoolMask(spellProto)))
+            if (target->IsImmunedToDamage(GetSpellSchoolMask(spellProto)))
+            {
+                pCaster->SendSpellDamageImmune(target, spellProto->Id);
                 return;
+            }
 
             // some auras remove at specific health level or more
             if(m_modifier.m_auraname == SPELL_AURA_PERIODIC_DAMAGE)
@@ -9561,6 +9580,52 @@ void Aura::PeriodicDummyTick()
                 uint32 deal = m_modifier.m_amount * target->GetMaxHealth() / 100;
                 target->DealDamage(target, deal, NULL, NODAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
                 return;
+            }
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+void Aura::PeriodicCheck()
+{
+
+    SpellAuraHolderPtr holder = GetHolder();
+    SpellEntry const* spellProto = GetSpellProto();
+
+    if (!holder || !spellProto)
+        return;
+
+    Unit* target = GetTarget();
+    Unit* caster = GetCaster();
+
+    if (!caster || !target)
+        return;
+
+    if (target->IsImmuneToSpell(spellProto))
+    {
+        if (Unit* caster = GetCaster())
+            caster->SendSpellDamageImmune(target, spellProto->Id);
+        target->RemoveAurasDueToSpell(GetId());
+        return;
+    }
+
+    switch(m_modifier.m_auraname)
+    {
+        case SPELL_AURA_MOD_CONFUSE:
+        case SPELL_AURA_MOD_FEAR:
+        case SPELL_AURA_MOD_STUN:
+        case SPELL_AURA_MOD_ROOT:
+        case SPELL_AURA_TRANSFORM:
+        {
+            if (caster->GetObjectGuid().IsPlayer() && target->GetObjectGuid().IsCreatureOrVehicle())
+            {
+                if (caster->MagicSpellHitResult(target, spellProto) != SPELL_MISS_NONE)
+                {
+                    caster->SendSpellDamageResist(target, spellProto->Id);
+                    target->RemoveAurasDueToSpell(GetId());
+                }
             }
             break;
         }
