@@ -1018,12 +1018,14 @@ bool Aura::CanProcFrom(SpellEntry const *spell, uint32 procFlag, uint32 EventPro
                 else
                     return false;
             }
-            else // Passive spells hits here only if resist/reflect/immune/evade
-            {
-                // Passive spells can`t trigger if need hit (exclude cases when procExtra include non-active flags)
-                if ((EventProcEx & (PROC_EX_NORMAL_HIT|PROC_EX_CRITICAL_HIT) & procEx) && !active)
+            // Passive spells hits here only if resist/reflect/immune/evade
+            // Passive spells can`t trigger if need hit (exclude cases when procExtra include non-active flags)
+            else if ((EventProcEx & (PROC_EX_NORMAL_HIT|PROC_EX_CRITICAL_HIT) & procEx) && !active)
                     return false;
-            }
+            // Custom procs with aura apply/fade (must fit in aura mask, if exists, independent from SchoolMask)
+            else if (procFlag & PROC_FLAG_ON_AURA_APPLY || procFlag & PROC_FLAG_ON_AURA_FADE)
+                    if (mask && !isAffectedOnSpell(spell))
+                        return false;
         }
         return true;
     }
@@ -10525,6 +10527,17 @@ void SpellAuraHolder::SendAuraUpdate(bool remove) const
 
 void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
 {
+    // it's impossible in theory, but possible at fact...
+    if (!GetSpellProto())
+        return;
+
+    // if holder applyed in deleted case, need do nothing
+    if (apply && IsDeleted())
+    {
+        sLog.outError("SpellAuraHolder::HandleSpellSpecificBoosts called `apply`  for deleted holder %u !", GetId());
+        return;
+    }
+
     bool cast_at_remove = false;                            // if spell must be casted at last aura from stack remove
     uint32 spellId1 = 0;
     uint32 spellId2 = 0;
@@ -11507,10 +11520,37 @@ void SpellAuraHolder::HandleSpellSpecificBoostsForward(bool apply)
     if (!GetSpellProto())
         return;
 
-    uint32 spellId1 = 0;
-    uint32 spellId2 = 0;
-    uint32 spellId3 = 0;
-    uint32 spellId4 = 0;
+    // if holder applyed in deleted case, need do nothing
+    if (apply && IsDeleted())
+    {
+        sLog.outError("SpellAuraHolder::HandleSpellSpecificBoostsForward called `apply`  for deleted holder %u !", GetId());
+        return;
+    }
+
+    // Custom proc system (proc before apply or before fade)
+    Unit* pCaster = GetCaster();
+    if (!pCaster)
+        pCaster = m_target;
+
+    uint32 procFlag = apply ? PROC_FLAG_ON_AURA_APPLY : PROC_FLAG_ON_AURA_FADE;
+    uint32 procEx   = 0;
+    switch (m_removeMode)
+    {
+        case AURA_REMOVE_BY_EXPIRE:
+        case AURA_REMOVE_BY_DEFAULT:
+            procEx   |= PROC_EX_EXPIRE;
+            break;
+        case AURA_REMOVE_BY_SHIELD_BREAK:
+            procEx   |= PROC_EX_SHIELD_BREAK;
+            break;
+        case AURA_REMOVE_BY_DISPEL:
+            procEx   |= PROC_EX_DISPEL;
+            break;
+        default:
+            break;
+    };
+
+    pCaster->ProcDamageAndSpell(m_target, procFlag, PROC_FLAG_NONE, procEx, 0, GetWeaponAttackType(GetSpellProto()), GetSpellProto());
 
     // Linked spells (boostforward chain)
     SpellLinkedSet linkedSet = sSpellMgr.GetSpellLinked(GetId(), SPELL_LINKED_TYPE_BOOSTFORWARD);
