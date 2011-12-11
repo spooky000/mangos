@@ -11874,6 +11874,8 @@ bool Aura::IsEffectStacking()
                 spellProto->SpellIconID == 2211)                        // Misery
                 return false;
             break;
+        case SPELL_AURA_CONTROL_VEHICLE:
+            return true;
 
         default:
             break;
