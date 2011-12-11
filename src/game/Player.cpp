@@ -531,6 +531,7 @@ Player::Player (WorldSession *session): Unit(), m_mover(this), m_camera(this), m
     m_baseSpellPower = 0;
     m_baseFeralAP = 0;
     m_baseManaRegen = 0;
+    m_baseHealthRegen = 0;
     m_armorPenetrationPct = 0.0f;
     m_spellPenetrationItemMod = 0;
 
