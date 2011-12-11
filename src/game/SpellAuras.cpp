@@ -10531,6 +10531,38 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
     uint32 spellId3 = 0;
     uint32 spellId4 = 0;
 
+    // Linked spells (boost chain)
+    SpellLinkedSet linkedSet = sSpellMgr.GetSpellLinked(GetId(), SPELL_LINKED_TYPE_BOOST);
+    if (linkedSet.size() > 0)
+    {
+        for (SpellLinkedSet::const_iterator itr = linkedSet.begin(); itr != linkedSet.end(); ++itr)
+        {
+            apply ?
+                m_target->CastSpell(m_target, *itr, true, NULL, NULL, GetCasterGuid()) :
+                m_target->RemoveAurasByCasterSpell(*itr, GetCasterGuid());
+        }
+    }
+
+    if (!apply)
+    {
+        // Linked spells (CastOnRemove chain)
+        linkedSet = sSpellMgr.GetSpellLinked(GetId(), SPELL_LINKED_TYPE_CASTONREMOVE);
+        if (linkedSet.size() > 0)
+        {
+            for (SpellLinkedSet::const_iterator itr = linkedSet.begin(); itr != linkedSet.end(); ++itr)
+                m_target->CastSpell(m_target, *itr, true, NULL, NULL, GetCasterGuid());
+        }
+
+        // Linked spells (RemoveOnRemove chain)
+        linkedSet = sSpellMgr.GetSpellLinked(GetId(), SPELL_LINKED_TYPE_REMOVEONREMOVE);
+        if (linkedSet.size() > 0)
+        {
+            for (SpellLinkedSet::const_iterator itr = linkedSet.begin(); itr != linkedSet.end(); ++itr)
+                m_target->RemoveAurasByCasterSpell(*itr, GetCasterGuid());
+        }
+    }
+    linkedSet.clear();
+
     switch(GetSpellProto()->SpellFamilyName)
     {
         case SPELLFAMILY_GENERIC:
@@ -11480,6 +11512,10 @@ void SpellAuraHolder::HandleSpellSpecificBoostsForward(bool apply)
     uint32 spellId3 = 0;
     uint32 spellId4 = 0;
 
+    // Linked spells (boostforward chain)
+    SpellLinkedSet linkedSet = sSpellMgr.GetSpellLinked(GetId(), SPELL_LINKED_TYPE_BOOSTFORWARD);
+
+    // Custom cases
     switch(GetSpellProto()->SpellFamilyName)
     {
         case SPELLFAMILY_WARLOCK:
@@ -11490,27 +11526,25 @@ void SpellAuraHolder::HandleSpellSpecificBoostsForward(bool apply)
                 switch(GetId())
                 {
                     case 32386:
-                        spellId1 = 60448;
+                        linkedSet.insert(60448);
                         break;
                     case 32388:
-                        spellId1 = 60465;
+                        linkedSet.insert(60465);
                         break;
                     case 32389:
-                        spellId1 = 60466;
+                        linkedSet.insert(60466);
                         break;
                     case 32390:
-                        spellId1 = 60467;
+                        linkedSet.insert(60467);
                         break;
                     case 32391:
-                        spellId1 = 60468;
+                        linkedSet.insert(60468);
                         break;
                     default:
                         break;
                 }
                 break;
             }
-            else
-                return;
             break;
         }
         case SPELLFAMILY_HUNTER:
@@ -11535,39 +11569,24 @@ void SpellAuraHolder::HandleSpellSpecificBoostsForward(bool apply)
                 return;
             }
             else
-            break;
+                break;
         }
         default:
             return;
     }
 
-    // prevent aura deletion, specially in multi-boost case
-    SetInUse(true);
-
-    if (apply)
+    if (linkedSet.size() > 0)
     {
-        if (spellId1)
-            m_target->CastSpell(m_target, spellId1, true, NULL, NULL, GetCasterGuid());
-        if (spellId2 && !IsDeleted())
-            m_target->CastSpell(m_target, spellId2, true, NULL, NULL, GetCasterGuid());
-        if (spellId3 && !IsDeleted())
-            m_target->CastSpell(m_target, spellId3, true, NULL, NULL, GetCasterGuid());
-        if (spellId4 && !IsDeleted())
-            m_target->CastSpell(m_target, spellId4, true, NULL, NULL, GetCasterGuid());
+        // prevent aura deletion, specially in multi-boost case
+        SetInUse(true);
+        for (SpellLinkedSet::const_iterator itr = linkedSet.begin(); itr != linkedSet.end(); ++itr)
+        {
+            apply ?
+                m_target->CastSpell(m_target, *itr, true, NULL, NULL, GetCasterGuid()) :
+                m_target->RemoveAurasByCasterSpell(*itr, GetCasterGuid());
+        }
+        SetInUse(false);
     }
-    else
-    {
-        if (spellId1)
-            m_target->RemoveAurasByCasterSpell(spellId1, GetCasterGuid());
-        if (spellId2)
-            m_target->RemoveAurasByCasterSpell(spellId2, GetCasterGuid());
-        if (spellId3)
-            m_target->RemoveAurasByCasterSpell(spellId3, GetCasterGuid());
-        if (spellId4)
-            m_target->RemoveAurasByCasterSpell(spellId4, GetCasterGuid());
-    }
-
-    SetInUse(false);
 }
 
 SpellAuraHolder::~SpellAuraHolder()
