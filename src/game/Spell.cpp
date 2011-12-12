@@ -3904,6 +3904,7 @@ void Spell::cast(bool skipCheck)
         // critical hit related part is currently done on hit so proc there, 
         // 0 damage since any damage based procs should be on hit
         // 0 victim proc since there is no victim proc dependent on successfull cast for caster
+        // if m_casttime > 0  proc already maked in prepare()
         if (!GetCastTime())
             m_caster->ProcDamageAndSpell(procTarget, m_procAttacker, 0, PROC_EX_CAST_END, 0, m_attackType, m_spellInfo);
     }
