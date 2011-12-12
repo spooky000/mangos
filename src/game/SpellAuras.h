@@ -512,6 +512,7 @@ class MANGOS_DLL_SPEC Aura
         // must be called only from Aura*::Update
         void PeriodicTick();
         void PeriodicDummyTick();
+        void PeriodicCheck();
 
         bool IsCritFromAbilityAura(Unit* caster, uint32& damage);
         void ReapplyAffectedPassiveAuras();
