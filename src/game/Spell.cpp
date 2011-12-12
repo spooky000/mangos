@@ -5516,6 +5516,12 @@ SpellCastResult Spell::CheckCast(bool strict)
                 if (target->HasAura(61987))                 // Avenging Wrath Marker
                     return SPELL_FAILED_CASTER_AURASTATE;
             }
+            // Vampiric Bite (Lana'thel encounter)
+            if (m_spellInfo->Id == 70946 || m_spellInfo->Id == 71475 ||
+                m_spellInfo->Id == 71476 || m_spellInfo->Id == 71477)
+            {
+                return SPELL_FAILED_BAD_TARGETS;
+            }
         }
 
         // check pet presents
