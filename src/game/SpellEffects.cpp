@@ -1858,6 +1858,31 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     return;
                 }
+                case 42339:                                 // Bucket Lands
+                {
+                    // remove aura Has Bucket from caster
+                    m_caster->RemoveAurasDueToSpell(42336);
+
+                    if (!unitTarget)
+                        return;
+
+                    // if target has aura Has Bucket do nothing
+                    if (unitTarget->HasAura(42336))
+                        return;
+
+                    // if hit Headless Horseman Fire bunny - Extingush Fire (without missile bucket)
+                    if (unitTarget->GetTypeId() == TYPEID_UNIT && unitTarget->GetEntry() == 23686)
+                    {
+                        m_caster->CastSpell(unitTarget, 42348, true);
+                        ((Creature*)unitTarget)->ForcedDespawn(3000);
+                        return;
+                    }
+                    // apply aura Has Bucket
+                    unitTarget->CastSpell(unitTarget, 42336, true);
+                    // create new bucket for target
+                    m_caster->CastSpell(unitTarget, 42349, true);
+                    return;
+                }
                 case 42793:                                 // Burn Body
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT || m_caster->GetTypeId() != TYPEID_PLAYER)
