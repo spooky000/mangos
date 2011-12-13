@@ -332,7 +332,7 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
     &Unit::HandleNULLProc,                                  //297 1 spell (counter spell school?)
     &Unit::HandleNULLProc,                                  //298 unused (3.2.2a)
     &Unit::HandleNULLProc,                                  //299 unused (3.2.2a)
-    &Unit::HandleNULLProc,                                  //300 3 spells (share damage?)
+    &Unit::HandleShareDamagePctAuraProc,                    //300 SPELL_AURA_SHARE_DAMAGE_PCT share damage taken by pct
     &Unit::HandleNULLProc,                                  //301 5 spells
     &Unit::HandleNULLProc,                                  //302 unused (3.2.2a)
     &Unit::HandleNULLProc,                                  //303 17 spells
@@ -3293,6 +3293,23 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
             break;
     }
 
+    if (!triggered_spell_id)
+    {
+        // Linked spells (Proc chain)
+        SpellLinkedSet linkedSet = sSpellMgr.GetSpellLinked(dummySpell->Id, SPELL_LINKED_TYPE_PROC);
+        if (linkedSet.size() > 0)
+        {
+            for (SpellLinkedSet::const_iterator itr = linkedSet.begin(); itr != linkedSet.end(); ++itr)
+            {
+                if (target == NULL)
+                    target = !(procFlag & PROC_FLAG_SUCCESSFUL_POSITIVE_SPELL) && IsPositiveSpell(*itr) ? this : pVictim;
+                CastSpell(target, *itr, true, castItem, triggeredByAura);
+                if (cooldown && GetTypeId()==TYPEID_PLAYER)
+                    ((Player*)this)->AddSpellCooldown(*itr,0,time(NULL) + cooldown);
+            }
+        }
+    }
+
     // processed charge only counting case
     if (!triggered_spell_id)
         return SPELL_AURA_PROC_OK;
@@ -4301,6 +4318,23 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
         }
     }
 
+    if (!trigger_spell_id)
+    {
+        // Linked spells (Proc chain)
+        SpellLinkedSet linkedSet = sSpellMgr.GetSpellLinked(auraSpellInfo->Id, SPELL_LINKED_TYPE_PROC);
+        if (linkedSet.size() > 0)
+        {
+            for (SpellLinkedSet::const_iterator itr = linkedSet.begin(); itr != linkedSet.end(); ++itr)
+            {
+                if (target == NULL)
+                    target = !(procFlags & PROC_FLAG_SUCCESSFUL_POSITIVE_SPELL) && IsPositiveSpell(*itr) ? this : pVictim;
+                CastSpell(target, *itr, true, castItem, triggeredByAura);
+                if (cooldown && GetTypeId()==TYPEID_PLAYER)
+                    ((Player*)this)->AddSpellCooldown(*itr,0,time(NULL) + cooldown);
+            }
+        }
+    }
+
     if (cooldown && GetTypeId()==TYPEID_PLAYER && ((Player*)this)->HasSpellCooldown(trigger_spell_id))
         return SPELL_AURA_PROC_FAILED;
 
@@ -5001,21 +5035,14 @@ bool Unit::IsTriggeredAtCustomProcEvent(Unit *pVictim, SpellAuraHolderPtr holder
             {
                 case SPELL_AURA_DAMAGE_SHIELD:
                     if (procFlag & PROC_FLAG_TAKEN_MELEE_HIT)
-                        return true;
+                        return SPELL_AURA_PROC_OK;
                     break;
                 case SPELL_AURA_MOD_STEALTH:
                 case SPELL_AURA_MOD_INVISIBILITY:
                 {
-                    uint32 anydamageMask = (PROC_FLAG_TAKEN_MELEE_HIT |
-                                        PROC_FLAG_TAKEN_MELEE_SPELL_HIT |
-                                        PROC_FLAG_TAKEN_RANGED_HIT |
-                                        PROC_FLAG_TAKEN_AOE_SPELL_HIT |
-                                        PROC_FLAG_TAKEN_NEGATIVE_SPELL_HIT |
-                                        PROC_FLAG_TAKEN_ANY_DAMAGE |
-                                        PROC_FLAG_ON_TRAP_ACTIVATION);
-                    if (procFlag & anydamageMask &&
+                    if (procFlag & DAMAGE_OR_HIT_TRIGGER_MASK &&
                         spellProto->AuraInterruptFlags & AURA_INTERRUPT_FLAG_DAMAGE)
-                        return true;
+                        return SPELL_AURA_PROC_OK;
                     break;
                 }
                 default:
@@ -5106,6 +5133,20 @@ SpellAuraProcResult Unit::HandleIgnoreAuraStateProc(Unit* /*pVictim*/, uint32 da
         // only at real damage
         if (!damage)
             return SPELL_AURA_PROC_FAILED;
+    }
+
+    return SPELL_AURA_PROC_OK;
+}
+
+SpellAuraProcResult Unit::HandleShareDamagePctAuraProc(Unit* pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const * procSpell, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/)
+{
+    if (Unit *pCaster = triggeredByAura->GetCaster())
+    {
+        SpellEntry const *spellInfo = triggeredByAura->GetSpellProto();
+
+        uint32 shareDamage = damage * (triggeredByAura->GetModifier()->m_amount / 100.0f);
+        pVictim->DealDamage(pCaster, shareDamage, NULL, DIRECT_DAMAGE, SpellSchoolMask(spellInfo->SchoolMask), spellInfo, true);
+        pVictim->SendSpellNonMeleeDamageLog(pCaster, spellInfo->Id, shareDamage, SpellSchoolMask(spellInfo->SchoolMask), 0, 0, false, 0, false);
     }
 
     return SPELL_AURA_PROC_OK;

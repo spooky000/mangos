@@ -565,6 +565,32 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         damage *= exp(-distance/(10.0f));
                         break;
                     }
+                    // Vampiric Bite (Queen Lana'thel)
+                    case 70946:
+                    case 71475:
+                    case 71476:
+                    case 71477:
+                    case 71726:
+                    case 71727:
+                    case 71728:
+                    case 71729:
+                    {
+                        // trigger Presence of the Darkfallen check
+                        unitTarget->CastSpell(unitTarget, 71952, true);
+                        break;
+                    }
+                    // Mark of the Fallen Champion damage (Saurfang)
+                    case 72255:
+                    case 72444:
+                    case 72445:
+                    case 72446:
+                    {
+                        if (!unitTarget->HasAura(72293))
+                            damage = 0;
+                        else
+                            unitTarget->CastSpell(unitTarget, 72202, true); // Blood Link
+                        break;
+                    }
                     // Shadow Prison
                     case 72999:
                     {
@@ -1832,6 +1858,31 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     return;
                 }
+                case 42339:                                 // Bucket Lands
+                {
+                    // remove aura Has Bucket from caster
+                    m_caster->RemoveAurasDueToSpell(42336);
+
+                    if (!unitTarget)
+                        return;
+
+                    // if target has aura Has Bucket do nothing
+                    if (unitTarget->HasAura(42336))
+                        return;
+
+                    // if hit Headless Horseman Fire bunny - Extingush Fire (without missile bucket)
+                    if (unitTarget->GetTypeId() == TYPEID_UNIT && unitTarget->GetEntry() == 23686)
+                    {
+                        m_caster->CastSpell(unitTarget, 42348, true);
+                        ((Creature*)unitTarget)->ForcedDespawn(3000);
+                        return;
+                    }
+                    // apply aura Has Bucket
+                    unitTarget->CastSpell(unitTarget, 42336, true);
+                    // create new bucket for target
+                    m_caster->CastSpell(unitTarget, 42349, true);
+                    return;
+                }
                 case 42793:                                 // Burn Body
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT || m_caster->GetTypeId() != TYPEID_PLAYER)
@@ -2946,6 +2997,15 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     for(uint32 i = 0; i < random; ++i)
                         m_caster->CastSpell(m_caster, 55528, true);
 
+                    return;
+                }
+                case 55931:                                 // Conjure Flame Sphere
+                {
+                    m_caster->CastSpell(m_caster, 55895, true);
+                    if (m_caster->GetMap()->IsRegularDifficulty())
+                        return;
+                    m_caster->CastSpell(m_caster, 59511, true);
+                    m_caster->CastSpell(m_caster, 59512, true);
                     return;
                 }
                 case 57496:                                 // Volazj - Insanity
@@ -4442,6 +4502,14 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
             }
             break;
         }
+    }
+
+    // Linked spells (DUMMYEFFECT chain)
+    SpellLinkedSet linkedSet = sSpellMgr.GetSpellLinked(m_spellInfo->Id, SPELL_LINKED_TYPE_DUMMYEFFECT);
+    if (linkedSet.size() > 0)
+    {
+        for (SpellLinkedSet::const_iterator itr = linkedSet.begin(); itr != linkedSet.end(); ++itr)
+            m_caster->CastSpell(unitTarget ? unitTarget : m_caster, *itr, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
     }
 
     // pet auras
@@ -8141,6 +8209,17 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(m_caster, 50217, true);
                     return;
                 }
+                case 43375:                                 // Mixing Vrykul Blood
+                case 43972:                                 // Mixing Blood for Quest 11306
+                {
+                    if (!unitTarget)
+                        return;
+
+                    uint32 triggeredSpell[] = {43376, 43378, 43970, 43377};
+
+                    unitTarget->CastSpell(unitTarget, triggeredSpell[urand(0, 3)], true);
+                    return;
+                }
                 case 44364:                                 // Rock Falcon Primer
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
@@ -8995,16 +9074,16 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                 {
                     if (!unitTarget)    // Stoneclaw Totem owner
                         return;
+
                     // Absorb shield for totems
                     for(int itr = 0; itr < MAX_TOTEM_SLOT; ++itr)
                         if (Totem* totem = unitTarget->GetTotem(TotemSlot(itr)))
-                            totem->CastCustomSpell(totem, 55277, &damage, NULL, NULL, true);
-
+                            m_caster->CastCustomSpell(totem, 55277, &damage, NULL, NULL, true);
                     // Glyph of Stoneclaw Totem
-                    if(Aura* auraGlyph = unitTarget->GetAura(63298, EFFECT_INDEX_0))
+                    if (Aura* auraGlyph = unitTarget->GetAura(63298, EFFECT_INDEX_0))
                     {
                         int32 playerAbsorb = damage * auraGlyph->GetModifier()->m_amount;
-                        unitTarget->CastCustomSpell(unitTarget, 55277, &playerAbsorb, NULL, NULL, true);
+                        m_caster->CastCustomSpell(unitTarget, 55277, &playerAbsorb, NULL, NULL, true);
                     }
                     return;
                 }
@@ -9209,6 +9288,17 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     unitTarget->EnterVehicle(m_caster->GetVehicleKit(), 1);
                     m_caster->CastSpell(unitTarget, (m_spellInfo->Id == 62707) ? 62717 : 63477, true); // DoT/Immunity
+                    break;
+                }
+                case 63027:                                 // Proximity Mines for Mimiron Encounter
+                {
+                    if (!unitTarget)
+                        return;
+
+                    for(uint8 i = 0; i < urand(8, 10); ++i)
+                    {
+                        unitTarget->CastSpell(unitTarget, 65347, true);
+                    }
                     break;
                 }
                 case 63795:                                 // Psychosis nh (Ulduar - Yogg Saron)
@@ -9712,7 +9802,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!unitTarget)
                         return;
 
-                    unitTarget->CastSpell(unitTarget, 71447, true);
+                    unitTarget->CastSpell(unitTarget, 71447, true, 0, 0, m_caster->GetObjectGuid(), m_spellInfo);
                     return;
                 }
                 case 71478:                                 // Twilight Bloodbolt 25N
@@ -9769,6 +9859,18 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         return;
 
                     m_caster->CastSpell(unitTarget, 71480, true);
+                    return;
+                }
+                case 71952:                                 // Presence of the Darkfallen (Queen Lana'thel ICC)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    if (unitTarget->GetMap()->GetDifficulty() == RAID_DIFFICULTY_10MAN_HEROIC ||
+                        unitTarget->GetMap()->GetDifficulty() == RAID_DIFFICULTY_25MAN_HEROIC)
+                    {
+                        unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
+                    }
                     return;
                 }
                 case 72034:                                 // Whiteout
@@ -10325,6 +10427,14 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
     // normal DB scripted effect
     if (!unitTarget)
         return;
+
+    // Linked spells (SCRIPTEFFECT chain)
+    SpellLinkedSet linkedSet = sSpellMgr.GetSpellLinked(m_spellInfo->Id, SPELL_LINKED_TYPE_SCRIPTEFFECT);
+    if (linkedSet.size() > 0)
+    {
+        for (SpellLinkedSet::const_iterator itr = linkedSet.begin(); itr != linkedSet.end(); ++itr)
+            m_caster->CastSpell(unitTarget, *itr, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
+    }
 
     DEBUG_FILTER_LOG(LOG_FILTER_SPELL_CAST, "Spell ScriptStart spellid %u in EffectScriptEffect ", m_spellInfo->Id);
     if (m_caster->IsInWorld())
@@ -11263,9 +11373,6 @@ void Spell::EffectSendTaxi(SpellEffectIndex eff_idx)
 void Spell::EffectPlayerPull(SpellEffectIndex eff_idx)
 {
     if( !unitTarget || !unitTarget->isAlive())
-        return;
-
-    if (unitTarget->hasUnitState(UNIT_STAT_ROOT))
         return;
 
     float speedZ = (float)(m_caster->CalculateSpellDamage(unitTarget, m_spellInfo, eff_idx) / 10);

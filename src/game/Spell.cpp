@@ -2658,7 +2658,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 71481:                                 // Bloodbolt Splash 25N
                 case 71482:                                 // Bloodbolt Splash 10H
                 case 71483:                                 // Bloodbolt Splash 25H
-                    FillAreaTargets(targetUnitMap, radius, PUSH_SELF_CENTER, SPELL_TARGETS_FRIENDLY);
+                    FillAreaTargets(targetUnitMap, radius, PUSH_SELF_CENTER, SPELL_TARGETS_AOE_DAMAGE, GetAffectiveCaster());
                     targetUnitMap.remove(m_caster);
                     break;
                 default:
@@ -2801,12 +2801,6 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
         }
         case TARGET_DUELVSPLAYER:
         {
-            if (m_spellInfo->SpellFamilyName == SPELLFAMILY_SHAMAN && m_spellInfo->SpellIconID == 276) // Stoneclaw Totem absorb has wrong target
-            {
-                targetUnitMap.push_back(m_caster);
-                break;
-            }
-
             Unit *target = m_targets.getUnitTarget();
             if(target)
             {
@@ -3498,6 +3492,15 @@ void Spell::prepare(SpellCastTargets const* targets, Aura* triggeredByAura)
     // else triggered with cast time will execute execute at next tick or later
     // without adding to cast type slot
     // will not show cast bar but will show effects at casting time etc
+
+    if (m_spellInfo->speed > 0.0f && GetCastTime())
+    {
+        Unit* procTarget = m_targets.getUnitTarget();
+        if (!procTarget)
+            procTarget = m_caster;
+
+        m_caster->ProcDamageAndSpell(procTarget, m_procAttacker, 0, PROC_EX_CAST_END, 0, m_attackType, m_spellInfo);
+    }
 }
 
 void Spell::cancel()
@@ -3651,8 +3654,10 @@ void Spell::cast(bool skipCheck)
                 AddPrecastSpell(69832);                     // cast "cluster" before silence and pacify
             else if (m_spellInfo->Id == 58672)              // Impale, damage and loose threat effect (Vault of Archavon, Archavon the Stone Watcher)
                 AddPrecastSpell(m_caster->GetMap()->IsRegularDifficulty() ? 58666 : 60882);
-            else if (m_spellInfo->Id == 71265)             // Swarming Shadows DoT (Queen Lana'thel ICC)
+            else if (m_spellInfo->Id == 71265)              // Swarming Shadows DoT (Queen Lana'thel ICC)
                 AddPrecastSpell(71277);
+            else if (m_spellInfo->Id == 70923)              // Uncontrollable Frenzy (Queen Lana'thel ICC)
+                AddTriggeredSpell(70924);                   // health buff etc.
 
             switch(m_spellInfo->Id)
             {
@@ -3826,6 +3831,22 @@ void Spell::cast(bool skipCheck)
             break;
     }
 
+    // Linked spells (precast chain)
+    SpellLinkedSet linkedSet = sSpellMgr.GetSpellLinked(m_spellInfo->Id, SPELL_LINKED_TYPE_PRECAST);
+    if (linkedSet.size() > 0)
+    {
+        for (SpellLinkedSet::const_iterator itr = linkedSet.begin(); itr != linkedSet.end(); ++itr)
+            AddPrecastSpell(*itr);
+    }
+
+    // Linked spells (triggered chain)
+    linkedSet = sSpellMgr.GetSpellLinked(m_spellInfo->Id, SPELL_LINKED_TYPE_TRIGGERED);
+    if (linkedSet.size() > 0)
+    {
+        for (SpellLinkedSet::const_iterator itr = linkedSet.begin(); itr != linkedSet.end(); ++itr)
+            AddTriggeredSpell(*itr);
+    }
+
     // traded items have trade slot instead of guid in m_itemTargetGUID
     // set to real guid to be sent later to the client
     m_targets.updateTradeSlotItem();
@@ -3883,7 +3904,9 @@ void Spell::cast(bool skipCheck)
         // critical hit related part is currently done on hit so proc there, 
         // 0 damage since any damage based procs should be on hit
         // 0 victim proc since there is no victim proc dependent on successfull cast for caster
-        m_caster->ProcDamageAndSpell(procTarget, m_procAttacker, 0, PROC_EX_CAST_END, 0, m_attackType, m_spellInfo);
+        // if m_casttime > 0  proc already maked in prepare()
+        if (!GetCastTime())
+            m_caster->ProcDamageAndSpell(procTarget, m_procAttacker, 0, PROC_EX_CAST_END, 0, m_attackType, m_spellInfo);
     }
     else
     {
@@ -4787,6 +4810,10 @@ void Spell::SendChannelUpdate(uint32 time)
             if (Unit* target = ObjectAccessor::GetUnit(*m_caster, target_guid))
                 target->RemoveAurasByCasterSpell(m_spellInfo->Id, m_caster->GetObjectGuid());
 
+        // Only finish channeling when latest channeled spell finishes
+        if (m_caster->GetUInt32Value(UNIT_CHANNEL_SPELL) != m_spellInfo->Id)
+            return;
+
         m_caster->SetChannelObjectGuid(ObjectGuid());
         m_caster->SetUInt32Value(UNIT_CHANNEL_SPELL, 0);
     }
@@ -5492,6 +5519,12 @@ SpellCastResult Spell::CheckCast(bool strict)
                     return SPELL_FAILED_CASTER_AURASTATE;
                 if (target->HasAura(61987))                 // Avenging Wrath Marker
                     return SPELL_FAILED_CASTER_AURASTATE;
+            }
+            // Vampiric Bite (Lana'thel encounter)
+            if (m_spellInfo->Id == 70946 || m_spellInfo->Id == 71475 ||
+                m_spellInfo->Id == 71476 || m_spellInfo->Id == 71477)
+            {
+                return SPELL_FAILED_BAD_TARGETS;
             }
         }
 
@@ -6237,9 +6270,6 @@ SpellCastResult Spell::CheckCast(bool strict)
             case SPELL_EFFECT_LEAP:
             case SPELL_EFFECT_TELEPORT_UNITS_FACE_CASTER:
             {
-                if (m_caster->hasUnitState(UNIT_STAT_ROOT))
-                    return SPELL_FAILED_ROOTED;
-
                 float direction = (m_spellInfo->Effect[i] == SPELL_EFFECT_LEAP_BACK ? M_PI + m_caster->GetOrientation() : m_caster->GetOrientation());
                 float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[i]));
                 float fx = m_caster->GetPositionX() + dis * cos(direction);
@@ -6286,15 +6316,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                         return SPELL_FAILED_NOT_IN_BATTLEGROUND;
                 }
             }
-            case SPELL_EFFECT_JUMP:
-            case SPELL_EFFECT_JUMP2:
-            case SPELL_EFFECT_CHARGE2:
-            {
-                if (m_caster->hasUnitState(UNIT_STAT_ROOT))
-                    return SPELL_FAILED_ROOTED;
-            }
-            default:
-                break;
+            default:break;
         }
     }
 
