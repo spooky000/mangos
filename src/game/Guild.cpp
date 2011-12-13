@@ -1978,7 +1978,7 @@ void Guild::SwapItems(Player * pl, uint8 BankTab, uint8 BankTabSlot, uint8 BankT
 
         CharacterDatabase.BeginTransaction();
 
-        if (BankTab != BankTabDst)abDst);
+        if (BankTab != BankTabDst);
             LogBankEvent(GUILD_BANK_LOG_MOVE_ITEM, BankTab, pl->GetGUIDLow(), pItemSrc->GetEntry(), SplitedAmount, BankTabDst);
 
         pl->ItemRemovedQuestCheck( pItemSrc->GetEntry(), SplitedAmount );
