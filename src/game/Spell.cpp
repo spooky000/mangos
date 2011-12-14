@@ -905,6 +905,15 @@ void Spell::AddUnitTarget(Unit* pVictim, SpellEffectIndex effIndex)
         target.timeDelay = (uint64) floor(dist / m_spellInfo->speed * 1000.0f);
 
     }
+    // Spell cast on self - mostly TRIGGER_MISSILE code
+    else if (m_spellInfo->speed > 0.0f && affectiveObject && pVictim == affectiveObject)
+    {
+        float dist = 5.0f;
+        if (m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
+            dist = affectiveObject->GetDistance(m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ);
+
+        target.timeDelay = (uint64) floor(dist / m_spellInfo->speed * 1000.0f);
+    }
     else
         target.timeDelay = UI64LIT(0);
 
@@ -1107,20 +1116,16 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
             unitTarget = m_caster;
         }
     }
-    else if(missInfo == SPELL_MISS_MISS || missInfo == SPELL_MISS_RESIST)
+    else if (missInfo == SPELL_MISS_MISS || missInfo == SPELL_MISS_RESIST)
     {
-        if(real_caster && real_caster != unit)
+        if (real_caster && real_caster != unit)
         {
             // can cause back attack (if detected)
             if (!(m_spellInfo->AttributesEx3 & SPELL_ATTR_EX3_NO_INITIAL_AGGRO) && !(m_spellInfo->AttributesEx & SPELL_ATTR_EX_NO_THREAT) && !IsPositiveSpell(m_spellInfo->Id) &&
                 (m_caster->isVisibleForOrDetect(unit, unit, false) && !m_IsTriggeredSpell))
             {
                 if (!unit->isInCombat() && unit->GetTypeId() != TYPEID_PLAYER && ((Creature*)unit)->AI())
-                    ((Creature*)unit)->AI()->AttackedBy(real_caster);
-
-                unit->AddThreat(real_caster);
-                unit->SetInCombatWith(real_caster);
-                real_caster->SetInCombatWith(unit);
+                    unit->AttackedBy(real_caster);
             }
         }
     }
@@ -1215,6 +1220,9 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
             if (count)
             {
                 int32 bp = count * CalculateDamage(EFFECT_INDEX_2, unitTarget) * damageInfo.damage / 100;
+                if (Aura* dummy = caster->GetDummyAura(64736)) // Item - Death Knight T8 Melee 4P Bonus
+                    bp *= ((float)dummy->GetModifier()->m_amount+100.0f)/100.0f;
+
                 if (bp)
                 {
                     if(caster->HasAura(48266, EFFECT_INDEX_0)) // If Blood Presence is active, additional damage from Scourge Strike gains bonus too.
@@ -1471,16 +1479,10 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
         }
         else
         {
-            if (!m_spellAuraHolder || m_spellAuraHolder->IsDeleted())
-                return;
-
             m_spellAuraHolder->SetInUse(false);
 
-            if (m_spellAuraHolder->IsInUse())
-            {
-                m_spellAuraHolder->SetDeleted();
+            if (!m_spellAuraHolder->IsDeleted())
                 unit->AddSpellAuraHolderToRemoveList(m_spellAuraHolder);
-            }
         }
     }
 }
@@ -3697,8 +3699,15 @@ void Spell::cast(bool skipCheck)
             else if (m_spellInfo->Id == 46916 || m_spellInfo->Id == 52437)
                 // Item - Warrior T10 Melee 4P Bonus
                 if (Aura *aur = m_caster->GetAura(70847, EFFECT_INDEX_0))
+                {
                     if (roll_chance_i(aur->GetModifier()->m_amount))
+                    {
                         AddTriggeredSpell(70849);           // Extra Charge!
+                        // Slam! trigger Slam GCD Reduced . Sudden Death trigger Execute GCD Reduced
+                        int32 gcd_spell=m_spellInfo->Id==46916 ? 71072 : 71069;
+                        AddPrecastSpell(gcd_spell);
+                    }
+                }
             break;
         }
         case SPELLFAMILY_PRIEST:
@@ -4298,7 +4307,10 @@ void Spell::finish(bool ok)
     // update encounter state if needed
     Map* map = m_caster->GetMap();
     if (map && map->IsDungeon())
-        ((DungeonMap*)map)->GetPersistanceState()->UpdateEncounterState(ENCOUNTER_CREDIT_CAST_SPELL, m_spellInfo->Id);
+    {
+        if (DungeonPersistentState* state = ((DungeonMap*)map)->GetPersistanceState())
+            state->UpdateEncounterState(ENCOUNTER_CREDIT_CAST_SPELL, m_spellInfo->Id);
+    }
 }
 
 void Spell::SendCastResult(SpellCastResult result)
@@ -8484,6 +8496,11 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
             SetTargetMap(SpellEffectIndex(i), TARGET_RANDOM_ENEMY_CHAIN_IN_AREA, targetUnitMap);
             break;
         }
+        case 59754:                    //Rune Tap triggered from Glyph of Rune Tap
+        {
+            FillRaidOrPartyTargets(targetUnitMap, m_caster, m_caster, radius, false, true, false);
+            break;
+        }
         case 61999: // Raise ally
         {
             WorldObject* result = FindCorpseUsing <MaNGOS::RaiseAllyObjectCheck>  ();
@@ -8499,6 +8516,7 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
         //    FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
         //    targetUnitMap.remove(m_caster); // exclude caster
         //}
+        case 65044: // Flames
         case 65045: // Flame of demolisher
         {
             FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
@@ -8811,6 +8829,25 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
         {
             FillAreaTargets(targetUnitMap, radius, PUSH_SELF_CENTER, SPELL_TARGETS_AOE_DAMAGE);
             targetUnitMap.remove(m_caster);
+            break;
+        }
+        case 70728: // Exploit Weakness triggered
+        case 70840: // Devious Minds triggered
+        {
+            targetUnitMap.push_back(m_caster);
+            if (m_caster->GetObjectGuid().IsPet())
+            {
+                if (Unit* owner = m_caster->GetOwner())
+                    targetUnitMap.push_back(owner);
+            }
+            else
+            {
+               GroupPetList const& groupPets = m_caster->GetPets();
+               if (!groupPets.empty())
+                   for (GroupPetList::const_iterator itr = groupPets.begin(); itr != groupPets.end(); ++itr)
+                       if (Pet* pet = m_caster->GetMap()->GetPet(*itr))
+                           targetUnitMap.push_back((Unit*)pet);
+            }
             break;
         }
         case 71075: // Invocation of Blood (V) Move

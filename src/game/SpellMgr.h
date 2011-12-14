@@ -264,6 +264,8 @@ inline bool IsCrowdControlAura(AuraType aura)
             aura == SPELL_AURA_TRANSFORM   );
 }
 
+uint32 GetProcFlag(SpellEntry const* spellInfo);
+
 inline bool IsDeathPersistentSpell(SpellEntry const *spellInfo)
 {
     return spellInfo->AttributesEx3 & SPELL_ATTR_EX3_DEATH_PERSISTENT;

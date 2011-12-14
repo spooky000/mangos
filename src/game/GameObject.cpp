@@ -788,7 +788,7 @@ bool GameObject::isVisibleForInState(Player const* u, WorldObject const* viewPoi
     }
 
     // check distance
-    return IsWithinDistInMap(viewPoint, GetMap()->GetVisibilityDistance() +
+    return IsWithinDistInMap(viewPoint, GetMap()->GetVisibilityDistance(const_cast<GameObject*>(this)) +
         (inVisibleList ? World::GetVisibleObjectGreyDistance() : 0.0f), false);
 }
 
@@ -2066,4 +2066,21 @@ void GameObject::SpawnInMaps(uint32 db_guid, GameObjectData const* data)
 bool GameObject::HasStaticDBSpawnData() const
 {
     return sObjectMgr.GetGOData(GetGUIDLow()) != NULL;
+}
+
+float GameObject::GetDeterminativeSize() const
+{
+    if (!IsInWorld())
+        return 0.0f;
+
+    GameObjectDisplayInfoEntry const *info = sGameObjectDisplayInfoStore.LookupEntry(GetUInt32Value(GAMEOBJECT_DISPLAYID));
+    if (!info)
+        return 0.0f;
+
+    float dx = info->maxX - info->minX;
+    float dy = info->maxY - info->minY;
+    float dz = info->maxZ - info->minZ;
+    float _size = sqrt(dx*dx + dy*dy +dz*dz);
+
+    return _size;
 }

@@ -37,14 +37,14 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
     &Unit::HandleNULLProc,                                  //  2 SPELL_AURA_MOD_POSSESS
     &Unit::HandleNULLProc,                                  //  3 SPELL_AURA_PERIODIC_DAMAGE
     &Unit::HandleDummyAuraProc,                             //  4 SPELL_AURA_DUMMY
-    &Unit::HandleRemoveByDamageProc,                        //  5 SPELL_AURA_MOD_CONFUSE
+    &Unit::HandleRemoveByDamageChanceProc,                  //  5 SPELL_AURA_MOD_CONFUSE
     &Unit::HandleNULLProc,                                  //  6 SPELL_AURA_MOD_CHARM
     &Unit::HandleRemoveByDamageChanceProc,                  //  7 SPELL_AURA_MOD_FEAR
     &Unit::HandleNULLProc,                                  //  8 SPELL_AURA_PERIODIC_HEAL
     &Unit::HandleNULLProc,                                  //  9 SPELL_AURA_MOD_ATTACKSPEED
     &Unit::HandleNULLProc,                                  // 10 SPELL_AURA_MOD_THREAT
     &Unit::HandleNULLProc,                                  // 11 SPELL_AURA_MOD_TAUNT
-    &Unit::HandleRemoveByDamageProc,                        // 12 SPELL_AURA_MOD_STUN
+    &Unit::HandleRemoveByDamageChanceProc,                  // 12 SPELL_AURA_MOD_STUN
     &Unit::HandleNULLProc,                                  // 13 SPELL_AURA_MOD_DAMAGE_DONE
     &Unit::HandleNULLProc,                                  // 14 SPELL_AURA_MOD_DAMAGE_TAKEN
     &Unit::HandleNULLProc,                                  // 15 SPELL_AURA_DAMAGE_SHIELD
@@ -88,7 +88,7 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
     &Unit::HandleNULLProc,                                  // 53 SPELL_AURA_PERIODIC_LEECH
     &Unit::HandleNULLProc,                                  // 54 SPELL_AURA_MOD_HIT_CHANCE
     &Unit::HandleNULLProc,                                  // 55 SPELL_AURA_MOD_SPELL_HIT_CHANCE
-    &Unit::HandleNULLProc,                                  // 56 SPELL_AURA_TRANSFORM
+    &Unit::HandleRemoveByDamageChanceProc,                  // 56 SPELL_AURA_TRANSFORM
     &Unit::HandleSpellCritChanceAuraProc,                   // 57 SPELL_AURA_MOD_SPELL_CRIT_CHANCE
     &Unit::HandleNULLProc,                                  // 58 SPELL_AURA_MOD_INCREASE_SWIM_SPEED
     &Unit::HandleNULLProc,                                  // 59 SPELL_AURA_MOD_DAMAGE_DONE_CREATURE
@@ -353,21 +353,28 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
 
 bool Unit::IsTriggeredAtSpellProcEvent(Unit *pVictim, SpellAuraHolderPtr holder, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, SpellProcEventEntry const*& spellProcEvent )
 {
-
-    if (IsTriggeredAtCustomProcEvent(pVictim, holder, procSpell, procFlag, procExtra, attType, isVictim, spellProcEvent))
-        return true;
+    if (!holder || holder->IsDeleted())
+        return false;
 
     SpellEntry const* spellProto = holder->GetSpellProto();
 
-    // Get proc Event Entry
-    spellProcEvent = sSpellMgr.GetSpellProcEvent(spellProto->Id);
+    if (!spellProto)
+        return false;
+
+    switch (IsTriggeredAtCustomProcEvent(pVictim, holder, procSpell, procFlag, procExtra, attType, isVictim, spellProcEvent))
+    {
+        case SPELL_AURA_PROC_OK:
+            return true;
+        case SPELL_AURA_PROC_CANT_TRIGGER:
+            return false;
+        case SPELL_AURA_PROC_FAILED:
+        default:
+            break;
+    }
 
     // Get EventProcFlag
-    uint32 EventProcFlag;
-    if (spellProcEvent && spellProcEvent->procFlags) // if exist get custom spellProcEvent->procFlags
-        EventProcFlag = spellProcEvent->procFlags;
-    else
-        EventProcFlag = spellProto->procFlags;       // else get from spell proto
+    uint32 EventProcFlag = GetProcFlag(spellProto);
+
     // Continue if no trigger exist
     if (!EventProcFlag)
         return false;
@@ -3255,11 +3262,11 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
             // Blood-Caked Blade
             if (dummySpell->SpellIconID == 138)
             {
-                // only main hand melee auto attack affected and Rune Strike
-                if ((procFlag & PROC_FLAG_SUCCESSFUL_OFFHAND_HIT) || procSpell && procSpell->Id != 56815)
+                // only melee auto attack affected and Rune Strike & Offhand Rune Strike
+                if ( procSpell && !procSpell->SpellFamilyFlags.test<CF_DEATHKNIGHT_RUNE_STRIKE>())
                     return SPELL_AURA_PROC_FAILED;
-
-                // triggered_spell_id in spell data
+                if (procFlag & PROC_FLAG_SUCCESSFUL_OFFHAND_HIT)
+                    triggered_spell_id=61895; // Offhand Blood-Caked Strike
                 break;
             }
             // Rune strike
@@ -3445,6 +3452,11 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 //case 44819: break;                        // Hate Monster (Spar Buddy) (>30% Health)
                 //case 44820: break;                        // Hate Monster (Spar) (<30%)
                 case 45057:                                 // Evasive Maneuvers (Commendation of Kael`thas trinket)
+                case 52420:                                 // Deflection        ( Soul Harvester's Charm )
+                case 71634:                                 // Item - Icecrown 25 Normal Tank Trinket 1
+                case 71640:                                 // Item - Icecrown 25 Heroic Tank Trinket 1
+                case 75475:                                 // Item - Chamber of Aspects 25 Tank Trinket
+                case 75481:                                 // Item - Chamber of Aspects 25 Heroic Tank Trinket
                     // reduce you below $s1% health (in fact in this specific case can proc from any attack while health in result less $s1%)
                     if (int32(GetHealth()) - int32(damage) >= int32(GetMaxHealth() * triggerAmount / 100))
                         return SPELL_AURA_PROC_FAILED;
@@ -3550,14 +3562,6 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                 {
                     // Do not summont our knights if we arent fighting specific enemy
                     if (GetTypeId() != TYPEID_PLAYER || pVictim->GetEntry() != 19457)
-                        return SPELL_AURA_PROC_FAILED;
-                    break;
-                }
-                // Deflection
-                case 52420:
-                {
-                    int32 health35 = int32(GetMaxHealth() * 35 / 100);
-                    if (int32(GetHealth()) - int32(damage) >= health35 || int32(GetHealth()) < health35)
                         return SPELL_AURA_PROC_FAILED;
                     break;
                 }
@@ -3869,6 +3873,19 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
                     default:
                         return SPELL_AURA_PROC_FAILED;
                 }
+            }
+            // Hunter T10 2P Bonus (bad spellfamily)
+            else if (auraSpellInfo->Id == 70727)
+            {
+                if (Pet* pet = GetPet())
+                {
+                    if (pet->isAlive())
+                    {
+                        pet->CastSpell(pet,trigger_spell_id,true);
+                        return SPELL_AURA_PROC_OK;
+                    }
+                }
+                return SPELL_AURA_PROC_FAILED;
             }
             break;
         }
@@ -4737,6 +4754,15 @@ SpellAuraProcResult Unit::HandleAddPctModifierAuraProc(Unit* /*pVictim*/, uint32
             }
             break;
         }
+        case SPELLFAMILY_WARRIOR:
+        {
+            if (spellInfo->Id == 46916)           // Slam!
+            {
+                if (!(procSpell && procSpell->Id==50782))
+                    return SPELL_AURA_PROC_CANT_TRIGGER;
+            }
+            break;
+        }
     }
     return SPELL_AURA_PROC_OK;
 }
@@ -4897,7 +4923,7 @@ SpellAuraProcResult Unit::HandleRemoveByDamageProc(Unit* pVictim, uint32 damage,
 
 SpellAuraProcResult Unit::HandleRemoveByDamageChanceProc(Unit* pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown)
 {
-    switch (triggeredByAura->GetSpellProto()->Id)
+    /*switch (triggeredByAura->GetSpellProto()->Id)
     {
         case 23694:                               // Improved Hamstring
         case 58373:                               // Glyph of Hamstring
@@ -4909,21 +4935,27 @@ SpellAuraProcResult Unit::HandleRemoveByDamageChanceProc(Unit* pVictim, uint32 d
         case 62469:                               // Freeze (Hodir)
         // don't remove
             return SPELL_AURA_PROC_CANT_TRIGGER;
-    }
+    }*/
 
-    if (triggeredByAura->GetAuraDuration() == triggeredByAura->GetAuraMaxDuration())
+    if (!triggeredByAura)
+        return SPELL_AURA_PROC_FAILED;
+
+    SpellEntry const *spellProto = triggeredByAura->GetSpellProto();
+
+    if (!spellProto)
+        return SPELL_AURA_PROC_FAILED;
+
+    if (spellProto->AuraInterruptFlags & AURA_INTERRUPT_FLAG_DAMAGE)
+        return HandleRemoveByDamageProc(pVictim, damage, triggeredByAura, procSpell, procFlag, procEx, cooldown);
+
+    if (triggeredByAura->IsAffectedByCrowdControlEffect(damage))
         return SPELL_AURA_PROC_FAILED;
 
     // The chance to dispel an aura depends on the damage taken with respect to the casters level.
-    uint32 CCDamageCap = triggeredByAura->CalculateCrowdControlBreakDamage();
+    uint32 max_dmg = getLevel() > 8 ? 25 * getLevel() - 150 : 50;
+    float chance = float(damage) / max_dmg * 100.0f;
 
-    // use parabolic chance progression instead of default linear (more blizzlike) - /dev/rsa
-    int32 chance = (CCDamageCap > 0) ? int32(float(damage*damage) / float(CCDamageCap*CCDamageCap) * 100.0f) : 100;
-
-    if (chance > 100)
-        chance = 100;
-
-    if (roll_chance_i(chance))
+    if (roll_chance_f(chance))
         return HandleRemoveByDamageProc(pVictim, damage, triggeredByAura, procSpell, procFlag, procEx, cooldown);
 
     return SPELL_AURA_PROC_FAILED;
@@ -5015,15 +5047,27 @@ SpellAuraProcResult Unit::HandleModResistanceAuraProc(Unit* /*pVictim*/, uint32 
     return SPELL_AURA_PROC_OK;
 }
 
-bool Unit::IsTriggeredAtCustomProcEvent(Unit *pVictim, SpellAuraHolderPtr holder, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, SpellProcEventEntry const*& spellProcEvent )
+/**
+ * Function to operations with custom hardcoded proc-like effects, maked over proc system
+ *
+ * @param - as 
+ * @retcode - enum SpellAuraProcResult
+        SPELL_AURA_PROC_OK           - aura must proc anyway
+        SPELL_AURA_PROC_CANT_TRIGGER - aura not may proc anyway
+        SPELL_AURA_PROC_FAILED       - aura may proc, if this defined by Unit::IsTriggeredAtSpellProcEvent
+ */
+
+SpellAuraProcResult Unit::IsTriggeredAtCustomProcEvent(Unit *pVictim, SpellAuraHolderPtr holder, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, SpellProcEventEntry const*& spellProcEvent )
 {
     if (!holder || holder->IsDeleted())
-        return false;
+        return SPELL_AURA_PROC_CANT_TRIGGER;
 
     SpellEntry const* spellProto = holder->GetSpellProto();
 
     if (procSpell == spellProto)
-        return false;
+        return SPELL_AURA_PROC_FAILED;
+
+    uint32 EventProcFlag = GetProcFlag(spellProto);
 
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
     {
@@ -5033,6 +5077,22 @@ bool Unit::IsTriggeredAtCustomProcEvent(Unit *pVictim, SpellAuraHolderPtr holder
 
             switch (auraName)
             {
+                // Crowd Control auras
+                case SPELL_AURA_MOD_CONFUSE:
+                case SPELL_AURA_MOD_FEAR:
+                case SPELL_AURA_MOD_STUN:
+                case SPELL_AURA_MOD_ROOT:
+                case SPELL_AURA_TRANSFORM:
+                {
+                    if (EventProcFlag &&
+                        procFlag & PROC_FLAG_TAKEN_ANY_DAMAGE &&
+                        spellProto->AuraInterruptFlags & AURA_INTERRUPT_FLAG_DAMAGE)
+                        return SPELL_AURA_PROC_OK;
+                    else if (EventProcFlag)
+                        return SPELL_AURA_PROC_FAILED;
+                    else
+                        return SPELL_AURA_PROC_CANT_TRIGGER;
+                }
                 case SPELL_AURA_DAMAGE_SHIELD:
                     if (procFlag & PROC_FLAG_TAKEN_MELEE_HIT)
                         return SPELL_AURA_PROC_OK;
@@ -5051,7 +5111,7 @@ bool Unit::IsTriggeredAtCustomProcEvent(Unit *pVictim, SpellAuraHolderPtr holder
 
         }
     }
-    return false;
+    return SPELL_AURA_PROC_FAILED;
 }
 
 SpellAuraProcResult Unit::HandleDamageShieldAuraProc(Unit* pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown)
@@ -5149,5 +5209,16 @@ SpellAuraProcResult Unit::HandleShareDamagePctAuraProc(Unit* pVictim, uint32 dam
         pVictim->SendSpellNonMeleeDamageLog(pCaster, spellInfo->Id, shareDamage, SpellSchoolMask(spellInfo->SchoolMask), 0, 0, false, 0, false);
     }
 
+    return SPELL_AURA_PROC_OK;
+}
+
+SpellAuraProcResult Unit::HandleIgnoreUnitStateAuraProc(Unit* /*pVictim*/, uint32 /*damage*/, Aura* triggeredByAura, SpellEntry const * procSpell, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/)
+{
+    SpellEntry const *spellInfo = triggeredByAura->GetSpellProto();
+    if (spellInfo->Id == 52437 && procSpell && procSpell->Id==20647)   // Sudden Death must proc only from dummy part of Execute
+    {
+        //Remove only single aura from stack
+        return SPELL_AURA_PROC_CANT_TRIGGER;
+    }
     return SPELL_AURA_PROC_OK;
 }

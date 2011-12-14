@@ -4686,19 +4686,24 @@ void Spell::EffectTriggerSpell(SpellEffectIndex effIndex)
         // Cloak of Shadows
         case 35729:
         {
+            std::set<uint32> toRemoveSpellList;
             Unit::SpellAuraHolderMap& Auras = unitTarget->GetSpellAuraHolderMap();
             for(Unit::SpellAuraHolderMap::iterator iter = Auras.begin(); iter != Auras.end(); ++iter)
             {
+                SpellAuraHolderPtr holder = iter->second;
+                if (!holder || holder->IsDeleted())
+                    continue;
                 // Remove all harmful spells on you except positive/passive/physical auras
-                if (!iter->second->IsPositive() &&
-                    !iter->second->IsPassive() &&
-                    !iter->second->IsDeathPersistent() &&
-                    (GetSpellSchoolMask(iter->second->GetSpellProto()) & SPELL_SCHOOL_MASK_NORMAL) == 0)
+                if (!holder->IsPositive() &&
+                    !holder->IsPassive() &&
+                    !holder->IsDeathPersistent() &&
+                    (GetSpellSchoolMask(holder->GetSpellProto()) & SPELL_SCHOOL_MASK_NORMAL) == 0)
                 {
-                    m_caster->RemoveAurasDueToSpell(iter->second->GetSpellProto()->Id);
-                    iter = Auras.begin();
+                    toRemoveSpellList.insert(holder->GetId());
                 }
             }
+            for (std::set<uint32>::iterator i = toRemoveSpellList.begin(); i != toRemoveSpellList.end(); ++i)
+                m_caster->RemoveAurasDueToSpell(*i);
             return;
         }
         // Priest Shadowfiend (34433) need apply mana gain trigger aura on pet
@@ -4927,7 +4932,7 @@ void Spell::EffectTeleportUnits(SpellEffectIndex eff_idx)
             if (unitTarget->GetTypeId() != TYPEID_PLAYER)
                 return;
 
-            ((Player*)unitTarget)->TeleportToHomebind(unitTarget==m_caster ? TELE_TO_SPELL : 0);
+            ((Player*)unitTarget)->TeleportToHomebind(unitTarget == m_caster ? TELE_TO_SPELL|TELE_TO_CHECKED : TELE_TO_CHECKED);
             return;
         }
         case TARGET_AREAEFFECT_INSTANT:                     // in all cases first TARGET_TABLE_X_Y_Z_COORDINATES
@@ -5119,6 +5124,14 @@ void Spell::EffectApplyAura(SpellEffectIndex eff_idx)
     DEBUG_FILTER_LOG(LOG_FILTER_SPELL_CAST, "Spell: Aura is: %u", m_spellInfo->EffectApplyAuraName[eff_idx]);
 
     Aura* aur = m_spellAuraHolder->CreateAura(m_spellInfo, eff_idx, &m_currentBasePoints[eff_idx], m_spellAuraHolder, unitTarget, caster, m_CastItem);
+
+    SpellAuraHolderPtr _holder = aur->GetHolder();
+
+    if (!aur || !_holder)
+    {
+        sLog.outError("Spell::EffectApplyAura cannot create aura, spell %u effect %u", m_spellInfo->Id, eff_idx);
+        return;
+    }
 
     // Now Reduce spell duration using data received at spell hit
     int32 duration = aur->GetAuraMaxDuration();
@@ -6148,12 +6161,16 @@ void Spell::DoSummonGroupPets(SpellEffectIndex eff_idx)
         return;
     }
 
-    if (pet_entry == 37994)    // Mage: Water Elemental from Glyph
-        m_duration = 86400000; // 24 hours
-
     if (m_duration > 0)
+    {
         if (Player* modOwner = m_caster->GetSpellModOwner())
             modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_DURATION, m_duration);
+    }
+    else if (m_duration < 0)
+    {
+        DEBUG_LOG("Spell::DoSummonGroupPets: attempt to summon pet with negative duration (%i)",m_duration);
+        m_duration = 0;
+    }
 
     uint32 amount = damage;
 
@@ -6328,16 +6345,18 @@ void Spell::EffectDispel(SpellEffectIndex eff_idx)
     Unit::SpellAuraHolderMap const& auras = unitTarget->GetSpellAuraHolderMap();
     for(Unit::SpellAuraHolderMap::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
     {
-        SpellAuraHolderPtr holder = itr->second;
-        if ((1<<holder->GetSpellProto()->Dispel) & dispelMask)
+        if (!itr->second || !itr->second->IsDeleted())
+            continue;
+
+        if ((1 << itr->second->GetSpellProto()->Dispel) & dispelMask)
         {
-            if(holder->GetSpellProto()->Dispel == DISPEL_MAGIC)
+            if (itr->second->GetSpellProto()->Dispel == DISPEL_MAGIC)
             {
                 bool positive = true;
-                if (!holder->IsPositive())
+                if (!itr->second->IsPositive())
                     positive = false;
                 else
-                    positive = (holder->GetSpellProto()->AttributesEx & SPELL_ATTR_EX_NEGATIVE)==0;
+                    positive = (itr->second->GetSpellProto()->AttributesEx & SPELL_ATTR_EX_NEGATIVE)==0;
 
                 // do not remove positive auras if friendly target
                 //               negative auras if non-friendly target
@@ -6345,14 +6364,14 @@ void Spell::EffectDispel(SpellEffectIndex eff_idx)
                     continue;
             }
             // Unholy Blight prevents dispel of diseases from target
-            else if (holder->GetSpellProto()->Dispel == DISPEL_DISEASE)
+            else if (itr->second->GetSpellProto()->Dispel == DISPEL_DISEASE)
                 if (unitTarget->HasAura(50536))
                     continue;
 
-            if (holder->GetAuraCharges() > 1)
-                dispel_list.push_back(std::pair<SpellAuraHolderPtr ,uint32>(holder, holder->GetAuraCharges()));
+            if (itr->second->GetAuraCharges() > 1)
+                dispel_list.push_back(std::pair<SpellAuraHolderPtr ,uint32>(itr->second, itr->second->GetAuraCharges()));
             else
-                dispel_list.push_back(std::pair<SpellAuraHolderPtr ,uint32>(holder, holder->GetStackAmount()));
+                dispel_list.push_back(std::pair<SpellAuraHolderPtr ,uint32>(itr->second, itr->second->GetStackAmount()));
         }
     }
     // Ok if exist some buffs for dispel try dispel it
@@ -6690,6 +6709,12 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
     float center_x = m_targets.m_destX;
     float center_y = m_targets.m_destY;
     float center_z = m_targets.m_destZ;
+
+    if (!MapManager::ExistMapAndVMap(m_caster->GetMapId(),center_x,center_y))
+    {
+        sLog.outError("Spell::DoSummonGuardian: impossible place for create creature entry %u, spell %u.", pet_entry, m_spellInfo->Id);
+        return;
+    }
 
     float radius = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
 
@@ -7524,12 +7549,20 @@ void Spell::EffectWeaponDmg(SpellEffectIndex eff_idx)
 
                 if (count)
                 {
-                    // Effect 1(for Blood-Caked Strike)/3(other) damage is bonus
-                    float bonus = count * CalculateDamage(m_spellInfo->SpellIconID == 1736 ? EFFECT_INDEX_0 : EFFECT_INDEX_2, unitTarget) / 100.0f;
-                    // Blood Strike, Blood-Caked Strike and Obliterate store bonus*2
-                    if (m_spellInfo->SpellFamilyFlags.test<CF_DEATHKNIGHT_BLOOD_STRIKE, CF_DEATHKNIGHT_OBLITERATE>() ||
-                        m_spellInfo->SpellIconID == 1736)
-                        bonus /= 2.0f;
+                    float bonus;
+                    if (m_spellInfo->SpellIconID != 1736) // Blood Strike, Heart Strike, Obliterate
+                    {
+                        // Effect 3 damage is bonus
+                        bonus = count * CalculateDamage(EFFECT_INDEX_2, unitTarget) / 100.0f;
+                        // Blood Strike and Obliterate store bonus*2
+                        if (m_spellInfo->SpellFamilyFlags.test<CF_DEATHKNIGHT_BLOOD_STRIKE, CF_DEATHKNIGHT_OBLITERATE>())
+                            bonus /= 2.0f;
+                           if (Aura* dummy = m_caster->GetDummyAura(64736)) // Item - Death Knight T8 Melee 4P Bonus
+                               bonus *= ((float)dummy->GetModifier()->m_amount+100.0f)/100.0f;
+                    }
+                    else // Blood-Caked Blade damage info taken from http://www.wowhead.com/forums&topic=54152.2 and Dr.Damage addon.
+                       bonus= count * 0.5f;//Blood-Caked Blade damage = (0.25(base) + diseaseCount * 0.125)= 0.25*(1+diseaseCount * 0.5)
+
 
                     totalDamagePercentMod *= 1.0f + bonus;
                 }
@@ -9483,9 +9516,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!unitTarget)
                         return;
 
-                    for (uint8 i = 0; i < 11; ++i)
-                        unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
-
+                    unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
                     return;
                 }
                 case 67398:                                 // Zergling Periodic Effect (Called by Zergling Passive)
