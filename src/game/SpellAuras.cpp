@@ -667,6 +667,9 @@ void Aura::AreaAuraUpdate(uint32 diff)
     {
         Unit* caster = GetTarget();
 
+        if (!caster || !caster->GetMap())
+            return;
+
         if( !caster->hasUnitState(UNIT_STAT_ISOLATED) )
         {
             Unit* owner = caster->GetCharmerOrOwner();
