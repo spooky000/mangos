@@ -11743,7 +11743,7 @@ void SpellAuraHolder::HandleSpellSpecificBoostsForward(bool apply)
                 break;
         }
         default:
-            return;
+            break;
     }
 
     if (linkedSet.size() > 0)
