@@ -11610,7 +11610,7 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
             break;
         }
         default:
-            return;
+            break;
     }
 
     // prevent aura deletion, specially in multi-boost case
