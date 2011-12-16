@@ -548,6 +548,11 @@ inline uint32 GetDispellMask(DispelType dispel)
         return (1 << dispel);
 }
 
+inline bool IsSpellAllowDeadTarget(SpellEntry const* spellInfo)
+{
+    return spellInfo ? spellInfo->AttributesEx2 & SPELL_ATTR2_ALLOW_DEAD_TARGET : false;
+}
+
 bool IsSpellAffectedBySpellMods(SpellEntry const* spellInfo);
 
 // Diminishing Returns interaction with spells

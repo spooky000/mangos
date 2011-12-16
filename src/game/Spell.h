@@ -454,7 +454,7 @@ class Spell
         void SendResurrectRequest(Player* target);
         void SendPlaySpellVisual(uint32 SpellID);
 
-        void HandleEffects(Unit *pUnitTarget,Item *pItemTarget,GameObject *pGOTarget,SpellEffectIndex i, float DamageMultiplier = 1.0);
+        void HandleEffects(Unit *pUnitTarget,Item *pItemTarget,GameObject *pGOTarget,SpellEffectIndex i);
         void HandleThreatSpells();
         //void HandleAddAura(Unit* Target);
 
@@ -590,6 +590,7 @@ class Spell
         int32 m_damage;                                     // Damage   in effects count here
         int32 m_healing;                                    // Healing in effects count here
         int32 m_healthLeech;                                // Health leech in effects for all targets count here
+        int8 m_damageIndex;                                 // Index of last effect that added to m_damage
 
         //******************************************
         // Spell trigger system
