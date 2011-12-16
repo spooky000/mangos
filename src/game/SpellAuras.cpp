@@ -10108,7 +10108,9 @@ void SpellAuraHolder::CleanupsBeforeDelete()
 {
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
         RemoveAura(SpellEffectIndex(i));
-    m_aurasStorage.clear();
+
+    if (!m_aurasStorage.empty())
+        m_aurasStorage.clear();
 }
 
 Aura* SpellAuraHolder::GetAuraByEffectIndex(SpellEffectIndex index)
