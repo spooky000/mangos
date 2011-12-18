@@ -11930,7 +11930,7 @@ void Unit::UpdateModelData()
 
         // never actually update combat_reach for player, it's always the same. Below player case is for initialization
         if (GetTypeId() == TYPEID_PLAYER)
-            SetFloatValue(UNIT_FIELD_COMBATREACH, BASE_MELEERANGE_OFFSET);
+            SetFloatValue(UNIT_FIELD_COMBATREACH, 1.7f);
         else
             SetFloatValue(UNIT_FIELD_COMBATREACH, GetObjectScale() * modelInfo->combat_reach);
     }
@@ -12803,7 +12803,7 @@ bool Unit::AddSpellAuraHolderToRemoveList(SpellAuraHolderPtr holder)
 
     MAPLOCK_READ(this, MAP_LOCK_TYPE_AURAS);
     if (m_deletedHolders.find(holder) != m_deletedHolders.end())
-    holder->SetDeleted();
+        holder->SetDeleted();
     m_deletedHolders.insert(holder);
     return true;
 };
