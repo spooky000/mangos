@@ -11930,7 +11930,7 @@ void Unit::UpdateModelData()
 
         // never actually update combat_reach for player, it's always the same. Below player case is for initialization
         if (GetTypeId() == TYPEID_PLAYER)
-            SetFloatValue(UNIT_FIELD_COMBATREACH, 1.5f);
+            SetFloatValue(UNIT_FIELD_COMBATREACH, BASE_MELEERANGE_OFFSET);
         else
             SetFloatValue(UNIT_FIELD_COMBATREACH, GetObjectScale() * modelInfo->combat_reach);
     }
