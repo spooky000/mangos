@@ -1612,7 +1612,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void RemoveSpellsCausingAura(AuraType auraType, SpellAuraHolderPtr except);
         void RemoveRankAurasDueToSpell(uint32 spellId);
         bool RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder);
-        void RemoveAurasWithInterruptFlags(uint32 flags);
+        void RemoveAurasWithInterruptFlags(uint32 flags, uint32 spellId = 0);
         void RemoveAurasWithAttribute(uint32 flags);
         void RemoveAurasWithDispelType(DispelType type, ObjectGuid casterGuid = ObjectGuid());
         void RemoveAllAuras(AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);

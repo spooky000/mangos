@@ -5259,7 +5259,7 @@ void Unit::RemoveAurasDueToItemSpell(Item* castItem,uint32 spellId)
     }
 }
 
-void Unit::RemoveAurasWithInterruptFlags(uint32 flags)
+void Unit::RemoveAurasWithInterruptFlags(uint32 flags, uint32 spellId)
 {
     std::set<uint32> spellsToRemove;
     {
@@ -5267,7 +5267,7 @@ void Unit::RemoveAurasWithInterruptFlags(uint32 flags)
         SpellAuraHolderMap const& holdersMap = GetSpellAuraHolderMap();
         for (SpellAuraHolderMap::const_iterator iter = holdersMap.begin(); iter != holdersMap.end(); ++iter)
         {
-            if (!iter->second || iter->second->IsDeleted() || !iter->second->GetSpellProto() || flags == AURA_INTERRUPT_FLAG_DAMAGE)
+            if (!iter->second || iter->second->IsDeleted() || !iter->second->GetSpellProto() || (flags == AURA_INTERRUPT_FLAG_DAMAGE && iter->second->GetId() == spellId))
                 continue;
 
             if (iter->second->GetSpellProto()->AuraInterruptFlags & flags)
@@ -11413,7 +11413,7 @@ uint32 createProcExtendMask(SpellNonMeleeDamage *damageInfo, SpellMissInfo missC
         // On absorb
         if (damageInfo->absorb)
         {
-            damageInfo->target->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_DAMAGE);
+            damageInfo->target->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_DAMAGE, damageInfo->SpellID);
             procEx|=PROC_EX_ABSORB;
         }
         // On crit
