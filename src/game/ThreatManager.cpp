@@ -223,21 +223,14 @@ void ThreatContainer::clearReferences()
 HostileReference* ThreatContainer::getReferenceByTarget(Unit* pVictim)
 {
     HostileReference* result = NULL;
-    if(!pVictim)
-    {
-        sLog.outError("getReferenceByTarget: pVictim is empty!");
-        return result;
-    }
-
     ObjectGuid guid = pVictim->GetObjectGuid();
     for(ThreatList::const_iterator i = iThreatList.begin(); i != iThreatList.end(); ++i)
     {
-        if((*i) && (*i)->getUnitGuid())
-            if ((*i)->getUnitGuid() == guid)
-            {
-                result = (*i);
-                break;
-            }
+        if ((*i)->getUnitGuid() == guid)
+        {
+            result = (*i);
+            break;
+        }
     }
 
     return result;
@@ -303,6 +296,7 @@ HostileReference* ThreatContainer::selectNextVictim(Creature* pAttacker, Hostile
         Unit* pTarget = pCurrentRef->getTarget();
         MANGOS_ASSERT(pTarget);                             // if the ref has status online the target must be there!
 
+        MAPLOCK_READ(pTarget, MAP_LOCK_TYPE_DEFAULT);
         // some units are prefered in comparison to others
         // if (checkThreatArea) consider IsOutOfThreatArea - expected to be only set for pCurrentVictim
         //     This prevents dropping valid targets due to 1.1 or 1.3 threat rule vs invalid current target
@@ -456,6 +450,7 @@ void ThreatManager::addThreatDirectly(Unit* pVictim, float threat)
 
     if(!ref)                                                // there was no ref => create a new one
     {
+        MAPLOCK_READ(pVictim, MAP_LOCK_TYPE_DEFAULT);
         // threat has to be 0 here
         HostileReference* hostileReference = new HostileReference(pVictim, this, 0);
         iThreatContainer.addReference(hostileReference);

@@ -157,7 +157,7 @@ enum UnitStandFlags
 {
     UNIT_STAND_FLAGS_UNK1         = 0x01,
     UNIT_STAND_FLAGS_CREEP        = 0x02,
-    UNIT_STAND_FLAGS_UNK3         = 0x04,
+    UNIT_STAND_FLAGS_UNTRACKABLE  = 0x04,
     UNIT_STAND_FLAGS_UNK4         = 0x08,
     UNIT_STAND_FLAGS_UNK5         = 0x10,
     UNIT_STAND_FLAGS_ALL          = 0xFF
@@ -1145,7 +1145,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         typedef std::multimap< uint32, SpellAuraHolderPtr> SpellAuraHolderMap;
         typedef std::pair<SpellAuraHolderMap::iterator, SpellAuraHolderMap::iterator> SpellAuraHolderBounds;
         typedef std::pair<SpellAuraHolderMap::const_iterator, SpellAuraHolderMap::const_iterator> SpellAuraHolderConstBounds;
-        typedef std::list<SpellAuraHolderPtr> SpellAuraHolderList;
+        typedef std::set<SpellAuraHolderPtr> SpellAuraHolderSet;
         typedef std::list<Aura *> AuraList;
         typedef std::list<DiminishingReturn> Diminishing;
         typedef std::set<ObjectGuid> ComboPointHolderSet;
@@ -1206,7 +1206,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         bool AttackStop(bool targetSwitch = false);
         void RemoveAllAttackers();
         bool isAttackingPlayer() const;
-        Unit* getVictim() const { return (IsInWorld() && GetMap()) ? GetMap()->GetUnit(m_attackingGuid) : NULL; }
+        Unit* getVictim() const { return IsInWorld() ? GetMap()->GetUnit(m_attackingGuid) : NULL; }
         void CombatStop(bool includingCast = false);
         void CombatStopWithPets(bool includingCast = false);
         void StopAttackFaction(uint32 faction_id);
@@ -1335,7 +1335,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         bool IsAllowedDamageInArea(Unit * pVictim) const;
 
-        void CalculateSpellDamage(SpellNonMeleeDamage *damageInfo, int32 damage, SpellEntry const *spellInfo, WeaponAttackType attackType = BASE_ATTACK);
+        void CalculateSpellDamage(SpellNonMeleeDamage *damageInfo, int32 damage, SpellEntry const *spellInfo, WeaponAttackType attackType = BASE_ATTACK, float DamageMultiplier = 1.0f);
         void DealSpellDamage(SpellNonMeleeDamage *damageInfo, bool durabilityLoss);
 
         // player or player's pet resilience (-1%)
@@ -1416,6 +1416,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         }
 
         bool HasAuraType(AuraType auraType) const;
+        bool HasNegativeAuraType(AuraType auraType) const;
         bool HasAffectedAura(AuraType auraType, SpellEntry const* spellProto) const;
         bool HasAura(uint32 spellId, SpellEffectIndex effIndex) const;
         bool HasAura(uint32 spellId) const
@@ -1431,6 +1432,8 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         bool isFeared()  const { return HasAuraType(SPELL_AURA_MOD_FEAR); }
         bool isInRoots() const { return HasAuraType(SPELL_AURA_MOD_ROOT); }
         bool IsPolymorphed() const;
+
+        bool IsCrowdControlled() const;
 
         bool isFrozen() const;
         bool IsIgnoreUnitState(SpellEntry const *spell, IgnoreUnitState ignoreState);
@@ -1580,7 +1583,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         bool AddSpellAuraHolder(SpellAuraHolderPtr holder);
         void AddAuraToModList(Aura *aura);
 
-        void _AddAura(uint32 spellID, uint32 duration = 60000, Unit * caster = NULL);
+        void _AddAura(uint32 spellID, uint32 duration = 60000);
 
         float CheckAuraStackingAndApply(Aura *Aur, UnitMods unitMod, UnitModifierType modifierType, float amount, bool apply, int32 miscMask = 0, int32 miscValue = 0);
 
@@ -1591,7 +1594,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void RemoveSingleAuraFromSpellAuraHolder(SpellAuraHolderPtr holder, SpellEffectIndex index, AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
         void RemoveSingleAuraFromSpellAuraHolder(uint32 id, SpellEffectIndex index, ObjectGuid casterGuid, AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
 
-        void AddSpellAuraHolderToRemoveList(SpellAuraHolderPtr holder) { m_deletedHolders.push_back(holder);};
+        bool AddSpellAuraHolderToRemoveList(SpellAuraHolderPtr holder);
 
         // removing specific aura stacks by diff reasons and selections
         void RemoveAurasDueToSpell(uint32 spellId, SpellAuraHolderPtr except = SpellAuraHolderPtr(NULL), AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
@@ -1605,11 +1608,11 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void RemoveNotOwnSingleTargetAuras(uint32 newPhase = 0x0);
         void RemoveAurasAtMechanicImmunity(uint32 mechMask, uint32 exceptSpellId, bool non_positive = false);
         void RemoveAurasBySpellMechanic(uint32 mechMask);
-        void RemoveSpellsCausingAura(AuraType auraType, bool negative = true, bool positive = true);
+        void RemoveSpellsCausingAura(AuraType auraType);
         void RemoveSpellsCausingAura(AuraType auraType, SpellAuraHolderPtr except);
         void RemoveRankAurasDueToSpell(uint32 spellId);
-        void RemoveAurasWithInterruptFlags(uint32 flags, uint32 spellId = 0);
         bool RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder);
+        void RemoveAurasWithInterruptFlags(uint32 flags);
         void RemoveAurasWithAttribute(uint32 flags);
         void RemoveAurasWithDispelType(DispelType type, ObjectGuid casterGuid = ObjectGuid());
         void RemoveAllAuras(AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
@@ -1744,6 +1747,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         bool isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, bool detect, bool inVisibleList = false, bool is3dDistance = true) const;
         bool canDetectInvisibilityOf(Unit const* u) const;
         void SetPhaseMask(uint32 newPhaseMask, bool update);// overwrite WorldObject::SetPhaseMask
+        bool IsVisibleTargetForAoEDamage(WorldObject const* caster, SpellEntry const* spellInfo) const;
 
         // virtual functions for all world objects types
         bool isVisibleForInState(Player const* u, WorldObject const* viewPoint, bool inVisibleList) const;
@@ -1779,6 +1783,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         }
         void SetVisibleAura(uint8 slot, uint32 spellid)
         {
+            MAPLOCK_WRITE(this,MAP_LOCK_TYPE_AURAS);
             if(spellid == 0)
                 m_visibleAuras.erase(slot);
             else
@@ -1881,7 +1886,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         uint32 SpellCriticalHealingBonus(SpellEntry const *spellProto, uint32 damage, Unit *pVictim);
 
         bool IsTriggeredAtSpellProcEvent(Unit *pVictim, SpellAuraHolderPtr holder, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, SpellProcEventEntry const*& spellProcEvent );
-        bool IsTriggeredAtCustomProcEvent(Unit *pVictim, SpellAuraHolderPtr holder, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, SpellProcEventEntry const*& spellProcEvent );
+        SpellAuraProcResult IsTriggeredAtCustomProcEvent(Unit *pVictim, SpellAuraHolderPtr holder, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, SpellProcEventEntry const*& spellProcEvent );
         // Aura proc handlers
         SpellAuraProcResult HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
         SpellAuraProcResult HandleHasteAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
@@ -1920,6 +1925,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         SpellAuraProcResult HandleDamageShieldAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
         SpellAuraProcResult HandleDropChargeByDamageProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
         SpellAuraProcResult HandleShareDamagePctAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
+        SpellAuraProcResult HandleIgnoreUnitStateAuraProc(Unit *pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
 
         void SetLastManaUse()
         {
@@ -1966,7 +1972,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         uint32 CalcNotIgnoreAbsorbDamage( uint32 damage, SpellSchoolMask damageSchoolMask, SpellEntry const* spellInfo = NULL);
         uint32 CalcNotIgnoreDamageReduction(uint32 damage, SpellSchoolMask damageSchoolMask);
         int32 CalculateAuraDuration(SpellEntry const* spellProto, uint32 effectMask, int32 duration, Unit const* caster);
-        uint32 CalculateAuraPeriodicTimeWithHaste(SpellEntry const* spellProto, uint32 periodicTime, SpellEffectIndex eff);
+        uint32 CalculateAuraPeriodicTimeWithHaste(SpellEntry const* spellProto, uint32 periodicTime);
         uint32 CalculateSpellDurationWithHaste(SpellEntry const* spellProto, uint32 duration);
 
         float CalculateLevelPenalty(SpellEntry const* spellProto) const;
@@ -2047,6 +2053,8 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void _SetAINotifyScheduled(bool on) { m_AINotifyScheduled = on;}       // only for call from RelocationNotifyEvent code
         void OnRelocated();
 
+        bool IsLinkingEventTrigger() { return m_isCreatureLinkingTrigger; }
+
     protected:
         explicit Unit ();
 
@@ -2062,7 +2070,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         DeathState m_deathState;
 
         SpellAuraHolderMap m_spellAuraHolders;
-        SpellAuraHolderList m_deletedHolders;
+        SpellAuraHolderSet m_deletedHolders;
 
         SingleCastSpellTargetMap m_singleCastSpellTargets;  // casted by unit single per-caster auras
 
@@ -2106,7 +2114,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         bool m_isSpawningLinked;
 
     private:
-        void CleanupDeletedAuras();
+        void CleanupDeletedHolders(bool force = false);
         void UpdateSplineMovement(uint32 t_diff);
 
         // player or player's pet

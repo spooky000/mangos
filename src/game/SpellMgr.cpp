@@ -503,9 +503,9 @@ SpellSpecific GetSpellSpecific(uint32 spellId)
             if (spellInfo->SpellFamilyFlags.test<CF_PALADIN_HAND_OF_FREEDOM, CF_PALADIN_HAND_OF_PROTECTION, CF_PALADIN_HAND_OF_SALVATION1, CF_PALADIN_HAND_OF_SACRIFICE>())
                 return SPELL_HAND;
 
-            // skip Heart of the Crusader that have also same spell family mask
+            // skip Heart of the Crusader and Judgements of the Just that have also same spell family mask
             if (spellInfo->SpellFamilyFlags.test<CF_PALADIN_JUDGEMENT_OF_RIGHT, CF_PALADIN_JUDGEMENT_OF_WISDOM_LIGHT, CF_PALADIN_JUDGEMENT_OF_JUSTICE, CF_PALADIN_HEART_OF_THE_CRUSADER, CF_PALADIN_JUDGEMENT_OF_BLOOD_MARTYR>() &&
-                (spellInfo->AttributesEx3 & 0x200) && (spellInfo->SpellIconID != 237))
+                (spellInfo->AttributesEx3 & SPELL_ATTR_EX3_UNK9) && !spellInfo->SpellFamilyFlags.test<CF_PALADIN_HEART_OF_THE_CRUSADER,CF_PALADIN_JUDGEMENT_OF_JUST>())
                 return SPELL_JUDGEMENT;
 
             // only paladin auras have this (for palaldin class family)
@@ -594,6 +594,8 @@ bool IsSingleFromSpellSpecificPerTarget(SpellSpecific spellSpec1,SpellSpecific s
         case SPELL_MAGE_POLYMORPH:
         case SPELL_PRESENCE:
         case SPELL_WELL_FED:
+        case SPELL_BLEED_DEBUFF:
+        case SPELL_MAGE_INTELLECT:
             return spellSpec1==spellSpec2;
         case SPELL_BATTLE_ELIXIR:
             return spellSpec2==SPELL_BATTLE_ELIXIR
@@ -746,6 +748,8 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
             {
                 case 28441:                                 // AB Effect 000
                     return false;
+                case 48021:                                 // support for quest 12173
+                    return true;
                 case 49634:                                 // Sergeant's Flare
                 case 54530:                                 // Opening
                 case 62105:                                 // To'kini's Blowgun
@@ -762,6 +766,10 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
         case SPELL_EFFECT_ENERGIZE_PCT:
         case SPELL_EFFECT_QUEST_COMPLETE:
             return true;
+
+        case SPELL_EFFECT_SCHOOL_DAMAGE:
+        case SPELL_EFFECT_THREAT:
+            return false;
 
         case SPELL_EFFECT_PERSISTENT_AREA_AURA:
             switch(spellproto->Id)
@@ -2431,6 +2439,7 @@ bool SpellMgr::IsStackableSpellAuraHolder(SpellEntry const* spellInfo)
             case SPELL_AURA_PERIODIC_DAMAGE_PERCENT:
             case SPELL_AURA_POWER_BURN_MANA:
             case SPELL_AURA_CONTROL_VEHICLE:
+            case SPELL_AURA_MOD_STUN:
                 return true;
         }
     }
@@ -3129,6 +3138,8 @@ void SpellMgr::LoadSpellScriptTarget()
                 spellProto->EffectImplicitTargetB[i] == TARGET_AREAEFFECT_INSTANT ||
                 spellProto->EffectImplicitTargetA[i] == TARGET_AREAEFFECT_CUSTOM ||
                 spellProto->EffectImplicitTargetB[i] == TARGET_AREAEFFECT_CUSTOM ||
+                spellProto->EffectImplicitTargetA[i] == TARGET_OBJECT_AREA_SRC ||
+                spellProto->EffectImplicitTargetB[i] == TARGET_OBJECT_AREA_SRC ||
                 spellProto->EffectImplicitTargetA[i] == TARGET_AREAEFFECT_GO_AROUND_DEST ||
                 spellProto->EffectImplicitTargetB[i] == TARGET_AREAEFFECT_GO_AROUND_DEST)
             {
@@ -4243,6 +4254,9 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
             // Dragon's Breath
             if  (spellproto->SpellIconID == 1548)
                 return DIMINISHING_DBREATH_SCATTER;
+            // Slow
+            else if (spellproto->Id == 31589)
+                return DIMINISHING_LIMITONLY;
             break;
         case SPELLFAMILY_ROGUE:
         {
@@ -4273,17 +4287,20 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
                 return DIMINISHING_LIMITONLY;
             break;
         }
-        case SPELLFAMILY_WARLOCK:
-        {
-            // Curses/etc
-            if (spellproto->SpellFamilyFlags.test<CF_WARLOCK_MISC_DEBUFFS>())
-                return DIMINISHING_LIMITONLY;
-            break;
-        }
         case SPELLFAMILY_PALADIN:
         {
             // Judgement of Justice - Limit to 10 seconds in PvP
             if (spellproto->SpellFamilyFlags.test<CF_PALADIN_JUDGEMENT_OF_JUSTICE>())
+                return DIMINISHING_LIMITONLY;
+            // Turn Evil - limit to 10 seconds in PvP
+            else if (spellproto->SpellFamilyFlags.test<CF_PALADIN_TURN_EVIL>())
+                return DIMINISHING_LIMITONLY;
+            break;
+        }
+        case SPELLFAMILY_WARLOCK:
+        {
+            // Curses/etc
+            if (spellproto->SpellFamilyFlags.test<CF_WARLOCK_MISC_DEBUFFS>())
                 return DIMINISHING_LIMITONLY;
             break;
         }
@@ -4372,6 +4389,22 @@ int32 GetDiminishingReturnsLimitDuration(DiminishingGroup group, SpellEntry cons
     // Explicit diminishing duration
     switch(spellproto->SpellFamilyName)
     {
+        case SPELLFAMILY_WARLOCK:
+        {
+            // Curse of the Elements - limit to 2 minutes in PvP
+            if (spellproto->SpellFamilyFlags.test<CF_WARLOCK_CURSE_OF_THE_ELEMENTS>())
+                return 120000;
+            // Banish - limit to 6 seconds in PvP (3.1)
+            else if (spellproto->SpellFamilyFlags.test<CF_WARLOCK_BANISH>())
+                return 6000;
+            // Curse of agony - limit to 24 seconds in PvP (?)
+            else if (spellproto->SpellFamilyFlags.test<CF_WARLOCK_CURSE_OF_AGONY>())
+                return 24000;
+            // Shadow embrace - limit to 12 seconds in PvP (?)
+            else if (spellproto->SpellFamilyFlags.test<CF_WARLOCK_MISC_DEBUFFS>() && spellproto->SpellIconID == 2209)
+                return 12000;
+            break;
+        }
         case SPELLFAMILY_HUNTER:
         {
             // Wyvern Sting
@@ -4423,6 +4456,7 @@ bool IsDiminishingReturnsGroupDurationLimited(DiminishingGroup group)
         default:
             return false;
     }
+    return false;
 }
 
 DiminishingReturnsType GetDiminishingReturnsGroupType(DiminishingGroup group)
@@ -4521,4 +4555,21 @@ SpellEntry const* GetSpellEntryByDifficulty(uint32 id, Difficulty difficulty, bo
     }
 
     return NULL;
+}
+
+uint32 GetProcFlag(SpellEntry const* spellInfo)
+{
+    if (!spellInfo)
+        return 0;
+
+    SpellProcEventEntry const* spellProcEvent = sSpellMgr.GetSpellProcEvent(spellInfo->Id);
+
+    // Get EventProcFlag
+    uint32 EventProcFlag = 0;
+    if (spellProcEvent && spellProcEvent->procFlags) // if exist get custom spellProcEvent->procFlags
+        EventProcFlag = spellProcEvent->procFlags;
+    else
+        EventProcFlag = spellInfo->procFlags;       // else get from spell proto
+
+    return EventProcFlag;
 }

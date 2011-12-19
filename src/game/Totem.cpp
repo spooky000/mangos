@@ -116,12 +116,24 @@ void Totem::Summon(Unit* owner)
 void Totem::UnSummon()
 {
     CombatStop();
-    RemoveAurasDueToSpell(GetSpell());
 
-    if (Unit *owner = GetOwner())
+    uint32 maxIdx = GetSpellMaxIndex();
+
+    for (int32 i = maxIdx; i >= 0; --i)
+    {
+        if (uint32 spellId = GetSpell(i))
+            RemoveAurasDueToSpell(spellId);
+    }
+
+    if (Unit* owner = GetOwner())
     {
         owner->_RemoveTotem(this);
-        owner->RemoveAurasDueToSpell(GetSpell());
+
+        for (int32 i = maxIdx; i >= 0; --i)
+        {
+            if (uint32 spellId = GetSpell(i))
+                owner->RemoveAurasDueToSpell(spellId);
+        }
 
         //remove aura all party members too
         if (owner->GetTypeId() == TYPEID_PLAYER)
@@ -129,13 +141,19 @@ void Totem::UnSummon()
             ((Player*)owner)->SendAutoRepeatCancel(this);
 
             // Not only the player can summon the totem (scripted AI)
-            if (Group *pGroup = ((Player*)owner)->GetGroup())
+            if (Group* pGroup = ((Player*)owner)->GetGroup())
             {
-                for(GroupReference *itr = pGroup->GetFirstMember(); itr != NULL; itr = itr->next())
+                for (GroupReference* itr = pGroup->GetFirstMember(); itr != NULL; itr = itr->next())
                 {
                     Player* Target = itr->getSource();
-                    if(Target && pGroup->SameSubGroup((Player*)owner, Target))
-                        Target->RemoveAurasDueToSpell(GetSpell());
+                    if (Target && pGroup->SameSubGroup((Player*)owner, Target))
+                    {
+                        for (int32 i = maxIdx; i >= 0; --i)
+                        {
+                            if (uint32 spellId = GetSpell(i))
+                                Target->RemoveAurasDueToSpell(spellId);
+                        }
+                    }
                 }
             }
         }

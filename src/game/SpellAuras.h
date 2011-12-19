@@ -173,6 +173,7 @@ class MANGOS_DLL_SPEC SpellAuraHolder
 
         void SetVisibleAura(bool remove);
         void SetRemoveMode(AuraRemoveMode mode) { m_removeMode = mode; }
+
         void SetLoadedState(ObjectGuid const& casterGUID, ObjectGuid const& itemGUID, uint32 stackAmount, uint32 charges, int32 maxduration, int32 duration)
         {
             m_casterGuid   = casterGUID;
@@ -476,9 +477,13 @@ class MANGOS_DLL_SPEC Aura
 
         void SetRemoveMode(AuraRemoveMode mode) { m_removeMode = mode; }
 
+        bool IsDeleted() const { return m_deleted;}
+        void SetDeleted()      { m_deleted = true;}
+
         Unit* GetTriggerTarget() const;
 
         uint32 CalculateCrowdControlBreakDamage();
+        bool   IsAffectedByCrowdControlEffect(uint32 damage);
 
         // add/remove SPELL_AURA_MOD_SHAPESHIFT (36) linked auras
         void HandleShapeshiftBoosts(bool apply);
@@ -529,6 +534,7 @@ class MANGOS_DLL_SPEC Aura
 
         SpellEffectIndex m_effIndex :8;                     // Aura effect index in spell
 
+        bool m_deleted:1;
         bool m_positive:1;
         bool m_isPeriodic:1;
         bool m_isAreaAura:1;

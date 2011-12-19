@@ -1774,6 +1774,14 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(m_caster, spell_id, true);
                     return;
                 }
+                case 37473:                                 // Detect Whispers (related to quest 10607 - Whispers of the Raven God_Whispers of the Raven God)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, damage, true);
+                    break;
+                }
                 case 37674:                                 // Chaos Blast
                 {
                     if (!unitTarget)
@@ -1904,12 +1912,15 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     ((Player*)m_caster)->KilledMonster(pCreature->GetCreatureInfo(), pCreature->GetObjectGuid());
                     return;
                 }
-                case 43014:                                 // Despawn Self
-                {
-                    if (m_caster->GetTypeId() != TYPEID_UNIT)
+                case 43014:                                  // Despawn Self
+                {                                           // used by ACID event to run away and despawn
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
                         return;
 
-                    ((Creature*)m_caster)->ForcedDespawn();
+                    ((Creature*)unitTarget)->ForcedDespawn(2000);
+                    float x, y, z;
+                    unitTarget->GetClosePoint(x, y, z, unitTarget->GetObjectBoundingRadius(), 10.0f, unitTarget->GetOrientation());
+                    unitTarget->MonsterMoveWithSpeed(x, y, z, 28);
                     return;
                 }
                 case 43036:                                 // Dismembering Corpse
@@ -2477,6 +2488,17 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                     return;
                 }*/
+                case 49859:                                 // Rune of Command
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
+                        return;
+
+                    // Captive Stone Giant Kill Credit
+                    unitTarget->CastSpell(m_caster, 43564, true);
+                    // Is it supposed to despawn?
+                    ((Creature*)unitTarget)->ForcedDespawn();
+                    return;
+                }
                 case 50133:                                 // Scourging Crystal Controller
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
@@ -2639,14 +2661,30 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     ((Creature*)unitTarget)->ForcedDespawn(5000);
                     return;
                 }
-                /*case 51858:                                 // Siphon of Acherus - Complete Quest
+                case 51858: // Siphon of Acherus
                 {
-                    if (!m_caster || !m_caster->isAlive() || !m_originalCaster || !m_originalCaster->GetCharmer() || m_originalCaster->GetCharmer()->GetTypeId() != TYPEID_PLAYER)
-                        return;
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
+                    return;
 
-                    ((Player*)m_originalCaster->GetCharmer())->KilledMonsterCredit(m_caster->GetEntry(), m_caster->GetObjectGuid());
-                        return;
-                }*/
+                    static uint32 const spellCredit[4] =
+                    {
+                        51974,                              // Forge Credit
+                        51980,                              // Scarlet Hold Credit
+                        51977,                              // Town Hall Credit
+                        51982,                              // Chapel Credit
+                    };
+                    for (int i = 0; i < 4; ++i)
+                    {
+                        const SpellEntry *pSpell = sSpellStore.LookupEntry(spellCredit[i]);
+                        if (pSpell->EffectMiscValue[EFFECT_INDEX_0] == unitTarget->GetEntry())
+                        {
+                            m_caster->RemoveAurasDueToSpell(52006);   // Remove Stealth from Eye of Acherus upon cast
+                            m_caster->CastSpell(unitTarget, spellCredit[i], true);
+                            break;
+                        }
+                    }
+                    return;
+                }
                 case 51866:                                 // Kick Nass
                 {
                     // It is possible that Nass Heartbeat (spell id 61438) is involved in this
@@ -2713,16 +2751,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     // This might not be the best way, and effect may need some adjustment. Removal of any aura from surrounding dummy creatures?
                     if (((Creature*)unitTarget)->AI())
                         ((Creature*)unitTarget)->AI()->AttackStart(m_caster);
-
-                    return;
-                }
-                case 51858:                                 // Siphon of Acherus
-                {
-                    if (!m_originalCaster || !unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
-                        return;
-
-                    if (Player* pPlayer = m_originalCaster->GetCharmerOrOwnerPlayerOrPlayerItself())
-                        pPlayer->KilledMonsterCredit(unitTarget->GetEntry(), unitTarget->GetObjectGuid());
 
                     return;
                 }
@@ -3198,6 +3226,11 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     }
 
                     m_caster->CastSpell(m_caster,spell_id,true,NULL);
+                    return;
+                }
+                case 60038:                                 // Arcane Lightning
+                {
+                    m_caster->CastSpell(m_caster, 58152, true);
                     return;
                 }
                 case 60932:                                 // Disengage (one from creature versions)
@@ -3920,7 +3953,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 }
 
                 //Any effect which causes you to lose control of your character will supress the starfall effect.
-                if (m_caster->hasUnitState(UNIT_STAT_NO_FREE_MOVE & ~ UNIT_STAT_ROOT))
+                if (m_caster->hasUnitState(UNIT_STAT_CAN_NOT_REACT))
                     return;
 
                 if (unitTarget->isVisibleForOrDetect(m_caster,m_caster,false))
@@ -4071,7 +4104,9 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     {
                         SpellEntry const *spellInfo = sSpellStore.LookupEntry(itr->first);
 
-                        if (spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER && spellInfo->Id != 23989 && GetSpellRecoveryTime(spellInfo) > 0 )
+                        if (spellInfo->SpellFamilyName == SPELLFAMILY_HUNTER &&
+                            spellInfo->Id != 23989 &&
+                            GetSpellRecoveryTime(spellInfo) > 0 )
                             ((Player*)m_caster)->RemoveSpellCooldown((itr++)->first,true);
                         else
                             ++itr;
@@ -4619,14 +4654,14 @@ void Spell::EffectForceCast(SpellEffectIndex eff_idx)
     }
 
     // if triggered spell has SPELL_AURA_CONTROL_VEHICLE, it must be casted on caster
-    /*for (uint32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+    for (uint32 i = 0; i < MAX_EFFECT_INDEX; ++i)
     {
         if (spellInfo->EffectApplyAuraName[i] == SPELL_AURA_CONTROL_VEHICLE)
         {
             unitTarget->CastSpell(m_caster, spellInfo, true, NULL, NULL, NULL, m_spellInfo);
             return;
         }
-    }*/
+    }
 
     unitTarget->CastSpell(unitTarget, spellInfo, true, NULL, NULL, m_originalCasterGUID, m_spellInfo);
 }
@@ -4686,19 +4721,24 @@ void Spell::EffectTriggerSpell(SpellEffectIndex effIndex)
         // Cloak of Shadows
         case 35729:
         {
+            std::set<uint32> toRemoveSpellList;
             Unit::SpellAuraHolderMap& Auras = unitTarget->GetSpellAuraHolderMap();
             for(Unit::SpellAuraHolderMap::iterator iter = Auras.begin(); iter != Auras.end(); ++iter)
             {
+                SpellAuraHolderPtr holder = iter->second;
+                if (!holder || holder->IsDeleted())
+                    continue;
                 // Remove all harmful spells on you except positive/passive/physical auras
-                if (!iter->second->IsPositive() &&
-                    !iter->second->IsPassive() &&
-                    !iter->second->IsDeathPersistent() &&
-                    (GetSpellSchoolMask(iter->second->GetSpellProto()) & SPELL_SCHOOL_MASK_NORMAL) == 0)
+                if (!holder->IsPositive() &&
+                    !holder->IsPassive() &&
+                    !holder->IsDeathPersistent() &&
+                    (GetSpellSchoolMask(holder->GetSpellProto()) & SPELL_SCHOOL_MASK_NORMAL) == 0)
                 {
-                    m_caster->RemoveAurasDueToSpell(iter->second->GetSpellProto()->Id);
-                    iter = Auras.begin();
+                    toRemoveSpellList.insert(holder->GetId());
                 }
             }
+            for (std::set<uint32>::iterator i = toRemoveSpellList.begin(); i != toRemoveSpellList.end(); ++i)
+                m_caster->RemoveAurasDueToSpell(*i);
             return;
         }
         // Priest Shadowfiend (34433) need apply mana gain trigger aura on pet
@@ -4927,7 +4967,7 @@ void Spell::EffectTeleportUnits(SpellEffectIndex eff_idx)
             if (unitTarget->GetTypeId() != TYPEID_PLAYER)
                 return;
 
-            ((Player*)unitTarget)->TeleportToHomebind(unitTarget==m_caster ? TELE_TO_SPELL : 0);
+            ((Player*)unitTarget)->TeleportToHomebind(unitTarget == m_caster ? TELE_TO_SPELL|TELE_TO_CHECKED : TELE_TO_CHECKED);
             return;
         }
         case TARGET_AREAEFFECT_INSTANT:                     // in all cases first TARGET_TABLE_X_Y_Z_COORDINATES
@@ -5120,6 +5160,14 @@ void Spell::EffectApplyAura(SpellEffectIndex eff_idx)
 
     Aura* aur = m_spellAuraHolder->CreateAura(m_spellInfo, eff_idx, &m_currentBasePoints[eff_idx], m_spellAuraHolder, unitTarget, caster, m_CastItem);
 
+    SpellAuraHolderPtr _holder = aur->GetHolder();
+
+    if (!aur || !_holder)
+    {
+        sLog.outError("Spell::EffectApplyAura cannot create aura, spell %u effect %u", m_spellInfo->Id, eff_idx);
+        return;
+    }
+
     // Now Reduce spell duration using data received at spell hit
     int32 duration = aur->GetAuraMaxDuration();
 
@@ -5287,7 +5335,7 @@ void Spell::EffectPowerBurn(SpellEffectIndex eff_idx)
     m_damage += new_damage;
 
     unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_FEAR);
-    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_TRANSFORM, true, false);
+    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_TRANSFORM);
 }
 
 void Spell::EffectHeal(SpellEffectIndex /*eff_idx*/)
@@ -5384,7 +5432,7 @@ void Spell::EffectHeal(SpellEffectIndex /*eff_idx*/)
             if (unitTarget == m_targets.getUnitTarget())
             {
                 // check for Riptide
-                Aura* riptide = unitTarget->GetAura(SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_SHAMAN, ClassFamilyMask::create<CF_SHAMAN_RIPTIDE>(), caster->GetObjectGuid());
+                Aura* riptide = unitTarget->GetAura<SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_SHAMAN, CF_SHAMAN_RIPTIDE>(caster->GetObjectGuid());
                 if (riptide)
                 {
                     addhealth += addhealth/4;
@@ -5684,6 +5732,10 @@ void Spell::EffectEnergize(SpellEffectIndex eff_idx)
     int level_diff = 0;
     switch (m_spellInfo->Id)
     {
+        case 2687:                                          // Bloodrage
+            if (m_caster->HasAura(70844))
+                m_caster->CastSpell(m_caster,70845,true);
+            break;
         case 9512:                                          // Restore Energy
             level_diff = m_caster->getLevel() - 40;
             level_multiplier = 2;
@@ -6148,12 +6200,16 @@ void Spell::DoSummonGroupPets(SpellEffectIndex eff_idx)
         return;
     }
 
-    if (pet_entry == 37994)    // Mage: Water Elemental from Glyph
-        m_duration = 86400000; // 24 hours
-
     if (m_duration > 0)
+    {
         if (Player* modOwner = m_caster->GetSpellModOwner())
             modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_DURATION, m_duration);
+    }
+    else if (m_duration < 0)
+    {
+        DEBUG_LOG("Spell::DoSummonGroupPets: attempt to summon pet with negative duration (%i)",m_duration);
+        m_duration = 0;
+    }
 
     uint32 amount = damage;
 
@@ -6328,16 +6384,18 @@ void Spell::EffectDispel(SpellEffectIndex eff_idx)
     Unit::SpellAuraHolderMap const& auras = unitTarget->GetSpellAuraHolderMap();
     for(Unit::SpellAuraHolderMap::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
     {
-        SpellAuraHolderPtr holder = itr->second;
-        if ((1<<holder->GetSpellProto()->Dispel) & dispelMask)
+        if (!itr->second || itr->second->IsDeleted())
+            continue;
+
+        if ((1 << itr->second->GetSpellProto()->Dispel) & dispelMask)
         {
-            if(holder->GetSpellProto()->Dispel == DISPEL_MAGIC)
+            if (itr->second->GetSpellProto()->Dispel == DISPEL_MAGIC)
             {
                 bool positive = true;
-                if (!holder->IsPositive())
+                if (!itr->second->IsPositive())
                     positive = false;
                 else
-                    positive = (holder->GetSpellProto()->AttributesEx & SPELL_ATTR_EX_NEGATIVE)==0;
+                    positive = (itr->second->GetSpellProto()->AttributesEx & SPELL_ATTR_EX_NEGATIVE)==0;
 
                 // do not remove positive auras if friendly target
                 //               negative auras if non-friendly target
@@ -6345,14 +6403,14 @@ void Spell::EffectDispel(SpellEffectIndex eff_idx)
                     continue;
             }
             // Unholy Blight prevents dispel of diseases from target
-            else if (holder->GetSpellProto()->Dispel == DISPEL_DISEASE)
+            else if (itr->second->GetSpellProto()->Dispel == DISPEL_DISEASE)
                 if (unitTarget->HasAura(50536))
                     continue;
 
-            if (holder->GetAuraCharges() > 1)
-                dispel_list.push_back(std::pair<SpellAuraHolderPtr ,uint32>(holder, holder->GetAuraCharges()));
+            if (itr->second->GetAuraCharges() > 1)
+                dispel_list.push_back(std::pair<SpellAuraHolderPtr ,uint32>(itr->second, itr->second->GetAuraCharges()));
             else
-                dispel_list.push_back(std::pair<SpellAuraHolderPtr ,uint32>(holder, holder->GetStackAmount()));
+                dispel_list.push_back(std::pair<SpellAuraHolderPtr ,uint32>(itr->second, itr->second->GetStackAmount()));
         }
     }
     // Ok if exist some buffs for dispel try dispel it
@@ -6691,6 +6749,12 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
     float center_y = m_targets.m_destY;
     float center_z = m_targets.m_destZ;
 
+    if (!MapManager::ExistMapAndVMap(m_caster->GetMapId(),center_x,center_y))
+    {
+        sLog.outError("Spell::DoSummonGuardian: impossible place for create creature entry %u, spell %u.", pet_entry, m_spellInfo->Id);
+        return;
+    }
+
     float radius = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
 
     uint32 originalSpellID = (m_IsTriggeredSpell && m_triggeredBySpellInfo) ? m_triggeredBySpellInfo->Id : m_spellInfo->Id;
@@ -6814,10 +6878,7 @@ void Spell::DoSummonVehicle(SpellEffectIndex eff_idx, uint32 forceFaction)
 
 void Spell::EffectTeleUnitsFaceCaster(SpellEffectIndex eff_idx)
 {
-    if (!unitTarget)
-        return;
-
-    if (unitTarget->IsTaxiFlying())
+    if (!unitTarget || unitTarget->IsTaxiFlying())
         return;
 
     float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
@@ -7354,7 +7415,7 @@ void Spell::EffectWeaponDmg(SpellEffectIndex eff_idx)
             // Rend and Tear ( on Maul / Shred )
             if (m_spellInfo->SpellFamilyFlags.test<CF_DRUID_MAUL, CF_DRUID_SHRED>())
             {
-                if(unitTarget->HasAuraState(AURA_STATE_BLEEDING))
+                if (unitTarget && unitTarget->HasAuraState(AURA_STATE_BLEEDING))
                 {
                     Unit::AuraList const& aura = m_caster->GetAurasByType(SPELL_AURA_DUMMY);
                     for(Unit::AuraList::const_iterator itr = aura.begin(); itr != aura.end(); ++itr)
@@ -7524,12 +7585,20 @@ void Spell::EffectWeaponDmg(SpellEffectIndex eff_idx)
 
                 if (count)
                 {
-                    // Effect 1(for Blood-Caked Strike)/3(other) damage is bonus
-                    float bonus = count * CalculateDamage(m_spellInfo->SpellIconID == 1736 ? EFFECT_INDEX_0 : EFFECT_INDEX_2, unitTarget) / 100.0f;
-                    // Blood Strike, Blood-Caked Strike and Obliterate store bonus*2
-                    if (m_spellInfo->SpellFamilyFlags.test<CF_DEATHKNIGHT_BLOOD_STRIKE, CF_DEATHKNIGHT_OBLITERATE>() ||
-                        m_spellInfo->SpellIconID == 1736)
-                        bonus /= 2.0f;
+                    float bonus;
+                    if (m_spellInfo->SpellIconID != 1736) // Blood Strike, Heart Strike, Obliterate
+                    {
+                        // Effect 3 damage is bonus
+                        bonus = count * CalculateDamage(EFFECT_INDEX_2, unitTarget) / 100.0f;
+                        // Blood Strike and Obliterate store bonus*2
+                        if (m_spellInfo->SpellFamilyFlags.test<CF_DEATHKNIGHT_BLOOD_STRIKE, CF_DEATHKNIGHT_OBLITERATE>())
+                            bonus /= 2.0f;
+                           if (Aura* dummy = m_caster->GetDummyAura(64736)) // Item - Death Knight T8 Melee 4P Bonus
+                               bonus *= ((float)dummy->GetModifier()->m_amount+100.0f)/100.0f;
+                    }
+                    else // Blood-Caked Blade damage info taken from http://www.wowhead.com/forums&topic=54152.2 and Dr.Damage addon.
+                       bonus= count * 0.5f;//Blood-Caked Blade damage = (0.25(base) + diseaseCount * 0.125)= 0.25*(1+diseaseCount * 0.5)
+
 
                     totalDamagePercentMod *= 1.0f + bonus;
                 }
@@ -8123,6 +8192,30 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         DoCreateItem(eff_idx,item);
                     break;
                 }
+                case 28560:                                 // Summon Blizzard
+                {
+                    if (!unitTarget)
+                        return;
+
+                    m_caster->SummonCreature(16474, unitTarget->GetPositionX(), unitTarget->GetPositionY(), unitTarget->GetPositionZ(), 0.0f, TEMPSUMMON_TIMED_DESPAWN, 30000);
+                    return;
+                }
+                case 29395:                                 // Break Kaliri Egg
+                {
+                    uint32 creature_id = 0;
+                    uint32 rand = urand(0, 99);
+
+                    if (rand < 10)
+                        creature_id = 17034;
+                    else if (rand < 60)
+                        creature_id = 17035;
+                    else
+                        creature_id = 17039;
+
+                    if (WorldObject* pSource = GetAffectiveCasterObject())
+                        pSource->SummonCreature(creature_id, 0.0f, 0.0f, 0.0f, 0.0f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 120*IN_MILLISECONDS);
+                    return;
+                }
                 case 29830:                                 // Mirren's Drinking Hat
                 {
                     uint32 item = 0;
@@ -8153,6 +8246,14 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->RemoveAurasAtMechanicImmunity(IMMUNE_TO_ROOT_AND_SNARE_MASK,30918,true);
                     break;
                 }
+                case 37473:                                 // Detect Whispers (related to quest 10607 - Whispers of the Raven God_Whispers of the Raven God)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, damage, true);
+                    break;
+                }
                 case 38358:                                 // Tidal Surge
                 {
                     if (!unitTarget)
@@ -8161,21 +8262,21 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 38353, true, NULL, NULL, m_caster->GetObjectGuid());
                     return;
                 }
-                case 29395:                                 // Break Kaliri Egg
+                case 39681:                                 // Summon Goblin Tonk
                 {
-                    uint32 creature_id = 0;
-                    uint32 rand = urand(0, 99);
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                        return;
 
-                    if (rand < 10)
-                        creature_id = 17034;
-                    else if (rand < 60)
-                        creature_id = 17035;
-                    else
-                        creature_id = 17039;
+                    unitTarget->CastSpell(unitTarget, 39682, true);
+                    break;
+                }
+                case 39684:                                 // Summon Gnomish Tonk
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                        return;
 
-                    if (WorldObject* pSource = GetAffectiveCasterObject())
-                        pSource->SummonCreature(creature_id, 0.0f, 0.0f, 0.0f, 0.0f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 120*IN_MILLISECONDS);
-                    return;
+                    unitTarget->CastSpell(unitTarget, 39683, true);
+                    break;
                 }
                 case 41055:                                 // Copy Weapon
                 {
@@ -8199,6 +8300,37 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     unitTarget->CastSpell(unitTarget, 41131, true);
                     break;
+                }
+                case 42281:                                 // Sprout (Headless Horsemann spell)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 42285, true);
+                    return;
+                }
+                case 42577:                                 // Zap
+                {
+                    if (!unitTarget)
+                        return;
+
+                    if (unitTarget->getVictim())
+                    {
+                        // Cast Zap damage spell
+                        unitTarget->CastSpell(unitTarget->getVictim(), 43137, true);
+
+                        // Attack a new target
+                        if (unitTarget->GetTypeId() == TYPEID_UNIT)
+                        {
+                            Creature* cre = (Creature*)unitTarget;
+                            if (cre && cre->AI())
+                            {
+                                if (Unit* target = cre->SelectAttackingTarget(ATTACKING_TARGET_RANDOM, 0))
+                                    cre->AI()->AttackStart(target);
+                            }
+                        }
+                    }
+                    return;
                 }
                 case 43365:                                 // The Cleansing: Shrine Cast
                 {
@@ -8363,6 +8495,14 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->RemoveAurasDueToSpell(46394);
                     return;
                 }
+                case 45204: // Clone Me!
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(m_caster, damage, true);
+                    break;
+                }
                 case 45206:                                 // Copy Off-hand Weapon
                 {
                     if (m_caster->GetTypeId() != TYPEID_UNIT || !unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
@@ -8377,6 +8517,14 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     }
 
                     return;
+                }
+                case 45625:                                 // Arcane Chains: Character Force Cast
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(m_caster, 45626, true);
+                    break;
                 }
                 case 45668:                                 // Ultra-Advanced Proto-Typical Shortening Blaster
                 {
@@ -8515,6 +8663,22 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     ((Player*)unitTarget)->ModifyMoney(50000000);
                     break;
                 }
+                case 46671:                                 // Cleansing Flames Exodar
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 46690, true); // Create Flame of the Exodar
+                    break;
+                }
+                case 46672:                                 // Cleansing Flames Silvermoon
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 46689, true); // Create Flame of The Silvermoon
+                    break;
+                }
                 case 47097:                                 // Surge Needle Teleporter
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
@@ -8581,10 +8745,40 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->RemoveAurasDueToSpell(47636);
                     return;
                 }
+                case 47958:                                 // Crystal Spikes
+                {
+                    // Summon Crystal Spike
+                    m_caster->CastSpell(m_caster, 47954, true);
+                    m_caster->CastSpell(m_caster, 47955, true);
+                    m_caster->CastSpell(m_caster, 47956, true);
+                    m_caster->CastSpell(m_caster, 47957, true);
+                    return;
+                }
+                case 48590:                                 // Avenging Spirits (summon Avenging Spirit Summoners)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 48586, true);
+                    unitTarget->CastSpell(unitTarget, 48587, true);
+                    unitTarget->CastSpell(unitTarget, 48588, true);
+                    unitTarget->CastSpell(unitTarget, 48589, true);
+                    return;
+                }
                 case 48603:                                 // High Executor's Branding Iron
+                {
                     // Torture the Torturer: High Executor's Branding Iron Impact
                     unitTarget->CastSpell(unitTarget, 48614, true);
                     return;
+                }
+                case 48679:                                 // Banshee's Magic Mirror
+                {
+                    if (!unitTarget || m_caster->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    unitTarget->CastSpell(m_caster, 48648, true);
+                    return;
+                }
                 case 48724:                                 // The Denouncement: Commander Jordan On Death
                 case 48726:                                 // The Denouncement: Lead Cannoneer Zierhut On Death
                 case 48728:                                 // The Denouncement: Blacksmith Goodman On Death
@@ -8619,7 +8813,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, spellId, true);
                     return;
                 }
-                /*case 48810:                                 // Death's Door
+                case 48810:                                 // Death's Door
                 {
                     if (m_caster->GetTypeId() != TYPEID_PLAYER)
                         return;
@@ -8641,7 +8835,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     // Binding Death
                     m_caster->CastSpell(m_caster, 48808, true);
                     return;
-                }*/
+                }
                 case 48811:                                 // Despawn Forgotten Soul
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
@@ -8674,6 +8868,20 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, unitTarget->getGender() == GENDER_MALE ? 38080 : 38081, true);
                     // Shadowy Disguise
                     unitTarget->CastSpell(unitTarget, 32756, true);
+                    return;
+                }
+                case 49380:                                 // Consume: Spell of Trollgore nonhero
+                {
+                    m_caster->CastSpell(m_caster,49381,true);
+                    return;
+                }
+                case 49405:                                 // Taunt Invider Trigger (Trollgore - Drak'Tharon Keep)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    //cast back Trollgore -> Taunt Invider
+                    unitTarget->CastSpell(m_caster, 49406, true);
                     return;
                 }
                 case 50217:                                 // The Cleansing: Script Effect Player Cast Mirror Image
@@ -8756,6 +8964,15 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     ((Player*)caster)->RemoveSpellCategoryCooldown(82, true);
                     return;
                 }
+                case 50810:                                 // Shatter (Krystallus)
+                case 61546:                                 // Shatter (h) (Krystallus)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, m_spellInfo->Id + 1, true, NULL, NULL, m_caster->GetObjectGuid());
+                    return;
+                }
                 case 50894:                                 // Zul'Drak Rat
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
@@ -8824,7 +9041,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     }
                     return;
                 }
-                /*case 52694:                                 // Recall Eye of Acherus
+                case 52694:                                 // Recall Eye of Acherus
                 {
                     if(!m_caster || m_caster->GetTypeId() != TYPEID_UNIT)
                         return;
@@ -8845,7 +9062,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     m_caster->CleanupsBeforeDelete();
                     m_caster->AddObjectToRemoveList();
                         return;
-                }*/
+                }
                 case 52751:                                 // Death Gate
                 {
                     if (!unitTarget || unitTarget->getClass() != CLASS_DEATH_KNIGHT)
@@ -8932,12 +9149,6 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     }
                     return;
                 }
-                case 48810:
-                {
-                    if(unitTarget)
-                        unitTarget->CastSpell(unitTarget, 48809, true);
-                    return;
-                }
                 case 50252:                                 // Q: In Service of Blood/Unholy/Frost
                 case 47724:
                 case 47703:
@@ -8984,6 +9195,14 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     break;
                 }
+                case 53242:                                 // Clear Gift of Tharonja
+                {
+                    if (!unitTarget || !unitTarget->HasAura(52509))
+                        return;
+
+                    unitTarget->RemoveAurasDueToSpell(52509);
+                    return;
+                }
                 case 54182:                                 // An End to the Suffering: Quest Completion Script
                 {
                     if (!unitTarget)
@@ -9005,6 +9224,15 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 52580, true); // Bones
                     unitTarget->CastSpell(unitTarget, 52575, true); // Bones II
                     unitTarget->CastSpell(unitTarget, 54250, true); // Skull Missile
+                    return;
+                }
+               case 54269:                                 // Drakkari Colossus, Elemental Despawn
+                {
+                    if (!unitTarget || m_caster->GetTypeId() != TYPEID_UNIT)
+                        return;
+
+                    ((Creature*)m_caster)->ForcedDespawn(3000);
+                    m_caster->CastSpell(unitTarget, 54878, true); // Set Scale 0.1 And Stun
                     return;
                 }
                 case 54581:                                 // Mammoth Explosion Spell Spawner
@@ -9059,6 +9287,11 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                             aura->GetHolder()->SendAuraUpdate(false);
                         }
                     }
+                    return;
+                }
+                case 55299:                                 // Galdarah Transform to Troll!
+                {
+                    m_caster->RemoveAurasDueToSpell(55297);
                     return;
                 }
                 case 55328:                                    // Stoneclaw Totem I
@@ -9118,6 +9351,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         return;
 
                     unitTarget->CastSpell(unitTarget, 57085, true);
+                    unitTarget->CastSpell(unitTarget, m_spellInfo->Id == 58475 ? 58477 : 58467, true);
                     break;
                 }
                 case 58418:                                 // Portal to Orgrimmar
@@ -9433,6 +9667,28 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     return;
                 }*/
+                case 65917:                                 // Magic Rooster
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    // Prevent stacking of mounts
+                    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
+
+                    uint32 spellId = 66122; // common case
+
+                    if (((Player*)unitTarget)->getGender() == GENDER_MALE)
+                    {
+                        switch (((Player*)unitTarget)->getRace())
+                        {
+                            case RACE_TAUREN: spellId = 66124; break;
+                            case RACE_DRAENEI: spellId = 66123; break;
+                        }
+                    }
+
+                    unitTarget->CastSpell(unitTarget, spellId, true);
+                    return;
+                }
                 case 66477:                                 // Bountiful Feast
                 {
                     if (!unitTarget)
@@ -9483,9 +9739,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!unitTarget)
                         return;
 
-                    for (uint8 i = 0; i < 11; ++i)
-                        unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
-
+                    unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
                     return;
                 }
                 case 67398:                                 // Zergling Periodic Effect (Called by Zergling Passive)
@@ -9550,6 +9804,14 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     // Actually this spell should be sent with SMSG_SPELL_START
                     unitTarget->CastSpell(m_caster, 69023, true);
+                    return;
+                }
+                case 69200:                                 // Raging Spirit
+                {
+                    if (!unitTarget)
+                        return;
+
+                    unitTarget->CastSpell(unitTarget, 69201, true);
                     return;
                 }
                 case 69377:                                 // Fortitude
@@ -10372,9 +10634,9 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (unitTarget != (Unit*)m_caster)
                     {
                         m_caster->CastSpell(unitTarget->GetPositionX(),unitTarget->GetPositionY(),unitTarget->GetPositionZ(),triggered_spell_id, true, NULL, NULL, m_caster->GetObjectGuid(), m_spellInfo);
-                        if (unitTarget->GetTypeId() == TYPEID_UNIT)
+                        /*if (unitTarget->GetTypeId() == TYPEID_UNIT)
                             if (!((Creature*)unitTarget)->IsWorldBoss())
-                                ((Creature*)unitTarget)->RemoveCorpse();
+                                ((Creature*)unitTarget)->RemoveCorpse();*/
                     }
                     else if (m_caster->HasAura(60200))
                     {
@@ -11002,7 +11264,7 @@ void Spell::EffectBlock(SpellEffectIndex /*eff_idx*/)
 
 void Spell::EffectLeapForward(SpellEffectIndex eff_idx)
 {
-    if(unitTarget->IsTaxiFlying())
+    if (!unitTarget || unitTarget->IsTaxiFlying())
         return;
 
     if( m_spellInfo->rangeIndex == 1)                       //self range

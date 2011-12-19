@@ -264,6 +264,8 @@ inline bool IsCrowdControlAura(AuraType aura)
             aura == SPELL_AURA_TRANSFORM   );
 }
 
+uint32 GetProcFlag(SpellEntry const* spellInfo);
+
 inline bool IsDeathPersistentSpell(SpellEntry const *spellInfo)
 {
     return spellInfo->AttributesEx3 & SPELL_ATTR_EX3_DEATH_PERSISTENT;
@@ -544,6 +546,11 @@ inline uint32 GetDispellMask(DispelType dispel)
         return DISPEL_ALL_MASK;
     else
         return (1 << dispel);
+}
+
+inline bool IsSpellAllowDeadTarget(SpellEntry const* spellInfo)
+{
+    return spellInfo ? spellInfo->AttributesEx2 & SPELL_ATTR2_ALLOW_DEAD_TARGET : false;
 }
 
 bool IsSpellAffectedBySpellMods(SpellEntry const* spellInfo);
