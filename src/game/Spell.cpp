@@ -1499,7 +1499,9 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
         else
         {
             m_spellAuraHolder->SetInUse(false);
-            unit->AddSpellAuraHolderToRemoveList(m_spellAuraHolder);
+
+            if (!m_spellAuraHolder->IsDeleted())
+                unit->AddSpellAuraHolderToRemoveList(m_spellAuraHolder);
         }
     }
 }
