@@ -5413,8 +5413,8 @@ void Unit::RemoveSpellAuraHolder(SpellAuraHolderPtr holder, AuraRemoveMode mode)
 
     // If holder in use (removed from code that plan access to it data after return)
     // store it in holder list with delayed deletion
-    if (!AddSpellAuraHolderToRemoveList(holder))
-        sLog.outError("Unit::RemoveSpellAuraHolder cannot insert SpellAuraHolder (spell %) to remove list!", holder->GetId());
+    if (holder && !holder->IsDeleted())
+        AddSpellAuraHolderToRemoveList(holder);
 
     if (mode != AURA_REMOVE_BY_EXPIRE && IsChanneledSpell(AurSpellInfo) && !IsAreaOfEffectSpell(AurSpellInfo) &&
         caster && caster->GetObjectGuid() != GetObjectGuid())
@@ -11425,10 +11425,6 @@ uint32 createProcExtendMask(SpellNonMeleeDamage *damageInfo, SpellMissInfo missC
 
 void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, SpellEntry const * procSpell, uint32 damage )
 {
-    // Fixme: need remove this check after make LocationManager
-    if (!IsInWorld() || !GetMap())
-        return;
-
     // For melee/ranged based attack need update skills and set some Aura states
     if (!(procExtra & PROC_EX_CAST_END) && procFlag & MELEE_BASED_TRIGGER_MASK)
     {
@@ -12796,16 +12792,15 @@ void Unit::CleanupDeletedHolders(bool force)
 }
 
 
-bool Unit::AddSpellAuraHolderToRemoveList(SpellAuraHolderPtr holder)
+void Unit::AddSpellAuraHolderToRemoveList(SpellAuraHolderPtr holder)
 {
     if (!holder || holder->IsDeleted())
-        return false;
+        return;
 
     MAPLOCK_READ(this, MAP_LOCK_TYPE_AURAS);
-    if (m_deletedHolders.find(holder) != m_deletedHolders.end())
-        holder->SetDeleted();
+    holder->SetDeleted();
     m_deletedHolders.insert(holder);
-    return true;
+    return;
 };
 
 bool Unit::CheckAndIncreaseCastCounter()
