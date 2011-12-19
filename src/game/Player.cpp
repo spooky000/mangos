@@ -2091,7 +2091,8 @@ void Player::Regenerate(Powers power, uint32 diff)
         {
             float RunicPowerDecreaseRate = sWorld.getConfig(CONFIG_FLOAT_RATE_POWER_RUNICPOWER_LOSS);
             addvalue = 30 * RunicPowerDecreaseRate;         // 3 RunicPower by tick
-        }   break;
+            break;
+        }
         case POWER_RUNE:
         {
             if (getClass() != CLASS_DEATH_KNIGHT)
@@ -2130,6 +2131,7 @@ void Player::Regenerate(Powers power, uint32 diff)
         case POWER_FOCUS:
         case POWER_HAPPINESS:
         case POWER_HEALTH:
+        default:
             break;
     }
 
@@ -22302,7 +22304,7 @@ bool Player::ActivateRunes(RuneType type, uint32 count)
     bool modify = false;
     for(uint32 j = 0; count > 0 && j < MAX_RUNES; ++j)
     {
-        if (GetRuneCooldown(j) && GetCurrentRune(j) == type)
+        if (GetCurrentRune(j) == type && GetRuneCooldown(j) > 0)
         {
             SetRuneCooldown(j, 0);
             --count;
