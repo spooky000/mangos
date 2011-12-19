@@ -5267,7 +5267,7 @@ void Unit::RemoveAurasWithInterruptFlags(uint32 flags)
         SpellAuraHolderMap const& holdersMap = GetSpellAuraHolderMap();
         for (SpellAuraHolderMap::const_iterator iter = holdersMap.begin(); iter != holdersMap.end(); ++iter)
         {
-            if (!iter->second || iter->second->IsDeleted() || !iter->second->GetSpellProto())
+            if (!iter->second || iter->second->IsDeleted() || !iter->second->GetSpellProto() || flags == AURA_INTERRUPT_FLAG_DAMAGE)
                 continue;
 
             if (iter->second->GetSpellProto()->AuraInterruptFlags & flags)
