@@ -24066,6 +24066,9 @@ AreaLockStatus Player::GetAreaTriggerLockStatus(AreaTrigger const* at, Difficult
         // cannot enter if the instance is full (player cap), GMs don't count
         if (((DungeonMap*)map)->GetPlayersCountExceptGMs() >= ((DungeonMap*)map)->GetMaxPlayers())
             return AREA_LOCKSTATUS_INSTANCE_IS_FULL;
+        // cannot enter if the instance is in combat
+        else if (((DungeonMap*)map)->GetInstanceData() && ((DungeonMap*)map)->GetInstanceData()->IsEncounterInProgress())
+            return AREA_LOCKSTATUS_ZONE_IN_COMBAT;
     }
 
     return AREA_LOCKSTATUS_OK;
