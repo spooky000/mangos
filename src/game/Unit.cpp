@@ -12783,7 +12783,7 @@ void Unit::CleanupDeletedHolders(bool force)
     {
         for (SpellAuraHolderSet::iterator iter = m_deletedHolders.begin(); iter != m_deletedHolders.end();)
         {
-            if (!(*iter)->IsInUse())
+            if ((*iter) && !(*iter)->IsInUse())
             {
                 m_deletedHolders.erase(*iter++);
             }
@@ -12792,7 +12792,6 @@ void Unit::CleanupDeletedHolders(bool force)
         }
     }
 }
-
 
 void Unit::AddSpellAuraHolderToRemoveList(SpellAuraHolderPtr holder)
 {
