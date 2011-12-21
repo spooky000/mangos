@@ -9339,6 +9339,17 @@ void Aura::PeriodicDummyTick()
                     target->CastSpell(target, 62593, true);
                     return;
                 }*/
+                case 66870:                                 // Trial Of Crusader (Dreadscale Burning Bile)
+                {
+                    if (!target)
+                        return;
+
+                    // If hit by Burning bile while have Paralytic Toxin, remove Toxin
+                    if (target->HasAura(66823,EFFECT_INDEX_0))
+                        target->RemoveAurasDueToSpell(66823);
+
+                    return;
+                }
                 case 67574:                                // Trial Of Crusader (Spike Aggro Aura - Anub'arak)
                 {
                     if (!target->GetMap()->Instanceable())
