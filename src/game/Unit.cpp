@@ -598,11 +598,10 @@ void Unit::RemoveSpellsCausingAura(AuraType auraType)
         if (!aura)
             continue;
 
-        SpellAuraHolderPtr holder = aura->GetHolder();
-        if (!holder || holder->IsDeleted())
+        if (!aura->GetHolder() || aura->GetHolder()->IsDeleted())
             continue;
 
-        toRemoveSpellList.insert(holder->GetId());
+        toRemoveSpellList.insert(aura->GetId());
     }
 
     for (std::set<uint32>::iterator i = toRemoveSpellList.begin(); i != toRemoveSpellList.end(); ++i)
@@ -618,15 +617,14 @@ void Unit::RemoveSpellsCausingAura(AuraType auraType, SpellAuraHolderPtr except)
         if (!aura)
             continue;
 
-        SpellAuraHolderPtr holder = aura->GetHolder();
-        if (!holder || holder->IsDeleted())
+        if (!aura->GetHolder() || aura->GetHolder()->IsDeleted())
             continue;
 
         // skip `except` holder
-        if (holder == except)
+        if (aura->GetHolder() == except)
             continue;
 
-        toRemoveSpellList.insert(holder->GetId());
+        toRemoveSpellList.insert(aura->GetId());
     }
 
     for (std::set<uint32>::iterator i = toRemoveSpellList.begin(); i != toRemoveSpellList.end(); ++i)
@@ -2582,10 +2580,9 @@ void Unit::CalculateDamageAbsorbAndResist(Unit *pCaster, SpellSchoolMask schoolM
         std::set<uint32> toRemoveSpellList;
         for(AuraList::const_iterator i = vSchoolAbsorb.begin(); i != vSchoolAbsorb.end(); ++i)
         {
-            SpellAuraHolderPtr _holder = (*i)->GetHolder();
-            if (_holder && !_holder->IsDeleted() && (*i)->GetModifier()->m_amount <= 0)
+            if ((*i)->GetHolder() && !(*i)->GetHolder()->IsDeleted() && (*i)->GetModifier()->m_amount <= 0)
             {
-                toRemoveSpellList.insert(_holder->GetId());
+                toRemoveSpellList.insert((*i)->GetId());
             }
         }
         for (std::set<uint32>::iterator _i = toRemoveSpellList.begin(); _i != toRemoveSpellList.end(); ++_i)
@@ -4799,17 +4796,17 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder)
 
     SpellSpecific spellId_spec = GetSpellSpecific(spellId);
 
-    SpellAuraHolderMap::iterator i,next;
+    SpellAuraHolderMap& holderMap = GetSpellAuraHolderMap();
+    for (SpellAuraHolderMap::iterator itr = holderMap.begin(), next; itr != holderMap.end(); itr = next)
     for (i = m_spellAuraHolders.begin(); i != m_spellAuraHolders.end(); i = next)
     {
-        SpellAuraHolderPtr i_holder = (*i).second;
-        next = i;
+        next = itr;
         ++next;
 
-        if (!i_holder)
+        if (!itr->second || itr->second->IsDeleted())
             continue;
 
-        SpellEntry const* i_spellProto = i_holder->GetSpellProto();
+        SpellEntry const* i_spellProto = itr->second->GetSpellProto();
 
         if (!i_spellProto)
             continue;
@@ -4820,7 +4817,7 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder)
         if (IsPassiveSpell(i_spellProto))
         {
             // passive non-stackable spells not stackable only for same caster
-            if (holder->GetCasterGuid() != i_holder->GetCasterGuid())
+            if (holder->GetCasterGuid() != itr->second->GetCasterGuid())
                 continue;
 
             // passive non-stackable spells not stackable only with another rank of same spell
@@ -4849,7 +4846,7 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder)
         // single allowed spell specific from same caster or from any caster at target
         bool is_spellSpecPerTargetPerCaster = IsSingleFromSpellSpecificPerTargetPerCaster(spellId_spec,i_spellId_spec);
         bool is_spellSpecPerTarget = IsSingleFromSpellSpecificPerTarget(spellId_spec,i_spellId_spec);
-        if (is_spellSpecPerTarget || (is_spellSpecPerTargetPerCaster && holder->GetCasterGuid() == i_holder->GetCasterGuid()))
+        if (is_spellSpecPerTarget || (is_spellSpecPerTargetPerCaster && holder->GetCasterGuid() == itr->second->GetCasterGuid()))
         {
             // cannot remove higher rank
             if (sSpellMgr.IsRankSpellDueToSpell(spellProto, i_spellId))
@@ -4857,17 +4854,17 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder)
                     return false;
 
             // Its a parent aura (create this aura in ApplyModifier)
-            if (i_holder->IsInUse())
+            if (itr->second->IsInUse())
             {
-                sLog.outError("SpellAuraHolder (Spell %u) is in process but attempt removed at SpellAuraHolder (Spell %u) adding, need add stack rule for Unit::RemoveNoStackAurasDueToAuraHolder", i_holder->GetId(), holder->GetId());
+                sLog.outError("SpellAuraHolder (Spell %u) is in process but attempt removed at SpellAuraHolder (Spell %u) adding, need add stack rule for Unit::RemoveNoStackAurasDueToAuraHolder", itr->second->GetId(), holder->GetId());
                 continue;
             }
             if (is_spellSpecPerTargetPerCaster)
-                RemoveSpellAuraHolder(i_holder);
+                RemoveSpellAuraHolder(itr->second);
             else
                 RemoveAurasDueToSpell(i_spellId);
 
-            if( m_spellAuraHolders.empty() )
+            if (m_spellAuraHolders.empty() )
                 break;
             else
                 next =  m_spellAuraHolders.begin();
@@ -4878,21 +4875,21 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder)
         // spell with spell specific that allow single ranks for spell from diff caster
         // same caster case processed or early or later
         bool is_spellPerTarget = IsSingleFromSpellSpecificSpellRanksPerTarget(spellId_spec,i_spellId_spec);
-        if ( is_spellPerTarget && holder->GetCasterGuid() != i_holder->GetCasterGuid() && sSpellMgr.IsRankSpellDueToSpell(spellProto, i_spellId))
+        if ( is_spellPerTarget && holder->GetCasterGuid() != itr->second->GetCasterGuid() && sSpellMgr.IsRankSpellDueToSpell(spellProto, i_spellId))
         {
             // cannot remove higher rank
-            if(CompareAuraRanks(spellId, i_spellId) < 0)
+            if (CompareAuraRanks(spellId, i_spellId) < 0)
                 return false;
 
             // Its a parent aura (create this aura in ApplyModifier)
-            if (i_holder->IsInUse())
+            if (itr->second->IsInUse())
             {
                 sLog.outError("SpellAuraHolder (Spell %u) is in process but attempt removed at SpellAuraHolder (Spell %u) adding, need add stack rule for Unit::RemoveNoStackAurasDueToAuraHolder", i_holder->GetId(), holder->GetId());
                 continue;
             }
             RemoveAurasDueToSpell(i_spellId);
 
-            if( m_spellAuraHolders.empty() )
+            if (m_spellAuraHolders.empty() )
                 break;
             else
                 next =  m_spellAuraHolders.begin();
@@ -4904,17 +4901,18 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder)
         if ( !is_spellSpecPerTargetPerCaster && !is_spellSpecPerTarget && sSpellMgr.IsNoStackSpellDueToSpell(spellId, i_spellId) )
         {
             // Its a parent aura (create this aura in ApplyModifier)
-            if (i_holder->IsInUse())
+            if (itr->second->IsInUse())
             {
-                sLog.outError("SpellAuraHolder (Spell %u) is in process but attempt removed at SpellAuraHolder (Spell %u) adding, need add stack rule for Unit::RemoveNoStackAurasDueToAuraHolder", i_holder->GetId(), holder->GetId());
+                sLog.outError("SpellAuraHolder (Spell %u) is in process but attempt removed at SpellAuraHolder (Spell %u) adding, need add stack rule for Unit::RemoveNoStackAurasDueToAuraHolder", itr->second->GetId(), holder->GetId());
                 continue;
             }
 
             // different ranks spells with different casters should also stack
-            if (holder->GetCasterGuid() != i_holder->GetCasterGuid() && sSpellMgr.IsStackableSpellAuraHolder(spellProto))
+            if (holder->GetCasterGuid() != itr->second->GetCasterGuid() && sSpellMgr.IsStackableSpellAuraHolder(spellProto))
                 continue;
 
-            RemoveSpellAuraHolder(i_holder, AURA_REMOVE_BY_STACK);
+            if (!itr->second->IsDeleted())
+                RemoveSpellAuraHolder(itr->second, AURA_REMOVE_BY_STACK);
 
             if( m_spellAuraHolders.empty() )
                 break;
@@ -4933,14 +4931,14 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder)
                     return false;                       // cannot remove higher rank
 
                 // Its a parent aura (create this aura in ApplyModifier)
-                if (i_holder->IsInUse())
+                if (itr->second->IsInUse())
                 {
                     sLog.outError("SpellAuraHolder (Spell %u) is in process but attempt removed at SpellAuraHolder (Spell %u) adding, need add stack rule for Unit::RemoveNoStackAurasDueToAuraHolder", i_holder->GetId(), holder->GetId());
                     continue;
                 }
                 RemoveAurasDueToSpell(i_spellId);
 
-                if( m_spellAuraHolders.empty() )
+                if (m_spellAuraHolders.empty())
                     break;
                 else
                     next =  m_spellAuraHolders.begin();
@@ -5150,7 +5148,8 @@ void Unit::RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGuid, U
         {
             foundHolder->SetAuraDuration(new_max_dur);
             foundHolder->SetAuraCharges(foundHolder->GetAuraCharges()+1, true);
-            AddSpellAuraHolderToRemoveList(new_holder);
+            if (!AddSpellAuraHolderToRemoveList(new_holder))
+                DEBUG_LOG("Unit::RemoveAurasDueToSpellBySteal cannot insert SpellAuraHolder (spell %u) to remove list!", new_holder ? new_holder->GetId() : 0);
             return;
         }
         else
@@ -5407,8 +5406,8 @@ void Unit::RemoveSpellAuraHolder(SpellAuraHolderPtr holder, AuraRemoveMode mode)
 
     // If holder in use (removed from code that plan access to it data after return)
     // store it in holder list with delayed deletion
-    if (holder && !holder->IsDeleted())
-        AddSpellAuraHolderToRemoveList(holder);
+    if (!AddSpellAuraHolderToRemoveList(holder))
+        DEBUG_LOG("Unit::RemoveSpellAuraHolder cannot insert SpellAuraHolder (spell %u) to remove list!", holder ? holder->GetId() : 0);
 
     if (mode != AURA_REMOVE_BY_EXPIRE && IsChanneledSpell(AurSpellInfo) && !IsAreaOfEffectSpell(AurSpellInfo) &&
         caster && caster->GetObjectGuid() != GetObjectGuid())
@@ -5571,7 +5570,7 @@ void Unit::RemoveAllAurasOnDeath()
     // and disable the mods for the passive ones
     for(SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end();)
     {
-        if (!iter->second->IsPassive() && !iter->second->IsDeathPersistent())
+        if (iter->second && !iter->second->IsDeleted() && !iter->second->IsPassive() && !iter->second->IsDeathPersistent())
         {
             RemoveSpellAuraHolder(iter->second, AURA_REMOVE_BY_DEATH);
             iter = m_spellAuraHolders.begin();
@@ -5681,12 +5680,11 @@ Aura* Unit::GetTriggeredByClientAura(uint32 spellId)
         {
             for (AuraList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
             {
-                SpellAuraHolderPtr holder = (*itr)->GetHolder();
-                if (!holder || holder->IsDeleted())
+                if (!(*itr)->GetHolder() || (*itr)->GetHolder()->IsDeleted())
                     continue;
 
-                if (holder->GetCasterGuid() == GetObjectGuid() &&
-                    holder->GetSpellProto()->EffectTriggerSpell[(*itr)->GetEffIndex()] == spellId)
+                if ((*itr)->GetHolder()->GetCasterGuid() == GetObjectGuid() &&
+                    (*itr)->GetHolder()->GetSpellProto()->EffectTriggerSpell[(*itr)->GetEffIndex()] == spellId)
                     return *itr;
             }
         }
@@ -11419,6 +11417,10 @@ uint32 createProcExtendMask(SpellNonMeleeDamage *damageInfo, SpellMissInfo missC
 
 void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, SpellEntry const * procSpell, uint32 damage )
 {
+    // Fixme: need remove this check after make LocationManager
+    if (!IsInWorld() || !GetMap())
+        return;
+
     // For melee/ranged based attack need update skills and set some Aura states
     if (!(procExtra & PROC_EX_CAST_END) && procFlag & MELEE_BASED_TRIGGER_MASK)
     {
@@ -11604,6 +11606,8 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
                                 if (pAura->GetCaster() == pImpSRCaster)
                                     member->RemoveAura(pAura);
     }
+
+    procTriggered.clear();
 
     if (!removedSpells.empty())
     {
@@ -12796,15 +12800,22 @@ void Unit::CleanupDeletedHolders(bool force)
     }
 }
 
-void Unit::AddSpellAuraHolderToRemoveList(SpellAuraHolderPtr holder)
+bool Unit::AddSpellAuraHolderToRemoveList(SpellAuraHolderPtr holder)
 {
     if (!holder || holder->IsDeleted())
-        return;
+        return false;
 
-    MAPLOCK_READ(this, MAP_LOCK_TYPE_AURAS);
+    MAPLOCK_WRITE(this, MAP_LOCK_TYPE_AURAS);
     holder->SetDeleted();
+
+    if (m_deletedHolders.find(holder) != m_deletedHolders.end())
+    {
+//        DEBUG_LOG("Unit::AddSpellAuraHolderToRemoveList cannot insert SpellAuraHolder (spell %u) to remove list! Holder already in this list.", holder ? holder->GetId() : 0);
+        return false;
+    }
+
     m_deletedHolders.insert(holder);
-    return;
+    return true;
 };
 
 bool Unit::CheckAndIncreaseCastCounter()
