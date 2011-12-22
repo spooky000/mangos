@@ -4781,7 +4781,7 @@ void Unit::RemoveRankAurasDueToSpell(uint32 spellId)
 
 bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder)
 {
-    if (!holder)
+    if (!holder || holder->IsDeleted())
         return false;
 
     SpellEntry const* spellProto = holder->GetSpellProto();
