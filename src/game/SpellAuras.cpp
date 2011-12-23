@@ -11695,28 +11695,33 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
             break;
     }
 
-    // Old method override. need rewrite.
-    if (spellId1)
-        linkedSet.insert(spellId1);
-    if (spellId2)
-        linkedSet.insert(spellId2);
-    if (spellId3)
-        linkedSet.insert(spellId3);
-    if (spellId4)
-        linkedSet.insert(spellId4);
+    // prevent aura deletion, specially in multi-boost case
+    SetInUse(true);
 
-    if (linkedSet.size() > 0)
+    if (apply || cast_at_remove)
     {
-        // prevent aura deletion, specially in multi-boost case
-        SetInUse(true);
-        for (SpellLinkedSet::const_iterator itr = linkedSet.begin(); itr != linkedSet.end(); ++itr)
-        {
-            (apply || cast_at_remove) ?
-                m_target->CastSpell(m_target, *itr, true, NULL, NULL, GetCasterGuid()) :
-                m_target->RemoveAurasByCasterSpell(*itr, GetCasterGuid());
-        }
-        SetInUse(false);
+        if (spellId1)
+            m_target->CastSpell(m_target, spellId1, true, NULL, NULL, GetCasterGuid());
+        if (spellId2 && !IsDeleted())
+            m_target->CastSpell(m_target, spellId2, true, NULL, NULL, GetCasterGuid());
+        if (spellId3 && !IsDeleted())
+            m_target->CastSpell(m_target, spellId3, true, NULL, NULL, GetCasterGuid());
+        if (spellId4 && !IsDeleted())
+            m_target->CastSpell(m_target, spellId4, true, NULL, NULL, GetCasterGuid());
     }
+    else
+    {
+        if (spellId1)
+            m_target->RemoveAurasByCasterSpell(spellId1, GetCasterGuid());
+        if (spellId2)
+            m_target->RemoveAurasByCasterSpell(spellId2, GetCasterGuid());
+        if (spellId3)
+            m_target->RemoveAurasByCasterSpell(spellId3, GetCasterGuid());
+        if (spellId4)
+            m_target->RemoveAurasByCasterSpell(spellId4, GetCasterGuid());
+    }
+
+    SetInUse(false);
 }
 
 void SpellAuraHolder::HandleSpellSpecificBoostsForward(bool apply)
