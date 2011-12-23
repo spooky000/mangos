@@ -601,7 +601,7 @@ void Unit::RemoveSpellsCausingAura(AuraType auraType)
         if (!aura->GetHolder() || aura->GetHolder()->IsDeleted())
             continue;
 
-        toRemoveSpellList.insert(aura->GetId());
+        toRemoveSpellList.insert(aura->GetHolder()->GetId());
     }
 
     for (std::set<uint32>::iterator i = toRemoveSpellList.begin(); i != toRemoveSpellList.end(); ++i)
@@ -624,7 +624,7 @@ void Unit::RemoveSpellsCausingAura(AuraType auraType, SpellAuraHolderPtr except)
         if (aura->GetHolder() == except)
             continue;
 
-        toRemoveSpellList.insert(aura->GetId());
+        toRemoveSpellList.insert(aura->GetHolder()->GetId());
     }
 
     for (std::set<uint32>::iterator i = toRemoveSpellList.begin(); i != toRemoveSpellList.end(); ++i)
