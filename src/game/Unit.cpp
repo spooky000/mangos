@@ -2793,7 +2793,7 @@ void Unit::CalculateAbsorbResistBlock(Unit *pCaster, SpellNonMeleeDamage *damage
     }
 
     uint32 absorb_affected_damage = pCaster->CalcNotIgnoreAbsorbDamage(damageInfo->damage,GetSpellSchoolMask(spellProto),spellProto);
-    CalculateDamageAbsorbAndResist(pCaster, GetSpellSchoolMask(spellProto), SPELL_DIRECT_DAMAGE, absorb_affected_damage, &damageInfo->absorb, &damageInfo->resist, !(spellProto->AttributesEx2 & SPELL_ATTR_EX2_CANT_REFLECTED));
+    CalculateDamageAbsorbAndResist(pCaster, GetSpellSchoolMask(spellProto), SPELL_DIRECT_DAMAGE, absorb_affected_damage, &damageInfo->absorb, &damageInfo->resist, !(spellProto->AttributesEx2 & SPELL_ATTR_EX2_IGNORE_LOS));
     damageInfo->damage-= damageInfo->absorb + damageInfo->resist;
 }
 
@@ -13102,7 +13102,7 @@ bool Unit::IsVisibleTargetForAoEDamage(WorldObject const* caster, SpellEntry con
         return isVisibleForOrDetect(static_cast<Unit const*>(caster), caster, false);
     // spell can hit stealth/invisible targets, just check for LoS
     else
-        return spellInfo->AttributesEx2 & SPELL_ATTR_EX2_CANT_REFLECTED ? true : caster->IsWithinLOSInMap(this);
+        return spellInfo->AttributesEx2 & SPELL_ATTR_EX2_IGNORE_LOS ? true : caster->IsWithinLOSInMap(this);
 }
 
 uint32 Unit::GetModelForForm(SpellShapeshiftFormEntry const* ssEntry) const
