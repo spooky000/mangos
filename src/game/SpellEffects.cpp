@@ -538,23 +538,6 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
 
                         break;
                     }
-                    // Defile damage depending from scale.
-                    case 72754:
-                    case 73708:
-                    case 73709:
-                    case 73710:
-                        damage = damage * m_caster->GetObjectScale();
-                        break;
-                    // Growling ooze puddle
-                    case 70346:
-                    case 72456:
-                    case 72868:
-                    case 72869:
-                    {
-                        float distance = unitTarget->GetDistance2d(m_caster); 
-                        damage *= exp(-distance/(5.0f*m_caster->GetObjectScale()));
-                        break;
-                    }
                     // Bone Storm
                     case 69075:
                     case 70834:
@@ -563,6 +546,36 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     {
                         float distance = unitTarget->GetDistance2d(m_caster); 
                         damage *= exp(-distance/(10.0f));
+                        break;
+                    }
+                    // Expunged Gas (Putricide)
+                    case 70701:
+                    {
+                        uint32 stack = 1;
+                        int32 extraDamage = 0;
+                        damage = 1;
+
+                        SpellAuraHolderPtr holder = m_caster->GetSpellAuraHolder(70672);
+                        if (!holder)
+                            holder = m_caster->GetSpellAuraHolder(72455);
+                        if (!holder)
+                            holder = m_caster->GetSpellAuraHolder(72832);
+                        if (!holder)
+                            holder = m_caster->GetSpellAuraHolder(72833);
+
+                        if (holder)
+                        {
+                            stack = holder->GetStackAmount();
+
+                            if (m_caster->GetMap()->GetDifficulty() >= RAID_DIFFICULTY_25MAN_NORMAL)
+                                extraDamage = 1500;
+                            else
+                                extraDamage = 1250;
+                        }
+
+                        for (uint32 i = 1; i <= stack; ++i)
+                            damage += extraDamage * i;
+
                         break;
                     }
                     // Vampiric Bite (Queen Lana'thel)
@@ -589,6 +602,124 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                             damage = 0;
                         else
                             unitTarget->CastSpell(unitTarget, 72202, true); // Blood Link
+                        break;
+                    }
+                    // Mutated Plague (Putricide)
+                    // need to find correct formula
+                    case 72454: // 10normal
+                    {
+                        if (SpellAuraHolderPtr holder = m_caster->GetSpellAuraHolder(72451))
+                        {
+                            uint32 stack = holder->GetStackAmount();
+                            switch(stack)
+                            {
+                                case 1:
+                                    // deal normal dmg
+                                    break;
+                                case 2:
+                                    damage = urand(200, 500);
+                                    break;
+                                case 3:
+                                    damage = urand(1000, 1200);
+                                    break;
+                                case 4:
+                                    damage = urand(2500, 3000);
+                                    break;
+                                case 5:
+                                    damage = urand(6500, 7500);
+                                    break;
+                                default:
+                                    damage = 3000 * stack;
+                                    break;
+                            }
+                        }
+                        break;
+                    }
+                    case 72464: // 25normal
+                    {
+                        if (SpellAuraHolderPtr holder = m_caster->GetSpellAuraHolder(72463))
+                        {
+                            uint32 stack = holder->GetStackAmount();
+                            switch(stack)
+                            {
+                                case 1:
+                                    // deal normal dmg
+                                    break;
+                                case 2:
+                                    damage = urand(500, 1000);
+                                    break;
+                                case 3:
+                                    damage = urand(1800, 2300);
+                                    break;
+                                case 4:
+                                    damage = urand(4200, 4700);
+                                    break;
+                                case 5:
+                                    damage = urand(9000, 9500);
+                                    break;
+                                default:
+                                    damage = 3500 * stack;
+                                    break;
+                            }
+                        }
+                        break;
+                    }
+                    case 72506: // 10hero
+                    {
+                        if (SpellAuraHolderPtr holder = m_caster->GetSpellAuraHolder(72745))
+                        {
+                            uint32 stack = holder->GetStackAmount();
+                            switch(stack)
+                            {
+                                case 1:
+                                    // deal normal dmg
+                                    break;
+                                case 2:
+                                    damage = urand(400, 800);
+                                    break;
+                                case 3:
+                                    damage = urand(1500, 2000);
+                                    break;
+                                case 4:
+                                    damage = urand(3500, 4000);
+                                    break;
+                                case 5:
+                                    damage = urand(7000, 8000);
+                                    break;
+                                default:
+                                    damage = 3500 * stack;
+                                    break;
+                            }
+                        }
+                        break;
+                    }
+                    case 72507: // 25hero
+                    {
+                        if (SpellAuraHolderPtr holder = m_caster->GetSpellAuraHolder(72672))
+                        {
+                            uint32 stack = holder->GetStackAmount();
+                            switch(stack)
+                            {
+                                case 1:
+                                    // deal normal dmg
+                                    break;
+                                case 2:
+                                    damage = urand(500, 1000);
+                                    break;
+                                case 3:
+                                    damage = urand(2000, 3000);
+                                    break;
+                                case 4:
+                                    damage = urand(4500, 5500);
+                                    break;
+                                case 5:
+                                    damage = urand(10000, 1200);
+                                    break;
+                                default:
+                                    damage = 4000 * stack;
+                                    break;
+                            }
+                        }
                         break;
                     }
                     // Shadow Prison
@@ -2964,6 +3095,13 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(unitTarget,spell_id,true,NULL);
                     return;
                 }
+                case 54171:                                 // Divine Storm
+                {
+                        // split between targets
+                        int32 bp = damage / m_UniqueTargetInfo.size();
+                        m_caster->CastCustomSpell(unitTarget, 54172, &bp, NULL, NULL, true);
+                        return;
+                }
                 case 54850:                                 // Drakkari Colossus, Summon Elemental
                 {
                     if (!unitTarget)
@@ -2972,13 +3110,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 54851, true);
                     return;
                 }
-                case 54171:                                 // Divine Storm
-                {
-                        // split between targets
-                        int32 bp = damage / m_UniqueTargetInfo.size();
-                        m_caster->CastCustomSpell(unitTarget, 54172, &bp, NULL, NULL, true);
-                        return;
-                }                
                 case 55004:                                 // Nitro Boosts
                 {
                     if (!m_CastItem)
@@ -8857,9 +8988,14 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 32756, true);
                     return;
                 }
-                case 49380:                                 // Consume: Spell of Trollgore nonhero
+                case 49380:                                 // Consume
+                case 59803:                                 // Consume (heroic)
                 {
-                    m_caster->CastSpell(m_caster,49381,true);
+                    if (!unitTarget)
+                        return;
+
+                    // Each target hit buffs the caster
+                    unitTarget->CastSpell(m_caster, m_spellInfo->Id == 49380 ? 49381 : 59805, true, NULL, NULL, m_caster->GetObjectGuid());
                     return;
                 }
                 case 49405:                                 // Taunt Invider Trigger (Trollgore - Drak'Tharon Keep)
@@ -10001,7 +10137,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         if (SpellAuraHolderPtr holder= unitTarget->GetSpellAuraHolder(m_spellInfo->Id))
                         {
                             if (holder->GetStackAmount() >= 4)
-                                unitTarget->CastSpell(unitTarget, 69839, true); // Unstable Ooze Explosion
+                                unitTarget->CastSpell(unitTarget, 69839, false); // Unstable Ooze Explosion
                         }
                     }
                     return;
@@ -10046,6 +10182,45 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->NearTeleportTo(fPosX, fPosY, fPosZ+1.0f, -unitTarget->GetOrientation(), false);
                     return;
                 }
+                case 70360:                                 // Eat Ooze (Putricide)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    if (SpellAuraHolderPtr holder = unitTarget->GetSpellAuraHolder(70347))
+                    {
+                        if (holder->GetStackAmount() <= 3)
+                        {
+                            if (unitTarget->GetTypeId() == TYPEID_UNIT)
+                                ((Creature*)unitTarget)->ForcedDespawn();
+                            else
+                                unitTarget->RemoveAurasDueToSpell(70347);
+                        }
+                        else
+                            holder->ModStackAmount(-3);
+                    }
+                    return;
+                }
+                case 70920:                                 // Unbound Plague Search Effect
+                {
+                    // don't pass the plague for the first 5 seconds
+                    if (m_caster->GetDummyAura(70955))
+                        return;
+
+                    if (unitTarget)
+                    {
+                        m_caster->CastSpell(unitTarget, 70911, true);   // apply Plague to new target
+                        m_caster->RemoveAurasDueToSpell(70911);         // remove Plague from the previous target
+                    }
+                    return;
+                }
+                case 71255:                                 // Choking Gas Bomb (Putricide)
+                {
+                    m_caster->CastSpell(m_caster, m_spellInfo->CalculateSimpleValue(EFFECT_INDEX_0), true);
+                    // second is on random side
+                    m_caster->CastSpell(m_caster, m_spellInfo->CalculateSimpleValue(SpellEffectIndex(urand(1, 2))), true);
+                    return;
+                }
                 case 71446:                                 // Twilight Bloodbolt 10N
                 {
                     if (!unitTarget)
@@ -10076,6 +10251,16 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         return;
 
                     unitTarget->CastSpell(unitTarget, 71483, true);
+                    return;
+                }
+                case 71620:                                 // Tear Gas Cancel (Putricide)
+                case 72618:                                 // Mutated Plague Clear (Putricide)
+                {
+                    if (unitTarget)
+                    {
+                        unitTarget->RemoveAurasDueToSpell(m_spellInfo->CalculateSimpleValue(EFFECT_INDEX_0));
+                        unitTarget->RemoveAurasDueToSpell(m_spellInfo->CalculateSimpleValue(EFFECT_INDEX_1));
+                    }
                     return;
                 }
                 case 71899:                                 // Bloodbolt Whirl 10N
