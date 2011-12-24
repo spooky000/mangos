@@ -2964,6 +2964,13 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(unitTarget,spell_id,true,NULL);
                     return;
                 }
+                case 54171:                                 // Divine Storm
+                {
+                        // split between targets
+                        int32 bp = damage / m_UniqueTargetInfo.size();
+                        m_caster->CastCustomSpell(unitTarget, 54172, &bp, NULL, NULL, true);
+                        return;
+                }
                 case 54850:                                 // Drakkari Colossus, Summon Elemental
                 {
                     if (!unitTarget)
@@ -2972,13 +2979,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 54851, true);
                     return;
                 }
-                case 54171:                                 // Divine Storm
-                {
-                        // split between targets
-                        int32 bp = damage / m_UniqueTargetInfo.size();
-                        m_caster->CastCustomSpell(unitTarget, 54172, &bp, NULL, NULL, true);
-                        return;
-                }                
                 case 55004:                                 // Nitro Boosts
                 {
                     if (!m_CastItem)
@@ -8857,9 +8857,14 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 32756, true);
                     return;
                 }
-                case 49380:                                 // Consume: Spell of Trollgore nonhero
+                case 49380:                                 // Consume
+                case 59803:                                 // Consume (heroic)
                 {
-                    m_caster->CastSpell(m_caster,49381,true);
+                    if (!unitTarget)
+                        return;
+
+                    // Each target hit buffs the caster
+                    unitTarget->CastSpell(m_caster, m_spellInfo->Id == 49380 ? 49381 : 59805, true, NULL, NULL, m_caster->GetObjectGuid());
                     return;
                 }
                 case 49405:                                 // Taunt Invider Trigger (Trollgore - Drak'Tharon Keep)
