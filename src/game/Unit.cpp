@@ -680,10 +680,19 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
         RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
 
-        if(pVictim != this)
+        if (pVictim != this)
+        {
             RemoveSpellsCausingAura(SPELL_AURA_MOD_INVISIBILITY);
 
-        if(pVictim->GetTypeId() == TYPEID_PLAYER && !pVictim->IsStandState() && !pVictim->hasUnitState(UNIT_STAT_STUNNED))
+            // set in combat
+            SetInCombatWith(pVictim);
+            pVictim->SetInCombatWith(this);
+
+            if (Player* attackedPlayer = pVictim->GetCharmerOrOwnerPlayerOrPlayerItself())
+                SetContestedPvP(attackedPlayer);
+        }
+
+        if (pVictim->GetTypeId() == TYPEID_PLAYER && !pVictim->IsStandState() && !pVictim->hasUnitState(UNIT_STAT_STUNNED))
             pVictim->SetStandState(UNIT_STAND_STATE_STAND);
     }
 
