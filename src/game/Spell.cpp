@@ -2547,8 +2547,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                     FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
                     break;
             }
-            if (m_spellInfo->Id == 63278 ||                                                 // Mark of the Faceless
-                m_spellInfo->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_MIND_SEAR1>())     // Mind Sear
+            if (m_spellInfo->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_MIND_SEAR1>())     // Mind Sear
                 if(Unit* currentTarget = m_targets.getUnitTarget())
                     targetUnitMap.remove(currentTarget);
             break;
