@@ -12342,6 +12342,11 @@ uint32 Aura::CalculateCrowdControlBreakDamage()
     if (!IsCrowdControlAura(m_modifier.m_auraname))
         return 0;
 
+    // auras with this attribute not have damage cap
+    if (GetSpellProto()->AttributesEx & SPELL_ATTR_EX_BREAKABLE_BY_ANY_DAMAGE
+        && GetSpellProto()->AuraInterruptFlags & AURA_INTERRUPT_FLAG_DIRECT_DAMAGE)
+        return 0;
+
     // Damage cap for CC effects
     uint32 damageCap = (int32)((float)GetTarget()->GetMaxHealth() * sWorld.getConfig(CONFIG_FLOAT_CROWDCONTROL_HP_BASE));
 
