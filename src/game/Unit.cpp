@@ -4869,10 +4869,10 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder)
             else
                 RemoveAurasDueToSpell(i_spellId);
 
-            if (holderMap.empty() )
+            if( m_spellAuraHolders.empty() )
                 break;
             else
-                next = holderMap.begin();
+                next =  m_spellAuraHolders.begin();
 
             continue;
         }
@@ -4894,10 +4894,10 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder)
             }
             RemoveAurasDueToSpell(i_spellId);
 
-            if (holderMap.empty() )
+            if( m_spellAuraHolders.empty() )
                 break;
             else
-                next = holderMap.begin();
+                next =  m_spellAuraHolders.begin();
 
             continue;
         }
@@ -4918,10 +4918,10 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder)
 
             RemoveSpellAuraHolder(i_holder, AURA_REMOVE_BY_STACK);
 
-            if (holderMap.empty() )
+            if( m_spellAuraHolders.empty() )
                 break;
             else
-                next = holderMap.begin();
+                next =  m_spellAuraHolders.begin();
 
             continue;
         }
@@ -4942,10 +4942,10 @@ bool Unit::RemoveNoStackAurasDueToAuraHolder(SpellAuraHolderPtr holder)
                 }
                 RemoveAurasDueToSpell(i_spellId);
 
-                if (holderMap.empty())
-                    break;
-                else
-                    next = holderMap.begin();
+            if( m_spellAuraHolders.empty() )
+                break;
+            else
+                next =  m_spellAuraHolders.begin();
             }
         }
     }
