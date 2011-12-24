@@ -847,6 +847,8 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
                         return true;
                     // let check by target modes (for Amplify Magic cases/etc)
                     break;
+                case SPELL_AURA_MOD_MECHANIC_DAMAGE_TAKEN_PERCENT:
+                    return (spellproto->CalculateSimpleValue(effIndex) < 0);
                 case SPELL_AURA_MOD_SPELL_CRIT_CHANCE:
                 case SPELL_AURA_MOD_INCREASE_HEALTH_PERCENT:
                 case SPELL_AURA_MOD_DAMAGE_PERCENT_DONE:
