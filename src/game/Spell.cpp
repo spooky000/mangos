@@ -6867,7 +6867,7 @@ SpellCastResult Spell::CheckCasterAuras() const
         if (school_immune || mechanic_immune || dispel_immune)
         {
             //Checking auras is needed now, because you are prevented by some state but the spell grants immunity.
-            //MAPLOCK_READ(m_caster, MAP_LOCK_TYPE_AURAS);
+            MAPLOCK_READ(m_caster, MAP_LOCK_TYPE_AURAS);
             Unit::SpellAuraHolderMap const& auras = m_caster->GetSpellAuraHolderMap();
             for(Unit::SpellAuraHolderMap::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
             {

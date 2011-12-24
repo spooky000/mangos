@@ -607,7 +607,8 @@ void Unit::RemoveSpellsCausingAura(AuraType auraType)
         if (!aura)
             continue;
 
-        if (!aura->GetHolder() || aura->GetHolder()->IsDeleted())
+        SpellAuraHolderPtr holder = aura->GetHolder();
+        if (!holder || holder->IsDeleted())
             continue;
 
         toRemoveSpellList.insert(aura->GetId());
@@ -626,14 +627,15 @@ void Unit::RemoveSpellsCausingAura(AuraType auraType, SpellAuraHolderPtr except)
         if (!aura)
             continue;
 
-        if (!aura->GetHolder() || aura->GetHolder()->IsDeleted())
+        SpellAuraHolderPtr holder = aura->GetHolder();
+        if (!holder || holder->IsDeleted())
             continue;
 
         // skip `except` holder
-        if (aura->GetHolder() == except)
+        if (holder == except)
             continue;
 
-        toRemoveSpellList.insert(aura->GetId());
+        toRemoveSpellList.insert(holder->GetId());
     }
 
     for (SpellIdSet::iterator i = toRemoveSpellList.begin(); i != toRemoveSpellList.end(); ++i)
