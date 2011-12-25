@@ -10320,6 +10320,9 @@ m_permanent(false), m_isRemovedOnShapeLost(true), m_deleted(false), m_in_use(0)
 
 void SpellAuraHolder::AddAura(Aura aura, SpellEffectIndex index)
 {
+    if (!aura)
+        return;
+
     if (Aura* _aura = GetAuraByEffectIndex(index))
     {
         DEBUG_LOG("SpellAuraHolder::AddAura attempt to add aura (effect %u) to holder of spell %u, but holder already have active aura!", index, GetId());
