@@ -2585,10 +2585,9 @@ void Unit::CalculateDamageAbsorbAndResist(Unit *pCaster, SpellSchoolMask schoolM
         std::set<uint32> toRemoveSpellList;
         for(AuraList::const_iterator i = vSchoolAbsorb.begin(); i != vSchoolAbsorb.end(); ++i)
         {
-            SpellAuraHolderPtr _holder = (*i)->GetHolder();
-            if (_holder && !_holder->IsDeleted() && (*i)->GetModifier()->m_amount <= 0)
+            if ((*i)->GetHolder() && !(*i)->GetHolder()->IsDeleted() && (*i)->GetModifier()->m_amount <= 0)
             {
-                toRemoveSpellList.insert(_holder->GetId());
+                toRemoveSpellList.insert((*i)->GetId());
             }
         }
         for (std::set<uint32>::iterator _i = toRemoveSpellList.begin(); _i != toRemoveSpellList.end(); ++_i)
@@ -4986,6 +4985,21 @@ void Unit::RemoveAurasByCasterSpell(uint32 spellId, ObjectGuid casterGuid)
     }
 }
 
+void Unit::RemoveAllGroupBuffsFromCaster(ObjectGuid guidCaster)
+{
+    SpellAuraHolderMap &holdersMap = GetSpellAuraHolderMap();
+    for (SpellAuraHolderMap::iterator itr = holdersMap.begin(); itr != holdersMap.end();)
+    {
+        if (itr->second && !itr->second->IsDeleted() && itr->second->GetCasterGuid() == guidCaster && SpellMgr::IsGroupBuff(itr->second->GetSpellProto()))
+        {
+            RemoveSpellAuraHolder(itr->second);
+            itr = holdersMap.begin();
+        }
+        else
+            ++itr;
+    }
+}
+
 void Unit::RemoveSingleAuraFromSpellAuraHolder(uint32 spellId, SpellEffectIndex effindex, ObjectGuid casterGuid, AuraRemoveMode mode)
 {
     SpellAuraHolderBounds spair = GetSpellAuraHolderBounds(spellId);
@@ -5153,7 +5167,8 @@ void Unit::RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGuid, U
         {
             foundHolder->SetAuraDuration(new_max_dur);
             foundHolder->SetAuraCharges(foundHolder->GetAuraCharges()+1, true);
-            AddSpellAuraHolderToRemoveList(new_holder);
+            if (!AddSpellAuraHolderToRemoveList(new_holder))
+                DEBUG_LOG("Unit::RemoveAurasDueToSpellBySteal cannot insert SpellAuraHolder (spell %u) to remove list!", new_holder ? new_holder->GetId() : 0);
             return;
         }
         else
@@ -5574,7 +5589,7 @@ void Unit::RemoveAllAurasOnDeath()
     // and disable the mods for the passive ones
     for(SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end();)
     {
-        if (!iter->second->IsPassive() && !iter->second->IsDeathPersistent())
+        if (iter->second && !iter->second->IsDeleted() && !iter->second->IsPassive() && !iter->second->IsDeathPersistent())
         {
             RemoveSpellAuraHolder(iter->second, AURA_REMOVE_BY_DEATH);
             iter = m_spellAuraHolders.begin();
@@ -5684,12 +5699,11 @@ Aura* Unit::GetTriggeredByClientAura(uint32 spellId)
         {
             for (AuraList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
             {
-                SpellAuraHolderPtr holder = (*itr)->GetHolder();
-                if (!holder || holder->IsDeleted())
+                if (!(*itr)->GetHolder() || (*itr)->GetHolder()->IsDeleted())
                     continue;
 
-                if (holder->GetCasterGuid() == GetObjectGuid() &&
-                    holder->GetSpellProto()->EffectTriggerSpell[(*itr)->GetEffIndex()] == spellId)
+                if ((*itr)->GetHolder()->GetCasterGuid() == GetObjectGuid() &&
+                    (*itr)->GetHolder()->GetSpellProto()->EffectTriggerSpell[(*itr)->GetEffIndex()] == spellId)
                     return *itr;
             }
         }
@@ -11422,6 +11436,10 @@ uint32 createProcExtendMask(SpellNonMeleeDamage *damageInfo, SpellMissInfo missC
 
 void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, SpellEntry const * procSpell, uint32 damage )
 {
+    // Fixme: need remove this check after make LocationManager
+    if (!IsInWorld() || !GetMap())
+        return;
+
     // For melee/ranged based attack need update skills and set some Aura states
     if (!(procExtra & PROC_EX_CAST_END) && procFlag & MELEE_BASED_TRIGGER_MASK)
     {
@@ -11613,6 +11631,8 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
                                 if (pAura->GetCaster() == pImpSRCaster)
                                     member->RemoveAura(pAura);
     }
+
+    procTriggered.clear();
 
     if (!removedSpells.empty())
     {
