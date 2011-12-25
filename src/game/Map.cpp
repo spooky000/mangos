@@ -1329,10 +1329,10 @@ bool DungeonMap::Add(Player *player)
         if (pGroup)
         {
             // solo saves should be reset when entering a group
-            InstanceGroupBind *groupBind = pGroup->GetBoundInstance(this,GetDifficulty());
+            InstanceGroupBind* groupBind = pGroup->GetBoundInstance(this,GetDifficulty());
             if (playerBind)
             {
-                sLog.outError("DungeonMap::Add: %s is being put in instance %d,%d,%d,%d,%d,%d but he is in group (Id: %d) and is bound to instance %d,%d,%d,%d,%d,%d!",
+                DEBUG_LOG("DungeonMap::Add: %s enter to instance %d,%d,%d,%d,%d,%d but he is in group (Id: %d) and has non-permanent bind to instance %d,%d,%d,%d,%d,%d!",
                     player->GetGuidStr().c_str(), GetPersistentState()->GetMapId(), GetPersistentState()->GetInstanceId(),
                     GetPersistanceState()->GetDifficulty(), GetPersistanceState()->GetPlayerCount(), GetPersistanceState()->GetGroupCount(),
                     GetPersistanceState()->CanReset(), pGroup->GetId(),
@@ -1340,7 +1340,7 @@ bool DungeonMap::Add(Player *player)
                     playerBind->state->GetPlayerCount(), playerBind->state->GetGroupCount(), playerBind->state->CanReset());
 
                 if (groupBind)
-                    sLog.outError("DungeonMap::Add: the group (Id: %d) is bound to instance %d,%d,%d,%d,%d,%d",
+                    DEBUG_LOG("DungeonMap::Add: the group (Id: %d) is bound to instance %d,%d,%d,%d,%d,%d.",
                     pGroup->GetId(),
                     groupBind->state->GetMapId(), groupBind->state->GetInstanceId(), groupBind->state->GetDifficulty(),
                     groupBind->state->GetPlayerCount(), groupBind->state->GetGroupCount(), groupBind->state->CanReset());
@@ -1357,7 +1357,7 @@ bool DungeonMap::Add(Player *player)
                 // cannot jump to a different instance without resetting it (GM can enter any instance)
                 if (groupBind->state != GetPersistentState() && !player->isGameMaster())
                 {
-                    sLog.outError("DungeonMap::Add: %s is being put in instance %d,%d,%d but he is in group (Id: %d) which is bound to instance %d,%d,%d!",
+                    DEBUG_LOG("DungeonMap::Add: %s is being put in instance %d,%d,%d but he is in group (Id: %d) which has non-permanent bind to instance %d,%d,%d!",
                         player->GetGuidStr().c_str(), GetPersistentState()->GetMapId(),
                         GetPersistentState()->GetInstanceId(), GetPersistentState()->GetDifficulty(),
                         pGroup->GetId(), groupBind->state->GetMapId(),
