@@ -12800,15 +12800,22 @@ void Unit::CleanupDeletedHolders(bool force)
     }
 }
 
-void Unit::AddSpellAuraHolderToRemoveList(SpellAuraHolderPtr holder)
+bool Unit::AddSpellAuraHolderToRemoveList(SpellAuraHolderPtr holder)
 {
     if (!holder || holder->IsDeleted())
-        return;
+        return false;
 
-    MAPLOCK_READ(this, MAP_LOCK_TYPE_AURAS);
+    MAPLOCK_WRITE(this, MAP_LOCK_TYPE_AURAS);
     holder->SetDeleted();
+
+    if (m_deletedHolders.find(holder) != m_deletedHolders.end())
+    {
+//        DEBUG_LOG("Unit::AddSpellAuraHolderToRemoveList cannot insert SpellAuraHolder (spell %u) to remove list! Holder already in this list.", holder ? holder->GetId() : 0);
+        return false;
+    }
+
     m_deletedHolders.insert(holder);
-    return;
+    return true;
 };
 
 bool Unit::CheckAndIncreaseCastCounter()
