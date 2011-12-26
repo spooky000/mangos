@@ -1692,6 +1692,12 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
 
     MapEntry const* mEntry = sMapStore.LookupEntry(mapid);
 
+    if(!mEntry)
+    {
+        sLog.outError("TeleportTo: invalid map entry (id %d). possible disk or memory error.", mapid);
+        return false;
+    }
+
     // don't let enter battlegrounds without assigned battleground id (for example through areatrigger)...
     // don't let gm level > 1 either
     if(!InBattleGround() && mEntry->IsBattleGroundOrArena())
@@ -14051,6 +14057,19 @@ bool Player::CanCompleteQuest(uint32 quest_id) const
         return false;
     }
 
+    // Anti WPE for client command /script CompleteQuest() on quests with AutoComplete flag
+    if (status == QUEST_STATUS_NONE)
+    {
+        for (uint32 i = 0; i < QUEST_ITEM_OBJECTIVES_COUNT; ++i)
+        {
+            if (qInfo->ReqItemCount[i] != 0 &&
+                GetItemCount(qInfo->ReqItemId[i]) < qInfo->ReqItemCount[i])
+            {
+                return false;
+            }
+        }
+    }
+
     // auto complete quest
     if (qInfo->IsAutoComplete() && CanTakeQuest(qInfo, false))
         return true;
@@ -16125,7 +16144,10 @@ bool Player::LoadFromDB(ObjectGuid guid, SqlQueryHolder *holder )
     DungeonPersistentState* state = GetBoundInstanceSaveForSelfOrGroup(GetMapId());
 
     // load the player's map here if it's not already loaded
-    SetMap(sMapMgr.CreateMap(GetMapId(), this));
+    if (Map* map = sMapMgr.CreateMap(GetMapId(), this))
+        SetMap(map);
+    else
+        RelocateToHomebind();
 
     // if the player not at BG and is in an instance and it has been reset in the meantime teleport him to the entrance
     if (!player_at_bg && GetInstanceId() && !state)
@@ -16331,7 +16353,10 @@ bool Player::LoadFromDB(ObjectGuid guid, SqlQueryHolder *holder )
 
         //we can be relocated from taxi and still have an outdated Map pointer!
         //so we need to get a new Map pointer!
-        SetMap(sMapMgr.CreateMap(GetMapId(), this));
+        if (Map* map = sMapMgr.CreateMap(GetMapId(), this))
+            SetMap(map);
+        else
+            RelocateToHomebind();
         SaveRecallPosition();                           // save as recall also to prevent recall and fall from sky
 
         m_taxi.ClearTaxiDestinations();

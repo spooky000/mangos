@@ -4253,8 +4253,9 @@ void Aura::HandleAuraTransform(bool apply, bool Real)
                     //break;
                 //case 53806:                               // Pygmy Oil
                     //break;
-                //case 62847:                               // NPC Appearance - Valiant 02
-                    //break;
+                case 62847:                                 // NPC Appearance - Valiant 02
+                    target->SetDisplayId(target->getGender() == GENDER_MALE ? 26185 : 26186);
+                    break;
                 //case 62852:                               // NPC Appearance - Champion 01
                     //break;
                 //case 63965:                               // NPC Appearance - Champion 02
