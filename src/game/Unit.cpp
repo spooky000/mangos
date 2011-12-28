@@ -11984,7 +11984,7 @@ void Unit::UpdateModelData()
     SetFloatValue(UNIT_FIELD_COMBATREACH, combatReach);
 }
 
-void Unit::GetRandomContactPoint(const Unit* obj, float &x, float &y, float &z, float distance2dMin, float distance2dMax) const
+void Unit::GetRandomContactPoint(const WorldObject* obj, float &x, float &y, float &z, float distance2dMin, float distance2dMax) const
 {
     float combatReach;
     if (CreatureModelInfo const* modelInfo = sObjectMgr.GetCreatureModelInfo(GetDisplayId()))
