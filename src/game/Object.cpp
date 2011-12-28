@@ -1799,9 +1799,10 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
 {
     GetNearPoint2D(x, y, distance2d + searcher_bounding_radius, absAngle);
     z = GetPositionZ();
+    UpdateGroundPositionZ(x, y, z);
 
     // if detection disabled, return first point
-    if(!sWorld.getConfig(CONFIG_BOOL_DETECT_POS_COLLISION))
+    /*if(!sWorld.getConfig(CONFIG_BOOL_DETECT_POS_COLLISION))
     {
         if (searcher)
             searcher->UpdateAllowedPositionZ(x, y, z);      // update to LOS height if available
@@ -1899,7 +1900,7 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
     if (searcher)
         searcher->UpdateAllowedPositionZ(x, y, z);          // update to LOS height if available
     else
-        UpdateGroundPositionZ(x, y, z);
+        UpdateGroundPositionZ(x, y, z);*/
 }
 
 void WorldObject::SetPhaseMask(uint32 newPhaseMask, bool update)

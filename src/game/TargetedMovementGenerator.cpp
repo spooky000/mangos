@@ -50,7 +50,8 @@ void TargetedMovementGeneratorMedium<T,D>::_setTargetLocation(T &owner)
     else if (!i_offset)
     {
         // to nearest contact position
-        i_target->GetContactPoint( &owner, x, y, z );
+        // i_target->GetContactPoint( &owner, x, y, z );
+        i_target->GetRandomContactPoint(&owner, x, y, z, 0, DEFAULT_OBJECT_SCALE);
     }
     else
     {
