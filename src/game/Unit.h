@@ -1875,8 +1875,6 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         // at any changes to scale and/or displayId
         void UpdateModelData();
 
-        void GetRandomContactPoint(const Unit* target, float &x, float &y, float &z, float distance2dMin, float distance2dMax) const;
-
         DynamicObject* GetDynObject(uint32 spellId, SpellEffectIndex effIndex);
         DynamicObject* GetDynObject(uint32 spellId);
         void AddDynObject(DynamicObject* dynObj);

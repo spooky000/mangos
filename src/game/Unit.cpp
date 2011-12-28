@@ -11984,19 +11984,6 @@ void Unit::UpdateModelData()
     SetFloatValue(UNIT_FIELD_COMBATREACH, combatReach);
 }
 
-void Unit::GetRandomContactPoint(const Unit* obj, float &x, float &y, float &z, float distance2dMin, float distance2dMax) const
-{
-    float combatReach;
-    if (CreatureModelInfo const* modelInfo = sObjectMgr.GetCreatureModelInfo(GetDisplayId()))
-        combatReach = modelInfo->combat_reach;
-
-    uint32 attacker_number = GetMap()->GetAttackersFor(GetObjectGuid()).size();
-    if (attacker_number > 0)
-        --attacker_number;
-    GetNearPoint(obj, x, y, z, combatReach, distance2dMin+(distance2dMax-distance2dMin) * (float)rand_norm()
-        , GetAngle(obj) + (attacker_number ? (static_cast<float>(M_PI/2) - static_cast<float>(M_PI) * (float)rand_norm()) * float(attacker_number) / combatReach * 0.3f : 0));
-}
-
 void Unit::ClearComboPointHolders()
 {
     while(!m_ComboPointHolders.empty())
