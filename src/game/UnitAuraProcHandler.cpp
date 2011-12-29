@@ -5199,10 +5199,10 @@ SpellAuraProcResult Unit::IsTriggeredAtCustomProcEvent(Unit *pVictim, SpellAuraH
                         (spellProto->AuraInterruptFlags & AURA_INTERRUPT_FLAG_DAMAGE ||
                         spellProto->Attributes & SPELL_ATTR_BREAKABLE_BY_DAMAGE))
                         return SPELL_AURA_PROC_OK;
-                    else if (procFlag & PROC_FLAG_TAKEN_ANY_DAMAGE &&
+                    /*else if (procFlag & PROC_FLAG_TAKEN_ANY_DAMAGE &&
                         (spellProto->AuraInterruptFlags & AURA_INTERRUPT_FLAG_DAMAGE &&
                         spellProto->AttributesEx & SPELL_ATTR_EX_BREAKABLE_BY_ANY_DAMAGE))
-                        return SPELL_AURA_PROC_OK;
+                        return SPELL_AURA_PROC_OK;*/
                     else if (EventProcFlag || spellProcEvent)
                         return SPELL_AURA_PROC_FAILED;
                     else
