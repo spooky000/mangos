@@ -810,7 +810,7 @@ void Aura::AreaAuraUpdate(uint32 diff)
                 case AREA_AURA_OWNER:
                 case AREA_AURA_PET:
                 {
-                    if(owner != caster && caster->IsWithinDistInMap(owner, m_radius))
+                    if (owner != caster && caster->IsInWorld() && caster->IsWithinDistInMap(owner, m_radius))
                         targets.insert(owner->GetObjectGuid());
                     break;
                 }
@@ -1081,27 +1081,33 @@ bool Aura::CanProcFrom(SpellEntry const *spell, uint32 procFlag, uint32 EventPro
 
 void Aura::ReapplyAffectedPassiveAuras( Unit* target, bool owner_mode )
 {
+    if (!target)
+        return;
+
     // we need store cast item guids for self casted spells
     // expected that not exist permanent auras from stackable auras from different items
     std::map<uint32, ObjectGuid> affectedSelf;
 
-    std::set<uint32> affectedAuraCaster;
+    Unit::SpellIdSet affectedAuraCaster;
 
-    for(Unit::SpellAuraHolderMap::const_iterator itr = target->GetSpellAuraHolderMap().begin(); itr != target->GetSpellAuraHolderMap().end(); ++itr)
     {
-        // permanent passive or permanent area aura
-        // passive spells can be affected only by own or owner spell mods)
-        if ((itr->second->IsPermanent() && (owner_mode && itr->second->IsPassive() || itr->second->IsAreaAura())) &&
-            // non deleted and not same aura (any with same spell id)
-            !itr->second->IsDeleted() && itr->second->GetId() != GetId() &&
-            // and affected by aura
-            isAffectedOnSpell(itr->second->GetSpellProto()))
+        MAPLOCK_READ(target,MAP_LOCK_TYPE_AURAS);
+        for (Unit::SpellAuraHolderMap::const_iterator itr = target->GetSpellAuraHolderMap().begin(); itr != target->GetSpellAuraHolderMap().end(); ++itr)
         {
-            // only applied by self or aura caster
-            if (itr->second->GetCasterGuid() == target->GetObjectGuid())
-                affectedSelf[itr->second->GetId()] = itr->second->GetCastItemGuid();
-            else if (itr->second->GetCasterGuid() == GetCasterGuid())
-                affectedAuraCaster.insert(itr->second->GetId());
+            // permanent passive or permanent area aura
+            // passive spells can be affected only by own or owner spell mods)
+            if ((itr->second->IsPermanent() && (owner_mode && itr->second->IsPassive() || itr->second->IsAreaAura())) &&
+                // non deleted and not same aura (any with same spell id)
+                !itr->second->IsDeleted() && itr->second->GetId() != GetId() &&
+                // and affected by aura
+                isAffectedOnSpell(itr->second->GetSpellProto()))
+            {
+                // only applied by self or aura caster
+                if (itr->second->GetCasterGuid() == target->GetObjectGuid())
+                    affectedSelf[itr->second->GetId()] = itr->second->GetCastItemGuid();
+                else if (itr->second->GetCasterGuid() == GetCasterGuid())
+                    affectedAuraCaster.insert(itr->second->GetId());
+            }
         }
     }
 
@@ -1120,7 +1126,7 @@ void Aura::ReapplyAffectedPassiveAuras( Unit* target, bool owner_mode )
     if (!affectedAuraCaster.empty())
     {
         Unit* caster = GetCaster();
-        for(std::set<uint32>::const_iterator set_itr = affectedAuraCaster.begin(); set_itr != affectedAuraCaster.end(); ++set_itr)
+        for(Unit::SpellIdSet::const_iterator set_itr = affectedAuraCaster.begin(); set_itr != affectedAuraCaster.end(); ++set_itr)
         {
             target->RemoveAurasDueToSpell(*set_itr);
             if (caster)
@@ -2487,6 +2493,17 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         if (target->GetTypeId() == TYPEID_PLAYER)
                             ((Player*)target)->learnSpell(63680, false);
                         return;
+                    case 68645:
+                        // Rocket Pack
+                        if (target->GetTypeId() == TYPEID_PLAYER)
+                        {
+                            // Rocket Burst - visual effect
+                            target->CastSpell(target, 69192, true, NULL, this);
+                            // Rocket Pack - causing damage
+                            target->CastSpell(target, 69193, true, NULL, this);
+                            return;
+                        }
+                        return;
                     case 63651:                             // Revert to One Talent Specialization
                         // Teach Learn Talent Specialization Switches, remove
                         if (target->GetTypeId() == TYPEID_PLAYER)
@@ -3076,7 +3093,6 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                     if (m_removeMode == AURA_REMOVE_BY_EXPIRE)
                         pCaster->CastSpell(target, 51872, true, NULL, this);
                 }
-
                 return;
             }
             case 52098:                                     // Charge Up
@@ -3798,7 +3814,7 @@ void Aura::HandleAuraWaterWalk(bool apply, bool Real)
     if(!Real)
         return;
 
-    // Dont remove flag if player has another water-walk effect
+    // do not remove unit flag if there are more than this auraEffect of that kind on unit on unit
     if (!apply && GetTarget()->HasAuraType(SPELL_AURA_WATER_WALK))
         return;
 
@@ -3820,12 +3836,9 @@ void Aura::HandleAuraFeatherFall(bool apply, bool Real)
 
     Unit *target = GetTarget();
 
-    if (!apply)
-    {
-        // do not remove unit flag if there are more than this auraEffect of that kind on unit on unit
-        if (target->HasAuraType(SPELL_AURA_FEATHER_FALL))
-            return;
-    }
+    // do not remove unit flag if there are more than this auraEffect of that kind on unit on unit
+    if (!apply && target->HasAuraType(SPELL_AURA_FEATHER_FALL))
+        return;
 
     WorldPacket data;
     if(apply)
@@ -3847,12 +3860,9 @@ void Aura::HandleAuraHover(bool apply, bool Real)
     if(!Real)
         return;
 
-    if (!apply)
-    {
-        // do not remove unit flag if there are more than this auraEffect of that kind on unit on unit
-        if (GetTarget()->HasAuraType(SPELL_AURA_HOVER))
-            return;
-    }
+    // do not remove unit flag if there are more than this auraEffect of that kind on unit on unit
+    if (!apply && GetTarget()->HasAuraType(SPELL_AURA_HOVER))
+        return;
 
     WorldPacket data;
     if(apply)
@@ -5053,7 +5063,7 @@ void Aura::HandleAuraModStun(bool apply, bool Real)
         // Summon the Naj'entus Spine GameObject on target if spell is Impaling Spine
         switch(GetId())
         {
-            case 39837:
+            case 39837:  // Impaling Spine
             {
                 GameObject* pObj = new GameObject;
                 if(pObj->Create(target->GetMap()->GenerateLocalLowGuid(HIGHGUID_GAMEOBJECT), 185584, target->GetMap(), target->GetPhaseMask(),
@@ -5445,6 +5455,9 @@ void Aura::HandleAuraModRoot(bool apply, bool Real)
                 target->SendMessageToSet(&data, true);
             }
         }
+
+        if (GetSpellProto()->Id == 70980)                   // Web Wrap (Icecrown Citadel, trash mob Nerub'ar Broodkeeper)
+            target->CastSpell(target, 71010, true);
     }
 }
 
@@ -7559,12 +7572,22 @@ void Aura::HandleModDamageDone(bool apply, bool Real)
     // This information for client side use only
     if(target->GetTypeId() == TYPEID_PLAYER)
     {
-        if(!m_positive)
+        if (m_positive)
+        {
+            for(int i = SPELL_SCHOOL_HOLY; i < MAX_SPELL_SCHOOL; ++i)
+            {
+                if((m_modifier.m_miscvalue & (1<<i)) != 0)
+                    target->ApplyModUInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_POS + i, m_modifier.m_amount, apply);
+            }
+        }
+        else
+        {
             for(int i = SPELL_SCHOOL_HOLY; i < MAX_SPELL_SCHOOL; ++i)
             {
                 if((m_modifier.m_miscvalue & (1<<i)) != 0)
                     target->ApplyModInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_NEG + i, m_modifier.m_amount, apply);
             }
+        }
         
         ((Player*)target)->UpdateSpellDamageAndHealingBonus();
 
@@ -8319,7 +8342,10 @@ void Aura::PeriodicTick()
     if (!holder || !target || !spellProto)
         return;
 
-    switch(m_modifier.m_auraname)
+    if (target->IsImmuneToSpell(spellProto))
+        return;
+
+    switch (m_modifier.m_auraname)
     {
         case SPELL_AURA_PERIODIC_DAMAGE:
         case SPELL_AURA_PERIODIC_DAMAGE_PERCENT:
@@ -8517,6 +8543,9 @@ void Aura::PeriodicTick()
             if (pCaster->GetTypeId() == TYPEID_PLAYER)
                 pdamage -= target->GetSpellDamageReduction(pdamage);
 
+            if (GetSpellProto()->Id == 50344) // Dream Funnel Oculus drake spell
+                pdamage = uint32(pCaster->GetMaxHealth()*0.05f);
+
             target->CalculateDamageAbsorbAndResist(pCaster, GetSpellSchoolMask(spellProto), DOT, pdamage, &absorb, &resist, !(GetSpellProto()->AttributesEx2 & SPELL_ATTR_EX2_CANT_REFLECTED));
             cleanDamage.absorb += absorb;
 
@@ -8531,6 +8560,11 @@ void Aura::PeriodicTick()
             uint32 procEx = isCrit ? PROC_EX_CRITICAL_HIT : PROC_EX_NORMAL_HIT;
 
             pdamage = (pdamage <= absorb + resist) ? 0 : (pdamage - absorb - resist);
+
+            if (pdamage <= 0)
+                procEx &= ~PROC_EX_DIRECT_DAMAGE;
+            else
+                procEx |= PROC_EX_DIRECT_DAMAGE;
 
             uint32 overkill = pdamage > target->GetHealth() ? pdamage - target->GetHealth() : 0;
             SpellPeriodicAuraLogInfo pInfo(this, pdamage, overkill, absorb, resist, 0.0f, isCrit);
@@ -10106,7 +10140,7 @@ void Aura::HandleAuraConvertRune(bool apply, bool Real)
         {
             if (plr->GetCurrentRune(i) == runeFrom && !plr->GetRuneCooldown(i))
             {
-                plr->ConvertRune(i, runeTo);
+                plr->ConvertRune(i, runeTo, GetId());
                 break;
             }
         }
@@ -10118,6 +10152,7 @@ void Aura::HandleAuraConvertRune(bool apply, bool Real)
             if(plr->GetCurrentRune(i) == runeTo && plr->GetBaseRune(i) == runeFrom)
             {
                 plr->ConvertRune(i, runeFrom);
+                plr->ClearConvertedBy(i);
                 break;
             }
         }
@@ -10233,7 +10268,7 @@ void Aura::HandleAuraStopNaturalManaRegen(bool apply, bool Real)
     if (!Real)
         return;
 
-    if (GetTarget()->getPowerType() == POWER_MANA)
+    if (GetTarget()->getClass() != CLASS_DEATH_KNIGHT)
         GetTarget()->ApplyModFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_REGENERATE_POWER, !apply && !GetTarget()->IsUnderLastManaUseEffect());
 }
 
@@ -10714,6 +10749,25 @@ void SpellAuraHolder::SetStackAmount(uint32 stackAmount)
                     if(m_spellProto->SpellFamilyName != SPELLFAMILY_DRUID && !(m_spellProto->SpellFamilyFlags & UI64LIT(0x1000000000)))
                         aur->GetModifier()->m_amount = amount;
                     aur->ApplyModifier(true, true);
+
+                    // change duration if aura refreshes
+                    if (refresh)
+                    {
+                        int32 maxduration = GetSpellMaxDuration(aur->GetSpellProto());
+                        int32 duration = GetSpellDuration(aur->GetSpellProto());
+
+                        // new duration based on combo points
+                        if (duration != maxduration)
+                        {
+                            if (Unit *caster = aur->GetCaster())
+                            {
+                                duration += int32((maxduration - duration) * caster->GetComboPoints() / 5);
+                                SetAuraMaxDuration(duration);
+                                SetAuraDuration(duration);
+                                refresh = false;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -11165,19 +11219,31 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
             if(!apply)
             {
                 // Remove Blood Frenzy only if target no longer has any Deep Wound or Rend (applying is handled by procs)
-                if (GetSpellProto()->Mechanic != MECHANIC_BLEED)
+                if (GetSpellProto()->Mechanic == MECHANIC_BLEED)
+                {
+
+                    // If target still has one of Warrior's bleeds, do nothing
+                    Unit::AuraList const& PeriodicDamage = m_target->GetAurasByType(SPELL_AURA_PERIODIC_DAMAGE);
+                    for(Unit::AuraList::const_iterator i = PeriodicDamage.begin(); i != PeriodicDamage.end(); ++i)
+                        if ( (*i)->GetCasterGuid() == GetCasterGuid() &&
+                            (*i)->GetSpellProto()->SpellFamilyName == SPELLFAMILY_WARRIOR &&
+                            (*i)->GetSpellProto()->Mechanic == MECHANIC_BLEED)
+                            return;
+
+                    spellId1 = 30069;                           // Blood Frenzy (Rank 1)
+                    spellId2 = 30070;                           // Blood Frenzy (Rank 2)
+                    break;
+                }
+                else if (GetId() == 44521 && m_target && m_target->GetTypeId() == TYPEID_PLAYER)
+                {
+                    Player* plr = (Player*)m_target;
+                    plr->SetPower(POWER_MANA, plr->GetMaxPower(POWER_MANA));
+                    plr->SetPower(POWER_RAGE, 0);
+                    plr->SetPower(POWER_ENERGY, plr->GetMaxPower(POWER_ENERGY));
+                    plr->SetPower(POWER_RUNIC_POWER, 0);
                     return;
-
-                // If target still has one of Warrior's bleeds, do nothing
-                Unit::AuraList const& PeriodicDamage = m_target->GetAurasByType(SPELL_AURA_PERIODIC_DAMAGE);
-                for(Unit::AuraList::const_iterator i = PeriodicDamage.begin(); i != PeriodicDamage.end(); ++i)
-                    if( (*i)->GetCasterGuid() == GetCasterGuid() &&
-                        (*i)->GetSpellProto()->SpellFamilyName == SPELLFAMILY_WARRIOR &&
-                        (*i)->GetSpellProto()->Mechanic == MECHANIC_BLEED)
-                        return;
-
-                spellId1 = 30069;                           // Blood Frenzy (Rank 1)
-                spellId2 = 30070;                           // Blood Frenzy (Rank 2)
+                }
+                return;
             }
             break;
         }
@@ -11811,33 +11877,28 @@ void SpellAuraHolder::HandleSpellSpecificBoosts(bool apply)
             break;
     }
 
-    // prevent aura deletion, specially in multi-boost case
-    SetInUse(true);
+    // Old method override. need rewrite.
+    if (spellId1)
+        linkedSet.insert(spellId1);
+    if (spellId2)
+        linkedSet.insert(spellId2);
+    if (spellId3)
+        linkedSet.insert(spellId3);
+    if (spellId4)
+        linkedSet.insert(spellId4);
 
-    if (apply || cast_at_remove)
+    if (linkedSet.size() > 0)
     {
-        if (spellId1)
-            m_target->CastSpell(m_target, spellId1, true, NULL, NULL, GetCasterGuid());
-        if (spellId2 && !IsDeleted())
-            m_target->CastSpell(m_target, spellId2, true, NULL, NULL, GetCasterGuid());
-        if (spellId3 && !IsDeleted())
-            m_target->CastSpell(m_target, spellId3, true, NULL, NULL, GetCasterGuid());
-        if (spellId4 && !IsDeleted())
-            m_target->CastSpell(m_target, spellId4, true, NULL, NULL, GetCasterGuid());
+        // prevent aura deletion, specially in multi-boost case
+        SetInUse(true);
+        for (SpellLinkedSet::const_iterator itr = linkedSet.begin(); itr != linkedSet.end(); ++itr)
+        {
+            (apply || cast_at_remove) ?
+                m_target->CastSpell(m_target, *itr, true, NULL, NULL, GetCasterGuid()) :
+                m_target->RemoveAurasByCasterSpell(*itr, GetCasterGuid());
+        }
+        SetInUse(false);
     }
-    else
-    {
-        if (spellId1)
-            m_target->RemoveAurasByCasterSpell(spellId1, GetCasterGuid());
-        if (spellId2)
-            m_target->RemoveAurasByCasterSpell(spellId2, GetCasterGuid());
-        if (spellId3)
-            m_target->RemoveAurasByCasterSpell(spellId3, GetCasterGuid());
-        if (spellId4)
-            m_target->RemoveAurasByCasterSpell(spellId4, GetCasterGuid());
-    }
-
-    SetInUse(false);
 }
 
 void SpellAuraHolder::HandleSpellSpecificBoostsForward(bool apply)
