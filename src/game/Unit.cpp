@@ -11986,7 +11986,7 @@ void Unit::UpdateModelData()
 
 void Unit::GetRandomContactPoint(const WorldObject* obj, float &x, float &y, float &z, float distance2dMin, float distance2dMax) const
 {
-    float combatReach;
+    /*float combatReach;
     if (CreatureModelInfo const* modelInfo = sObjectMgr.GetCreatureModelInfo(GetDisplayId()))
         combatReach = modelInfo->combat_reach;
 
@@ -11994,7 +11994,8 @@ void Unit::GetRandomContactPoint(const WorldObject* obj, float &x, float &y, flo
     if (attacker_number > 0)
         --attacker_number;
     GetNearPoint(obj, x, y, z, combatReach, distance2dMin+(distance2dMax-distance2dMin) * (float)rand_norm()
-        , GetAngle(obj) + (attacker_number ? (static_cast<float>(M_PI/2) - static_cast<float>(M_PI) * (float)rand_norm()) * float(attacker_number) / combatReach * 0.3f : 0));
+        , GetAngle(obj) + (attacker_number ? (static_cast<float>(M_PI/2) - static_cast<float>(M_PI) * (float)rand_norm()) * float(attacker_number) / combatReach * 0.3f : 0));*/
+    GetNearPoint(obj, x, y, z, obj->GetObjectBoundingRadius(), distance2dMin + (distance2dMax-distance2dMin) * (float)rand_norm(), GetAngle(obj));
 }
 
 void Unit::ClearComboPointHolders()
