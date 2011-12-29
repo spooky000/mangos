@@ -548,6 +548,28 @@ inline uint32 GetDispellMask(DispelType dispel)
         return (1 << dispel);
 }
 
+inline bool IsSpellReduceThreat(SpellEntry const* spellInfo)
+{
+    for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+    {
+        if (spellInfo->Effect[i] != SPELL_EFFECT_APPLY_AURA)
+            continue;
+
+        switch(spellInfo->EffectApplyAuraName[i])
+        {
+            case SPELL_AURA_MOD_TOTAL_THREAT:
+            case SPELL_AURA_MOD_THREAT:
+            case SPELL_AURA_MOD_CRITICAL_THREAT:
+                if (spellInfo->CalculateSimpleValue(SpellEffectIndex(i)) < 0)
+                    return true;
+                break;
+            default:
+                break;
+        }
+    }
+    return false;
+}
+
 inline bool IsSpellAllowDeadTarget(SpellEntry const* spellInfo)
 {
     return spellInfo ? spellInfo->AttributesEx2 & SPELL_ATTR2_ALLOW_DEAD_TARGET : false;
