@@ -11975,7 +11975,9 @@ void Unit::UpdateModelData()
         else
         {
             // We expect values in database to be relative to scale = 1.0
-            boundingRadius = modelInfo->combat_reach;
+            float scaled_radius = GetObjectScale() * modelInfo->bounding_radius;
+
+            boundingRadius = scaled_radius < 2.0f ? scaled_radius : 2.0f;
             combatReach = GetObjectScale() * (modelInfo->bounding_radius < 2.0 ? modelInfo->combat_reach : modelInfo->combat_reach / modelInfo->bounding_radius);
         }
     }
