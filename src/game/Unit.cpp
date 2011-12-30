@@ -1179,15 +1179,15 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
                 SpellAuraHolderMap const& vAuras = pVictim->GetSpellAuraHolderMap();
                 for (SpellAuraHolderMap::const_iterator i = vAuras.begin(), next; i != vAuras.end(); ++i)
                 {
+                    if (!i->second || i->second->IsDeleted())
+                        continue;
+
+                    if (spellProto && spellProto->Id == i->first) // Not drop auras added by self
+                        continue;
+
                     // Not drop aruras, if he has proc (real or custom)
                     SpellProcEventEntry const* spellProcEvent = sSpellMgr.GetSpellProcEvent(i->first);
                     if (IsTriggeredAtSpellProcEvent(pVictim, i->second, spellProto, uint32(DAMAGE_OR_HIT_TRIGGER_MASK),uint32( bDirectDamage ? PROC_EX_DIRECT_DAMAGE : PROC_EX_NONE), cleanDamage ? cleanDamage->attackType : BASE_ATTACK, pVictim == this, spellProcEvent))
-                        continue;
-
-                    if (i->second->GetSpellProto()->procFlags)
-                        continue;
-
-                    if (GetProcFlag(i->second->GetSpellProto()))
                         continue;
 
                     if (i->second->GetSpellProto()->AuraInterruptFlags & AURA_INTERRUPT_FLAG_DAMAGE)
