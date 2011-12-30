@@ -78,7 +78,7 @@ namespace Movement
 
         moveFlags |= (MOVEFLAG_SPLINE_ENABLED|MOVEFLAG_FORWARD);
         
-        if (fabs(args.velocity) < M_NULL_F)
+        if (args.velocity == 0.f)
             args.velocity = unit.GetSpeed(SelectSpeedType(moveFlags));
 
         if (!args.Validate())

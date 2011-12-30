@@ -19614,7 +19614,7 @@ bool Player::ActivateTaxiPathTo(std::vector<uint32> const& nodes, Creature* npc 
     }
 
     // check node starting pos data set case if provided
-    if (fabs(node->x) > M_NULL_F || fabs(node->y) > M_NULL_F || fabs(node->z) > M_NULL_F)
+    if (node->x != 0.0f || node->y != 0.0f || node->z != 0.0f)
     {
         if (node->map_id != GetMapId() ||
             (node->x - GetPositionX())*(node->x - GetPositionX())+

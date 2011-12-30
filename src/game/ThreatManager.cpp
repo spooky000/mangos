@@ -33,7 +33,7 @@
 float ThreatCalcHelper::CalcThreat(Unit* pHatedUnit, Unit* /*pHatingUnit*/, float threat, bool crit, SpellSchoolMask schoolMask, SpellEntry const *pThreatSpell)
 {
     // all flat mods applied early
-    if (fabs(threat) < M_NULL_F)
+    if (!threat)
         return 0.0f;
 
     if (pThreatSpell)
@@ -106,13 +106,13 @@ void HostileReference::addThreat(float pMod)
     // if the link was cut before relink it again
     if(!isOnline())
         updateOnlineStatus();
-    if(fabs(pMod) > M_NULL_F)
+    if(pMod != 0.0f)
     {
         ThreatRefStatusChangeEvent event(UEV_THREAT_REF_THREAT_CHANGE, this, pMod);
         fireStatusChanged(event);
     }
 
-    if(isValid() && pMod >= 0.0f)
+    if(isValid() && pMod >= 0)
     {
         Unit* victim_owner = getTarget()->GetOwner();
         if(victim_owner && victim_owner->isAlive())
@@ -419,7 +419,7 @@ void ThreatManager::addThreat(Unit* pVictim, float pThreat, bool crit, SpellScho
 
     float threat = ThreatCalcHelper::CalcThreat(pVictim, iOwner, pThreat, crit, schoolMask, pThreatSpell);
 
-    if (threat > M_NULL_F)
+    if (threat > 0.0f)
     {
         if (float redirectedMod = pVictim->getHostileRefManager().GetThreatRedirectionMod())
         {
@@ -501,7 +501,7 @@ void ThreatManager::tauntApply(Unit* pTaunter)
         if(getCurrentVictim() && (ref->getThreat() < getCurrentVictim()->getThreat()))
         {
             // Ok, temp threat is unused
-            if(fabs(ref->getTempThreatModifyer()) < M_NULL_F)
+            if(ref->getTempThreatModifyer() == 0.0f)
             {
                 ref->setTempThreat(getCurrentVictim()->getThreat());
                 iUpdateNeed = true;

@@ -1654,7 +1654,7 @@ Creature* WorldObject::SummonCreature(uint32 id, float x, float y, float z, floa
 
     CreatureCreatePos pos(GetMap(), x, y, z, ang, GetPhaseMask());
 
-    if (fabs(x) < M_NULL_F && fabs(y) < M_NULL_F && fabs(z) < M_NULL_F)
+    if (x == 0.0f && y == 0.0f && z == 0.0f)
         pos = CreatureCreatePos(this, GetOrientation(), CONTACT_DISTANCE, ang);
 
     if (!pCreature->Create(GetMap()->GenerateLocalLowGuid(cinfo->GetHighGuid()), pos, cinfo, team))
