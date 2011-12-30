@@ -1224,6 +1224,8 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
             }
         }
         bool CanReachWithMeleeAttack(Unit* pVictim, float flat_mod = 0.0f) const;
+        void GetRandomContactPoint(const Unit* obj, float &x, float &y, float &z, float distance2dMin, float distance2dMax) const;
+        float GetCombatReach() const { return m_floatValues[UNIT_FIELD_COMBATREACH]; }
         uint32 m_extraAttacks;
 
         bool const IsInCombat() const { return GetMap() ? bool(GetMap()->GetAttackersFor(GetObjectGuid()).size() > 0) : false; }
@@ -1874,8 +1876,6 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         // at any changes to scale and/or displayId
         void UpdateModelData();
-
-        void GetRandomContactPoint(const WorldObject* obj, float &x, float &y, float &z, float distance2dMin, float distance2dMax) const;
 
         DynamicObject* GetDynObject(uint32 spellId, SpellEffectIndex effIndex);
         DynamicObject* GetDynObject(uint32 spellId);
