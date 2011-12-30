@@ -1374,7 +1374,11 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
             // not break stealth by cast targeting
             if (!(m_spellInfo->AttributesEx & (SPELL_ATTR_EX_NOT_BREAK_STEALTH | SPELL_ATTR_EX_NO_THREAT)) &&
                 !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_UNK28))
+            {
+                // hacky mass dispel exception
+                if (!m_spellInfo->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_MASS_DISPEL>())
                     unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+            }
 
             // Sap should remove victim's stealth
             if (m_spellInfo->Mechanic == MECHANIC_SAPPED)
@@ -1386,7 +1390,11 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
             {
                 // use speedup check to avoid re-remove after above lines
                 if (m_spellInfo->AttributesEx & SPELL_ATTR_EX_NOT_BREAK_STEALTH)
-                    unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+                {
+                    // hacky mass dispel exception
+                    if (!m_spellInfo->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_MASS_DISPEL>())
+                        unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+                }
 
                 // caster can be detected but have stealth aura
                 m_caster->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
