@@ -2034,7 +2034,7 @@ bool Pet::IsPermanentPetFor(Player* owner)
                 case CLASS_DEATH_KNIGHT:
                     return GetCreatureInfo()->type == CREATURE_TYPE_UNDEAD;
                 case CLASS_MAGE:
-                    return GetCreatureInfo()->Entry == 37994;
+                    return GetCreatureInfo()->Entry == 510;
                 default:
                     return false;
             }
