@@ -1826,6 +1826,7 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
         Cell::VisitAllObjects(this, worker, distance2d + searcher_bounding_radius);
     }
 
+    /*
     // maybe can just place in primary position
     if (selector.CheckOriginalAngle())
     {
@@ -1843,7 +1844,7 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
     UpdateGroundPositionZ(x, y, z);
 
     // set first used pos in lists
-    /*selector.InitializeAngle();
+    selector.InitializeAngle();
 
     float angle;                                            // candidate of angle for free pos
 
