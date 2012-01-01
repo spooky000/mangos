@@ -1840,8 +1840,10 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
         first_los_conflict = true;                          // first point have LOS problems
     }
 
+    UpdateGroundPositionZ(x, y, z);
+
     // set first used pos in lists
-    selector.InitializeAngle();
+    /*selector.InitializeAngle();
 
     float angle;                                            // candidate of angle for free pos
 
@@ -1899,7 +1901,7 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
     if (searcher)
         searcher->UpdateAllowedPositionZ(x, y, z);          // update to LOS height if available
     else
-        UpdateGroundPositionZ(x, y, z);
+        UpdateGroundPositionZ(x, y, z);*/
 }
 
 void WorldObject::SetPhaseMask(uint32 newPhaseMask, bool update)

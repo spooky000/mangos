@@ -612,8 +612,12 @@ void Unit::GetRandomContactPoint(const Unit* obj, float &x, float &y, float &z, 
     if (attacker_number > 0)
         --attacker_number;
 
-    GetNearPoint(obj, x, y, z, obj->GetCombatReach(), distance2dMin+(distance2dMax-distance2dMin) * (float)rand_norm()
-        , GetAngle(obj) + (attacker_number ? (static_cast<float>(M_PI/2) - static_cast<float>(M_PI) * (float)rand_norm()) * float(attacker_number) / GetCombatReach() * 0.3f : 0));
+    float angle = ((attacker_number) ? float(rand_norm() - 0.5f) : 0);
+
+    //GetNearPoint(obj, x, y, z, obj->GetCombatReach(), distance2dMin+(distance2dMax-distance2dMin) * (float)rand_norm()
+      //  , GetAngle(obj) + (attacker_number ? (static_cast<float>(M_PI/2) - static_cast<float>(M_PI) * (float)rand_norm()) * float(attacker_number) / GetCombatReach() * 0.3f : 0));
+    GetNearPoint(obj, x, y, z, obj->GetCombatReach(), distance2dMin + (distance2dMax - distance2dMin) * (float)rand_norm()
+        , GetAngle(obj) + angle);
 }
 
 void Unit::RemoveSpellsCausingAura(AuraType auraType)
