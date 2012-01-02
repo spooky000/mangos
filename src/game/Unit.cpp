@@ -12875,7 +12875,7 @@ SpellAuraHolderPtr Unit::GetSpellAuraHolder (uint32 spellid, ObjectGuid casterGu
     return SpellAuraHolderPtr(NULL);
 }
 
-void Unit::_AddAura(uint32 spellID, uint32 duration)
+void Unit::_AddAura(uint32 spellID, uint32 duration, Unit * caster)
 {
     SpellEntry const *spellInfo = sSpellStore.LookupEntry( spellID );
 
@@ -12883,7 +12883,7 @@ void Unit::_AddAura(uint32 spellID, uint32 duration)
     {
         if (IsSpellAppliesAura(spellInfo, (1 << EFFECT_INDEX_0) | (1 << EFFECT_INDEX_1) | (1 << EFFECT_INDEX_2)) || IsSpellHaveEffect(spellInfo, SPELL_EFFECT_PERSISTENT_AREA_AURA))
         {
-            SpellAuraHolderPtr holder = CreateSpellAuraHolder(spellInfo, this, this);
+            SpellAuraHolderPtr holder = CreateSpellAuraHolder(spellInfo, this, caster ? caster : this);
 
             for(uint8 i = 0; i < MAX_EFFECT_INDEX; ++i)
             {
@@ -12898,6 +12898,9 @@ void Unit::_AddAura(uint32 spellID, uint32 duration)
                     DEBUG_FILTER_LOG(LOG_FILTER_SPELL_CAST, "Manually adding aura of spell %u, index %u, duration %u ms", spellID, i, duration);
                 }
             }
+            if (GetTypeId() == TYPEID_UNIT)
+                if (((Creature*)this)->AI())
+                    ((Creature*)this)->AI()->SpellHit(caster, spellInfo);
             AddSpellAuraHolder(holder);
         }
     }
