@@ -466,6 +466,7 @@ class MANGOS_DLL_SPEC WorldObject : public Object
         }
 
         virtual float GetObjectBoundingRadius() const { return DEFAULT_WORLD_OBJECT_SIZE; }
+        float GetCombatReach() const { return m_floatValues[UNIT_FIELD_COMBATREACH]; }
 
         bool IsPositionValid() const;
         void UpdateGroundPositionZ(float x, float y, float &z, float maxDiff = 30.0f) const;
