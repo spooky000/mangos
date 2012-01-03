@@ -585,10 +585,20 @@ bool Unit::CanReachWithMeleeAttack(Unit* pVictim, float flat_mod /*= 0.0f*/) con
         return false;
 
     // The measured values show BASE_MELEE_OFFSET in (1.3224, 1.342)
-    float reach = GetFloatValue(UNIT_FIELD_COMBATREACH) + pVictim->GetFloatValue(UNIT_FIELD_COMBATREACH) +
-        BASE_MELEERANGE_OFFSET + flat_mod;
+    float reach = GetFloatValue(UNIT_FIELD_COMBATREACH) + BASE_MELEERANGE_OFFSET + flat_mod;
 
     return IsWithinDistInMap(pVictim, reach < ATTACK_DISTANCE ? ATTACK_DISTANCE : reach);
+}
+
+void Unit::GetRandomContactPoint(const Unit* obj, float &x, float &y, float &z, float distance2dMin, float distance2dMax) const
+{
+    int32 attacker_number = GetMap()->GetAttackersFor(GetObjectGuid()).size();
+    if (attacker_number > 0)
+        --attacker_number;
+
+    float angle = ((attacker_number) ? (frand(-0.7f, 0.7f)) : 0);
+    GetNearPoint(obj, x, y, z, obj->GetCombatReach(), distance2dMin + (distance2dMax - distance2dMin) * (float)rand_norm()
+        , GetAngle(obj) + angle);
 }
 
 void Unit::RemoveSpellsCausingAura(AuraType auraType)
@@ -11969,10 +11979,7 @@ void Unit::UpdateModelData()
         }
         else
         {
-            // We expect values in database to be relative to scale = 1.0
-            float scaled_radius = GetObjectScale() * modelInfo->bounding_radius;
-
-            boundingRadius = scaled_radius < 2.0f ? scaled_radius : 2.0f;
+            boundingRadius = modelInfo->combat_reach;
             combatReach = GetObjectScale() * (modelInfo->bounding_radius < 2.0 ? modelInfo->combat_reach : modelInfo->combat_reach / modelInfo->bounding_radius);
         }
     }

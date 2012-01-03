@@ -1826,8 +1826,10 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
         Cell::VisitAllObjects(this, worker, distance2d + searcher_bounding_radius);
     }
 
+    UpdateGroundPositionZ(x, y, z);
+
     // maybe can just place in primary position
-    if (selector.CheckOriginalAngle())
+    /*if (selector.CheckOriginalAngle())
     {
         if (searcher)
             searcher->UpdateAllowedPositionZ(x, y, z);      // update to LOS height if available
@@ -1899,7 +1901,7 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
     if (searcher)
         searcher->UpdateAllowedPositionZ(x, y, z);          // update to LOS height if available
     else
-        UpdateGroundPositionZ(x, y, z);
+        UpdateGroundPositionZ(x, y, z);*/
 }
 
 void WorldObject::SetPhaseMask(uint32 newPhaseMask, bool update)
