@@ -5033,6 +5033,11 @@ SpellAuraProcResult Unit::HandleRemoveByDamageProc(Unit* pVictim, uint32 damage,
 
 SpellAuraProcResult Unit::HandleRemoveByDamageChanceProc(Unit* pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown)
 {
+    // Hungering Cold - not break from diseases
+    if (triggeredByAura->GetSpellProto()->SpellIconID == 2797)
+        if (procSpell && procSpell->Dispel == DISPEL_DISEASE)
+            return SPELL_AURA_PROC_FAILED;
+
     /*switch (triggeredByAura->GetSpellProto()->Id)
     {
         case 23694:                               // Improved Hamstring
@@ -5057,9 +5062,6 @@ SpellAuraProcResult Unit::HandleRemoveByDamageChanceProc(Unit* pVictim, uint32 d
 
     if (spellProto->AuraInterruptFlags & AURA_INTERRUPT_FLAG_DAMAGE)
         return HandleRemoveByDamageProc(pVictim, damage, triggeredByAura, procSpell, procFlag, procEx, cooldown);
-
-    if (triggeredByAura->IsAffectedByCrowdControlEffect(damage))
-        return SPELL_AURA_PROC_FAILED;
 
     // The chance to dispel an aura depends on the damage taken with respect to the casters level.
     uint32 max_dmg = getLevel() > 8 ? 25 * getLevel() - 150 : 50;
