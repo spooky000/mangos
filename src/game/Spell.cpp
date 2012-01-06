@@ -3848,7 +3848,10 @@ void Spell::cast(bool skipCheck)
             else if (m_spellInfo->SpellFamilyFlags.test<CF_PALADIN_HAND_OF_PROTECTION, CF_PALADIN_DIVINE_SHIELD>())
             {
                 AddPrecastSpell(25771);                     // Forbearance
-                AddPrecastSpell(61987);                     // Avenging Wrath Marker
+
+                // only for self cast
+                if (m_caster == m_targets.getUnitTarget())
+                    AddPrecastSpell(61987);                     // Avenging Wrath Marker
             }
             // Lay on Hands
             else if (m_spellInfo->SpellFamilyFlags.test<CF_PALADIN_LAY_ON_HANDS>())
@@ -3859,7 +3862,6 @@ void Spell::cast(bool skipCheck)
                     AddPrecastSpell(25771);                     // Forbearance
                     AddPrecastSpell(61987);                     // Avenging Wrath Marker
                 }
-
             }
             // Avenging Wrath
             else if (m_spellInfo->SpellFamilyFlags.test<CF_PALADIN_AVENGING_WRATH>())
