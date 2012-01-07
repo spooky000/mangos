@@ -382,6 +382,7 @@ void BattleGround::Update(uint32 diff)
         {
             if (itr->second.OfflineRemoveTime <= sWorld.GetGameTime())
             {
+                sLog.outString("Player %s logged out during the bg and hasnt come back in time.", sObjectMgr.GetPlayer(itr->first)->GetName());
                 RemovePlayerAtLeave(itr->first, true, true);// remove player from BG
                 m_OfflineQueue.pop_front();                 // remove from offline queue
                 //do not use itr for anything, because it is erased in RemovePlayerAtLeave()

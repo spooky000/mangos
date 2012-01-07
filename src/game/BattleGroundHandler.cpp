@@ -244,6 +244,7 @@ void WorldSession::HandleBattlemasterJoinOpcode( WorldPacket & recv_data )
         SendPacket(&data);
         DEBUG_LOG("Battleground: player joined queue for bg queue type %u bg type %u: GUID %u, NAME %s",bgQueueTypeId,bgTypeId,_player->GetGUIDLow(), _player->GetName());
     }
+
     sBattleGroundMgr.ScheduleQueueUpdate(0, ARENA_TYPE_NONE, bgQueueTypeId, bgTypeId, bracketEntry->GetBracketId());
 }
 
@@ -536,6 +537,10 @@ void WorldSession::HandleLeaveBattlefieldOpcode( WorldPacket& recv_data )
             if (bg->GetStatus() != STATUS_WAIT_LEAVE)
                 return;
 
+    if (BattleGround* bg = _player->GetBattleGround())
+        if (bg->GetStatus() != STATUS_WAIT_LEAVE)
+            sLog.outString("Player %s has left the battleground before it ended.", _player->GetName());
+
     _player->LeaveBattleground();
 }
 
@@ -825,6 +830,6 @@ void WorldSession::HandleReportPvPAFK( WorldPacket & recv_data )
     }
 
     DEBUG_LOG("WorldSession::HandleReportPvPAFK: %s reported %s", _player->GetName(), reportedPlayer->GetName());
-
+    sLog.outString("Player %s reported %s for being AFK.", _player->GetName(), reportedPlayer->GetName());
     reportedPlayer->ReportedAfkBy(_player);
 }
