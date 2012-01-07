@@ -98,4 +98,15 @@ class MANGOS_DLL_SPEC VehicleKit
         float m_dst_x, m_dst_y, m_dst_z, m_dst_o, m_dst_speed, m_dst_elevation;
 };
 
+class PassengerEjectEvent : public BasicEvent
+{
+    public:
+        PassengerEjectEvent(uint8 seatId, Unit& vehicle) : BasicEvent(), m_seatId(seatId), m_vehicle(vehicle) {}
+        bool Execute(uint64 e_time, uint32 p_time);
+
+    private:
+        uint8 m_seatId;
+        Unit& m_vehicle;
+};
+
 #endif

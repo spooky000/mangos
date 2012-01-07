@@ -308,6 +308,13 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
             ((Creature*)m_pBase)->AI()->PassengerBoarded(passenger, seat->first, true);
     }
 
+    if (seatInfo->m_flagsB & VEHICLE_SEAT_FLAG_B_EJECTABLE_FORCED)
+    {
+        uint32 delay = seatInfo->m_exitMaxDuration * IN_MILLISECONDS;
+        m_pBase->AddEvent(new PassengerEjectEvent(seatId,*m_pBase), delay);
+        DEBUG_LOG("Vehicle::AddPassenger eject event for %s added, delay %u",passenger->GetObjectGuid().GetString().c_str(), delay);
+    }
+
     return true;
 }
 
@@ -515,7 +522,6 @@ void VehicleKit::Dismount(Unit* passenger, VehicleSeatEntry const* seatInfo)
         float max_height = - Movement::computeFallElevation(moveTimeHalf,false,-verticalSpeed);
         passenger->UpdateAllowedPositionZ(m_dst_x, m_dst_y, m_dst_z);
         passenger->MonsterMoveJump(m_dst_x, m_dst_y, m_dst_z,passenger->GetOrientation(), horisontalSpeed, max_height, false);
-
     }
     else if (seatInfo)
     {
@@ -556,3 +562,38 @@ void VehicleKit::SetDestination(float x, float y, float z, float o, float speed,
         fabs(m_dst_elevation) > 0.001)
         b_dstSet = true;
 };
+
+bool PassengerEjectEvent::Execute(uint64 /*e_time*/, uint32 /*p_time*/)
+{
+    if (!m_vehicle.GetVehicleInfo())
+        return true;
+
+    VehicleKit* pVehicle = m_vehicle.GetVehicleKit();
+
+    if (!pVehicle)
+        return true;
+
+    Unit* passenger = pVehicle->GetPassenger(m_seatId);
+
+    if (passenger && passenger->IsInWorld() && passenger->hasUnitState(UNIT_STAT_ON_VEHICLE))
+    {
+        uint32 controlSpell = 0;
+        Unit::AuraList const& controlAuras = m_vehicle.GetAurasByType(SPELL_AURA_CONTROL_VEHICLE);
+        for(Unit::AuraList::const_iterator i = controlAuras.begin(); i != controlAuras.end(); ++i)
+        {
+            if ((*i)->GetCasterGuid() == passenger->GetObjectGuid())
+            {
+                controlSpell = (*i)->GetId();
+                break;
+            }
+        }
+
+        if (controlSpell)
+        {
+            m_vehicle.RemoveAurasByCasterSpell(controlSpell, passenger->GetObjectGuid());
+        }
+        else
+            passenger->ExitVehicle();
+    }
+    return true;
+}
