@@ -23823,13 +23823,6 @@ bool Player::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex
         default:
             break;
     }
-    switch(spellInfo->EffectApplyAuraName[index])
-    {
-        case SPELL_AURA_MOD_TAUNT:
-            return true;
-        default:
-            break;
-    }
     return Unit::IsImmuneToSpellEffect(spellInfo, index);
 }
 
