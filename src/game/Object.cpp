@@ -1676,8 +1676,6 @@ Creature* WorldObject::SummonCreature(uint32 id, float x, float y, float z, floa
     if(GetTypeId()==TYPEID_UNIT && ((Creature*)this)->AI())
         ((Creature*)this)->AI()->JustSummoned(pCreature);
 
-    sLog.outString("Creature with entry %u summoned by %u", id, (GetTypeId() == TYPEID_PLAYER ? ((Player*)this)->GetGUIDLow() : GetEntry()));
-
     // return the creature therewith the summoner has access to it
     return pCreature;
 }
