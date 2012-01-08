@@ -199,7 +199,7 @@ bool MoveSplineInitArgs::Validate() const
 #define CHECK(exp) \
     if (!(exp))\
     {\
-        sLog.outError("MoveSplineInitArgs::Validate: expression '%s' failed", #exp);\
+        DEBUG_LOG("MoveSplineInitArgs::Validate: expression '%s' failed", #exp);\
         return false;\
     }
     CHECK(path.size() > 1);

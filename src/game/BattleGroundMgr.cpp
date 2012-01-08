@@ -371,7 +371,7 @@ void BattleGroundQueue::RemovePlayer(ObjectGuid guid, bool decreaseInvitedCount)
         BattleGround* bg = sBattleGroundMgr.GetBattleGround(group->IsInvitedToBGInstanceGUID, group->BgTypeId == BATTLEGROUND_AA ? BATTLEGROUND_TYPE_NONE : group->BgTypeId);
         if (bg)
         {
-            sLog.outError("Player %s left the queue when already invited to join.", guid.GetString().c_str());
+            sLog.outString("LEECHER: %s left the queue when already invited to join.", guid.GetString().c_str());
             bg->DecreaseInvitedCount(group->GroupTeam);
         }
     }
