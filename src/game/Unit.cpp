@@ -11916,7 +11916,7 @@ void Unit::SetFeignDeath(bool apply, ObjectGuid casterGuid, uint32 /*spellID*/)
     {
         /*
         WorldPacket data(SMSG_FEIGN_DEATH_RESISTED, 9);
-        data<<GetGUID();
+        data<<GetObjectGuid();
         data<<uint8(0);
         SendMessageToSet(&data,true);
         */
@@ -11947,7 +11947,7 @@ void Unit::SetFeignDeath(bool apply, ObjectGuid casterGuid, uint32 /*spellID*/)
     {
         /*
         WorldPacket data(SMSG_FEIGN_DEATH_RESISTED, 9);
-        data<<GetGUID();
+        data<<GetObjectGuid();
         data<<uint8(1);
         SendMessageToSet(&data,true);
         */
