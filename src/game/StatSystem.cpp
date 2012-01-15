@@ -1130,8 +1130,8 @@ void Pet::UpdateDamagePhysical(WeaponAttackType attType)
         {
             case 61682:
             case 61683:
-                mindamage -= (*i)->GetModifier()->m_amount;
-                maxdamage -= (*i)->GetModifier()->m_amount;
+                mindamage *= 1 - ((*i)->GetModifier()->m_amount / 100.0f);
+                maxdamage *= 1 - ((*i)->GetModifier()->m_amount / 100.0f);
                 break;
             default:
                 break;
