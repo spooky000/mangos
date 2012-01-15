@@ -1123,6 +1123,21 @@ void Pet::UpdateDamagePhysical(WeaponAttackType attType)
     float mindamage = ((base_value + weapon_mindamage) * base_pct + total_value) * total_pct;
     float maxdamage = ((base_value + weapon_maxdamage) * base_pct + total_value) * total_pct;
 
+    AuraList const& ModAttackSpeedAuras = GetAurasByType(SPELL_AURA_MOD_ATTACKSPEED);
+    for (AuraList::const_iterator i = ModAttackSpeedAuras.begin(); i != ModAttackSpeedAuras.end(); ++i)
+    {
+        switch ((*i)->GetHolder()->GetId())
+        {
+            case 61682:
+            case 61683:
+                mindamage -= (*i)->GetModifier()->m_amount;
+                maxdamage -= (*i)->GetModifier()->m_amount;
+                break;
+            default:
+                break;
+        }
+    }
+
     if (attType == BASE_ATTACK)
     {
         SetStatFloatValue(UNIT_FIELD_MINDAMAGE, mindamage);
