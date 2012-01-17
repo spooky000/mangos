@@ -24,7 +24,7 @@ CREATE TABLE `db_version` (
   `version` varchar(120) default NULL,
   `creature_ai_version` varchar(120) default NULL,
   `cache_id` int(10) default '0',
-  `required_11852_01_mangos_gossip_menu` bit(1) default NULL
+  `required_11876_01_mangos_creature_linking_template` bit(1) default NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Used DB version notes';
 
 --
@@ -944,6 +944,29 @@ CREATE TABLE `creature_involvedrelation` (
 LOCK TABLES `creature_involvedrelation` WRITE;
 /*!40000 ALTER TABLE `creature_involvedrelation` DISABLE KEYS */;
 /*!40000 ALTER TABLE `creature_involvedrelation` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `creature_linking_template`
+--
+
+DROP TABLE IF EXISTS creature_linking_template;
+CREATE TABLE `creature_linking_template` (
+  `entry` mediumint(8) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'creature_template.entry of the slave mob that is linked',
+  `map` SMALLINT(5) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'Id of map of the mobs',
+  `master_entry` mediumint(8) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'master to trigger events',
+  `flag` mediumint(8) UNSIGNED NOT NULL DEFAULT '0' COMMENT 'flag - describing what should happen when',
+  PRIMARY KEY  (`entry`,`map`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Creature Linking System';
+
+
+--
+-- Dumping data for table `creature_linking_template`
+--
+
+LOCK TABLES `creature_linking_template` WRITE;
+/*!40000 ALTER TABLE `creature_linking_template` DISABLE KEYS */;
+/*!40000 ALTER TABLE `creature_linking_template` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -17002,7 +17025,7 @@ CREATE TABLE `spell_pet_auras` (
   `pet` mediumint(8) unsigned NOT NULL default '0' COMMENT 'pet id; 0 = all',
   `aura` mediumint(8) unsigned NOT NULL COMMENT 'pet aura id',
   PRIMARY KEY  (`spell`,`effectId`,`pet`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `spell_pet_auras`
@@ -17800,7 +17823,7 @@ CREATE TABLE `spell_script_target` (
   `type` tinyint(3) unsigned NOT NULL default '0',
   `targetEntry` mediumint(8) unsigned NOT NULL default '0',
   UNIQUE KEY `entry_type_target` (`entry`,`type`,`targetEntry`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COMMENT='Spell System';
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Spell System';
 
 --
 -- Dumping data for table `spell_script_target`
