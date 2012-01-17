@@ -2479,12 +2479,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 // Sacred Shield (buff)
                 case 58597:
                 {
-                    triggered_spell_id = 66922;
-                    SpellEntry const* triggeredEntry = sSpellStore.LookupEntry(triggered_spell_id);
-                    if (!triggeredEntry)
-                        return SPELL_AURA_PROC_FAILED;
-
-                    if(pVictim)
+                    if (pVictim)
                         if(!pVictim->HasAura(53569, EFFECT_INDEX_0) && !pVictim->HasAura(53576, EFFECT_INDEX_0))
                             return SPELL_AURA_PROC_FAILED;
 
@@ -2496,6 +2491,10 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 // Sacred Shield (talent rank)
                 case 53601:
                 {
+                    if (procSpell)
+                        if (procSpell->SpellFamilyFlags.test<CF_PALADIN_FLASH_OF_LIGHT>())
+                            triggered_spell_id = 66922;
+
                     // triggered_spell_id in spell data
                     target = this;
                     break;
