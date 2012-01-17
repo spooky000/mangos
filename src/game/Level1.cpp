@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2084,7 +2084,7 @@ bool ChatHandler::HandleGoTaxinodeCommand(char* args)
         return false;
     }
 
-    if (node->x == 0.0f && node->y == 0.0f && node->z == 0.0f)
+    if (fabs(node->x) < M_NULL_F && fabs(node->y) < M_NULL_F && fabs(node->z) < M_NULL_F)
     {
         PSendSysMessage(LANG_INVALID_TARGET_COORD,node->x,node->y,node->map_id);
         SetSentErrorMessage(true);

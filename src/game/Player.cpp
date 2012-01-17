@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -8193,7 +8193,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
     if (ObjectGuid lootGuid = GetLootGuid())
         m_session->DoLootRelease(lootGuid);
 
-    Loot    *loot = 0;
+    Loot* loot = NULL;
     PermissionTypes permission = ALL_PERMISSION;
 
     DEBUG_LOG("Player::SendLoot");
@@ -8214,6 +8214,13 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
             }
 
             loot = &go->loot;
+
+            Player* recipient = go->GetLootRecipient();
+            if (!recipient)
+            {
+                go->SetLootRecipient(this);
+                recipient = this;
+            }
 
             // generate loot only if ready for open and spawned in world
             if (go->getLootState() == GO_READY && go->isSpawned())
@@ -8269,6 +8276,33 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                     loot->clear();
                     loot->FillLoot(lootid, LootTemplates_Gameobject, this, false);
                     loot->generateMoneyLoot(go->GetGOInfo()->MinMoneyLoot, go->GetGOInfo()->MaxMoneyLoot);
+
+                    if (go->GetGoType() == GAMEOBJECT_TYPE_CHEST && go->GetGOInfo()->chest.groupLootRules)
+                    {
+                        if (Group* group = go->GetGroupLootRecipient())
+                        {
+                            group->UpdateLooterGuid(go, true);
+
+                            switch (group->GetLootMethod())
+                            {
+                                case GROUP_LOOT:
+                                    // GroupLoot delete items over threshold (threshold even not implemented), and roll them. Items with quality<threshold, round robin
+                                    group->GroupLoot(go, loot);
+                                    permission = GROUP_PERMISSION;
+                                    break;
+                                case NEED_BEFORE_GREED:
+                                    group->NeedBeforeGreed(go, loot);
+                                    permission = GROUP_PERMISSION;
+                                    break;
+                                case MASTER_LOOT:
+                                    group->MasterLoot(go, loot);
+                                    permission = MASTER_PERMISSION;
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
                 }
                 else if (loot_type == LOOT_FISHING)
                     go->getFishLoot(loot,this);
@@ -8276,39 +8310,31 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                 go->SetLootState(GO_ACTIVATED);
             }
 
-            if ((go->getLootState() == GO_ACTIVATED) && (go->GetGoType() == GAMEOBJECT_TYPE_CHEST))
+            if (go->getLootState() == GO_ACTIVATED && go->GetGoType() == GAMEOBJECT_TYPE_CHEST && go->GetGOInfo()->chest.groupLootRules)
             {
-                if (go->GetGOInfo()->chest.groupLootRules == 1/* || sWorld.getConfig(CONFIG_BOOL_LOOT_CHESTS_IGNORE_DB)*/)
+                if (Group* group = go->GetGroupLootRecipient())
                 {
-                    if(Group* group = GetGroup())
+                    if (group == GetGroup())
                     {
-                        if (group == go->GetGroupLootRecipient())
+                        if (group->GetLootMethod() == FREE_FOR_ALL)
+                            permission = ALL_PERMISSION;
+                        else if (group->GetLooterGuid() == GetObjectGuid())
                         {
-                            if (group->GetLootMethod() == FREE_FOR_ALL)
-                                permission = ALL_PERMISSION;
-                            else if (group->GetLooterGuid() == GetObjectGuid())
-                            {
-                                if (group->GetLootMethod() == MASTER_LOOT)
-                                    permission = MASTER_PERMISSION;
-                                else
-                                    permission = ALL_PERMISSION;
-                            }
+                            if (group->GetLootMethod() == MASTER_LOOT)
+                                permission = MASTER_PERMISSION;
                             else
-                                permission = GROUP_PERMISSION;
+                                permission = ALL_PERMISSION;
                         }
                         else
-                            permission = NONE_PERMISSION;
+                            permission = GROUP_PERMISSION;
                     }
-               }
-               else
-                   permission = ALL_PERMISSION;
-            }
-            // the player whose group may loot the corpse
-            Player* recipient = go->GetLootRecipient();
-            if (!recipient)
-            {
-                go->SetLootRecipient(this);
-                recipient = this;
+                    else
+                        permission = NONE_PERMISSION;
+                }
+                else if (recipient == this)
+                    permission = ALL_PERMISSION;
+                else
+                    permission = NONE_PERMISSION;
             }
             break;
         }
@@ -19614,7 +19640,7 @@ bool Player::ActivateTaxiPathTo(std::vector<uint32> const& nodes, Creature* npc 
     }
 
     // check node starting pos data set case if provided
-    if (node->x != 0.0f || node->y != 0.0f || node->z != 0.0f)
+    if (fabs(node->x) > M_NULL_F || fabs(node->y) > M_NULL_F || fabs(node->z) > M_NULL_F)
     {
         if (node->map_id != GetMapId() ||
             (node->x - GetPositionX())*(node->x - GetPositionX())+
@@ -21888,22 +21914,26 @@ void Player::UpdateZoneDependentAuras()
 void Player::UpdateAreaDependentAuras()
 {
     // remove auras from spells with area limitations
-    for(SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end();)
+    SpellIdSet toRemoveSpellList;
     {
-        // use m_zoneUpdateId for speed: UpdateArea called from UpdateZone or instead UpdateZone in both cases m_zoneUpdateId up-to-date
-        if (iter->second && (sSpellMgr.GetSpellAllowedInLocationError(iter->second->GetSpellProto(), GetMapId(), m_zoneUpdateId, m_areaUpdateId, this) != SPELL_CAST_OK))
+        MAPLOCK_READ(this,MAP_LOCK_TYPE_AURAS);
+        SpellAuraHolderMap const& holdersMap = GetSpellAuraHolderMap();
+        for(SpellAuraHolderMap::const_iterator iter = holdersMap.begin(); iter != holdersMap.end(); ++iter)
         {
-            RemoveSpellAuraHolder(iter->second);
-            iter = m_spellAuraHolders.begin();
+            // use m_zoneUpdateId for speed: UpdateArea called from UpdateZone or instead UpdateZone in both cases m_zoneUpdateId up-to-date
+            if (iter->second && (sSpellMgr.GetSpellAllowedInLocationError(iter->second->GetSpellProto(), GetMapId(), m_zoneUpdateId, m_areaUpdateId, this) != SPELL_CAST_OK))
+                toRemoveSpellList.insert(iter->first);
         }
-        else
-            ++iter;
     }
+
+    if (!toRemoveSpellList.empty())
+        for (SpellIdSet::iterator i = toRemoveSpellList.begin(); i != toRemoveSpellList.end(); ++i)
+            RemoveAurasDueToSpell(*i);
 
     // some auras applied at subzone enter
     SpellAreaForAreaMapBounds saBounds = sSpellMgr.GetSpellAreaForAreaMapBounds(m_areaUpdateId);
     for(SpellAreaForAreaMap::const_iterator itr = saBounds.first; itr != saBounds.second; ++itr)
-        if(itr->second->autocast && itr->second->IsFitToRequirements(this, m_zoneUpdateId, m_areaUpdateId))
+        if (itr->second->autocast && itr->second->IsFitToRequirements(this, m_zoneUpdateId, m_areaUpdateId))
             if (!HasAura(itr->second->spellId, EFFECT_INDEX_0))
                 CastSpell(this,itr->second->spellId,true);
 }
@@ -23815,13 +23845,6 @@ bool Player::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex
     switch(spellInfo->Effect[index])
     {
         case SPELL_EFFECT_ATTACK_ME:
-            return true;
-        default:
-            break;
-    }
-    switch(spellInfo->EffectApplyAuraName[index])
-    {
-        case SPELL_AURA_MOD_TAUNT:
             return true;
         default:
             break;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1374,7 +1374,11 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
             // not break stealth by cast targeting
             if (!(m_spellInfo->AttributesEx & (SPELL_ATTR_EX_NOT_BREAK_STEALTH | SPELL_ATTR_EX_NO_THREAT)) &&
                 !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_UNK28))
+            {
+                // hacky mass dispel exception
+                if (!m_spellInfo->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_MASS_DISPEL>())
                     unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+            }
 
             // Sap should remove victim's stealth
             if (m_spellInfo->Mechanic == MECHANIC_SAPPED)
@@ -1386,7 +1390,11 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
             {
                 // use speedup check to avoid re-remove after above lines
                 if (m_spellInfo->AttributesEx & SPELL_ATTR_EX_NOT_BREAK_STEALTH)
-                    unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+                {
+                    // hacky mass dispel exception
+                    if (!m_spellInfo->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_MASS_DISPEL>())
+                        unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
+                }
 
                 // caster can be detected but have stealth aura
                 m_caster->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
@@ -3457,7 +3465,7 @@ void Spell::prepare(SpellCastTargets const* targets, Aura* triggeredByAura)
 
     // create and add update event for this spell
     SpellEvent* Event = new SpellEvent(this);
-    m_caster->m_Events.AddEvent(Event, m_caster->m_Events.CalculateTime(1));
+    m_caster->AddEvent(Event, 1);
 
     //Prevent casting at cast another spell (ServerSide check)
     if(m_caster->IsNonMeleeSpellCasted(false, true, true) && m_cast_count)
@@ -3546,7 +3554,7 @@ void Spell::prepare(SpellCastTargets const* targets, Aura* triggeredByAura)
     }
 }
 
-void Spell::cancel()
+void Spell::cancel(bool force)
 {
     if(m_spellState == SPELL_STATE_FINISHED)
         return;
@@ -3577,7 +3585,7 @@ void Spell::cancel()
                 {
                     Unit* unit = m_caster->GetObjectGuid() == (*ihit).targetGUID ? m_caster : ObjectAccessor::GetUnit(*m_caster, ihit->targetGUID);
                     if (unit && unit->isAlive())
-                        unit->RemoveAurasByCasterSpell(m_spellInfo->Id, m_caster->GetObjectGuid());
+                        unit->RemoveAurasByCasterSpell(m_spellInfo->Id, m_caster->GetObjectGuid(), force ? AURA_REMOVE_BY_DELETE : AURA_REMOVE_BY_DEFAULT);
 
                     // prevent other effects applying if spell is already interrupted
                     // i.e. if effects have different targets and it was interrupted on one of them when 
@@ -3833,14 +3841,17 @@ void Spell::cast(bool skipCheck)
             // Hand of Reckoning
             if (m_spellInfo->Id == 62124)
             {
-                if (m_targets.getUnitTarget() && m_targets.getUnitTarget()->getVictim() != m_caster)
-                    AddPrecastSpell(67485);                 // Hand of Rekoning (no typos in name ;) )
+                if (m_targets.getUnitTarget() && m_targets.getUnitTarget()->getVictim() != m_caster && m_targets.getUnitTarget()->GetTypeId() != TYPEID_PLAYER)
+                    AddPrecastSpell(67485);                 // Hand of Reckoning
             }
             // Divine Shield, Divine Protection or Hand of Protection
             else if (m_spellInfo->SpellFamilyFlags.test<CF_PALADIN_HAND_OF_PROTECTION, CF_PALADIN_DIVINE_SHIELD>())
             {
                 AddPrecastSpell(25771);                     // Forbearance
-                AddPrecastSpell(61987);                     // Avenging Wrath Marker
+
+                // only for self cast
+                if (m_caster == m_targets.getUnitTarget())
+                    AddPrecastSpell(61987);                     // Avenging Wrath Marker
             }
             // Lay on Hands
             else if (m_spellInfo->SpellFamilyFlags.test<CF_PALADIN_LAY_ON_HANDS>())
@@ -3851,7 +3862,6 @@ void Spell::cast(bool skipCheck)
                     AddPrecastSpell(25771);                     // Forbearance
                     AddPrecastSpell(61987);                     // Avenging Wrath Marker
                 }
-
             }
             // Avenging Wrath
             else if (m_spellInfo->SpellFamilyFlags.test<CF_PALADIN_AVENGING_WRATH>())
@@ -4545,6 +4555,8 @@ void Spell::SendSpellGo()
         castFlags |= CAST_FLAG_PREDICTED_RUNES;             // rune cooldowns list
     }
 
+    if (m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION && m_targets.GetSpeed() > 0.0f)
+        castFlags |= CAST_FLAG_ADJUST_MISSILE;             // spell has trajectory (guess parameters)
     Unit *caster = m_IsTriggeredSpell && m_originalCaster ? m_originalCaster : m_caster;
 
     if (!caster)
@@ -4587,8 +4599,8 @@ void Spell::SendSpellGo()
 
     if (castFlags & CAST_FLAG_ADJUST_MISSILE)               // adjust missile trajectory duration
     {
-        data << float(0);
-        data << uint32(0);
+        data << float(m_targets.GetElevation());            // Elevation of missile
+        data << uint32(m_delayMoment);                      // Calculated trajectory delay time.
     }
 
     if (castFlags & CAST_FLAG_AMMO)                         // projectile info
@@ -5252,11 +5264,11 @@ void Spell::HandleThreatSpells()
 
     SpellThreatEntry const* threatEntry = sSpellMgr.GetSpellThreatEntry(m_spellInfo->Id);
 
-    if (!threatEntry || (!threatEntry->threat && threatEntry->ap_bonus == 0.0f))
+    if (!threatEntry || (!threatEntry->threat && fabs(threatEntry->ap_bonus) < M_NULL_F))
         return;
 
     float threat = threatEntry->threat;
-    if (threatEntry->ap_bonus != 0.0f)
+    if (fabs(threatEntry->ap_bonus) > M_NULL_F)
         threat += threatEntry->ap_bonus * m_caster->GetTotalAttackPowerValue(GetWeaponAttackType(m_spellInfo));
 
     bool positive = true;
@@ -7847,6 +7859,10 @@ bool Spell::CheckTarget( Unit* target, SpellEffectIndex eff )
             return false;
     }
 
+    if (m_spellInfo->EffectImplicitTargetA[eff] == TARGET_ALL_RAID_AROUND_CASTER ||
+        m_spellInfo->EffectImplicitTargetB[eff] == TARGET_ALL_RAID_AROUND_CASTER)
+        return true;
+
     // Check targets for LOS visibility (except spells without range limitations )
     switch(m_spellInfo->Effect[eff])
     {
@@ -8006,7 +8022,7 @@ bool SpellEvent::Execute(uint64 e_time, uint32 p_time)
                     if (n_offset)
                     {
                         // re-add us to the queue
-                        m_Spell->GetCaster()->m_Events.AddEvent(this, m_Spell->GetDelayStart() + n_offset, false);
+                        m_Spell->GetCaster()->AddEvent(this, m_Spell->GetDelayStart() + n_offset, false);
                         return false;                       // event not complete
                     }
                     // event complete
@@ -8018,7 +8034,7 @@ bool SpellEvent::Execute(uint64 e_time, uint32 p_time)
                 // delaying had just started, record the moment
                 m_Spell->SetDelayStart(e_time);
                 // re-plan the event for the delay moment
-                m_Spell->GetCaster()->m_Events.AddEvent(this, e_time + m_Spell->GetDelayMoment(), false);
+                m_Spell->GetCaster()->AddEvent(this, e_time + m_Spell->GetDelayMoment(), false);
                 return false;                               // event not complete
             }
         } break;
@@ -8031,7 +8047,7 @@ bool SpellEvent::Execute(uint64 e_time, uint32 p_time)
     }
 
     // spell processing not complete, plan event on the next update interval
-    m_Spell->GetCaster()->m_Events.AddEvent(this, e_time + 1, false);
+    m_Spell->GetCaster()->AddEvent(this, e_time + 1, false);
     return false;                                           // event not complete
 }
 
@@ -8039,7 +8055,7 @@ void SpellEvent::Abort(uint64 /*e_time*/)
 {
     // oops, the spell we try to do is aborted
     if (m_Spell->getState() != SPELL_STATE_FINISHED)
-        m_Spell->cancel();
+        m_Spell->cancel(true);
 }
 
 bool SpellEvent::IsDeletable() const

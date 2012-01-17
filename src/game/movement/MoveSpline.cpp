@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -199,7 +199,7 @@ bool MoveSplineInitArgs::Validate() const
 #define CHECK(exp) \
     if (!(exp))\
     {\
-        sLog.outError("MoveSplineInitArgs::Validate: expression '%s' failed", #exp);\
+        DEBUG_LOG("MoveSplineInitArgs::Validate: expression '%s' failed", #exp);\
         return false;\
     }
     CHECK(path.size() > 1);

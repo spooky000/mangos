@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 #include "Platform/Define.h"
 
 #include <map>
+#include <queue>
 
 // Note. All times are in milliseconds here.
 
@@ -56,6 +57,7 @@ class BasicEvent
 };
 
 typedef std::multimap<uint64, BasicEvent*> EventList;
+typedef std::queue<std::pair<uint64, BasicEvent*> > EventNewQueue;
 
 class EventProcessor
 {
@@ -64,15 +66,17 @@ class EventProcessor
         EventProcessor();
         ~EventProcessor();
 
-        void Update(uint32 p_time);
+        void Update(uint32 p_time, bool force = false);
         void KillAllEvents(bool force);
         void AddEvent(BasicEvent* Event, uint64 e_time, bool set_addtime = true);
         uint64 CalculateTime(uint64 t_offset);
+        void RenewEvents();
 
     protected:
-
+        void _AddEvents();
         uint64 m_time;
         EventList m_events;
+        EventNewQueue m_queue;
         bool m_aborting;
 };
 

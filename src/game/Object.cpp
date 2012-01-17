@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1278,8 +1278,9 @@ bool WorldObject::IsInBetween(const WorldObject *obj1, const WorldObject *obj2, 
 
 float WorldObject::GetAngle(const WorldObject* obj) const
 {
-    if(!obj) return 0;
-    return GetAngle( obj->GetPositionX(), obj->GetPositionY() );
+    if(!obj) 
+        return 0;
+    return GetAngle(obj->GetPositionX(), obj->GetPositionY());
 }
 
 // Return angle in range 0..2*pi
@@ -1290,7 +1291,7 @@ float WorldObject::GetAngle( const float x, const float y ) const
 
     float ang = atan2(dy, dx);
     ang = (ang >= 0) ? ang : 2 * M_PI_F + ang;
-    return ang;
+    return MapManager::NormalizeOrientation(ang);
 }
 
 bool WorldObject::HasInArc(const float arcangle, const WorldObject* obj) const
@@ -1654,7 +1655,7 @@ Creature* WorldObject::SummonCreature(uint32 id, float x, float y, float z, floa
 
     CreatureCreatePos pos(GetMap(), x, y, z, ang, GetPhaseMask());
 
-    if (x == 0.0f && y == 0.0f && z == 0.0f)
+    if (fabs(x) < M_NULL_F && fabs(y) < M_NULL_F && fabs(z) < M_NULL_F)
         pos = CreatureCreatePos(this, GetOrientation(), CONTACT_DISTANCE, ang);
 
     if (!pCreature->Create(GetMap()->GenerateLocalLowGuid(cinfo->GetHighGuid()), pos, cinfo, team))
@@ -1675,8 +1676,6 @@ Creature* WorldObject::SummonCreature(uint32 id, float x, float y, float z, floa
 
     if(GetTypeId()==TYPEID_UNIT && ((Creature*)this)->AI())
         ((Creature*)this)->AI()->JustSummoned(pCreature);
-
-    sLog.outString("Creature with entry %u summoned by %u", id, (GetTypeId() == TYPEID_PLAYER ? ((Player*)this)->GetGUIDLow() : GetEntry()));
 
     // return the creature therewith the summoner has access to it
     return pCreature;
@@ -1769,12 +1768,13 @@ namespace MaNGOS
                 float angle = i_object.GetAngle(u) - i_absAngle;
 
                 // move angle to range -pi ... +pi
-                while (angle > M_PI_F)
-                    angle -= 2.0f * M_PI_F;
-                while (angle < -M_PI_F)
-                    angle += 2.0f * M_PI_F;
+                float f_angle = MapManager::NormalizeOrientation(angle);
+                if (f_angle > M_PI_F)
+                    f_angle -= 2.0f * M_PI_F;
+                else if (f_angle < -M_PI_F)
+                    f_angle += 2.0f * M_PI_F;
 
-                i_selector.AddUsedArea(u->GetObjectBoundingRadius(), angle, dist2d);
+                i_selector.AddUsedArea(u->GetObjectBoundingRadius(), f_angle, dist2d);
             }
         private:
             WorldObject const& i_object;
@@ -1826,9 +1826,10 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
         Cell::VisitAllObjects(this, worker, distance2d + searcher_bounding_radius);
     }
 
-    /*
+    UpdateGroundPositionZ(x, y, z);
+
     // maybe can just place in primary position
-    if (selector.CheckOriginalAngle())
+    /*if (selector.CheckOriginalAngle())
     {
         if (searcher)
             searcher->UpdateAllowedPositionZ(x, y, z);      // update to LOS height if available
@@ -1840,8 +1841,6 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
 
         first_los_conflict = true;                          // first point have LOS problems
     }
-
-    UpdateGroundPositionZ(x, y, z);
 
     // set first used pos in lists
     selector.InitializeAngle();

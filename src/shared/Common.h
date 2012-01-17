@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -248,6 +248,10 @@ inline char * mangos_strdup(const char * source)
 
 #ifndef M_PI_F
 #  define M_PI_F        float(M_PI)
+#endif
+
+#ifndef M_NULL_F
+#  define M_NULL_F      0.009f
 #endif
 
 #ifndef countof

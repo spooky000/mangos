@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ ObjectPosSelector::ObjectPosSelector(float x, float y, float dist, float searche
     m_centerX(x), m_centerY(y), m_searcherDist(dist), m_searcherSize(searcher_size)
 {
     // if size == 0, m_anglestep will become 0 -> freeze
-    if (m_searcherSize == 0.0f)
+    if (fabs(m_searcherSize) < M_NULL_F)
         m_searcherSize = DEFAULT_WORLD_OBJECT_SIZE;
 
     m_searcherHalfSize = asin(m_searcherSize/m_searcherDist);

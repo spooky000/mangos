@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,7 +78,7 @@ namespace Movement
 
         moveFlags |= (MOVEFLAG_SPLINE_ENABLED|MOVEFLAG_FORWARD);
         
-        if (args.velocity == 0.f)
+        if (fabs(args.velocity) < M_NULL_F)
             args.velocity = unit.GetSpeed(SelectSpeedType(moveFlags));
 
         if (!args.Validate())

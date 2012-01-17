@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -3408,6 +3408,17 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     m_caster->CastSpell(m_caster, spell_id, true);
                     return;
                 }
+                case 66218:                                 // Launch - set position
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
+                        return;
+
+                    if (VehicleKit* vehicleKit = unitTarget->GetVehicleKit())
+                    {
+                        vehicleKit->SetDestination(m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, unitTarget->GetOrientation(),  m_targets.GetSpeed(), m_targets.GetElevation());
+                    }
+                    return;
+                }
                 case 66390:                                 // Read Last Rites
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT || m_caster->GetTypeId() != TYPEID_PLAYER)
@@ -4789,7 +4800,7 @@ void Spell::EffectForceCast(SpellEffectIndex eff_idx)
     {
         if (spellInfo->EffectApplyAuraName[i] == SPELL_AURA_CONTROL_VEHICLE)
         {
-            unitTarget->CastSpell(m_caster, spellInfo, true, NULL, NULL, NULL, m_spellInfo);
+            unitTarget->CastSpell(m_caster, spellInfo, true, NULL, NULL, ObjectGuid::Null, m_spellInfo);
             return;
         }
     }
@@ -4969,7 +4980,7 @@ void Spell::EffectTriggerSpell(SpellEffectIndex effIndex)
 
         MaNGOS::NormalizeMapCoord(x);
         MaNGOS::NormalizeMapCoord(y);
-        m_caster->UpdateGroundPositionZ(x,y,z);
+        m_caster->UpdateAllowedPositionZ(x,y,z);
 
         m_caster->CastSpell(x, y, z, spellInfo, true, NULL, NULL, m_originalCasterGUID);
         return;
@@ -5035,7 +5046,9 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
         return;
 
     // Init dest coordinates
+    Unit* pTarget = NULL;
     float x,y,z,o;
+    o = 0.0f;
     if(m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
     {
         x = m_targets.m_destX;
@@ -5046,7 +5059,6 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
         {
             // explicit cast data from client or server-side cast
             // some spell at client send caster
-            Unit* pTarget = NULL;
             if(m_targets.getUnitTarget() && m_targets.getUnitTarget()!=m_caster)
                 pTarget = m_targets.getUnitTarget();
             else if(unitTarget->getVictim())
@@ -5063,6 +5075,7 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
     {
         unitTarget->GetContactPoint(m_caster,x,y,z,CONTACT_DISTANCE);
         o = m_caster->GetOrientation();
+        pTarget = unitTarget;
     }
     else if(gameObjTarget)
     {
@@ -5083,7 +5096,10 @@ void Spell::EffectJump(SpellEffectIndex eff_idx)
     if (!speed_xy)
         speed_xy = 150;
 
-    m_caster->MonsterMoveJump(x, y, z, o, float(speed_xy) / 2, float(speed_z) / 10);
+    if (pTarget == m_caster)
+        pTarget = NULL;
+
+    m_caster->MonsterMoveJump(x, y, z, o, float(speed_xy) / 2, float(speed_z) / 10, false, pTarget);
 }
 
 void Spell::EffectTeleportUnits(SpellEffectIndex eff_idx)
@@ -9552,14 +9568,11 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                 }
                 case 62428: // Load into Catapult
                 {
-                    if (VehicleKit *seat = m_caster->GetVehicleKit())
-                        if (Unit *passenger = seat->GetPassenger(0))
-                            if (Unit *demolisher = m_caster->GetVehicle()->GetBase())
-                            {
-                                passenger->EnterVehicle(demolisher->GetVehicleKit(), 3);
-                                demolisher->CastSpell(demolisher, 62340, true);
-                            }
+                    if (!unitTarget)
+                        return;
 
+                    unitTarget->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
+                    m_caster->CastSpell(m_caster, 62340, true);
                     return;
                 }
                 case 62482: // Grab Crate
@@ -9913,6 +9926,15 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                         m_caster->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_STATE_ATTACK_UNARMED);
                         return;
                     }
+                    return;
+                }
+                case 67533:                                 // Shoot Air Rifle
+                {
+                    if (!unitTarget)
+                        return;
+
+                    m_caster->CastSpell(unitTarget, 67532, true);
+                    m_caster->CastSpell(unitTarget, 67531, true);
                     return;
                 }
                 case 68861:                                 // Consume Soul (ICC FoS: Bronjahm)

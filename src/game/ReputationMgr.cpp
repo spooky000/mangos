@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -256,7 +256,7 @@ bool ReputationMgr::SetReputation(FactionEntry const* factionEntry, int32 standi
         // check for sub-factions that receive spillover
         SimpleFactionsList const* flist = GetFactionTeamList(factionEntry->ID);
         // if has no sub-factions, check for factions with same parent
-        if (!flist && factionEntry->team && factionEntry->spilloverRateOut != 0.0f)
+        if (!flist && factionEntry->team && fabs(factionEntry->spilloverRateOut) > M_NULL_F)
         {
             spillOverRepOut *= factionEntry->spilloverRateOut;
             if (FactionEntry const *parent = sFactionStore.LookupEntry(factionEntry->team))

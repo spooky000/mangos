@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,11 +72,11 @@ class MANGOS_DLL_SPEC HostileReference : public Reference<Unit, ThreatManager>
 
         // used for temporary setting a threat and reducting it later again.
         // the threat modification is stored
-        void setTempThreat(float pThreat) { iTempThreatModifyer = pThreat - getThreat(); if(iTempThreatModifyer != 0.0f) addThreat(iTempThreatModifyer);  }
+        void setTempThreat(float pThreat) { iTempThreatModifyer = pThreat - getThreat(); if(fabs(iTempThreatModifyer) > M_NULL_F) addThreat(iTempThreatModifyer);  }
 
         void resetTempThreat()
         {
-            if(iTempThreatModifyer != 0.0f)
+            if (fabs(iTempThreatModifyer) > M_NULL_F)
             {
                 addThreat(-iTempThreatModifyer);  iTempThreatModifyer = 0.0f;
             }

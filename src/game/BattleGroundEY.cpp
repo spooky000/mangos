@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -150,7 +150,7 @@ void BattleGroundEY::CheckSomeoneJoinedPoint()
             Player *plr = sObjectMgr.GetPlayer(m_PlayersNearPoint[BG_EY_PLAYERS_OUT_OF_POINTS][j]);
             if (!plr)
             {
-                sLog.outError("BattleGroundEY:CheckSomeoneJoinedPoint: %s not found!", m_PlayersNearPoint[BG_EY_PLAYERS_OUT_OF_POINTS][j].GetString().c_str());
+                DEBUG_LOG("BattleGroundEY:CheckSomeoneJoinedPoint: %s not found!", m_PlayersNearPoint[BG_EY_PLAYERS_OUT_OF_POINTS][j].GetString().c_str());
                 ++j;
                 continue;
             }

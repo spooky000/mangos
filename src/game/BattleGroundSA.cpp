@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -465,6 +465,7 @@ void BattleGroundSA::UpdatePhase()
 
     // spirit healers at the relic
     SpawnEvent(SA_EVENT_ADD_GRAVE_A, (GetDefender() == ALLIANCE ? BG_SA_GRAVE_STATUS_ALLY_OCCUPIED : BG_SA_GRAVE_STATUS_HORDE_OCCUPIED), true);
+    m_Gyd[SA_EVENT_ADD_GRAVE_A] = ((GetDefender() == ALLIANCE) ? BG_SA_GRAVE_STATUS_ALLY_CONTESTED : BG_SA_GRAVE_STATUS_HORDE_CONTESTED);
 
     // (Re)spawn graveyard at the beach.
     SpawnEvent(SA_EVENT_ADD_GRAVE_B, (GetDefender() == ALLIANCE ? BG_SA_GRAVE_STATUS_HORDE_OCCUPIED : BG_SA_GRAVE_STATUS_ALLY_OCCUPIED), true);
@@ -1065,18 +1066,10 @@ void BattleGroundSA::SendTransportsRemove(Player * player)
     if (GetBGObject(BG_SA_BOAT_ONE) || GetBGObject(BG_SA_BOAT_TWO))
     {
         UpdateData transData;
-        if (GameObject * boat1 = GetBGObject(BG_SA_BOAT_ONE))
-        {
-            boat1->BuildOutOfRangeUpdateBlock(&transData);
-            boat1->SetRespawnTime(0);
-            boat1->Delete();
-        }
-        if (GameObject * boat2 = GetBGObject(BG_SA_BOAT_TWO))
-        {
-            boat2->BuildOutOfRangeUpdateBlock(&transData);
-            boat2->SetRespawnTime(0);
-            boat2->Delete();
-        }
+        if (GetBGObject(BG_SA_BOAT_ONE))
+            GetBGObject(BG_SA_BOAT_ONE)->BuildOutOfRangeUpdateBlock(&transData);
+        if (GetBGObject(BG_SA_BOAT_TWO))
+            GetBGObject(BG_SA_BOAT_TWO)->BuildOutOfRangeUpdateBlock(&transData);
         WorldPacket packet;
         transData.BuildPacket(&packet);
         player->GetSession()->SendPacket(&packet);

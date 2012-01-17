@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -138,7 +138,7 @@ void CreatureCreatePos::SelectFinalPoint(Creature* cr)
     // if object provided then selected point at specific dist/angle from object forward look
     if (m_closeObject)
     {
-        if (m_dist == 0.0f)
+        if (fabs(m_dist) < M_NULL_F)
         {
             m_pos.x = m_closeObject->GetPositionX();
             m_pos.y = m_closeObject->GetPositionY();
@@ -1594,7 +1594,7 @@ void Creature::ForcedDespawn(uint32 timeMSToDespawn)
     {
         ForcedDespawnDelayEvent *pEvent = new ForcedDespawnDelayEvent(*this);
 
-        m_Events.AddEvent(pEvent, m_Events.CalculateTime(timeMSToDespawn));
+        AddEvent(pEvent, timeMSToDespawn);
         return;
     }
 
@@ -1809,8 +1809,8 @@ void Creature::CallAssistance()
 
             if (!assistList.empty())
             {
-                AssistDelayEvent *e = new AssistDelayEvent(getVictim()->GetObjectGuid(), *this, assistList);
-                m_Events.AddEvent(e, m_Events.CalculateTime(sWorld.getConfig(CONFIG_UINT32_CREATURE_FAMILY_ASSISTANCE_DELAY)));
+                AssistDelayEvent* event = new AssistDelayEvent(getVictim()->GetObjectGuid(), *this, assistList);
+                AddEvent(event, sWorld.getConfig(CONFIG_UINT32_CREATURE_FAMILY_ASSISTANCE_DELAY));
             }
         }
     }

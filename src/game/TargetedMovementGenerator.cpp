@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,7 +50,6 @@ void TargetedMovementGeneratorMedium<T,D>::_setTargetLocation(T &owner)
     else if (!i_offset)
     {
         // to nearest contact position
-        // i_target->GetContactPoint( &owner, x, y, z );
         i_target->GetRandomContactPoint(&owner, x, y, z, 0, DEFAULT_OBJECT_SCALE);
     }
     else
@@ -158,7 +157,7 @@ bool TargetedMovementGeneratorMedium<T,D>::Update(T &owner, const uint32 & time_
 
     if (owner.movespline->Finalized())
     {
-        if (i_angle == 0.f && !owner.HasInArc(0.01f, i_target.getTarget()))
+        if (fabs(i_angle) < M_NULL_F && !owner.HasInArc(0.01f, i_target.getTarget()))
             owner.SetInFront(i_target.getTarget());
 
         if (!i_targetReached)

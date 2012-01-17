@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2030,6 +2030,9 @@ bool Pet::IsPermanentPetFor(Player* owner)
                     return GetCreatureInfo()->type == CREATURE_TYPE_DEMON;
                 case CLASS_DEATH_KNIGHT:
                     return GetCreatureInfo()->type == CREATURE_TYPE_UNDEAD;
+                case CLASS_MAGE:
+                    // both permanent and temporary water elementals should be in spellbook
+                    return GetCreatureInfo()->Entry == (owner->HasAura(70937)) ? 37994 : 510;
                 default:
                     return false;
             }

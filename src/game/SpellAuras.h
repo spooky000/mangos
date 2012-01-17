@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -424,8 +424,8 @@ class MANGOS_DLL_SPEC Aura
 
         SpellEntry const* GetSpellProto() const { return ( GetHolder() ? GetHolder()->GetSpellProto() : NULL); }
         uint32 GetId() const { return ( (GetHolder() && GetHolder()->GetSpellProto()) ? GetHolder()->GetSpellProto()->Id : 0 ); }
-        ObjectGuid const& GetCastItemGuid() const { return GetHolder() ? GetHolder()->GetCastItemGuid() : ObjectGuid::Null; }
-        ObjectGuid const& GetCasterGuid() const { return GetHolder() ? GetHolder()->GetCasterGuid() : ObjectGuid::Null; }
+        ObjectGuid const& GetCastItemGuid() const;
+        ObjectGuid const& GetCasterGuid() const;
         Unit* GetCaster() const { return ( GetHolder() ? GetHolder()->GetCaster() : NULL); }
         Unit* GetTarget() const { return ( GetHolder() ? GetHolder()->GetTarget() : NULL); }
 
@@ -491,7 +491,7 @@ class MANGOS_DLL_SPEC Aura
         void TriggerSpell();
         void TriggerSpellWithValue();
 
-        ClassFamilyMask const& GetAuraSpellClassMask() const { return  m_spellAuraHolder->GetSpellProto()->GetEffectSpellClassMask(m_effIndex); }
+        ClassFamilyMask const& GetAuraSpellClassMask() const;
         bool isAffectedOnSpell(SpellEntry const *spell) const;
         bool CanProcFrom(SpellEntry const *spell, uint32 procFlag, uint32 EventProcEx, uint32 procEx, bool active, bool useClassMask) const;
 

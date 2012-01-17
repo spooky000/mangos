@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -106,13 +106,13 @@ void HostileReference::addThreat(float pMod)
     // if the link was cut before relink it again
     if(!isOnline())
         updateOnlineStatus();
-    if(pMod != 0.0f)
+    if(fabs(pMod) > M_NULL_F)
     {
         ThreatRefStatusChangeEvent event(UEV_THREAT_REF_THREAT_CHANGE, this, pMod);
         fireStatusChanged(event);
     }
 
-    if(isValid() && pMod >= 0)
+    if(isValid() && pMod >= 0.0f)
     {
         Unit* victim_owner = getTarget()->GetOwner();
         if(victim_owner && victim_owner->isAlive())
@@ -294,7 +294,11 @@ HostileReference* ThreatContainer::selectNextVictim(Creature* pAttacker, Hostile
         pCurrentRef = (*iter);
 
         Unit* pTarget = pCurrentRef->getTarget();
-        MANGOS_ASSERT(pTarget);                             // if the ref has status online the target must be there!
+
+//        MANGOS_ASSERT(pTarget);                             // if the ref has status online the target must be there!
+
+        if (!pTarget)
+            continue;
 
         MAPLOCK_READ(pTarget, MAP_LOCK_TYPE_DEFAULT);
         // some units are prefered in comparison to others
@@ -501,7 +505,7 @@ void ThreatManager::tauntApply(Unit* pTaunter)
         if(getCurrentVictim() && (ref->getThreat() < getCurrentVictim()->getThreat()))
         {
             // Ok, temp threat is unused
-            if(ref->getTempThreatModifyer() == 0.0f)
+            if(fabs(ref->getTempThreatModifyer()) < M_NULL_F)
             {
                 ref->setTempThreat(getCurrentVictim()->getThreat());
                 iUpdateNeed = true;
@@ -561,7 +565,10 @@ void ThreatManager::processThreatEvent(ThreatRefStatusChangeEvent* threatRefStat
                     setCurrentVictim(NULL);
                     setDirty(true);
                 }
-                //iOwner->SendThreatRemove(hostileReference);
+                if (getOwner() && getOwner()->IsInWorld())
+                    if (Unit* target = ObjectAccessor::GetUnit(*getOwner(), hostileReference->getUnitGuid()))
+                        if (getOwner()->IsInMap(target))
+                            getOwner()->SendThreatRemove(hostileReference);
                 iThreatContainer.remove(hostileReference);
                 iUpdateNeed = true;
                 iThreatOfflineContainer.addReference(hostileReference);
@@ -583,7 +590,10 @@ void ThreatManager::processThreatEvent(ThreatRefStatusChangeEvent* threatRefStat
             }
             if(hostileReference->isOnline())
             {
-                iOwner->SendThreatRemove(hostileReference);
+                if (getOwner() && getOwner()->IsInWorld())
+                    if (Unit* target = ObjectAccessor::GetUnit(*getOwner(), hostileReference->getUnitGuid()))
+                        if (getOwner()->IsInMap(target))
+                            getOwner()->SendThreatRemove(hostileReference);
                 iThreatContainer.remove(hostileReference);
                 iUpdateNeed = true;
             }

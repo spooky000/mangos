@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -168,7 +168,7 @@ FleeingMovementGenerator<T>::_getPoint(T &owner, float &x, float &y, float &z)
             if((is_water_now && !is_water_next && !is_land_ok) || (!is_water_now && is_water_next && !is_water_ok))
                 continue;
 
-            if( !(new_z - z) || distance / fabs(new_z - z) > 1.0f)
+            if( !(new_z - z) || distance / fabs(new_z - z) > 3.0f)
             {
                 float new_z_left = _map->GetHeight(temp_x + 1.0f*cos(angle+M_PI_F/2),temp_y + 1.0f*sin(angle+M_PI_F/2),z,true);
                 float new_z_right = _map->GetHeight(temp_x + 1.0f*cos(angle-M_PI_F/2),temp_y + 1.0f*sin(angle-M_PI_F/2),z,true);
@@ -249,18 +249,18 @@ FleeingMovementGenerator<T>::_setMoveData(T &owner)
     //get angle and 'distance from caster' to run
     float angle;
 
-    if(i_cur_angle == 0.0f && i_last_distance_from_caster == 0.0f) //just started, first time
+    if (fabs(i_cur_angle) < M_NULL_F && fabs(i_last_distance_from_caster) < M_NULL_F) //just started, first time
     {
         angle = rand_norm_f()*(1.0f - cur_dist/MIN_QUIET_DISTANCE) * M_PI_F/3 + rand_norm_f()*M_PI_F*2/3;
         i_to_distance_from_caster = MIN_QUIET_DISTANCE;
         i_only_forward = true;
     }
-    else if(cur_dist < MIN_QUIET_DISTANCE)
+    else if (cur_dist < MIN_QUIET_DISTANCE)
     {
         angle = M_PI_F/6 + rand_norm_f()*M_PI_F*2/3;
         i_to_distance_from_caster = cur_dist*2/3 + rand_norm_f()*(MIN_QUIET_DISTANCE - cur_dist*2/3);
     }
-    else if(cur_dist > MAX_QUIET_DISTANCE)
+    else if (cur_dist > MAX_QUIET_DISTANCE)
     {
         angle = rand_norm_f()*M_PI_F/3 + M_PI_F*2/3;
         i_to_distance_from_caster = MIN_QUIET_DISTANCE + 2.5f + rand_norm_f()*(MAX_QUIET_DISTANCE - MIN_QUIET_DISTANCE - 2.5f);

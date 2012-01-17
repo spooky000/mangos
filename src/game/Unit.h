@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1225,7 +1225,6 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         }
         bool CanReachWithMeleeAttack(Unit* pVictim, float flat_mod = 0.0f) const;
         void GetRandomContactPoint(const Unit* obj, float &x, float &y, float &z, float distance2dMin, float distance2dMax) const;
-        float GetCombatReach() const { return m_floatValues[UNIT_FIELD_COMBATREACH]; }
         uint32 m_extraAttacks;
 
         bool const IsInCombat() const { return GetMap() ? bool(GetMap()->GetAttackersFor(GetObjectGuid()).size() > 0) : false; }
@@ -1498,7 +1497,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void SendSpellDamageImmune(Unit* target, uint32 spellId);
 
         void NearTeleportTo(float x, float y, float z, float orientation, bool casting = false);
-        void MonsterMoveJump(float x, float y, float z, float o, float speed, float height, bool isKnockBack = false);
+        void MonsterMoveJump(float x, float y, float z, float o, float speed, float height, bool isKnockBack = false, Unit* target = NULL);
         void MonsterMoveWithSpeed(float x, float y, float z, float speed);
 
         // recommend use MonsterMove/MonsterMoveWithSpeed for most case that correctly work with movegens
@@ -1613,7 +1612,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         bool AddSpellAuraHolder(SpellAuraHolderPtr holder);
         void AddAuraToModList(Aura *aura);
 
-        void _AddAura(uint32 spellID, uint32 duration = 60000);
+        void _AddAura(uint32 spellID, uint32 duration = 60000, Unit * caster = NULL);
 
         float CheckAuraStackingAndApply(Aura *Aur, UnitMods unitMod, UnitModifierType modifierType, float amount, bool apply, int32 miscMask = 0, int32 miscValue = 0);
 
@@ -1629,7 +1628,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         // removing specific aura stacks by diff reasons and selections
         void RemoveAurasDueToSpell(uint32 spellId, SpellAuraHolderPtr except = SpellAuraHolderPtr(NULL), AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
         void RemoveAurasDueToItemSpell(Item* castItem,uint32 spellId);
-        void RemoveAurasByCasterSpell(uint32 spellId, ObjectGuid casterGuid);
+        void RemoveAurasByCasterSpell(uint32 spellId, ObjectGuid casterGuid, AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
         void RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGuid, Unit *stealer);
         void RemoveAurasDueToSpellByCancel(uint32 spellId);
         void RemoveAllGroupBuffsFromCaster(ObjectGuid guidCaster);
@@ -1650,6 +1649,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         void RemoveAllAurasOnDeath();
 
         void HandleArenaPreparation(bool apply);
+        bool RemoveSpellsCausingAuraByCaster(AuraType auraType, ObjectGuid casterGuid, AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
 
         // removing specific aura FROM stack by diff reasons and selections
         void RemoveAuraHolderFromStack(uint32 spellId, uint32 stackAmount = 1, ObjectGuid casterGuid = ObjectGuid(), AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT);
@@ -1743,7 +1743,10 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         float m_modSpellSpeedPctPos;
 
         // Event handler
-        EventProcessor m_Events;
+        EventProcessor* GetEvents();
+        void UpdateEvents(uint32 update_diff, uint32 time);
+        void KillAllEvents(bool force);
+        void AddEvent(BasicEvent* Event, uint64 e_time, bool set_addtime = true);
 
         // stat system
         bool HandleStatModifier(UnitMods unitMod, UnitModifierType modifierType, float amount, bool apply);
@@ -2179,6 +2182,8 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
 
         GroupPetList m_groupPets;
+
+        EventProcessor m_Events;
 
         GuardianPetList m_guardianPets;
 

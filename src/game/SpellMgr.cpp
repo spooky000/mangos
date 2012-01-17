@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2059,7 +2059,7 @@ struct DoSpellThreat
 
         // flat threat bonus and attack power bonus currently only work properly when all
         // effects have same targets, otherwise, we'd need to seperate it by effect index
-        if (ste.threat || ste.ap_bonus != 0.f)
+        if (ste.threat || fabs(ste.ap_bonus) > M_NULL_F)
         {
             const uint32 *targetA = spell->EffectImplicitTargetA;
             //const uint32 *targetB = spell->EffectImplicitTargetB;
@@ -4613,3 +4613,5 @@ uint32 GetProcFlag(SpellEntry const* spellInfo)
 
     return EventProcFlag;
 }
+
+ClassFamilyMask const ClassFamilyMask::Null = ClassFamilyMask();

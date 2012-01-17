@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+* Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -500,11 +500,15 @@ enum VehicleSeatFlags
 enum VehicleSeatFlagsB
 {
     VEHICLE_SEAT_FLAG_B_NONE                     = 0x00000000,
+    VEHICLE_SEAT_FLAG_B_UNK1                     = 0x00000001,
     VEHICLE_SEAT_FLAG_B_USABLE_FORCED            = 0x00000002,
     VEHICLE_SEAT_FLAG_B_TARGETS_IN_RAIDUI        = 0x00000008,           // Lua_UnitTargetsVehicleInRaidUI
+    VEHICLE_SEAT_FLAG_B_UNK3                     = 0x00000010,
     VEHICLE_SEAT_FLAG_B_EJECTABLE                = 0x00000020,           // ejectable
     VEHICLE_SEAT_FLAG_B_USABLE_FORCED_2          = 0x00000040,
+    VEHICLE_SEAT_FLAG_B_UNK6                     = 0x00000080,
     VEHICLE_SEAT_FLAG_B_USABLE_FORCED_3          = 0x00000100,
+    VEHICLE_SEAT_FLAG_B_EJECTABLE_FORCED         = 0x00200000,           // seats for forced eject? 27 seats at 3.3.5a
     VEHICLE_SEAT_FLAG_B_CANSWITCH                = 0x04000000,           // can switch seats
     VEHICLE_SEAT_FLAG_B_VEHICLE_PLAYERFRAME_UI   = 0x80000000,           // Lua_UnitHasVehiclePlayerFrameUI - actually checked for flagsb &~ 0x80000000
 };

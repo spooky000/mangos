@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -346,8 +346,7 @@ void hexEncodeByteArray(uint8* bytes, uint32 arrayLen, std::string& result);
 /* Round float value to "pct" accuracy */
 inline float round_pct(float value)
 {
-    const double prec_value = 100.0f;
-    return (int(value*prec_value +(value < 0.0f ? -0.5f : 0.5f))/prec_value);
+    return ((value < 0.0f ? ceil(value * 100.0f - 0.5f) : floor(value * 100.0f + 0.5f))/100.0f);
 }
 
 #endif

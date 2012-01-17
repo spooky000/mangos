@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -321,7 +321,7 @@ void Player::UpdateAttackPowerAndDamage(bool ranged )
                             else if ((*itr)->GetEffIndex() == EFFECT_INDEX_1)
                                 mBonusWeaponAtt = (*itr)->GetModifier()->m_amount * m_baseFeralAP / 100.0f;
 
-                            if (mLevelBonus != 0.0f && mBonusWeaponAtt != 0.0f)
+                            if (fabs(mLevelBonus) > M_NULL_F && fabs(mBonusWeaponAtt) > M_NULL_F)
                                 break;
                         }
                         break;
@@ -1122,6 +1122,21 @@ void Pet::UpdateDamagePhysical(WeaponAttackType attType)
 
     float mindamage = ((base_value + weapon_mindamage) * base_pct + total_value) * total_pct;
     float maxdamage = ((base_value + weapon_maxdamage) * base_pct + total_value) * total_pct;
+
+    AuraList const& ModAttackSpeedAuras = GetAurasByType(SPELL_AURA_MOD_ATTACKSPEED);
+    for (AuraList::const_iterator i = ModAttackSpeedAuras.begin(); i != ModAttackSpeedAuras.end(); ++i)
+    {
+        switch ((*i)->GetHolder()->GetId())
+        {
+            case 61682:
+            case 61683:
+                mindamage *= 1 - ((*i)->GetModifier()->m_amount / 100.0f);
+                maxdamage *= 1 - ((*i)->GetModifier()->m_amount / 100.0f);
+                break;
+            default:
+                break;
+        }
+    }
 
     if (attType == BASE_ATTACK)
     {

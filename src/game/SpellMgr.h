@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2011 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -546,6 +546,28 @@ inline uint32 GetDispellMask(DispelType dispel)
         return DISPEL_ALL_MASK;
     else
         return (1 << dispel);
+}
+
+inline bool IsSpellReduceThreat(SpellEntry const* spellInfo)
+{
+    for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+    {
+        if (spellInfo->Effect[i] != SPELL_EFFECT_APPLY_AURA)
+            continue;
+
+        switch(spellInfo->EffectApplyAuraName[i])
+        {
+            case SPELL_AURA_MOD_TOTAL_THREAT:
+            case SPELL_AURA_MOD_THREAT:
+            case SPELL_AURA_MOD_CRITICAL_THREAT:
+                if (spellInfo->CalculateSimpleValue(SpellEffectIndex(i)) < 0)
+                    return true;
+                break;
+            default:
+                break;
+        }
+    }
+    return false;
 }
 
 inline bool IsSpellAllowDeadTarget(SpellEntry const* spellInfo)
