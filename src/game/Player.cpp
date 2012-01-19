@@ -23661,7 +23661,14 @@ void Player::ActivateSpec(uint8 specNum)
 
             for(int r = 0; r < MAX_TALENT_RANK; ++r)
                 if (talentInfo->RankID[r])
+                {
                     removeSpell(talentInfo->RankID[r],!IsPassiveSpell(talentInfo->RankID[r]),false);
+
+                    SpellEntry const *spellInfo = sSpellStore.LookupEntry(talentInfo->RankID[r]);
+                    for (int k = 0; k < MAX_EFFECT_INDEX; ++k)
+                        if (spellInfo->EffectTriggerSpell[k])
+                            removeSpell(spellInfo->EffectTriggerSpell[k]);
+                }
 
             specIter = m_talents[m_activeSpec].begin();
         }
