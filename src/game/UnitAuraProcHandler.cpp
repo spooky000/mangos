@@ -1042,6 +1042,12 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 case 68160:
                     triggered_spell_id = 66809;
                     break;
+                // Dark Hunger (Lich King)
+                case 69383:
+                    basepoints[0] = 0.5f * damage;
+                    target = this;
+                    triggered_spell_id = 69384;
+                    break;
                 // Shiny Shard of the Scale - Equip Effect
                 case 69739:
                     // Cauterizing Heal or Searing Flame
@@ -2476,20 +2482,26 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     basepoints[0] = triggerAmount * damage / 100;
                     break;
                 }
-                // Sacred Shield
-                case 53601:
+                // Sacred Shield (buff)
+                case 58597:
                 {
-                    triggered_spell_id = 66922;
-                    SpellEntry const* triggeredEntry = sSpellStore.LookupEntry(triggered_spell_id);
-                    if (!triggeredEntry)
-                        return SPELL_AURA_PROC_FAILED;
-
-                    if(pVictim)
-                        if(!pVictim->HasAura(53569, EFFECT_INDEX_0) && !pVictim->HasAura(53576, EFFECT_INDEX_0))
-                            return SPELL_AURA_PROC_FAILED;
-
                     basepoints[0] = int32(damage / GetSpellAuraMaxTicks(triggered_spell_id));
 
+                    target = this;
+                    break;
+                }
+                // Sacred Shield (talent rank)
+                case 53601:
+                {
+                    if (procSpell && IsFriendlyTo(pVictim))
+                    {
+                        if (procSpell->SpellFamilyFlags.test<CF_PALADIN_FLASH_OF_LIGHT>() && (pVictim->HasAura(53569, EFFECT_INDEX_0) || pVictim->HasAura(53576, EFFECT_INDEX_0)))
+                            triggered_spell_id = 66922;
+                        else
+                            return SPELL_AURA_PROC_FAILED;
+                    }
+
+                    // triggered_spell_id in spell data
                     target = this;
                     break;
                 }
