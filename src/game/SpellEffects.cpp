@@ -4479,8 +4479,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
             {
                 if (unitTarget)
                 {
-                    int32 healval = m_caster->SpellDamageBonusDone(m_caster,m_spellInfo,damage,DOT);
-
                     if (Unit *owner = m_caster->GetOwner())
                     {
                         // spell have SPELL_DAMAGE_CLASS_NONE and not get bonuses from owner, use main spell for bonuses
@@ -4495,13 +4493,13 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                         for(Unit::AuraList::const_iterator i = mDummyAuras.begin(); i != mDummyAuras.end(); ++i)
                             // only its have dummy with specific icon
                             if ((*i)->GetSpellProto()->SpellFamilyName == SPELLFAMILY_SHAMAN && (*i)->GetSpellProto()->SpellIconID == 338)
-                                healval += (*i)->GetModifier()->m_amount * damage / 100;
+                                damage += (*i)->GetModifier()->m_amount * damage / 100;
 
                         // Glyph of Healing Stream Totem
                         if (Aura *dummy = owner->GetDummyAura(55456))
-                            healval += dummy->GetModifier()->m_amount * damage / 100;
+                            damage += dummy->GetModifier()->m_amount * damage / 100;
                     }
-                    m_caster->CastCustomSpell(unitTarget, 52042, &healval, NULL, NULL, true, 0, 0, m_originalCasterGUID);
+                    m_caster->CastCustomSpell(unitTarget, 52042, &damage, NULL, NULL, true, 0, 0, m_originalCasterGUID);
                 }
                 return;
             }
