@@ -2142,7 +2142,6 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         VehicleKit*  m_pVehicle;
 
         void DisableSpline();
-
         bool m_isCreatureLinkingTrigger;
         bool m_isSpawningLinked;
 

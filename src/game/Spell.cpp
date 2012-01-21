@@ -8632,7 +8632,7 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
         }
         case 61999: // Raise ally
         {
-            WorldObject* result = FindCorpseUsing <MaNGOS::RaiseAllyObjectCheck>  ();
+            WorldObject* result = FindCorpseUsing<MaNGOS::RaiseAllyObjectCheck>();
             if (result)
                 targetUnitMap.push_back((Unit*)result);
             else
