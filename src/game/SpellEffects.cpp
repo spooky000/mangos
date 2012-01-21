@@ -2621,7 +2621,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     {
                         const SpellEntry *pSpell = sSpellStore.LookupEntry(spellCredit[i]);
 
-                        if (pSpell->EffectMiscValue[EFFECT_INDEX_0] == unitTarget->GetEntry())
+                        if (pSpell->EffectMiscValue[EFFECT_INDEX_0] == (int32)unitTarget->GetEntry())
                         {
                             m_caster->CastSpell(m_caster, spellCredit[i], true);
                             break;
@@ -2818,7 +2818,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     for (int i = 0; i < 4; ++i)
                     {
                         const SpellEntry *pSpell = sSpellStore.LookupEntry(spellCredit[i]);
-                        if (pSpell->EffectMiscValue[EFFECT_INDEX_0] == unitTarget->GetEntry())
+                        if (pSpell->EffectMiscValue[EFFECT_INDEX_0] == (int32)unitTarget->GetEntry())
                         {
                             m_caster->RemoveAurasDueToSpell(52006);   // Remove Stealth from Eye of Acherus upon cast
                             m_caster->CastSpell(unitTarget, spellCredit[i], true);
@@ -6774,8 +6774,7 @@ void Spell::EffectPickPocket(SpellEffectIndex /*eff_idx*/)
         {
             // Reveal action + get attack
             m_caster->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
-            if (((Creature*)unitTarget)->AI())
-                ((Creature*)unitTarget)->AI()->AttackedBy(m_caster);
+            unitTarget->AttackedBy(m_caster);
         }
     }
 }
@@ -6806,20 +6805,6 @@ void Spell::DoSummonWild(SpellEffectIndex eff_idx, uint32 forceFaction)
     uint32 creature_entry = m_spellInfo->EffectMiscValue[eff_idx];
     if (!creature_entry)
         return;
-
-    uint32 level = m_caster->getLevel();
-
-    // level of creature summoned using engineering item based at engineering skill level
-    if (m_caster->GetTypeId()==TYPEID_PLAYER && m_CastItem)
-    {
-        ItemPrototype const *proto = m_CastItem->GetProto();
-        if (proto && proto->RequiredSkill == SKILL_ENGINEERING)
-        {
-            uint16 skill202 = ((Player*)m_caster)->GetSkillValue(SKILL_ENGINEERING);
-            if (skill202)
-                level = skill202/5;
-        }
-    }
 
     // select center of summon position
     float center_x = m_targets.m_destX;
@@ -6865,7 +6850,7 @@ void Spell::DoSummonWild(SpellEffectIndex eff_idx, uint32 forceFaction)
             }
         }
 
-        if (Creature *summon = m_caster->SummonCreature(creature_entry, px, py, pz, m_caster->GetOrientation(), summonType, m_duration))
+        if (Creature* summon = m_caster->SummonCreature(creature_entry, px, py, pz, m_caster->GetOrientation(), summonType, m_duration))
         {
             summon->SetUInt32Value(UNIT_CREATED_BY_SPELL, m_spellInfo->Id);
 
@@ -6876,8 +6861,9 @@ void Spell::DoSummonWild(SpellEffectIndex eff_idx, uint32 forceFaction)
             if(forceFaction)
                 summon->setFaction(forceFaction);
 
-            if(m_caster->GetTypeId() == TYPEID_PLAYER && summon->AI())
-                summon->AI()->SummonedBySpell((Player*)m_caster );
+            // Notify original caster if not done already
+            if (m_originalCaster && m_originalCaster != m_caster && m_originalCaster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_originalCaster)->AI())
+                ((Creature*)m_originalCaster)->AI()->JustSummoned(summon);
         }
     }
 }
@@ -7004,6 +6990,8 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
         // Notify Summoner
         if (m_caster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_caster)->AI())
             ((Creature*)m_caster)->AI()->JustSummoned(spawnCreature);
+        if (m_originalCaster && m_originalCaster != m_caster && m_originalCaster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_originalCaster)->AI())
+            ((Creature*)m_originalCaster)->AI()->JustSummoned(spawnCreature);
 
         DEBUG_LOG("Guardian pet (guidlow %d, entry %d) summoned (default). Counter is %d ", spawnCreature->GetGUIDLow(), spawnCreature->GetEntry(), spawnCreature->GetPetCounter());
     }
@@ -7436,7 +7424,7 @@ void Spell::EffectSummonPet(SpellEffectIndex eff_idx)
         if(!OldSummon->IsInWorld())
             return;
 
-        if (m_caster->GetTypeId() == TYPEID_PLAYER && petentry == 0 || OldSummon->GetEntry() == petentry)
+        if (m_caster->GetTypeId() == TYPEID_PLAYER && (petentry == 0 || OldSummon->GetEntry() == petentry))
         {
             // pet in corpse state can't be summoned
             if (OldSummon->isDead())
@@ -8044,6 +8032,8 @@ void Spell::EffectSummonObjectWild(SpellEffectIndex eff_idx)
 
     if (m_caster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_caster)->AI())
         ((Creature*)m_caster)->AI()->JustSummoned(pGameObj);
+    if (m_originalCaster && m_originalCaster != m_caster && m_originalCaster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_originalCaster)->AI())
+        ((Creature*)m_originalCaster)->AI()->JustSummoned(pGameObj);
 
     if(m_spellInfo->Id == 55896) // Q: Valkyrion Must Burn
     {
@@ -11458,6 +11448,8 @@ void Spell::EffectSummonObject(SpellEffectIndex eff_idx)
 
     if (m_caster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_caster)->AI())
         ((Creature*)m_caster)->AI()->JustSummoned(pGameObj);
+    if (m_originalCaster && m_originalCaster != m_caster && m_originalCaster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_originalCaster)->AI())
+        ((Creature*)m_originalCaster)->AI()->JustSummoned(pGameObj);
 }
 
 void Spell::EffectResurrect(SpellEffectIndex /*eff_idx*/)
@@ -11857,6 +11849,8 @@ void Spell::DoSummonCritter(SpellEffectIndex eff_idx, uint32 forceFaction)
     // Notify Summoner
     if (m_caster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_caster)->AI())
         ((Creature*)m_caster)->AI()->JustSummoned(critter);
+    if (m_originalCaster && m_originalCaster != m_caster && m_originalCaster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_originalCaster)->AI())
+        ((Creature*)m_originalCaster)->AI()->JustSummoned(critter);
 
     DEBUG_LOG("New mini pet has guid %u", critter->GetGUIDLow());
 }
@@ -12227,6 +12221,8 @@ void Spell::EffectTransmitted(SpellEffectIndex eff_idx)
 
     if (m_caster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_caster)->AI())
         ((Creature*)m_caster)->AI()->JustSummoned(pGameObj);
+    if (m_originalCaster && m_originalCaster != m_caster && m_originalCaster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_originalCaster)->AI())
+        ((Creature*)m_originalCaster)->AI()->JustSummoned(pGameObj);
 }
 
 

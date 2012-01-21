@@ -1134,8 +1134,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             }
 
             // if damage pVictim call AI reaction
-            if(pVictim->GetTypeId()==TYPEID_UNIT && ((Creature*)pVictim)->AI())
-                ((Creature*)pVictim)->AI()->AttackedBy(this);
+            pVictim->AttackedBy(this);
         }
 
         if (pVictim->GetTypeId() != TYPEID_PLAYER)
@@ -2929,8 +2928,7 @@ void Unit::AttackerStateUpdate (Unit *pVictim, WeaponAttackType attType, bool ex
             GetGUIDLow(), pVictim->GetGUIDLow(), pVictim->GetTypeId(), damageInfo.damage, damageInfo.absorb, damageInfo.blocked_amount, damageInfo.resist);
 
     // if damage pVictim call AI reaction
-    if(pVictim->GetTypeId()==TYPEID_UNIT && ((Creature*)pVictim)->AI())
-        ((Creature*)pVictim)->AI()->AttackedBy(this);
+    pVictim->AttackedBy(this);
 
     // extra attack only at any non extra attack (normal case)
     if(!extra && extraAttacks)
@@ -5595,10 +5593,15 @@ void Unit::RemoveAura(Aura* aura, AuraRemoveMode mode)
 
 void Unit::RemoveAllAuras(AuraRemoveMode mode /*= AURA_REMOVE_BY_DEFAULT*/)
 {
-    while (!m_spellAuraHolders.empty())
+    for(SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin(); iter != m_spellAuraHolders.end();)
     {
-        SpellAuraHolderMap::iterator iter = m_spellAuraHolders.begin();
-        RemoveSpellAuraHolder(iter->second,mode);
+        if (!iter->second->IsDeleted())
+        {
+            RemoveSpellAuraHolder(iter->second,mode);
+            iter = m_spellAuraHolders.begin();
+        }
+        else
+            ++iter;
     }
 }
 
@@ -6704,34 +6707,15 @@ bool Unit::Attack(Unit *victim, bool meleeAttack)
     return true;
 }
 
-void Unit::AttackedBy(Unit *attacker)
+void Unit::AttackedBy(Unit* attacker)
 {
-    if (IsFriendlyTo(attacker) || attacker->IsFriendlyTo(this))
-        return;
-
     // trigger AI reaction
     if (GetTypeId() == TYPEID_UNIT && ((Creature*)this)->AI())
-    {
         ((Creature*)this)->AI()->AttackedBy(attacker);
-        if (!isInCombat())
-        {
-            AddThreat(attacker);
-            SetInCombatWith(attacker);
-            attacker->SetInCombatWith(this);
-        }
-    }
 
     // trigger pet AI reaction
-    if (attacker->IsHostileTo(this))
-    {
-        GroupPetList m_groupPets = GetPets();
-        if (!m_groupPets.empty())
-        {
-            for (GroupPetList::const_iterator itr = m_groupPets.begin(); itr != m_groupPets.end(); ++itr)
-                if (Pet* _pet = GetMap()->GetPet(*itr))
-                    _pet->AttackedBy(attacker);
-        }
-    }
+    if (Pet* pet = GetPet())
+        pet->AttackedBy(attacker);
 }
 
 bool Unit::AttackStop(bool targetSwitch /*=false*/)
@@ -11877,8 +11861,7 @@ void Unit::SetFeared(bool apply, ObjectGuid casterGuid, uint32 spellID, uint32 t
 
             // attack caster if can
             if (Unit* caster = IsInWorld() ? GetMap()->GetUnit(casterGuid) : NULL)
-                if (c->AI())
-                    c->AI()->AttackedBy(caster);
+                c->AttackedBy(caster);
         }
     }
 

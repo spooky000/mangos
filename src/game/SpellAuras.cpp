@@ -4770,9 +4770,7 @@ void Aura::HandleModPossess(bool apply, bool Real)
             target->getThreatManager().addThreat(p_caster, 9999999.0f);
 
             ((Creature*)target)->AIM_Initialize();
-
-            if (((Creature*)target)->AI())
-                ((Creature*)target)->AI()->AttackedBy(caster);
+            target->AttackedBy(caster);
         }
     }
 }
@@ -4968,8 +4966,7 @@ void Aura::HandleModCharm(bool apply, bool Real)
         if(target->GetTypeId() == TYPEID_UNIT)
         {
             ((Creature*)target)->AIM_Initialize();
-            if (((Creature*)target)->AI())
-                ((Creature*)target)->AI()->AttackedBy(caster);
+            target->AttackedBy(caster);
         }
     }
 }
@@ -5513,10 +5510,9 @@ void Aura::HandleAuraModSilence(bool apply, bool Real)
     else
     {
         // Real remove called after current aura remove from lists, check if other similar auras active
-        if(target->HasAuraType(SPELL_AURA_MOD_SILENCE))
-            return;
-
-        target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SILENCED);
+        if (!target->HasAuraType(SPELL_AURA_MOD_SILENCE) &&
+            !target->HasAuraType(SPELL_AURA_MOD_PACIFY_SILENCE))
+            target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SILENCED);
     }
 }
 
@@ -8041,12 +8037,21 @@ void Aura::HandleAuraUntrackable(bool apply, bool /*Real*/)
         GetTarget()->RemoveByteFlag(UNIT_FIELD_BYTES_1, 3, UNIT_BYTE1_FLAG_UNTRACKABLE);
 }
 
-void Aura::HandleAuraModPacify(bool apply, bool /*Real*/)
+void Aura::HandleAuraModPacify(bool apply, bool Real)
 {
+    // only at real add/remove aura
+    if(!Real)
+        return;
+
+    if (!GetTarget())
+        return;
+
     if (apply)
         GetTarget()->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED);
     else
-        GetTarget()->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED);
+        if (!GetTarget()->HasAuraType(SPELL_AURA_MOD_PACIFY) &&
+            !GetTarget()->HasAuraType(SPELL_AURA_MOD_PACIFY_SILENCE))
+            GetTarget()->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED);
 }
 
 void Aura::HandleAuraModPacifyAndSilence(bool apply, bool Real)
