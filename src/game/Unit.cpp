@@ -8480,6 +8480,9 @@ bool Unit::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex i
     if (spellInfo->Id == 63337)
         return false;
 
+    if (spellInfo->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY)
+        return false;
+
     if(HasAura(48707, EFFECT_INDEX_0)) // Anti-magic Shell; immune to magical aura effects
         if(spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC && IsAuraApplyEffect(spellInfo, index) && !IsPositiveSpell(spellInfo))
             return true;
