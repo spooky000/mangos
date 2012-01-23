@@ -8455,6 +8455,13 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
     // Resulting effect depends on spell that we want to cast
     switch (m_spellInfo->Id)
     {
+        case 19185: // Entrapment
+        case 64803:
+        case 64804:
+        {
+            FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            break;
+        }
         case 46584: // Raise Dead
         {
             Unit* pCorpseTarget = NULL;
