@@ -2209,6 +2209,11 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
                 (spellInfo_2->Id == 57055 && spellInfo_1->Id == 56648))
                 return true;
 
+            //Potent Pheromones and Conservator's Grip shouldnt stack (Freya silence / mushroom aura)
+            if ((spellInfo_1->Id == 64321 && spellInfo_2->Id == 62532) ||
+                (spellInfo_2->Id == 64321 && spellInfo_1->Id == 62532))
+                return true;
+
             // Blessing of Forgotten Kings and (Greater) Blessing of Kings
             if (spellInfo_1->Id == 72586)
             {
