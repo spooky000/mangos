@@ -2229,6 +2229,12 @@ void Aura::TriggerSpell()
 
                 break;
             }
+            // Gather Light Energy - player caster must be target also.
+            case 45351:
+            {
+                triggerTarget = triggerCaster;
+                break;
+            }
         }
     }
 
