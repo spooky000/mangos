@@ -1602,6 +1602,7 @@ void Creature::ForcedDespawn(uint32 timeMSToDespawn)
         SetDeathState(JUST_DIED);
 
     RemoveCorpse();
+    DisableSpline();
     SetHealth(0);                                           // just for nice GM-mode view
 }
 
