@@ -81,7 +81,7 @@ int RASocket::open(void* )
     sendf(sWorld.GetMotd());
     sendf("\r\n");
     sendf(sObjectMgr.GetMangosStringForDBCLocale(LANG_RA_USER));
-
+    sendf("\r\n");
     return 0;
 }
 
