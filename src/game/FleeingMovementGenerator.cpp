@@ -23,22 +23,19 @@
 #include "ObjectAccessor.h"
 #include "movement/MoveSplineInit.h"
 #include "movement/MoveSpline.h"
+#include "PathFinder.h"
 
 #define MIN_QUIET_DISTANCE 28.0f
 #define MAX_QUIET_DISTANCE 43.0f
 
 template<class T>
-void
-FleeingMovementGenerator<T>::_setTargetLocation(T &owner)
+void FleeingMovementGenerator<T>::_setTargetLocation(T &owner)
 {
-    if( !&owner )
+    if(!&owner)
         return;
 
     // ignore in case other no reaction state
     if (owner.hasUnitState(UNIT_STAT_CAN_NOT_REACT & ~UNIT_STAT_FLEEING))
-        return;
-
-    if(!_setMoveData(owner))
         return;
 
     float x, y, z;
@@ -47,10 +44,20 @@ FleeingMovementGenerator<T>::_setTargetLocation(T &owner)
 
     owner.addUnitState(UNIT_STAT_FLEEING_MOVE);
 
+    PathFinder path(&owner);
+    path.setPathLengthLimit(30.0f);
+    path.calculate(x, y, z);
+    if(path.getPathType() & PATHFIND_NOPATH)
+    {
+        i_nextCheckTime.Reset(urand(1000, 1500));
+        return;
+    }
+
     Movement::MoveSplineInit init(owner);
-    init.MoveTo(x,y,z);
+    init.MovebyPath(path.getPath());
     init.SetWalk(false);
-    init.Launch();
+    int32 traveltime = init.Launch();
+    i_nextCheckTime.Reset(traveltime + urand(800, 1500));
 }
 
 template<class T>

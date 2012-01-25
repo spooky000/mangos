@@ -43,5 +43,6 @@ class MANGOS_DLL_SPEC ConfusedMovementGenerator
         TimeTracker i_nextMoveTime;
         float i_waypoints[MAX_CONF_WAYPOINTS+1][3];
         uint32 i_nextMove;
+        float i_x, i_y, i_z;
 };
 #endif

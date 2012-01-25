@@ -50,11 +50,11 @@ namespace Movement
         return MOVE_RUN;
     }
 
-    void MoveSplineInit::Launch()
+    int32 MoveSplineInit::Launch()
     {
         MoveSpline& move_spline = *unit.movespline;
 
-        Location real_position(unit.GetPositionX(),unit.GetPositionY(),unit.GetPositionZ(),unit.GetOrientation());
+        Vector3 real_position(unit.GetPositionX(),unit.GetPositionY(),unit.GetPositionZ());
         // there is a big chane that current position is unknown if current state is not finalized, need compute it
         // this also allows calculate spline position and update map position in much greater intervals
         if (!move_spline.Finalized())
@@ -68,8 +68,6 @@ namespace Movement
 
         // corrent first vertex
         args.path[0] = real_position;
-        args.initialOrientation = real_position.orientation;
-
         uint32 moveFlags = unit.m_movementInfo.GetMovementFlags();
         if (args.flags.walkmode)
             moveFlags |= MOVEFLAG_WALK_MODE;
@@ -78,11 +76,11 @@ namespace Movement
 
         moveFlags |= (MOVEFLAG_SPLINE_ENABLED|MOVEFLAG_FORWARD);
         
-        if (fabs(args.velocity) < M_NULL_F)
+        if (args.velocity == 0.f)
             args.velocity = unit.GetSpeed(SelectSpeedType(moveFlags));
 
         if (!args.Validate())
-            return;
+            return 0;
 
         unit.m_movementInfo.SetMovementFlags((MovementFlags)moveFlags);
         move_spline.Initialize(args);
@@ -91,6 +89,8 @@ namespace Movement
         data << unit.GetPackGUID();
         PacketBuilder::WriteMonsterMove(move_spline, data);
         unit.SendMessageToSet(&data,true);
+
+        return move_spline.Duration();
     }
 
     MoveSplineInit::MoveSplineInit(Unit& m) : unit(m)
