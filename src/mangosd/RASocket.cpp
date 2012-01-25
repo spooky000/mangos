@@ -205,6 +205,7 @@ int RASocket::handle_input(ACE_HANDLE)
                     }
                     sendf("\r\n");
                     sendf(sObjectMgr.GetMangosStringForDBCLocale(LANG_RA_USER));
+                    sendf("\r\n");
                     break;
                 }
 
