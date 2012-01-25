@@ -23560,12 +23560,15 @@ void Player::RemoveBuffsAtSpecChange()
         SpellAuraHolderPtr AuraPtr = iter->second;
 
         const SpellEntry * pSpell = AuraPtr->GetSpellProto();
+        SpellSpecific spellSpec = GetSpellSpecific(pSpell->Id);
+
         if (!(pSpell->AttributesEx4 & SPELL_ATTR_EX4_UNK21) &&  // don't remove stances, shadowform, pally/hunter auras
             !AuraPtr->IsPassive() &&                       // don't remove passive auras
             (!(pSpell->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY) ||
             !(AuraPtr->GetSpellProto()->Attributes & SPELL_ATTR_HIDE_IN_COMBAT_LOG)) &&
             AuraPtr->GetCaster() == this && AuraPtr->IsPositive() && // don't remove other player and negative auras
             AuraPtr->GetSpellProto()->SpellFamilyName != SPELLFAMILY_POTION && // don't remove potion buffs
+            !(spellSpec == SPELL_BATTLE_ELIXIR || spellSpec == SPELL_GUARDIAN_ELIXIR || spellSpec == SPELL_FLASK_ELIXIR) && // more strict check about potion
             // not unaffected by invulnerability auras or not having that unknown flag (that seemed the most probable)
             AuraPtr->GetId() != SPELL_ARENA_PREPARATION && AuraPtr->GetId() != SPELL_PREPARATION)        // remove positive buffs on enter, negative buffs on leave
         {
