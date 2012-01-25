@@ -205,7 +205,6 @@ int RASocket::handle_input(ACE_HANDLE)
                     }
                     sendf("\r\n");
                     sendf(sObjectMgr.GetMangosStringForDBCLocale(LANG_RA_USER));
-                    sendf("\r\n");
                     break;
                 }
 
@@ -232,6 +231,7 @@ int RASocket::handle_input(ACE_HANDLE)
 
                 stage=LG;
                 sendf(sObjectMgr.GetMangosStringForDBCLocale(LANG_RA_PASS));
+                sendf("\r\n");
                 break;
             }
             ///<li> If the input is '<password>' (and the user already gave his username)
