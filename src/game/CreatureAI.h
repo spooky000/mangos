@@ -272,6 +272,10 @@ class MANGOS_DLL_SPEC CreatureAI
          */
         CanCastResult DoCastSpellIfCan(Unit* pTarget, uint32 uiSpell, uint32 uiCastFlags = 0, ObjectGuid OriginalCasterGuid = ObjectGuid());
 
+        // passing data between AI
+        void SetData(uint32 /*id*/, uint32 /*value*/) {}
+        void SetGUID(ObjectGuid /*guid*/, int32 /*id*/ = 0) {}
+
         ///== Fields =======================================
 
         /// Pointer to the Creature controlled by this AI
