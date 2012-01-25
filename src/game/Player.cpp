@@ -7163,7 +7163,7 @@ void Player::_ApplyItemMods(Item *item, uint8 slot,bool apply)
     ApplyItemEquipSpell(item,apply);
     ApplyEnchantment(item, apply);
 
-    if(proto->Socket[0].Color)                              //only (un)equipping of items with sockets can influence metagems, so no need to waste time with normal items
+    if (proto->Socket[0].Color || item->GetEnchantmentId(PRISMATIC_ENCHANTMENT_SLOT))                              //only (un)equipping of items with sockets can influence metagems, so no need to waste time with normal items
         CorrectMetaGemEnchants(slot, apply);
 
     DEBUG_LOG("_ApplyItemMods complete.");
@@ -9880,7 +9880,7 @@ bool Player::HasItemOrGemWithIdEquipped( uint32 item, uint32 count, uint8 except
                 continue;
 
             Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
-            if( pItem && pItem->GetProto()->Socket[0].Color)
+            if (pItem && (pItem->GetProto()->Socket[0].Color || pItem->GetEnchantmentId(PRISMATIC_ENCHANTMENT_SLOT)))
             {
                 tempcount += pItem->GetGemCountWithID(item);
                 if( tempcount >= count )
@@ -20425,7 +20425,7 @@ bool Player::EnchantmentFitsRequirements(uint32 enchantmentcondition, int8 slot)
         if(i == slot)
             continue;
         Item *pItem2 = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
-        if(pItem2 && !pItem2->IsBroken() && pItem2->GetProto()->Socket[0].Color)
+        if (pItem2 && !pItem2->IsBroken() && (pItem2->GetProto()->Socket[0].Color || pItem2->GetEnchantmentId(PRISMATIC_ENCHANTMENT_SLOT)))
         {
             for(uint32 enchant_slot = SOCK_ENCHANTMENT_SLOT; enchant_slot < SOCK_ENCHANTMENT_SLOT+3; ++enchant_slot)
             {
@@ -20502,7 +20502,7 @@ void Player::CorrectMetaGemEnchants(uint8 exceptslot, bool apply)
 
         Item* pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, slot );
 
-        if(!pItem || !pItem->GetProto()->Socket[0].Color)
+        if (!pItem || (!pItem->GetProto()->Socket[0].Color && !pItem->GetEnchantmentId(PRISMATIC_ENCHANTMENT_SLOT)))
             continue;
 
         for(uint32 enchant_slot = SOCK_ENCHANTMENT_SLOT; enchant_slot < SOCK_ENCHANTMENT_SLOT+3; ++enchant_slot)
