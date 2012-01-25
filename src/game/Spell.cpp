@@ -8455,6 +8455,13 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
     // Resulting effect depends on spell that we want to cast
     switch (m_spellInfo->Id)
     {
+        case 19185: // Entrapment
+        case 64803:
+        case 64804:
+        {
+            FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            break;
+        }
         case 46584: // Raise Dead
         {
             Unit* pCorpseTarget = NULL;
@@ -8632,7 +8639,7 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
         }
         case 61999: // Raise ally
         {
-            WorldObject* result = FindCorpseUsing <MaNGOS::RaiseAllyObjectCheck>  ();
+            WorldObject* result = FindCorpseUsing<MaNGOS::RaiseAllyObjectCheck>();
             if (result)
                 targetUnitMap.push_back((Unit*)result);
             else
@@ -9060,6 +9067,22 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
                 }
             }
 
+            break;
+        }
+        case 70117: // Icy grip (Sindragosa encounter)
+        {
+            UnitList tempTargetUnitMap;
+            FillAreaTargets(tempTargetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            if (!tempTargetUnitMap.empty())
+            {
+                for (UnitList::const_iterator iter = tempTargetUnitMap.begin(); iter != tempTargetUnitMap.end(); ++iter)
+                {
+                    if (!(*iter)->GetCharmerOrOwnerPlayerOrPlayerItself())
+                        continue;
+
+                    targetUnitMap.push_back((*iter));
+                }
+            }
             break;
         }
         case 70346: // Slime Puddle

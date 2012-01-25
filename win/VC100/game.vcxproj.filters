@@ -285,6 +285,9 @@
     <ClCompile Include="..\..\src\game\MotionMaster.cpp">
       <Filter>Motion generators</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\game\MoveMap.cpp">
+      <Filter>Motion generators</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\game\MovementGenerator.cpp">
       <Filter>Motion generators</Filter>
     </ClCompile>
@@ -378,6 +381,9 @@
     <ClCompile Include="..\..\src\game\ObjectPosSelector.cpp">
       <Filter>Object</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\game\PathFinder.cpp">
+      <Filter>Object</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\game\Pet.cpp">
       <Filter>Object</Filter>
     </ClCompile>
@@ -468,6 +474,12 @@
     <ClCompile Include="..\..\src\game\pchdef.cpp" />
     <ClCompile Include="..\..\src\game\CharacterDatabaseCleaner.cpp">
       <Filter>Tool</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\game\PathFinder.cpp">
+      <Filter>Motion generators</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\game\MoveMap.cpp">
+      <Filter>World/Handlers</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\game\Camera.cpp">
       <Filter>Object</Filter>
@@ -651,6 +663,9 @@
     <ClInclude Include="..\..\src\game\Path.h">
       <Filter>World/Handlers</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\game\PathFinder.h">
+      <Filter>World/Handlers</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\game\PoolManager.h">
       <Filter>World/Handlers</Filter>
     </ClInclude>
@@ -706,6 +721,12 @@
       <Filter>Motion generators</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\game\MotionMaster.h">
+      <Filter>Motion generators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\MoveMap.h">
+      <Filter>Motion generators</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\MoveMapSharedDefines.h">
       <Filter>Motion generators</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\game\MovementGenerator.h">
@@ -919,8 +940,17 @@
     <ClInclude Include="..\..\src\game\CharacterDatabaseCleaner.h">
       <Filter>Tool</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\game\PathFinder.h">
+      <Filter>Motion generators</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\game\Camera.h">
       <Filter>Object</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\MoveMap.h">
+      <Filter>World/Handlers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\game\MoveMapSharedDefines.h">
+      <Filter>World/Handlers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\game\AuctionHouseBot\AuctionHouseBot.h">
       <Filter>AhBot</Filter>

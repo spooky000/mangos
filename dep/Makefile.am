@@ -17,7 +17,7 @@
 ## Process this file with automake to produce Makefile.in
 
 ## Sub-directories to parse
-SUBDIRS = include lib src
+SUBDIRS = include lib src recastnavigation
 
 if MANGOS_BUILD_ACE
 SUBDIRS += ACE_wrappers
@@ -25,6 +25,9 @@ endif
 
 # Intel's TBB
 SUBDIRS += tbb
+
+# pathfinding
+SUBDIRS += recastnavigation
 
 ## Additional files to include when running 'make dist'
 #  Nothing yet.

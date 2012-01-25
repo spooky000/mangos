@@ -5207,6 +5207,23 @@ void Unit::RemoveAurasDueToSpellBySteal(uint32 spellId, ObjectGuid casterGuid, U
     new_holder->SetAuraMaxDuration(new_max_dur);
     new_holder->SetAuraDuration(new_max_dur);
 
+    // some specific events after stealing aura
+    // Lifebloom
+    if (spellProto->SpellFamilyName == SPELLFAMILY_DRUID && spellProto->SpellFamilyFlags.test<CF_DRUID_LIFEBLOOM>())
+    {
+        if (Aura* dotAura = GetAura<SPELL_AURA_DUMMY, SPELLFAMILY_DRUID, CF_DRUID_LIFEBLOOM>(casterGuid))
+        {
+            int32 amount = dotAura->GetModifier()->m_amount;
+            CastCustomSpell(this, 33778, &amount, NULL, NULL, true, NULL, dotAura, casterGuid);
+
+            if (Unit* caster = dotAura->GetCaster())
+            {
+                int32 returnmana = (spellProto->ManaCostPercentage * caster->GetCreateMana() / 100) * dotAura->GetStackAmount() / 2;
+                caster->CastCustomSpell(caster, 64372, &returnmana, NULL, NULL, true, NULL, dotAura, casterGuid);
+            }
+        }
+    }
+
     for (int32 i = 0; i < MAX_EFFECT_INDEX; ++i)
     {
         Aura *aur = holder->GetAuraByEffectIndex(SpellEffectIndex(i));
@@ -8478,6 +8495,9 @@ bool Unit::IsImmuneToSpellEffect(SpellEntry const* spellInfo, SpellEffectIndex i
 {
     // Saronite Vapors mana gain spell
     if (spellInfo->Id == 63337)
+        return false;
+
+    if (spellInfo->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY)
         return false;
 
     if(HasAura(48707, EFFECT_INDEX_0)) // Anti-magic Shell; immune to magical aura effects

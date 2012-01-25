@@ -496,7 +496,7 @@ void Creature::Update(uint32 update_diff, uint32 diff)
                 // Clear possible auras having IsDeathPersistent() attribute
                 RemoveAllAuras();
 
-                if(m_originalEntry != GetEntry())
+                if (m_originalEntry != GetEntry())
                 {
                     // need preserver gameevent state
                     GameEventCreatureData const* eventData = sGameEventMgr.GetCreatureUpdateDataForActiveEvent(GetGUIDLow());
@@ -1136,7 +1136,7 @@ void Creature::SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask)
         << data.curhealth << ","                            //curhealth
         << data.curmana << ","                              //curmana
         << (data.is_dead  ? 1 : 0) << ","                   //is_dead
-        << data.movementType << ")";                        //default movement generator type
+        << uint32(data.movementType) << ")";                //default movement generator type, cast to prevent save as symbol
 
     WorldDatabase.PExecuteLog("%s", ss.str().c_str());
 
@@ -1376,7 +1376,7 @@ bool Creature::LoadFromDB(uint32 guidlow, Map *map)
 
     AIM_Initialize();
 
-    // Creature Linking, Initial load id handled like respawn
+    // Creature Linking, Initial load is handled like respawn
     if (m_isCreatureLinkingTrigger && isAlive())
         GetMap()->GetCreatureLinkingHolder()->DoCreatureLinkingEvent(LINKING_EVENT_RESPAWN, this);
 
