@@ -53,6 +53,7 @@ class MANGOS_DLL_SPEC FleeingMovementGenerator
         float i_last_distance_from_caster;
         float i_to_distance_from_caster;
         float i_cur_angle;
+
         ObjectGuid i_frightGuid;
         TimeTracker i_nextCheckTime;
 };
@@ -71,7 +72,6 @@ class MANGOS_DLL_SPEC TimedFleeingMovementGenerator
 
     private:
         TimeTracker i_totalFleeTime;
-        float i_x, i_y, i_z;
 };
 
 #endif

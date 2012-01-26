@@ -25,72 +25,13 @@
 #include "PathFinder.h"
 
 template<class T>
-void
-ConfusedMovementGenerator<T>::Initialize(T &unit)
+void ConfusedMovementGenerator<T>::Initialize(T &unit)
 {
-    const float wander_distance=11;
-    float x,y,z;
-    x = unit.GetPositionX();
-    y = unit.GetPositionY();
-    z = unit.GetPositionZ();
-
-    TerrainInfo const* map = unit.GetTerrain();
-
-    i_nextMove = 1;
-
-    bool is_water_ok, is_land_ok;
-    _InitSpecific(unit, is_water_ok, is_land_ok);
-
-    for(unsigned int idx=0; idx < MAX_CONF_WAYPOINTS+1; ++idx)
-    {
-        const float wanderX=wander_distance*rand_norm_f() - wander_distance/2;
-        const float wanderY=wander_distance*rand_norm_f() - wander_distance/2;
-
-        i_waypoints[idx][0] = x + wanderX;
-        i_waypoints[idx][1] = y + wanderY;
-
-        // prevent invalid coordinates generation
-        MaNGOS::NormalizeMapCoord(i_waypoints[idx][0]);
-        MaNGOS::NormalizeMapCoord(i_waypoints[idx][1]);
-
-        // check LOS
-        if(!unit.IsWithinLOS(i_waypoints[idx][0], i_waypoints[idx][1], z))
-        {
-            i_waypoints[idx][0] = idx > 0 ? i_waypoints[idx-1][0] : x;
-            i_waypoints[idx][1] = idx > 0 ? i_waypoints[idx-1][1] : y;
-        }
-
-        bool is_water = map->IsInWater(i_waypoints[idx][0],i_waypoints[idx][1],z);
-        // if generated wrong path just ignore
-        if ((is_water && !is_water_ok) || (!is_water && !is_land_ok) ||
-            !map->IsNextZcoordOK(i_waypoints[idx][0], i_waypoints[idx][1], z))  // check if not under map
-        {
-            i_waypoints[idx][0] = idx > 0 ? i_waypoints[idx-1][0] : x;
-            i_waypoints[idx][1] = idx > 0 ? i_waypoints[idx-1][1] : y;
-        }
-
-        unit.UpdateAllowedPositionZ(i_waypoints[idx][0],i_waypoints[idx][1],z);
-        i_waypoints[idx][2] =  z;
-    }
+    // set initial position
+    unit.GetPosition(i_x, i_y, i_z);
 
     unit.StopMoving();
     unit.addUnitState(UNIT_STAT_CONFUSED|UNIT_STAT_CONFUSED_MOVE);
-}
-
-template<>
-void
-ConfusedMovementGenerator<Creature>::_InitSpecific(Creature &creature, bool &is_water_ok, bool &is_land_ok)
-{
-    is_water_ok = creature.CanSwim();
-    is_land_ok  = creature.CanWalk();
-}
-
-template<>
-void
-ConfusedMovementGenerator<Player>::_InitSpecific(Player &, bool &is_water_ok, bool &is_land_ok)
-{
-    is_water_ok = true;
-    is_land_ok  = true;
 }
 
 template<class T>
@@ -103,7 +44,6 @@ void ConfusedMovementGenerator<T>::Interrupt(T &unit)
 template<class T>
 void ConfusedMovementGenerator<T>::Reset(T &unit)
 {
-    i_nextMove = 1;
     i_nextMoveTime.Reset(0);
     unit.StopMoving();
     unit.addUnitState(UNIT_STAT_CONFUSED|UNIT_STAT_CONFUSED_MOVE);
@@ -122,10 +62,7 @@ bool ConfusedMovementGenerator<T>::Update(T &unit, const uint32 &diff)
         unit.addUnitState(UNIT_STAT_CONFUSED_MOVE);
 
         if (unit.movespline->Finalized())
-        {
-            i_nextMove = urand(1,MAX_CONF_WAYPOINTS);
-            i_nextMoveTime.Reset(urand(0, 1500-1));     // TODO: check the minimum reset time, should be probably higher
-        }
+            i_nextMoveTime.Reset(urand(800, 1500));
     }
     else
     {
@@ -157,14 +94,15 @@ bool ConfusedMovementGenerator<T>::Update(T &unit, const uint32 &diff)
             init.Launch();
         }
     }
+
     return true;
 }
 
 template<>
 void ConfusedMovementGenerator<Player>::Finalize(Player &unit)
 {
-    unit.StopMoving();
     unit.clearUnitState(UNIT_STAT_CONFUSED|UNIT_STAT_CONFUSED_MOVE);
+    unit.StopMoving();
 }
 
 template<>
