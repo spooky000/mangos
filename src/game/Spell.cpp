@@ -5212,7 +5212,7 @@ SpellCastResult Spell::CheckOrTakeRunePower(bool take)
         float rp = float(src->runePowerGain);
 
         // Add 10 runic power from Blood Boil if used in combat.
-        if(m_spellInfo->Id == 48721 && plr->isInCombat())
+        if(m_spellInfo->SpellFamilyFlags.test<CF_DEATHKNIGHT_BLOOD_BOIL>() && plr->isInCombat())
             rp = 100;
 
         rp *= sWorld.getConfig(CONFIG_FLOAT_RATE_POWER_RUNICPOWER_INCOME);
