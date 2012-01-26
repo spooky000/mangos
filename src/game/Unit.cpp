@@ -11238,9 +11238,6 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                     // not let attack friendly units.
                     if(owner->IsFriendlyTo(TargetUnit))
                         return;
-                    // Not let attack through obstructions
-                    if(!IsWithinLOSInMap(TargetUnit))
-                        return;
 
                     // This is true if pet has no target or has target but targets differs.
                     if(getVictim() != TargetUnit)
