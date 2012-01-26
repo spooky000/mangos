@@ -5210,6 +5210,11 @@ SpellCastResult Spell::CheckOrTakeRunePower(bool take)
     {
         // you can gain some runic power when use runes
         float rp = float(src->runePowerGain);
+
+        // Add 10 runic power from Blood Boil if used in combat.
+        if(m_spellInfo->Id == 48721 && plr->isInCombat())
+            rp = 100;
+
         rp *= sWorld.getConfig(CONFIG_FLOAT_RATE_POWER_RUNICPOWER_INCOME);
         plr->ModifyPower(POWER_RUNIC_POWER, (int32)rp);
     }
