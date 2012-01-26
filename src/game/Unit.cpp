@@ -7210,8 +7210,9 @@ Unit* Unit::SelectMagnetTarget(Unit *victim, Spell* spell, SpellEffectIndex eff)
     if(!victim)
         return NULL;
 
-    // SPELL_AURA_SPELL_MAGNET must NOT take any physical spells except for Hamstring, Wing Clip and Death Grip
-    if (spell && ((spell->m_spellInfo->SchoolMask != SPELL_SCHOOL_MASK_NORMAL && spell->m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC) || (spell->m_spellInfo->Id == 1715 || spell->m_spellInfo->Id == 2974 || spell->m_spellInfo->Id == 49576)))
+    // SPELL_AURA_SPELL_MAGNET must NOT take any physical spells except for Hamstring, Wing Clip and Death Grip and Cat's Feral Charge
+    if (spell && ((spell->m_spellInfo->SchoolMask != SPELL_SCHOOL_MASK_NORMAL && spell->m_spellInfo->DmgClass == SPELL_DAMAGE_CLASS_MAGIC) ||
+        (spell->m_spellInfo->Id == 1715 || spell->m_spellInfo->Id == 2974 || spell->m_spellInfo->Id == 49576 || spell->m_spellInfo->Id == 49376)))
     {
         Unit::AuraList const& magnetAuras = victim->GetAurasByType(SPELL_AURA_SPELL_MAGNET);
         for(Unit::AuraList::const_iterator itr = magnetAuras.begin(); itr != magnetAuras.end(); ++itr)
