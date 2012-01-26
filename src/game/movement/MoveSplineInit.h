@@ -144,7 +144,6 @@ namespace Movement
     {
         if(generatePath)
         {
-            sLog.outError("GENERATING MOVESPLINEINIT.h");
             PathFinder path(&unit);
             path.calculate(dest.x, dest.y, dest.z, forceDestination);
             MovebyPath(path.getPath());
