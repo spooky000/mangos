@@ -5388,7 +5388,12 @@ void Spell::CastTriggerSpells()
 {
     for(SpellInfoList::const_iterator si = m_TriggerSpells.begin(); si != m_TriggerSpells.end(); ++si)
     {
-        Spell* spell = new Spell(m_caster, (*si), true, m_originalCasterGUID);
+        bool triggered = true;
+        //triggered case exception: WotF and Medallion cooldown
+        if((*si)->Id == 72757 || (*si)->Id == 72752)
+            triggered = false;
+
+        Spell* spell = new Spell(m_caster, (*si), triggered, m_originalCasterGUID);
         spell->prepare(&m_targets);                         // use original spell original targets
     }
 }
