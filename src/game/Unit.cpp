@@ -8083,7 +8083,11 @@ bool Unit::IsSpellCrit(Unit *pVictim, SpellEntry const *spellProto, SpellSchoolM
                         else if (spellProto->Category == 19)
                         {
                             if (pVictim->GetCreatureTypeMask() & CREATURE_TYPEMASK_DEMON_OR_UNDEAD)
-                                return true;
+                            {
+                                // don't override auras that prevent critical strikes taken
+                                if (crit_chance > -100.0f)
+                                    return true;
+                            }
                         }
                         break;
                     case SPELLFAMILY_SHAMAN:
@@ -8092,7 +8096,8 @@ bool Unit::IsSpellCrit(Unit *pVictim, SpellEntry const *spellProto, SpellSchoolM
                         {
                             // Flame Shock
                             if (pVictim->GetAura<SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_SHAMAN, CF_SHAMAN_FLAME_SHOCK>(GetObjectGuid()))
-                                if (pVictim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE) > -100)
+                                // don't override auras that prevent critical strikes taken
+                                if (crit_chance > -100.0f)
                                     return true;
                         }
                         break;
@@ -12907,9 +12912,10 @@ void Unit::CleanupDeletedHolders(bool force)
     {
         for (SpellAuraHolderSet::iterator iter = m_deletedHolders.begin(); iter != m_deletedHolders.end();)
         {
-            if ((*iter) && !(*iter)->IsInUse())
+            if ((*iter) && (!(*iter)->IsInUse() || GetTypeId() != TYPEID_PLAYER))
             {
-                m_deletedHolders.erase(*iter++);
+                m_deletedHolders.erase(*iter);
+                iter = m_deletedHolders.begin();
             }
             else
                 ++iter;
