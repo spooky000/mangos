@@ -8587,12 +8587,18 @@ void Aura::PeriodicTick()
             // Curse of Agony damage-per-tick calculation
             if (spellProto->SpellFamilyName==SPELLFAMILY_WARLOCK && spellProto->SpellFamilyFlags.test<CF_WARLOCK_CURSE_OF_AGONY>() && spellProto->SpellIconID==544)
             {
+                uint32 auraTicks = GetAuraTicks();
                 // 1..4 ticks, 1/2 from normal tick damage
-                if (GetAuraTicks() <= 4)
+                if (auraTicks <= 4)
                     pdamage = pdamage/2;
                 // 9..12 ticks, 3/2 from normal tick damage
-                else if(GetAuraTicks() >= 9)
+                else if(auraTicks >= 9)
+                {
                     pdamage += (pdamage + 1) / 2;       // +1 prevent 0.5 damage possible lost at 1..4 ticks
+                    // Glyph of Curse of Agony 13,14 ticks
+                    if(auraTicks > 12)
+                        pdamage *= 1.33; // 33% additional to last ticks
+                }
                 // 5..8 ticks have normal tick damage
             }
 
