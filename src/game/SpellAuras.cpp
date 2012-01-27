@@ -9844,7 +9844,7 @@ void Aura::PeriodicDummyTick()
 
                         MaNGOS::AnyUnfriendlyVisibleUnitInObjectRangeCheck u_check(target, target, radius);
                         MaNGOS::UnitListSearcher<MaNGOS::AnyUnfriendlyVisibleUnitInObjectRangeCheck> checker(targets, u_check);
-                        Cell::VisitWorldObjects(target, checker, radius);
+                        Cell::VisitAllObjects(target, checker, radius);
                     }
 
                     for (std::list<Unit*>::iterator iter = targets.begin(); iter != targets.end(); ) // Remove Stealthed and Invisible units 
