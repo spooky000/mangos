@@ -2247,6 +2247,8 @@ void AchievementMgr::SetCriteriaProgress(AchievementCriteriaEntry const* criteri
                 break;
             case PROGRESS_ACCUMULATE:
             {
+                if (max_value == 1)
+                    max_value = std::numeric_limits<uint32>::max();
                 // avoid overflow
                 newValue = max_value - progress->counter > changeValue ? progress->counter + changeValue : max_value;
                 break;
