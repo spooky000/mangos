@@ -14337,6 +14337,9 @@ void Player::AddQuest( Quest const *pQuest, Object *questGiver )
         if (pQuest->GetQuestStartScript() != 0)
             GetMap()->ScriptsStart(sQuestStartScripts, pQuest->GetQuestStartScript(), questGiver, this);
 
+
+        if(pQuest->GetQuestId() == 12182) // Q: To Venomspite! (Feanor: move to script)
+            ActivateTaxiPathTo(837);
     }
 
     // remove start item if not need
