@@ -9999,6 +9999,9 @@ void Aura::PeriodicCheck()
     if (!caster || !target)
         return;
 
+    if(holder->IsPermanent())
+        return;
+
     switch(m_modifier.m_auraname)
     {
         case SPELL_AURA_MOD_CONFUSE:
