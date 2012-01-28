@@ -694,9 +694,12 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         {
             RemoveSpellsCausingAura(SPELL_AURA_MOD_INVISIBILITY);
 
-            // set in combat
-            SetInCombatWith(pVictim);
-            pVictim->SetInCombatWith(this);
+            if(!spellProto || !(spellProto->AttributesEx & SPELL_ATTR_EX_NO_THREAT))
+            {
+                // set in combat
+                SetInCombatWith(pVictim);
+                pVictim->SetInCombatWith(this);
+            }
 
             if (Player* attackedPlayer = pVictim->GetCharmerOrOwnerPlayerOrPlayerItself())
                 SetContestedPvP(attackedPlayer);
