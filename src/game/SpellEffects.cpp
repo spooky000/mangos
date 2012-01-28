@@ -1263,9 +1263,16 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
         {
             switch(m_spellInfo->Id)
             {
+                case 11402:                                 // Shay's Bell
+                {
+                    if(Creature * pShay = m_caster->GetClosestCreatureWithEntry(m_caster, 7774, 60))
+                        pShay->AI()->SpellHit(m_caster, m_spellInfo);
+
+                    return;
+                }
                 case 47911:                                 // EMP
                 {
-                    if (unitTarget->GetEntry() == 26406) // Anvil
+                    if (unitTarget->GetEntry() == 26406)    // Anvil
                     {
                         unitTarget->CastSpell(unitTarget, 47923, false); // Stunned by EMP
                         if (Creature * pThane = unitTarget->GetClosestCreatureWithEntry(unitTarget, 26405, 15))
@@ -1279,9 +1286,8 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                 case 56727:                                 // Q: Feeding Angrim
                 {
                     if (unitTarget->GetTypeId() == TYPEID_UNIT && unitTarget->GetEntry() == 30422)
-                    {
                         ((Creature*)unitTarget)->UpdateEntry(30423);
-                    }
+
                     return;
                 }
                 case 44935:                                 // Q:Discovering Your Roots
