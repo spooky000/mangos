@@ -298,7 +298,7 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
         if (passenger->GetTypeId() == TYPEID_PLAYER)
         {
             Player* player = (Player*)passenger;
-            player->SetMover(m_pBase);
+            //player->SetMover(m_pBase);
             player->SetClientControl(m_pBase, 0);
         }
     }
