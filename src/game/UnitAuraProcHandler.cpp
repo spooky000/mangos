@@ -2187,15 +2187,6 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                 triggered_spell_id = 37482;                 // Exploited Weakness
                 break;
             }
-            // Guard Dog
-            else if (dummySpell->SpellIconID == 201 && procSpell->SpellIconID == 201)
-            {
-                triggered_spell_id = 54445;
-                target = this;
-                if (pVictim)
-                    pVictim->AddThreat(this,procSpell->EffectBasePoints[0] * triggerAmount / 100.0f);
-                break;
-            }
             break;
         }
         case SPELLFAMILY_PALADIN:
@@ -3355,6 +3346,15 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
             {
                 triggered_spell_id = dummySpell->Id == 62764 ? 62800 : 62801;
                 target = this;
+                break;
+            }
+            // Guard Dog
+            else if (dummySpell->SpellIconID == 201 && procSpell->SpellIconID == 201)
+            {
+                triggered_spell_id = 54445;
+                target = this;
+                if (pVictim)
+                    pVictim->AddThreat(this,procSpell->EffectBasePoints[0] * triggerAmount / 100.0f);
                 break;
             }
             break;
