@@ -4340,7 +4340,7 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     if (!pet || !unitTarget)
                         return;
 
-                    pet->CastSpell(unitTarget, m_spellInfo->CalculateSimpleValue(eff_idx), true);
+                    unitTarget->CastSpell(unitTarget, 62305, true);
                     return;
                 }
                 case 55709:                                 // Heart of the phoenix
