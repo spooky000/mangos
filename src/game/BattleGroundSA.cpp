@@ -282,6 +282,7 @@ void BattleGroundSA::Update(uint32 diff)
             SetStatus(STATUS_IN_PROGRESS); // Start round two
             PlaySoundToAll(SOUND_BG_START);
             SendWarningToAll(LANG_BG_SA_HAS_BEGUN);
+            StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 21702);
 
             for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
             {
@@ -342,6 +343,7 @@ void BattleGroundSA::StartingEventOpenDoors()
     SpawnEvent(SA_EVENT_ADD_BOMB_B, (GetDefender() == ALLIANCE ? BG_SA_GRAVE_STATUS_HORDE_OCCUPIED : BG_SA_GRAVE_STATUS_ALLY_OCCUPIED), true);
     ToggleTimer();
     HandleInteractivity();
+    StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 23748);
 }
 
 void BattleGroundSA::RemovePlayer(Player* /*plr*/, ObjectGuid /*guid*/)
