@@ -2105,6 +2105,15 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
         }
         case SPELLFAMILY_HUNTER:
         {
+            // Improved Mend Pet
+            if(dummySpell->SpellIconID == 267)
+            {
+                if (!roll_chance_i(triggerAmount))
+                    return SPELL_AURA_PROC_FAILED;
+
+                triggered_spell_id = 24406;
+                break;
+            }
             // Thrill of the Hunt
             if (dummySpell->SpellIconID == 2236)
             {
@@ -4556,15 +4565,6 @@ SpellAuraProcResult Unit::HandleOverrideClassScriptAuraProc(Unit *pVictim, uint3
             if (!procSpell || procSpell->SpellVisual[0]!=9487)
                 return SPELL_AURA_PROC_FAILED;
             triggered_spell_id = 12486;
-            break;
-        }
-        case 4086:                                          // Improved Mend Pet (Rank 1)
-        case 4087:                                          // Improved Mend Pet (Rank 2)
-        {
-            if(!roll_chance_i(triggerAmount))
-                return SPELL_AURA_PROC_FAILED;
-
-            triggered_spell_id = 24406;
             break;
         }
         case 4533:                                          // Dreamwalker Raiment 2 pieces bonus
