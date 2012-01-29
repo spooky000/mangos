@@ -360,7 +360,7 @@ bool IsSpellAffectedBySpellMods(SpellEntry const* spellInfo)
 {
     return !(IsPassiveSpell(spellInfo) && 
            !(spellInfo->Attributes & SPELL_ATTR_ABILITY) &&
-           spellInfo->AttributesEx3 & SPELL_ATTR_EX3_CAN_PROC_WITH_TRIGGERED
+           spellInfo->AttributesEx3 & SPELL_ATTR_EX3_DISABLE_MODS
            );
 }
 
