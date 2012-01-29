@@ -5546,7 +5546,7 @@ void Spell::EffectPowerBurn(SpellEffectIndex eff_idx)
     unitTarget->RemoveSpellsCausingAura(SPELL_AURA_TRANSFORM);
 }
 
-void Spell::EffectHeal(SpellEffectIndex /*eff_idx*/)
+void Spell::EffectHeal(SpellEffectIndex eff_idx)
 {
     if (unitTarget && unitTarget->isAlive() && damage >= 0)
     {
@@ -5650,6 +5650,8 @@ void Spell::EffectHeal(SpellEffectIndex /*eff_idx*/)
         }
 
         addhealth = caster->SpellHealingBonusDone(unitTarget, m_spellInfo, addhealth, HEAL);
+        if (m_applyMultiplierMask & (1 << eff_idx))
+            addhealth = int32(addhealth * m_damageMultipliers[eff_idx]);
         addhealth = unitTarget->SpellHealingBonusTaken(caster, m_spellInfo, addhealth, HEAL);
 
         m_healing += addhealth;
