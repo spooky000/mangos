@@ -10757,7 +10757,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     if (!unitTarget->HasAura(55711))
                     {
-                        ((Pet*)unitTarget)->GetOwner()->CastSpell(((Pet*)unitTarget)->GetOwner(), 54114, true);
+                        ((Pet*)unitTarget)->GetOwner()->CastSpell(((Pet*)unitTarget)->GetOwner(), 54114, false);
                         unitTarget->CastSpell(unitTarget, 55711, true);
                     }
                     else
