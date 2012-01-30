@@ -6050,6 +6050,11 @@ SpellCastResult Spell::CheckCast(bool strict)
                     if (!m_caster->GetTotemGuid(TOTEM_SLOT_FIRE))
                         return SPELL_FAILED_TOTEMS;
                 }
+                else if (m_spellInfo->Id == 47305)          // Potent Explosive Charge
+                {
+                    if (target && target->GetHealthPercent() > 80)
+                        return SPELL_FAILED_BAD_TARGETS;
+                }
                 break;
             }
             case SPELL_EFFECT_SCHOOL_DAMAGE:
