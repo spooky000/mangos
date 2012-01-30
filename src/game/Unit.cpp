@@ -11260,6 +11260,7 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                         {
                             GetMotionMaster()->Clear();
                             InterruptNonMeleeSpells(false);
+                            InterruptSpell(CURRENT_CHANNELED_SPELL);
 
                             if (((Creature*)this)->AI())
                                 ((Creature*)this)->AI()->AttackStart(TargetUnit);
