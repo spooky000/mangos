@@ -9933,6 +9933,15 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 66747, true);
                     return;
                 }
+                case 66870:                                 // Burning Pile (ToC: Dreadscale)
+                {
+                    if (!unitTarget)
+                        return;
+
+                    if (unitTarget->HasAura(66823))
+                        unitTarget->RemoveAurasDueToSpell(66823);
+                    return;
+                }
                 case 67009:                                 // Nether Power (ToC25: Lord Jaraxxus)
                 {
                     if (!unitTarget)
