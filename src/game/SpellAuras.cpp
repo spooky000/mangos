@@ -10616,6 +10616,10 @@ void SpellAuraHolder::_AddSpellAuraHolder()
         if (m_spellProto->Category == 1133)
             m_target->ModifyAuraState(AURA_STATE_FAERIE_FIRE, true);
 
+        // Touch of Zanzil poison
+        if (m_spellProto->Id == 9991)
+            m_target->ModifyAuraState(AURA_STATE_FAERIE_FIRE, true);
+
         // Victorious
         if (m_spellProto->IsFitToFamily<SPELLFAMILY_WARRIOR, CF_WARRIOR_VICTORIOUS>())
             m_target->ModifyAuraState(AURA_STATE_WARRIOR_VICTORY_RUSH, true);
@@ -10749,6 +10753,11 @@ void SpellAuraHolder::_RemoveSpellAuraHolder()
             case SPELLFAMILY_HUNTER:
                 if (m_spellProto->SpellFamilyFlags.test<CF_HUNTER_PET_SPELLS>())
                     removeState = AURA_STATE_FAERIE_FIRE;   // Sting (hunter versions)
+                break;
+            case SPELLFAMILY_GENERIC:
+                if (m_spellProto->Id == 9991)
+                    removeState = AURA_STATE_FAERIE_FIRE;   // Touch of Zanzil poison
+                break;
         }
 
         // Remove state (but need check other auras for it)
