@@ -469,7 +469,7 @@ void BattleGround::Update(uint32 diff)
             if (Player* plr = sObjectMgr.GetPlayer(itr->first))
             {
                 BattleGroundTeamIndex teamIndex = GetTeamIndexByTeamId(plr->GetTeam());
-                if (!plr->isGameMaster() && plr->GetPositionZ() < deadly_Z)
+                if (!plr->isGameMaster() && plr->GetPositionZ() < deadly_Z && GetMapId() != 607)
                     plr->TeleportTo(GetMapId(), m_TeamStartLocX[teamIndex], m_TeamStartLocY[teamIndex], m_TeamStartLocZ[teamIndex], m_TeamStartLocO[teamIndex]);
             }
         }
