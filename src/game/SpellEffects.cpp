@@ -506,6 +506,15 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         damage = unitTarget->GetMaxHealth() / 10;
                         break;
                     }
+                    // Burning Spray
+                    case 66902:
+                    {
+                        if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                            return;
+
+                        m_caster->CastSpell(unitTarget, 66869, true);
+                        break;
+                    }
                     // Hand of Rekoning (name not have typos ;) )
                     case 67485:
                         damage += uint32(0.5f * m_caster->GetTotalAttackPowerValue(BASE_ATTACK));
