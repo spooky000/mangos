@@ -506,6 +506,15 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         damage = unitTarget->GetMaxHealth() / 10;
                         break;
                     }
+                    // Paralytic Spray
+                    case 66901:
+                    {
+                        if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                            return;
+
+                        m_caster->CastSpell(unitTarget, 66823, true);
+                        break;
+                    }
                     // Burning Spray
                     case 66902:
                     {
