@@ -4343,20 +4343,6 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     unitTarget->CastSpell(unitTarget, 62305, true);
                     return;
                 }
-                case 55709:                                 // Heart of the phoenix
-                {
-                    if (!unitTarget || !unitTarget->GetObjectGuid().IsPet())
-                        return;
-
-                    if (!unitTarget->HasAura(55711))
-                    {
-                        ((Pet*)unitTarget)->GetOwner()->CastSpell(unitTarget, 54114, true);
-                        unitTarget->CastSpell(unitTarget, 55711, true);
-                    }
-                    else
-                        SendCastResult(SPELL_FAILED_CASTER_AURASTATE);
-                    return;
-                }
             }
             break;
         }
@@ -10762,6 +10748,20 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     // script effect have in value, but this outdated removed part
                     unitTarget->CastSpell(unitTarget, 62305, true);
+                    return;
+                }
+                case 55709:                                 // Heart of the phoenix
+                {
+                    if (!unitTarget || !unitTarget->GetObjectGuid().IsPet())
+                        return;
+
+                    if (!unitTarget->HasAura(55711))
+                    {
+                        ((Pet*)unitTarget)->GetOwner()->CastSpell(unitTarget, 54114, true);
+                        unitTarget->CastSpell(unitTarget, 55711, true);
+                    }
+                    else
+                        SendCastResult(SPELL_FAILED_CASTER_AURASTATE);
                     return;
                 }
                 default:
