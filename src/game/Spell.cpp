@@ -1263,8 +1263,16 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
 
                 if (bp)
                 {
-                    if(caster->HasAura(48266, EFFECT_INDEX_0)) // If Blood Presence is active, additional damage from Scourge Strike gains bonus too.
-                        bp *= 1.15;
+                    // Double-dip http://elitistjerks.com/f72/t72364-unholy_dps_3_3_5_king_anything/ for more information
+                    Unit::AuraList const& modAuras = caster->GetAurasByType(SPELL_AURA_MOD_DAMAGE_PERCENT_DONE);
+                    for(Unit::AuraList::const_iterator i = modAuras.begin(); i != modAuras.end(); ++i)
+                    {
+                        if( (*i)->GetMiscValue() == 127) // All damage modifiers only
+                        {
+                            int32 multiplier = (*i)->GetSpellProto()->CalculateSimpleValue((*i)->GetEffIndex());
+                            bp += int32(bp * multiplier / 100);
+                        }
+                    }
 
                     caster->CastCustomSpell(unitTarget, 70890, &bp, NULL, NULL, true);
                 }
