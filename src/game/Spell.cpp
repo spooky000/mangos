@@ -8700,6 +8700,18 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
             FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
             break;
         }
+        case 66242: // Burning Inferno (ToC: Lord Jaraxxus - target only players)
+        {
+            UnitList tmpUnitMap;
+            FillAreaTargets(tmpUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_FRIENDLY);
+
+            if (!tmpUnitMap.empty())
+                for (UnitList::const_iterator itr = tmpUnitMap.begin(); itr != tmpUnitMap.end(); ++itr)
+                     if (*itr && (*itr)->GetTypeId() == TYPEID_PLAYER)
+                         targetUnitMap.push_back(*itr);
+
+            break;
+        }
         case 67470: // Pursuing Spikes (Check Aura and Summon Spikes) (Trial Of The Crusader - Anub'arak)
         {
             UnitList tmpUnitMap;
