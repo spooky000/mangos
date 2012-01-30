@@ -10135,7 +10135,7 @@ bool Unit::SelectHostileTarget()
 
     if (target)
     {
-        if (!hasUnitState(UNIT_STAT_STUNNED | UNIT_STAT_DIED))
+        if (!hasUnitState(UNIT_STAT_STUNNED | UNIT_STAT_DIED) && !IsCrowdControlled())
         {
             SetInFront(target);
             if (oldTarget != target)
