@@ -1815,6 +1815,9 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
                     LeaveBattleground(false);                   // don't teleport to entry point
             }
 
+            if(!mEntry->IsMountAllowed())
+                RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
+
             // remove pet on map change
             UnsummonPetTemporaryIfAny();
 
