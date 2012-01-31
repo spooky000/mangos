@@ -11786,6 +11786,13 @@ void Spell::EffectCharge(SpellEffectIndex /*eff_idx*/)
 
     if (unitTarget->GetTypeId() != TYPEID_PLAYER)
         ((Creature *)unitTarget)->StopMoving();
+    else
+    {   // Delay attack, otherwise player makes instant attack after cast
+        if (m_caster->GetAttackTime(BASE_ATTACK) < 300)
+            m_caster->setAttackTimer(BASE_ATTACK, m_caster->GetAttackTime(BASE_ATTACK) + 20 * m_caster->GetDistance(unitTarget));
+        if (m_caster->GetAttackTime(OFF_ATTACK) < 300)
+            m_caster->setAttackTimer(OFF_ATTACK,  m_caster->GetAttackTime(OFF_ATTACK)  + 20 * m_caster->GetDistance(unitTarget));
+    }
 
     // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
     m_caster->MonsterMoveWithSpeed(x, y, z, 100.f);
