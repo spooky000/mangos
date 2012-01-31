@@ -2827,7 +2827,26 @@ bool Pet::Summon()
         if (getPetType() == HUNTER_PET)
             SavePetToDB(PET_SAVE_AS_CURRENT);
         else if (getPetType() == SUMMON_PET)
-            SavePetToDB(PET_SAVE_NOT_IN_SLOT);
+        {
+            bool needsSave = true;
+            SpellEntry const *spellInfo = sSpellStore.LookupEntry(GetCreateSpellID());
+            for (int i = 0; i < MAX_EFFECT_INDEX; ++i)
+            {
+                if (spellInfo->Effect[i] == SPELL_EFFECT_SUMMON)
+                {                                           // these npcs need exceptions:
+                    if (GetCreateSpellID() != 70907 &&      // mage water elemental
+                        GetCreateSpellID() != 70908 &&
+                        GetCreateSpellID() != 51533 &&      // shaman spirit wolves
+                        GetCreateSpellID() != 34433)        // priest shadowfiend
+                    {
+                        needsSave = false;
+                        SetNeedSave(false);
+                        break;
+                    }
+                }
+            }
+            SavePetToDB(needsSave ? PET_SAVE_NOT_IN_SLOT : PET_SAVE_AS_DELETED);
+        }
         else
             SetNeedSave(false);
     }
