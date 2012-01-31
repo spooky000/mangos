@@ -11222,6 +11222,8 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
                         return;
 
                     AttackStop();
+                    InterruptNonMeleeSpells(false);
+                    InterruptSpell(CURRENT_CHANNELED_SPELL);
                     GetMotionMaster()->MoveFollow(owner,PET_FOLLOW_DIST,((Pet*)this)->GetPetFollowAngle());
                     GetCharmInfo()->SetCommandState( COMMAND_FOLLOW );
                     break;
