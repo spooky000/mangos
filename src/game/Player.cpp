@@ -19816,7 +19816,7 @@ void Player::ContinueTaxiFlight()
     if (!sourceNode)
         return;
 
-    if (InBattleGround())
+    if (InBattleGround() || (GetMap() && GetMap()->IsDungeon()))
         return;
 
     DEBUG_LOG( "WORLD: Restart character %u taxi flight", GetGUIDLow() );
