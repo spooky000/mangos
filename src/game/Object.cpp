@@ -2151,7 +2151,7 @@ void WorldObject::SetLootRecipient(Unit *unit)
 
 void WorldObject::SetActiveObjectState(bool active)
 {
-    if (m_isActiveObject == active || (isType(TYPEMASK_PLAYER) && !active))  // player shouldn't became inactive, never
+    /*if (m_isActiveObject == active || (isType(TYPEMASK_PLAYER) && !active))  // player shouldn't became inactive, never
         return;
 
     if (IsInWorld() && !isType(TYPEMASK_PLAYER))
@@ -2163,5 +2163,5 @@ void WorldObject::SetActiveObjectState(bool active)
         else if (!isActiveObject() && active)
             GetMap()->AddToActive(this);
     }
-    m_isActiveObject = active;
+    m_isActiveObject = active;*/
 }
