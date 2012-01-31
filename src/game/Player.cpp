@@ -19813,6 +19813,9 @@ void Player::ContinueTaxiFlight()
     if (!sourceNode)
         return;
 
+    if (InBattleGround())
+        return;
+
     DEBUG_LOG( "WORLD: Restart character %u taxi flight", GetGUIDLow() );
 
     uint32 mountDisplayId = sObjectMgr.GetTaxiMountDisplayId(sourceNode, GetTeam(), true);
