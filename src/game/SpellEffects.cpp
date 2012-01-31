@@ -449,6 +449,11 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                             damage = 200;
                         break;
                     }
+                    case 48292:                             // Dark Slash
+                    {
+                        damage = unitTarget->GetHealth() / 2;
+                        break;
+                    }
                     // Intercept (warrior spell trigger)
                     case 20253:
                     case 61491:
