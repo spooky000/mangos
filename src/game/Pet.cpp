@@ -2845,8 +2845,7 @@ bool Pet::Summon()
                     }
                 }
             }
-            if (needsSave)
-                SavePetToDB(PET_SAVE_NOT_IN_SLOT);
+            SavePetToDB(needsSave ? PET_SAVE_NOT_IN_SLOT : PET_SAVE_AS_DELETED);
         }
         else
             SetNeedSave(false);
