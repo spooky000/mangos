@@ -270,6 +270,12 @@ void WorldSession::HandleMessagechatOpcode( WorldPacket & recv_data )
                 }
             }
 
+            if (player->isDND())
+            {
+                ChatHandler(this).PSendSysMessage(LANG_PLAYER_DND, player->GetName(), player->autoReplyMsg.c_str());
+                return;
+            }
+
             GetPlayer()->Whisper(msg, lang, player->GetObjectGuid());
         } break;
 
