@@ -9189,7 +9189,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     ((Player*)caster)->RemoveSpellCategoryCooldown(82, true);
                     return;
                 }
-                case 50810:                                 // Shatter (Krystallus)
+                /*case 50810:                                 // Shatter (Krystallus)
                 case 61546:                                 // Shatter (h) (Krystallus)
                 {
                     if (!unitTarget)
@@ -9197,7 +9197,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     unitTarget->CastSpell(unitTarget, m_spellInfo->Id + 1, true, NULL, NULL, m_caster->GetObjectGuid());
                     return;
-                }
+                }*/
                 case 50894:                                 // Zul'Drak Rat
                 {
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
