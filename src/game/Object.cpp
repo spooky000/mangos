@@ -2151,7 +2151,6 @@ void WorldObject::SetLootRecipient(Unit *unit)
 
 void WorldObject::SetActiveObjectState(bool active)
 {
-    sLog.outString("SetActiveObjectState called");
     /*if (m_isActiveObject == active || (isType(TYPEMASK_PLAYER) && !active))  // player shouldn't became inactive, never
         return;
 
