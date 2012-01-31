@@ -4293,7 +4293,7 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
     {
         case SPELLFAMILY_GENERIC:
             // some generic arena related spells have by some strange reason MECHANIC_TURN
-            if  (spellproto->Mechanic == MECHANIC_TURN)
+            if  (spellproto->Mechanic == MECHANIC_TURN || spellproto->Id == 51750)
                 return DIMINISHING_NONE;
             break;
         case SPELLFAMILY_MAGE:
