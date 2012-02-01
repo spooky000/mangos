@@ -511,6 +511,36 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         damage = unitTarget->GetMaxHealth() / 10;
                         break;
                     }
+                    // Light spells (ToC twins)
+                    case 65767: case 67274: case 67275: case 67276:     // Light Surge
+                    case 66048: case 67203: case 67204: case 67205:     // Light Vortex
+                    case 65795: case 67238: case 67239: case 67240:     // Unleashed Light
+                    {
+                        // dont do anything if the player doesnt have Light Essence buff
+                        if (unitTarget && unitTarget->HasAura(65686))
+                        {
+                            unitTarget->CastSpell(unitTarget, 67604, true);
+                            if (roll_chance_i(2))
+                                // 2% chance to give the speed buff
+                                unitTarget->CastSpell(unitTarget, 67243, true);
+                        }
+                        break;
+                    }
+                    // Dark spells (ToC twins)
+                    case 65769: case 67265: case 67266: case 67267:     // Dark Surge
+                    case 66059: case 67155: case 67156: case 67157:     // Dark Vortex
+                    case 65808: case 67172: case 67173: case 67174:     // Unleashed Dark
+                    {
+                        // dont do anything if the player doesnt have Dark Essence buff
+                        if (unitTarget && unitTarget->HasAura(65684))
+                        {
+                            unitTarget->CastSpell(unitTarget, 67604, true);
+                            if (roll_chance_i(2))
+                                // 2% chance to give the speed buff
+                                unitTarget->CastSpell(unitTarget, 67243, true);
+                        }
+                        break;
+                    }
                     // Paralytic Spray
                     case 66901:
                     {

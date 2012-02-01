@@ -2532,6 +2532,16 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                         if (target->GetTypeId() == TYPEID_PLAYER)
                             ((Player*)target)->removeSpell(63680);
                         return;
+                    case 67590:                                 // Powering Up
+                        if (GetStackAmount() == 100)
+                        {
+                            if (target->HasAura(65686))
+                                target->CastSpell(target, 67218, true);
+                            else if (target->HasAura(65684))
+                                target->CastSpell(target, 67215, true);
+                            GetHolder()->SetStackAmount(0);
+                        }
+                        return;
                     case 68912:                             // Wailing Souls
                         if (Unit* caster = GetCaster())
                         {
