@@ -2535,8 +2535,10 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                     case 67590:                                 // Powering Up
                         if (GetStackAmount() == 100)
                         {
+                            // Light Essence, cast Empowered Light
                             if (target->HasAura(65686))
                                 target->CastSpell(target, 67218, true);
+                            // Dark Essence, cast Empowered Dark
                             else if (target->HasAura(65684))
                                 target->CastSpell(target, 67215, true);
                             GetHolder()->SetStackAmount(0);
