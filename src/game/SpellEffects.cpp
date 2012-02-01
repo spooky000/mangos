@@ -4207,7 +4207,22 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                 // replace cast by selected spell, this also make it interruptible including target death case
                 if (m_caster->IsFriendlyTo(unitTarget))
-                    m_caster->CastSpell(unitTarget, heal, false);
+                {
+                    Unit* spellTarget = m_caster;
+                    // sanctuary check, no healing cross faction player or same faction player in duel
+                    if (m_caster->getFaction() == unitTarget->getFaction())
+                    {
+                        if (unitTarget->GetTypeId() == TYPEID_PLAYER)
+                        {
+                            if (!((Player*)unitTarget)->duel)
+                                spellTarget = unitTarget;
+                        }
+                        else
+                            spellTarget = unitTarget;
+                    }
+
+                    m_caster->CastSpell(spellTarget, heal, false);
+                }
                 else
                     m_caster->CastSpell(unitTarget, hurt, false);
 
@@ -4449,7 +4464,22 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     }
 
                     if (m_caster->IsFriendlyTo(unitTarget))
-                        m_caster->CastSpell(unitTarget, heal, true);
+                    {
+                        Unit* spellTarget = m_caster;
+                        // sanctuary check, no healing cross faction player or same faction player in duel
+                        if (m_caster->getFaction() == unitTarget->getFaction())
+                        {
+                            if (unitTarget->GetTypeId() == TYPEID_PLAYER)
+                            {
+                                if (!((Player*)unitTarget)->duel)
+                                    spellTarget = unitTarget;
+                            }
+                            else
+                                spellTarget = unitTarget;
+                        }
+
+                        m_caster->CastSpell(spellTarget, heal, true);
+                    }
                     else
                         m_caster->CastSpell(unitTarget, hurt, true);
 
