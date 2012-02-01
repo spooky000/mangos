@@ -186,6 +186,9 @@ void PetAI::UpdateAI(const uint32 diff)
                     _stopAttack();
             }
         }
+
+        if (m_creature->IsNonMeleeSpellCasted(true))
+            m_creature->StopMoving();
     }
     else if (owner && m_creature->GetCharmInfo())
     {
