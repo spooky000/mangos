@@ -354,7 +354,7 @@ pAuraHandler AuraHandler[TOTAL_AURAS]=
     &Aura::HandleNULL,                                      //300 3 spells, share damage (in percent) with aura owner and aura target. implemented in Unit::DealDamage
     &Aura::HandleNULL,                                      //301 SPELL_AURA_HEAL_ABSORB 5 spells
     &Aura::HandleUnused,                                    //302 unused (3.2.2a)
-    &Aura::HandleNULL,                                      //303 17 spells
+    &Aura::HandleNoImmediateEffect,                         //303 17 spells SPELL_AURA_MOD_DAMAGE_DONE_TO_AURA_STATE_PCT
     &Aura::HandleNULL,                                      //304 2 spells (alcohol effect?)
     &Aura::HandleAuraModIncreaseSpeed,                      //305 SPELL_AURA_MOD_MINIMUM_SPEED
     &Aura::HandleNULL,                                      //306 1 spell
@@ -6065,6 +6065,16 @@ void Aura::HandlePeriodicTriggerSpell(bool apply, bool /*Real*/)
                     if (pCaster->HasAura(GetModifier()->m_amount))
                         pCaster->CastSpell(target, spellId, true);
                 }
+
+                return;
+            case 65766:                                     // Surge of light
+                if (Unit *pCaster = GetCaster())
+                    pCaster->ModifyAuraState(AURA_STATE_LIGHT_STATE, true);
+
+                return;
+            case 65768:                                     // Surge of darkness
+                if (Unit *pCaster = GetCaster())
+                    pCaster->ModifyAuraState(AURA_STATE_DARK_STATE, true);
 
                 return;
             case 66083:                                     // Lightning Arrows (Trial of the Champion encounter)
