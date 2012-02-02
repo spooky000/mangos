@@ -332,7 +332,7 @@ pAuraProcHandler AuraProcHandler[TOTAL_AURAS]=
     &Unit::HandleNULLProc,                                  //297 1 spell (counter spell school?)
     &Unit::HandleNULLProc,                                  //298 unused (3.2.2a)
     &Unit::HandleNULLProc,                                  //299 unused (3.2.2a)
-    &Unit::HandleShareDamagePctAuraProc,                    //300 SPELL_AURA_SHARE_DAMAGE_PCT share damage taken by pct
+    &Unit::HandleNULLProc,                                  //300 SPELL_AURA_SHARE_DAMAGE_PCT share damage taken by pct (handled in Unit::DealDamage)
     &Unit::HandleNULLProc,                                  //301 5 spells
     &Unit::HandleNULLProc,                                  //302 unused (3.2.2a)
     &Unit::HandleNULLProc,                                  //303 17 spells
@@ -5315,20 +5315,6 @@ SpellAuraProcResult Unit::HandleIgnoreAuraStateProc(Unit* /*pVictim*/, uint32 da
         // only at real damage
         if (!damage)
             return SPELL_AURA_PROC_FAILED;
-    }
-
-    return SPELL_AURA_PROC_OK;
-}
-
-SpellAuraProcResult Unit::HandleShareDamagePctAuraProc(Unit* pVictim, uint32 damage, Aura* triggeredByAura, SpellEntry const * procSpell, uint32 /*procFlag*/, uint32 /*procEx*/, uint32 /*cooldown*/)
-{
-    if (Unit *pCaster = triggeredByAura->GetCaster())
-    {
-        SpellEntry const *spellInfo = triggeredByAura->GetSpellProto();
-
-        uint32 shareDamage = damage * (triggeredByAura->GetModifier()->m_amount / 100.0f);
-        pVictim->DealDamage(pCaster, shareDamage, NULL, DIRECT_DAMAGE, SpellSchoolMask(spellInfo->SchoolMask), spellInfo, true);
-        pVictim->SendSpellNonMeleeDamageLog(pCaster, spellInfo->Id, shareDamage, SpellSchoolMask(spellInfo->SchoolMask), 0, 0, false, 0, false);
     }
 
     return SPELL_AURA_PROC_OK;
