@@ -539,7 +539,7 @@ void WorldSession::HandleLeaveBattlefieldOpcode( WorldPacket& recv_data )
 
     if (BattleGround* bg = _player->GetBattleGround())
         if (bg->GetStatus() != STATUS_WAIT_LEAVE)
-            sLog.outString("LEECHER: Player %s has left the battleground before it ended.", _player->GetName());
+            sLog.outString("LEECHER3: Player %s has left the battleground before it ended.", _player->GetName());
 
     _player->LeaveBattleground();
 }
@@ -830,6 +830,6 @@ void WorldSession::HandleReportPvPAFK( WorldPacket & recv_data )
     }
 
     DEBUG_LOG("WorldSession::HandleReportPvPAFK: %s reported %s", _player->GetName(), reportedPlayer->GetName());
-    sLog.outString("LEECHER: Player %s reported %s for being AFK.", _player->GetName(), reportedPlayer->GetName());
+    sLog.outString("LEECHER4: Player %s reported %s for being AFK.", _player->GetName(), reportedPlayer->GetName());
     reportedPlayer->ReportedAfkBy(_player);
 }
