@@ -7784,6 +7784,11 @@ uint32 Unit::SpellDamageBonusDone(Unit *pVictim, SpellEntry const *spellProto, u
     // apply ap bonus and benefit affected by spell power implicit coeffs and spell level penalties
     DoneTotal = SpellBonusWithCoeffs(spellProto, DoneTotal, DoneAdvertisedBenefit, 0, damagetype, true);
 
+    Unit::AuraList const& mDamageDoneToAuraState = GetAurasByType(SPELL_AURA_MOD_DAMAGE_DONE_TO_AURA_STATE_PCT);
+        for(Unit::AuraList::const_iterator i = mDamageDoneToAuraState.begin(); i != mDamageDoneToAuraState.end(); ++i)
+            if (pVictim->HasAuraState(AuraState((*i)->GetMiscValue())))
+                DoneTotalMod *= (100.0f+(*i)->GetModifier()->m_amount)/100.0f;
+
     float tmpDamage = (int32(pdamage) + DoneTotal * int32(stack)) * DoneTotalMod;
     // apply spellmod to Done damage (flat and pct)
     if(Player* modOwner = GetSpellModOwner())
@@ -8851,6 +8856,11 @@ uint32 Unit::MeleeDamageBonusDone(Unit *pVictim, uint32 pdamage,WeaponAttackType
 
         DoneTotal *= GetModifierValue(unitMod, TOTAL_PCT);
     }
+
+    Unit::AuraList const& mDamageDoneToAuraState = GetAurasByType(SPELL_AURA_MOD_DAMAGE_DONE_TO_AURA_STATE_PCT);
+    for(Unit::AuraList::const_iterator i = mDamageDoneToAuraState.begin(); i != mDamageDoneToAuraState.end(); ++i)
+        if (pVictim->HasAuraState(AuraState((*i)->GetMiscValue())))
+            DonePercent *= (100.0f+(*i)->GetModifier()->m_amount)/100.0f;
 
     float tmpDamage = float(int32(pdamage) + DoneTotal * int32(stack)) * DonePercent;
 
