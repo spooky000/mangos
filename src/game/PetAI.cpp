@@ -157,7 +157,7 @@ void PetAI::UpdateAI(const uint32 diff)
             _stopAttack();
             return;
         }
-        else if (!m_creature->getVictim()->isAlive() || m_creature->getVictim()->IsCrowdControlled())        // Stop attack if target dead or CCed
+        else if (!m_creature->getVictim()->isAlive())        // Stop attack if target dead
         {
             m_creature->InterruptNonMeleeSpells(false);
             _stopAttack();
