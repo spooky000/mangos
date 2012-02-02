@@ -8977,6 +8977,17 @@ void Aura::PeriodicTick()
                     }
 
             }
+            // Some special cases
+            switch (GetId())
+            {
+                case 21056:                                 // Mark of Kazzak
+                    if (target->GetTypeId() == TYPEID_PLAYER && target->GetPower(power) == 0)
+                    {
+                        target->CastSpell(target, 21058, true, NULL, this);
+                        target->RemoveAurasDueToSpell(GetId());
+                    }
+                    break;
+            }
             break;
         }
         case SPELL_AURA_PERIODIC_ENERGIZE:
