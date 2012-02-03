@@ -6077,22 +6077,6 @@ void Aura::HandlePeriodicTriggerSpell(bool apply, bool /*Real*/)
                 }
 
                 return;
-            case 65766:                                     // Surge of light
-            case 67270:
-            case 67271:
-            case 67272:
-                if (Unit *pCaster = GetCaster())
-                    pCaster->ModifyAuraState(AURA_STATE_LIGHT_STATE, true);
-
-                return;
-            case 65768:                                     // Surge of darkness
-            case 67262:
-            case 67263:
-            case 67264:
-                if (Unit *pCaster = GetCaster())
-                    pCaster->ModifyAuraState(AURA_STATE_DARK_STATE, true);
-
-                return;
             case 66083:                                     // Lightning Arrows (Trial of the Champion encounter)
                 if (m_removeMode == AURA_REMOVE_BY_EXPIRE)
                 {
