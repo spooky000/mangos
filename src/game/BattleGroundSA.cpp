@@ -283,7 +283,6 @@ void BattleGroundSA::Update(uint32 diff)
             PlaySoundToAll(SOUND_BG_START);
             SendWarningToAll(LANG_BG_SA_HAS_BEGUN);
             StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 21702);
-            SetBGFaction(SA_EVENT_ADD_CANNON, 0, (GetDefender() == ALLIANCE ? VEHICLE_FACTION_ALLIANCE : VEHICLE_FACTION_HORDE));
             SetBGFaction(SA_EVENT_ADD_NPC, 0, (GetDefender() == ALLIANCE ? VEHICLE_FACTION_HORDE : VEHICLE_FACTION_ALLIANCE));
 
             for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
