@@ -1819,6 +1819,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 66001:                                 // Touch of Darkness
                 case 66152:                                 // Bullet Foced Cast (Trial of the Crusader, ->
                 case 66153:
+                case 66332:                                 // Nerubian Burrower (Trial of the Crusader, -> 10m
                 case 66336:                                 // Mistress' Kiss (Trial of the Crusader, ->
                 case 66339:                                 // Summon Scarab (Trial of the Crusader, Anub'arak encounter)
                 case 67077:                                 // -> Lord Jaraxxus encounter, 10 and 10 heroic)
@@ -1847,8 +1848,8 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 63476:                                 // Icicle (Hodir 10man)
                 case 63802:                                 // Brain Link (Yogg-Saron)
                 case 66013:                                 // Penetrating Cold (10 man)
-                case 66332:                                 // Nerubian Burrower (Trial of the Crusader, ->
-                case 67755:                                 // -> Anub'arak encounter, 10 and 10 heroic)
+                case 67755:                                 // -> Anub'arak encounter, 10heroic and 25)
+                case 67756:
                 case 68509:                                 // Penetrating Cold (10 man heroic)
                 case 69055:                                 // Bone Slice (Icecrown Citadel, Lord Marrowgar, normal)
                 case 69278:                                 // Gas spore - 10 (Festergut)
@@ -1875,8 +1876,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 63482:                                 // Lightning Whirl (25 man)
                     unMaxTargets = urand(3,6);
                     break;
-                case 67756:                                 // Nerubian Burrower (Trial of the Crusader, ->
-                case 67757:                                 // -> Anub'arak encounter, 25 and 25 heroic)
+                case 67757:                                 // Nerubian Burrower (Trial of the Crusader-> Anub'arak encounter 25 heroic)
                 case 71221:                                 // Gas spore - 25
                     unMaxTargets = 4;
                     break;
