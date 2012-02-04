@@ -1931,6 +1931,14 @@ void BattleGround::MakeInteractive(uint8 event1, uint8 event2, bool interactive)
     }
 }
 
+void BattleGround::SetBGFaction(uint8 event1, uint8 event2, uint32 factionId)
+{
+    uint32 objEvent = MAKE_PAIR32(event1, event2);
+    for (std::vector<ObjectGuid>::iterator itr = m_EventObjects[objEvent].creatures.begin(); itr != m_EventObjects[objEvent].creatures.end(); ++itr)
+        if (Creature * pEventCreature = GetBgMap()->GetCreature(*itr))
+            pEventCreature->setFaction(factionId);
+}
+
 void BattleGround::SendMessageToAll(int32 entry, ChatMsg type, Player const* source)
 {
     MaNGOS::BattleGroundChatBuilder bg_builder(type, entry, source);
