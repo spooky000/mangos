@@ -283,6 +283,7 @@ void BattleGroundSA::Update(uint32 diff)
             PlaySoundToAll(SOUND_BG_START);
             SendWarningToAll(LANG_BG_SA_HAS_BEGUN);
             StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 21702);
+            SetBGFaction(SA_EVENT_ADD_NPC, 0, (GetDefender() == ALLIANCE ? VEHICLE_FACTION_HORDE : VEHICLE_FACTION_ALLIANCE));
 
             for (BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
             {
@@ -344,6 +345,7 @@ void BattleGroundSA::StartingEventOpenDoors()
     ToggleTimer();
     HandleInteractivity();
     StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 23748);
+    SetBGFaction(SA_EVENT_ADD_NPC, 0, (GetDefender() == ALLIANCE ? VEHICLE_FACTION_HORDE : VEHICLE_FACTION_ALLIANCE));
 }
 
 void BattleGroundSA::RemovePlayer(Player* /*plr*/, ObjectGuid /*guid*/)
@@ -476,6 +478,7 @@ void BattleGroundSA::UpdatePhase()
     SpawnEvent(SA_EVENT_ADD_CANNON, 0, true);
     SpawnEvent(SA_EVENT_ADD_RELIC, (GetDefender() == ALLIANCE) ? 2 : 1, true);
     MakeInteractive(SA_EVENT_ADD_RELIC, (GetDefender() == ALLIANCE) ? 2 : 1, false);
+    SetBGFaction(SA_EVENT_ADD_CANNON, 0, (GetDefender() == ALLIANCE ? VEHICLE_FACTION_ALLIANCE : VEHICLE_FACTION_HORDE));
 
     // spawning gate sigils
     for (uint8 i = SA_EVENT_ADD_GREEN_SIGIL; i <= SA_EVENT_ADD_YELLOW_SIGIL; ++i)
@@ -602,11 +605,13 @@ void BattleGroundSA::EventPlayerClickedOnFlag(Player *source, GameObject* target
         case 0:
             SpawnEvent(SA_EVENT_ADD_VECH_E, 0, true);
             SpawnEvent(SA_EVENT_ADD_BOMB_E, (GetDefender() == ALLIANCE) ? BG_SA_GRAVE_STATUS_HORDE_OCCUPIED : BG_SA_GRAVE_STATUS_ALLY_OCCUPIED, true);
+            SetBGFaction(SA_EVENT_ADD_VECH_E, 0, (GetDefender() == ALLIANCE ? VEHICLE_FACTION_HORDE : VEHICLE_FACTION_ALLIANCE));
             break;
         // west base
         case 1:
             SpawnEvent(SA_EVENT_ADD_VECH_W, 0, true);
             SpawnEvent(SA_EVENT_ADD_BOMB_W, (GetDefender() == ALLIANCE) ? BG_SA_GRAVE_STATUS_HORDE_OCCUPIED : BG_SA_GRAVE_STATUS_ALLY_OCCUPIED, true);
+            SetBGFaction(SA_EVENT_ADD_VECH_W, 0, (GetDefender() == ALLIANCE ? VEHICLE_FACTION_HORDE : VEHICLE_FACTION_ALLIANCE));
             break;
         // central base
         case 2:

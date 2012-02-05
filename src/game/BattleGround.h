@@ -571,6 +571,7 @@ class BattleGround
         void SpawnBGCreature(ObjectGuid guid, uint32 respawntime);
         bool DelObject(uint32 type);
         void MakeInteractive(uint8 event1, uint8 event2, bool interactive);
+        void SetBGFaction(uint8 event1, uint8 event2, uint32 factionId);
 
         void DoorOpen(ObjectGuid guid);
         void DoorClose(ObjectGuid guid);
