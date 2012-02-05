@@ -9667,6 +9667,32 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     return;
                 }
+                case 61551: // Toy Train Set
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    int soundId = 0;
+                    uint8 gender = unitTarget->getGender();
+                    switch (unitTarget->getRace())
+                    {
+                        case RACE_BLOODELF: soundId = (gender == GENDER_MALE? 9672 : 9644); break;
+                        case RACE_DRAENEI: soundId = (gender == GENDER_MALE? 9722 : 9697); break;
+                        case RACE_DWARF: soundId = (gender == GENDER_MALE? 7636 : 7637); break;
+                        case RACE_GNOME: soundId = (gender == GENDER_MALE? 7641 : 7640); break;
+                        case RACE_HUMAN: soundId = (gender == GENDER_MALE? 7634 : 7635); break;
+                        case RACE_NIGHTELF: soundId = (gender == GENDER_MALE? 7643 : 7642); break;
+                        case RACE_ORC: soundId = (gender == GENDER_MALE? 7638 : 7639); break;
+                        case RACE_TAUREN: soundId = (gender == GENDER_MALE? 7646 : 7647); break;
+                        case RACE_TROLL: soundId = (gender == GENDER_MALE? 7648 : 7649); break;
+                        case RACE_UNDEAD: soundId = (gender == GENDER_MALE? 7644 : 7645); break;
+                    }
+
+                    unitTarget->HandleEmote(EMOTE_ONESHOT_TRAIN);
+                    unitTarget->PlayDistanceSound(soundId);
+
+                    return;
+                }
                 case 62428: // Load into Catapult
                 {
                     if (!unitTarget)
