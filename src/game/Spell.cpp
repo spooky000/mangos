@@ -1338,6 +1338,20 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
         return;
     }
 
+    // Recheck effect immune (only for delayed spells)
+    if (m_spellInfo->speed)
+    {
+        for(int effectNumber = 0; effectNumber < MAX_EFFECT_INDEX; ++effectNumber)
+        {
+            if (effectMask & (1 << effectNumber))
+            {
+                // don't handle effect to which target is immuned
+                if (unit->IsImmuneToSpellEffect(m_spellInfo, SpellEffectIndex(effectNumber)))
+                    effectMask &= ~(1 << effectNumber);
+            }
+        }
+    }
+
     // Recheck immune (only for delayed spells)
     if (m_spellInfo->speed && !((realCaster && realCaster->IsFriendlyTo(unit)) && IsPositiveSpell(m_spellInfo->Id)) && (
         unit->IsImmunedToDamage(GetSpellSchoolMask(m_spellInfo)) ||
@@ -1819,6 +1833,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 66001:                                 // Touch of Darkness
                 case 66152:                                 // Bullet Foced Cast (Trial of the Crusader, ->
                 case 66153:
+                case 66332:                                 // Nerubian Burrower (Trial of the Crusader, -> 10m
                 case 66336:                                 // Mistress' Kiss (Trial of the Crusader, ->
                 case 66339:                                 // Summon Scarab (Trial of the Crusader, Anub'arak encounter)
                 case 67077:                                 // -> Lord Jaraxxus encounter, 10 and 10 heroic)
@@ -1847,8 +1862,8 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 63476:                                 // Icicle (Hodir 10man)
                 case 63802:                                 // Brain Link (Yogg-Saron)
                 case 66013:                                 // Penetrating Cold (10 man)
-                case 66332:                                 // Nerubian Burrower (Trial of the Crusader, ->
-                case 67755:                                 // -> Anub'arak encounter, 10 and 10 heroic)
+                case 67755:                                 // -> Anub'arak encounter, 10heroic and 25)
+                case 67756:
                 case 68509:                                 // Penetrating Cold (10 man heroic)
                 case 69055:                                 // Bone Slice (Icecrown Citadel, Lord Marrowgar, normal)
                 case 69278:                                 // Gas spore - 10 (Festergut)
@@ -1875,8 +1890,7 @@ void Spell::SetTargetMap(SpellEffectIndex effIndex, uint32 targetMode, UnitList&
                 case 63482:                                 // Lightning Whirl (25 man)
                     unMaxTargets = urand(3,6);
                     break;
-                case 67756:                                 // Nerubian Burrower (Trial of the Crusader, ->
-                case 67757:                                 // -> Anub'arak encounter, 25 and 25 heroic)
+                case 67757:                                 // Nerubian Burrower (Trial of the Crusader-> Anub'arak encounter 25 heroic)
                 case 71221:                                 // Gas spore - 25
                     unMaxTargets = 4;
                     break;
@@ -5592,6 +5606,25 @@ SpellCastResult Spell::CheckCast(bool strict)
                 // spell expected to be auto-downranking in cast handle, so must be same
                 if (m_spellInfo != sSpellMgr.SelectAuraRankForLevel(m_spellInfo, target->getLevel()))
                     return SPELL_FAILED_LOWLEVEL;
+            }
+
+            if (m_caster->GetTypeId() == TYPEID_PLAYER && m_spellInfo->Mechanic == MECHANIC_DISARM)
+            {
+                if (target->GetTypeId() == TYPEID_PLAYER)
+                {
+                    Player *player = (Player*)target;
+                    if (m_spellInfo->Id == 51722)                           // Dismantle
+                    {
+                        if (!player->GetWeaponForAttack(BASE_ATTACK) && !player->GetShield() && !player->GetWeaponForAttack(RANGED_ATTACK))
+                            return SPELL_FAILED_TARGET_NO_WEAPONS;
+                    }
+                    else if ((!player->GetWeaponForAttack(BASE_ATTACK) && !player->GetWeaponForAttack(RANGED_ATTACK)) || !player->IsUsingEquippedWeapon(true))
+                    {
+                        return SPELL_FAILED_TARGET_NO_WEAPONS;
+                    }
+                }
+                else if (!target->GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID))
+                    return SPELL_FAILED_TARGET_NO_WEAPONS;
             }
         }
         else if (m_caster == target)

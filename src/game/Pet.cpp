@@ -376,6 +376,19 @@ void Pet::SavePetToDB(PetSaveMode mode)
     if (!pOwner)
         return;
 
+    if (getPetType() == SUMMON_PET)
+    {
+        // save mage water elementals, shaman spirit wolves, priest shadowfiends, DK ghouls and warlock pets
+        if (GetEntry() == 37994 || GetEntry() == 510 || GetEntry() == 29264 || GetEntry() == 19668 || GetEntry() == 26125 ||
+            GetEntry() == 416 || GetEntry() == 417 || GetEntry() == 1860 || GetEntry() == 1863  || GetEntry() == 17252 )
+        {
+            mode = PET_SAVE_NOT_IN_SLOT;
+            SetNeedSave(true);
+        }
+        else
+            mode = PET_SAVE_AS_DELETED;
+    }
+
     // current/stable/not_in_slot
     if (mode >= PET_SAVE_AS_CURRENT)
     {
@@ -2827,26 +2840,7 @@ bool Pet::Summon()
         if (getPetType() == HUNTER_PET)
             SavePetToDB(PET_SAVE_AS_CURRENT);
         else if (getPetType() == SUMMON_PET)
-        {
-            bool needsSave = true;
-            SpellEntry const *spellInfo = sSpellStore.LookupEntry(GetCreateSpellID());
-            for (int i = 0; i < MAX_EFFECT_INDEX; ++i)
-            {
-                if (spellInfo->Effect[i] == SPELL_EFFECT_SUMMON)
-                {                                           // these npcs need exceptions:
-                    if (GetCreateSpellID() != 70907 &&      // mage water elemental
-                        GetCreateSpellID() != 70908 &&
-                        GetCreateSpellID() != 51533 &&      // shaman spirit wolves
-                        GetCreateSpellID() != 34433)        // priest shadowfiend
-                    {
-                        needsSave = false;
-                        SetNeedSave(false);
-                        break;
-                    }
-                }
-            }
-            SavePetToDB(needsSave ? PET_SAVE_NOT_IN_SLOT : PET_SAVE_AS_DELETED);
-        }
+            SavePetToDB(PET_SAVE_NOT_IN_SLOT);
         else
             SetNeedSave(false);
     }

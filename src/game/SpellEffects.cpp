@@ -511,13 +511,27 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         damage = unitTarget->GetMaxHealth() / 10;
                         break;
                     }
+                    case 64412:                                 // Algalon Phase Punch
+                    {
+                        if (!unitTarget)
+                            return;
+
+                        // On phase punch, check if stacks is greater than 4, if so phase out with spell 64417
+                        if (SpellAuraHolderPtr holder = unitTarget->GetSpellAuraHolder(64412))
+                            if (holder->GetStackAmount() > 3)
+                            {
+                                unitTarget->RemoveAurasDueToSpell(64412);
+                                unitTarget->CastSpell(unitTarget, 64417, true);
+                            }
+                        return;
+                    }
                     // Light spells (ToC twins)
                     case 65767: case 67274: case 67275: case 67276:     // Light Surge
                     case 66048: case 67203: case 67204: case 67205:     // Light Vortex
                     case 65795: case 67238: case 67239: case 67240:     // Unleashed Light
                     {
                         // dont do anything if the player doesnt have Light Essence buff
-                        if (unitTarget && unitTarget->HasAura(65686))
+                        if (unitTarget && (unitTarget->HasAura(65686) || unitTarget->HasAura(67222) || unitTarget->HasAura(67223) || unitTarget->HasAura(67224)))
                         {
                             unitTarget->CastSpell(unitTarget, 67604, true);
                             if (roll_chance_i(2))
@@ -532,7 +546,7 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     case 65808: case 67172: case 67173: case 67174:     // Unleashed Dark
                     {
                         // dont do anything if the player doesnt have Dark Essence buff
-                        if (unitTarget && unitTarget->HasAura(65684))
+                        if (unitTarget && (unitTarget->HasAura(65684) || unitTarget->HasAura(67176) || unitTarget->HasAura(67177) || unitTarget->HasAura(67178)))
                         {
                             unitTarget->CastSpell(unitTarget, 67604, true);
                             if (roll_chance_i(2))
@@ -3678,8 +3692,17 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     if (!unitTarget)
                         return;
 
+                    // Spawn cosmic smash target on player when hit by target seeking spell from algalon
                     unitTarget->CastSpell(unitTarget, 62295, true);
                     return;
+                }
+                case 62003:                                 // Algalon - Black Hole Spawn
+                {
+                    if (!unitTarget)
+                        return;
+
+                    // Apply aura which causes black hole phase/1 sec to hostile targets
+                    unitTarget->CastSpell(m_caster, 62185, true);
                 }
                 case 63984:                                 // Hate to Zero (Ulduar - Yogg Saron), if the player teleport into the "brain"
                 {
@@ -4184,7 +4207,22 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
 
                 // replace cast by selected spell, this also make it interruptible including target death case
                 if (m_caster->IsFriendlyTo(unitTarget))
-                    m_caster->CastSpell(unitTarget, heal, false);
+                {
+                    Unit* spellTarget = m_caster;
+                    // sanctuary check, no healing cross faction player or same faction player in duel
+                    if (m_caster->getFaction() == unitTarget->getFaction())
+                    {
+                        if (unitTarget->GetTypeId() == TYPEID_PLAYER)
+                        {
+                            if (!((Player*)unitTarget)->duel)
+                                spellTarget = unitTarget;
+                        }
+                        else
+                            spellTarget = unitTarget;
+                    }
+
+                    m_caster->CastSpell(spellTarget, heal, false);
+                }
                 else
                     m_caster->CastSpell(unitTarget, hurt, false);
 
@@ -4426,7 +4464,22 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     }
 
                     if (m_caster->IsFriendlyTo(unitTarget))
-                        m_caster->CastSpell(unitTarget, heal, true);
+                    {
+                        Unit* spellTarget = m_caster;
+                        // sanctuary check, no healing cross faction player or same faction player in duel
+                        if (m_caster->getFaction() == unitTarget->getFaction())
+                        {
+                            if (unitTarget->GetTypeId() == TYPEID_PLAYER)
+                            {
+                                if (!((Player*)unitTarget)->duel)
+                                    spellTarget = unitTarget;
+                            }
+                            else
+                                spellTarget = unitTarget;
+                        }
+
+                        m_caster->CastSpell(spellTarget, heal, true);
+                    }
                     else
                         m_caster->CastSpell(unitTarget, hurt, true);
 
@@ -6460,12 +6513,12 @@ void Spell::DoSummonGroupPets(SpellEffectIndex eff_idx)
         m_duration = 0;
     }
 
-    uint32 amount = damage;
+    int32 amount = m_spellInfo->EffectRealPointsPerLevel[eff_idx] ? m_spellInfo->EffectRealPointsPerLevel[eff_idx] : m_currentBasePoints[eff_idx];
+
+    if (amount < 0)
+        amount = 1;
 
     uint32 originalSpellID = (m_IsTriggeredSpell && m_triggeredBySpellInfo) ? m_triggeredBySpellInfo->Id : m_spellInfo->Id;
-
-    if (amount > 5)
-        amount = 1;  // Don't find any cast, summons over 3 pet.
 
     CreatureCreatePos pos (m_caster->GetMap(), m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, -m_caster->GetOrientation(), m_caster->GetPhaseMask());
 
@@ -6869,7 +6922,9 @@ void Spell::DoSummonWild(SpellEffectIndex eff_idx, uint32 forceFaction)
     float radius = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
     TempSummonType summonType = (m_duration == 0) ? TEMPSUMMON_DEAD_DESPAWN : TEMPSUMMON_TIMED_OR_DEAD_DESPAWN;
 
-    int32 amount = damage > 0 ? damage : 1;
+    int32 amount = m_spellInfo->EffectRealPointsPerLevel[eff_idx] ? m_spellInfo->EffectRealPointsPerLevel[eff_idx] : m_currentBasePoints[eff_idx];
+    if (amount < 0)
+        amount = 1;
 
     for(int32 count = 0; count < amount; ++count)
     {
@@ -6965,8 +7020,12 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
         if (Pet* old_protector = m_caster->GetProtectorPet())
             old_protector->Unsummon(PET_SAVE_AS_DELETED, m_caster);
 
-    // in another case summon new
-    uint32 level = m_caster->getLevel();
+    int32 amount = m_spellInfo->EffectRealPointsPerLevel[eff_idx] ? m_spellInfo->EffectRealPointsPerLevel[eff_idx] : m_currentBasePoints[eff_idx];
+    if (amount < 0)
+        amount = 1;
+
+    //uint32 level  = m_caster->getLevel();
+    uint32 level  = m_spellInfo->EffectRealPointsPerLevel[eff_idx] ? (damage < m_caster->getLevel() ? damage : m_caster->getLevel()) : m_caster->getLevel();
 
     // level of pet summoned using engineering item based at engineering skill level
     if (m_caster->GetTypeId() == TYPEID_PLAYER && m_CastItem)
@@ -6996,9 +7055,6 @@ void Spell::DoSummonGuardian(SpellEffectIndex eff_idx, uint32 forceFaction)
     float radius = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
 
     uint32 originalSpellID = (m_IsTriggeredSpell && m_triggeredBySpellInfo) ? m_triggeredBySpellInfo->Id : m_spellInfo->Id;
-
-    // cannot find any guardian group over 5. need correct?
-    int32 amount = (damage > 0 && damage < 6) ? damage : 1;
 
     for (int32 count = 0; count < amount; ++count)
     {
@@ -9667,6 +9723,32 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
 
                     return;
                 }
+                case 61551: // Toy Train Set
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    int soundId = 0;
+                    uint8 gender = unitTarget->getGender();
+                    switch (unitTarget->getRace())
+                    {
+                        case RACE_BLOODELF: soundId = (gender == GENDER_MALE? 9672 : 9644); break;
+                        case RACE_DRAENEI: soundId = (gender == GENDER_MALE? 9722 : 9697); break;
+                        case RACE_DWARF: soundId = (gender == GENDER_MALE? 7636 : 7637); break;
+                        case RACE_GNOME: soundId = (gender == GENDER_MALE? 7641 : 7640); break;
+                        case RACE_HUMAN: soundId = (gender == GENDER_MALE? 7634 : 7635); break;
+                        case RACE_NIGHTELF: soundId = (gender == GENDER_MALE? 7643 : 7642); break;
+                        case RACE_ORC: soundId = (gender == GENDER_MALE? 7638 : 7639); break;
+                        case RACE_TAUREN: soundId = (gender == GENDER_MALE? 7646 : 7647); break;
+                        case RACE_TROLL: soundId = (gender == GENDER_MALE? 7648 : 7649); break;
+                        case RACE_UNDEAD: soundId = (gender == GENDER_MALE? 7644 : 7645); break;
+                    }
+
+                    unitTarget->HandleEmote(EMOTE_ONESHOT_TRAIN);
+                    unitTarget->PlayDistanceSound(soundId);
+
+                    return;
+                }
                 case 62428: // Load into Catapult
                 {
                     if (!unitTarget)
@@ -9876,13 +9958,6 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!unitTarget)
                         return;
                     unitTarget->RemoveAurasDueToSpell(m_spellInfo->EffectBasePoints[eff_idx]);
-                    return;
-                }
-                case 62168:									// Algalon - Black Hole Damage
-                {
-                    if (!unitTarget)
-                        return;
-                    unitTarget->CastSpell(unitTarget, 62169, true);
                     return;
                 }
                 /*  Feanor: CHECK LATER
