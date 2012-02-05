@@ -93,6 +93,7 @@ World::World()
     m_ShutdownTimer = 0;
     m_gameTime=time(NULL);
     m_startTime=m_gameTime;
+    m_updateTime = 0;
     m_maxActiveSessionCount = 0;
     m_maxQueuedSessionCount = 0;
     m_NextDailyQuestReset = 0;
@@ -1487,6 +1488,8 @@ void World::DetectDBCLang()
 /// Update the World !
 void World::Update(uint32 diff)
 {
+    m_updateTime = diff;
+
     ///- Update the different timers
     for(int i = 0; i < WUPDATE_COUNT; ++i)
     {
