@@ -531,7 +531,7 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     case 65795: case 67238: case 67239: case 67240:     // Unleashed Light
                     {
                         // dont do anything if the player doesnt have Light Essence buff
-                        if (unitTarget && unitTarget->HasAura(65686))
+                        if (unitTarget && (unitTarget->HasAura(65686) || unitTarget->HasAura(67222) || unitTarget->HasAura(67223) || unitTarget->HasAura(67224)))
                         {
                             unitTarget->CastSpell(unitTarget, 67604, true);
                             if (roll_chance_i(2))
@@ -546,7 +546,7 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     case 65808: case 67172: case 67173: case 67174:     // Unleashed Dark
                     {
                         // dont do anything if the player doesnt have Dark Essence buff
-                        if (unitTarget && unitTarget->HasAura(65684))
+                        if (unitTarget && (unitTarget->HasAura(65684) || unitTarget->HasAura(67176) || unitTarget->HasAura(67177) || unitTarget->HasAura(67178)))
                         {
                             unitTarget->CastSpell(unitTarget, 67604, true);
                             if (roll_chance_i(2))
