@@ -511,6 +511,20 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         damage = unitTarget->GetMaxHealth() / 10;
                         break;
                     }
+                    case 64412:                                 // Algalon Phase Punch
+                    {
+                        if (!unitTarget)
+                            return;
+
+                        // On phase punch, check if stacks is greater than 4, if so phase out with spell 64417
+                        if (SpellAuraHolderPtr holder = unitTarget->GetSpellAuraHolder(64412))
+                            if (holder->GetStackAmount() > 3)
+                            {
+                                unitTarget->RemoveAurasDueToSpell(64412);
+                                unitTarget->CastSpell(unitTarget, 64417, true);
+                            }
+                        return;
+                    }
                     // Light spells (ToC twins)
                     case 65767: case 67274: case 67275: case 67276:     // Light Surge
                     case 66048: case 67203: case 67204: case 67205:     // Light Vortex
@@ -3681,6 +3695,14 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
                     // Spawn cosmic smash target on player when hit by target seeking spell from algalon
                     unitTarget->CastSpell(unitTarget, 62295, true);
                     return;
+                }
+                case 62003:                                 // Algalon - Black Hole Spawn
+                {
+                    if (!unitTarget)
+                        return;
+
+                    // Apply aura which causes black hole phase/1 sec to hostile targets
+                    unitTarget->CastSpell(m_caster, 62185, true);
                 }
                 case 63984:                                 // Hate to Zero (Ulduar - Yogg Saron), if the player teleport into the "brain"
                 {
@@ -9880,46 +9902,6 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     if (!unitTarget)
                         return;
                     unitTarget->RemoveAurasDueToSpell(m_spellInfo->EffectBasePoints[eff_idx]);
-                    return;
-                }
-                case 64412:                                 // Algalon Phase Punch
-                {
-                    if (!unitTarget)
-                        return;
-
-                    unitTarget->MonsterSay("Test", 0, unitTarget);
-                    // On phase punch, check if stacks is greater than 4, if so phase out with spell 64417
-                    if (Aura *phasePunch = unitTarget->GetAura(64412, EFFECT_INDEX_0))
-                        if(phasePunch->GetStackAmount() > 4)
-                        {
-                            unitTarget->RemoveAurasDueToSpell(64412);
-                            unitTarget->CastSpell(unitTarget, 64417, true);
-                        }
-                    return;
-                }
-                case 62003:                                 // Algalon - Black Hole Spawn
-                {
-                    if (!unitTarget)
-                        return;
-
-                    // Apply aura which causes black hole phase/1 sec to hostile targets
-                    unitTarget->CastSpell(m_caster, 62185, true);
-                }
-                case 62168:									// Algalon - Black Hole Damage
-                {
-                    if (!unitTarget)
-                        return;
-                    unitTarget->CastSpell(unitTarget, 62169, true);
-                    return;
-                }
-                case 64122:
-                case 65108:                                 // Algalon - Collapsing start explosion to summon black hole
-                {
-                    if (!unitTarget)
-                        return;
-                    
-                    // Cast Black hole spawn
-                    m_caster->CastSpell(m_caster, 62189, true);
                     return;
                 }
                 /*  Feanor: CHECK LATER
