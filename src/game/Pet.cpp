@@ -378,8 +378,9 @@ void Pet::SavePetToDB(PetSaveMode mode)
 
     if (getPetType() == SUMMON_PET)
     {
-        // save mage water elementals, shaman spirit wolves, priest shadowfiends, DK ghouls
-        if (GetEntry() == 37994 || GetEntry() == 510 || GetEntry() == 29264 || GetEntry() == 19668 || GetEntry() == 26125)
+        // save mage water elementals, shaman spirit wolves, priest shadowfiends, DK ghouls and warlock pets
+        if (GetEntry() == 37994 || GetEntry() == 510 || GetEntry() == 29264 || GetEntry() == 19668 || GetEntry() == 26125 ||
+            GetEntry() == 416 || GetEntry() == 417 || GetEntry() == 1860 || GetEntry() == 1863  || GetEntry() == 17252 )
         {
             mode = PET_SAVE_NOT_IN_SLOT;
             SetNeedSave(true);
