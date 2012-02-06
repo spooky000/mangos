@@ -346,6 +346,7 @@ void BattleGroundSA::StartingEventOpenDoors()
     HandleInteractivity();
     StartTimedAchievement(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 23748);
     SetBGFaction(SA_EVENT_ADD_NPC, 0, (GetDefender() == ALLIANCE ? VEHICLE_FACTION_HORDE : VEHICLE_FACTION_ALLIANCE));
+    SetBGFaction(SA_EVENT_ADD_CANNON, 0, (GetDefender() == ALLIANCE ? VEHICLE_FACTION_ALLIANCE : VEHICLE_FACTION_HORDE));
 }
 
 void BattleGroundSA::RemovePlayer(Player* /*plr*/, ObjectGuid /*guid*/)
@@ -456,6 +457,7 @@ void BattleGroundSA::UpdatePhase()
             if (Player* plr = sObjectMgr.GetPlayer(itr->first))
                 plr->CastSpell(plr, SPELL_PREPARATION, true);
         }
+        SetBGFaction(SA_EVENT_ADD_CANNON, 0, (GetDefender() == ALLIANCE ? VEHICLE_FACTION_ALLIANCE : VEHICLE_FACTION_HORDE));
         HandleInteractivity();
     }
 
@@ -478,7 +480,6 @@ void BattleGroundSA::UpdatePhase()
     SpawnEvent(SA_EVENT_ADD_CANNON, 0, true);
     SpawnEvent(SA_EVENT_ADD_RELIC, (GetDefender() == ALLIANCE) ? 2 : 1, true);
     MakeInteractive(SA_EVENT_ADD_RELIC, (GetDefender() == ALLIANCE) ? 2 : 1, false);
-    SetBGFaction(SA_EVENT_ADD_CANNON, 0, (GetDefender() == ALLIANCE ? VEHICLE_FACTION_ALLIANCE : VEHICLE_FACTION_HORDE));
 
     // spawning gate sigils
     for (uint8 i = SA_EVENT_ADD_GREEN_SIGIL; i <= SA_EVENT_ADD_YELLOW_SIGIL; ++i)
