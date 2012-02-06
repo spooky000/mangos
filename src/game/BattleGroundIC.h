@@ -221,11 +221,12 @@ const uint32 BG_IC_GraveyardIds[7] = {1480, 1481, 1482, 1485, 1486, 1483, 1484};
 enum BG_IC_Events
 {
     IC_EVENT_ADD_TELEPORT       = 7,  // base teleports
-    IC_EVENT_ADD_VEH            = 8,  // keep cannons
+    IC_EVENT_ADD_CANNON_A       = 8,  // alliance keep cannons
     IC_EVENT_ADD_A_GUARDS       = 9,
     IC_EVENT_ADD_H_GUARDS       = 10,
     IC_EVENT_ADD_A_BOSS         = 11,
     IC_EVENT_ADD_H_BOSS         = 12,
+    IC_EVENT_ADD_CANNON_H       = 13,  // horde keep cannons
     // IC_EVENT_BOSS_A 251 - alli boss gate
     // IC_EVENT_BOSS_H 252 - horde boss gate
 };

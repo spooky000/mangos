@@ -97,7 +97,8 @@ void BattleGroundIC::Reset()
     m_Nodes[BG_IC_NODE_H_KEEP] = BG_IC_NODE_STATUS_HORDE_OCCUPIED;
 
     SpawnEvent(IC_EVENT_ADD_TELEPORT, 0, true);
-    SpawnEvent(IC_EVENT_ADD_VEH, 0, true);
+    SpawnEvent(IC_EVENT_ADD_CANNON_A, 0, true);
+    SpawnEvent(IC_EVENT_ADD_CANNON_H, 0, true);
     SpawnEvent(IC_EVENT_BOSS_H, 0, true);
     SpawnEvent(IC_EVENT_BOSS_A, 0, true);
 
@@ -211,6 +212,10 @@ void BattleGroundIC::Update(uint32 diff)
                     PlaySoundToAll(BG_IC_SOUND_NODE_CAPTURED_HORDE);
                 }
 
+                // set vehicle faction
+                SetBGFaction(node, (teamIndex == BG_TEAM_ALLIANCE ? BG_IC_NODE_STATUS_ALLY_OCCUPIED : BG_IC_NODE_STATUS_HORDE_OCCUPIED), 
+                    teamIndex == BG_TEAM_ALLIANCE ? VEHICLE_FACTION_ALLIANCE : VEHICLE_FACTION_HORDE);
+
                 // gunship starting
                 if (node == BG_IC_NODE_HANGAR)
                     (teamIndex == BG_TEAM_ALLIANCE ? gunshipAlliance : gunshipHorde)->BuildStartMovePacket(GetBgMap());
@@ -248,6 +253,9 @@ void BattleGroundIC::StartingEventOpenDoors()
 
     // make teleporters clickable
     MakeInteractive(IC_EVENT_ADD_TELEPORT, 0, true);
+
+    SetBGFaction(IC_EVENT_ADD_CANNON_A, 0, VEHICLE_FACTION_ALLIANCE);
+    SetBGFaction(IC_EVENT_ADD_CANNON_H, 0, VEHICLE_FACTION_HORDE);
 }
 
 void BattleGroundIC::AddPlayer(Player *plr)
@@ -284,10 +292,12 @@ void BattleGroundIC::HandleAreaTrigger(Player * Source, uint32 Trigger)
 
     switch (Trigger)
     {
+        // horde keep
         case 5535:
             if (Source->GetTeam() == ALLIANCE && hOpen == false)
                 Source->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 68502);
             break;
+        // alliance keep
         case 5555:
             if (Source->GetTeam() == HORDE && aOpen == false)
                 Source->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, 68502);
