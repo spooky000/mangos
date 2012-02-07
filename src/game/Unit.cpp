@@ -10189,7 +10189,7 @@ bool Unit::SelectHostileTarget()
                     m_HostileRefManager.deleteReference(target);
                     m_ThreatManager.modifyThreatPercent(target, -101);
 
-                    _removeAttacker(target);
+                    //_removeAttacker(target);
                 }
 
                 return false;
