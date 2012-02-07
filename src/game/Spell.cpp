@@ -1403,8 +1403,8 @@ void Spell::DoSpellHitOnUnit(Unit *unit, uint32 effectMask)
             if (!(m_spellInfo->AttributesEx & (SPELL_ATTR_EX_NOT_BREAK_STEALTH | SPELL_ATTR_EX_NO_THREAT)) &&
                 !(m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_UNK28))
             {
-                // hacky mass dispel and Storm Earth and Fire's Earthbind Totem root exception
-                if (!m_spellInfo->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_MASS_DISPEL>() && m_spellInfo->Id != 64695)
+                // hacky mass dispel exception
+                if (!m_spellInfo->IsFitToFamily<SPELLFAMILY_PRIEST, CF_PRIEST_MASS_DISPEL>())
                     unit->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
             }
 
