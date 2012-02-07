@@ -83,6 +83,8 @@ void TargetedMovementGeneratorMedium<T,D>::_setTargetLocation(T &owner)
                         && owner.hasUnitState(UNIT_STAT_FOLLOW));
     i_path->calculate(x, y, z, forceDest);
     if(i_path->getPathType() & PATHFIND_NOPATH)
+
+    if (!&owner)
         return;
 
     D::_addUnitStateMove(owner);
