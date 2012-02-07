@@ -2717,7 +2717,7 @@ void Unit::CalculateDamageAbsorbAndResist(Unit *pCaster, SpellSchoolMask schoolM
             {
                 pCaster->SendSpellNonMeleeDamageLog(caster, (*i)->GetSpellProto()->Id, splitted, schoolMask, splitted_absorb, 0, false, 0, false);
                 CleanDamage cleanDamage = CleanDamage(splitted, 0, BASE_ATTACK, MELEE_HIT_NORMAL);
-                pCaster->DealDamage(caster, splitted, &cleanDamage, DIRECT_DAMAGE, schoolMask, (*i)->GetSpellProto(), false);
+                pCaster->DealDamage(caster, splitted, &cleanDamage, damagetype, schoolMask, (*i)->GetSpellProto(), false);
             }
             else
                 pCaster->SendSpellMiss(caster, (*i)->GetId(), SPELL_MISS_IMMUNE);
@@ -2748,7 +2748,7 @@ void Unit::CalculateDamageAbsorbAndResist(Unit *pCaster, SpellSchoolMask schoolM
             {
                 pCaster->SendSpellNonMeleeDamageLog(caster, (*i)->GetSpellProto()->Id, splitted, schoolMask, split_absorb, 0, false, 0, false);
                 CleanDamage cleanDamage = CleanDamage(splitted, 0, BASE_ATTACK, MELEE_HIT_NORMAL);
-                pCaster->DealDamage(caster, splitted, &cleanDamage, DIRECT_DAMAGE, schoolMask, (*i)->GetSpellProto(), false);
+                pCaster->DealDamage(caster, splitted, &cleanDamage, damagetype, schoolMask, (*i)->GetSpellProto(), false);
             }
             else pCaster->SendSpellMiss(caster, (*i)->GetId(), SPELL_MISS_IMMUNE);
         }
