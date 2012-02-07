@@ -617,7 +617,7 @@ class MANGOS_DLL_SPEC ChatHandler
         bool HandleQuitCommand(char* args);
         bool HandleShowGearScoreCommand(char* args);
 
-        // mmap
+        // mmaps
         bool HandleMmapPathCommand(char* args);
         bool HandleMmapLocCommand(char* args);
         bool HandleMmapLoadedTilesCommand(char* args);
