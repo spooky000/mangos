@@ -261,7 +261,7 @@ void PathFinder::BuildPolyPath(const Vector3 &startPos, const Vector3 &endPos)
         {
             // here to carch few bugs
             MANGOS_ASSERT(m_pathPolyRefs[pathStartIndex] != INVALID_POLYREF);
-            
+
             if (m_pathPolyRefs[pathStartIndex] == startPoly)
             {
                 startPolyFound = true;
@@ -445,7 +445,7 @@ void PathFinder::BuildPointPath(const float *startPoint, const float *endPoint)
         (!(m_type & PATHFIND_NORMAL) || !inRange(getEndPosition(), getActualEndPosition(), 1.0f, 1.0f)))
     {
         // we may want to keep partial subpath
-        if(dist3DSqr(getActualEndPosition(), getEndPosition()) < 
+        if(dist3DSqr(getActualEndPosition(), getEndPosition()) <
             0.3f * dist3DSqr(getStartPosition(), getEndPosition()))
         {
             setActualEndPosition(getEndPosition());

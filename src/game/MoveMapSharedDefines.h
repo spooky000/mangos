@@ -50,3 +50,5 @@ enum NavTerrain
     NAV_UNUSED4 = 0x80
     // we only have 8 bits
 };
+
+#endif  // _MOVE_MAP_SHARED_DEFINES_H
