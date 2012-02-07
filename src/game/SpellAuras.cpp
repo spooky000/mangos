@@ -2542,13 +2542,16 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                             ((Player*)target)->removeSpell(63680);
                         return;
                     case 67590:                                 // Powering Up
+                    case 67602:
+                    case 67603:
+                    case 67604:
                         if (GetStackAmount() == 100)
                         {
                             // Light Essence, cast Empowered Light
-                            if (target->HasAura(65686))
+                            if (target->HasAura(65686) || target->HasAura(67222) || target->HasAura(67223) || target->HasAura(67224))
                                 target->CastSpell(target, 67218, true);
                             // Dark Essence, cast Empowered Dark
-                            else if (target->HasAura(65684))
+                            else if (target->HasAura(65684) || target->HasAura(67176) || target->HasAura(67177) || target->HasAura(67178))
                                 target->CastSpell(target, 67215, true);
                             GetHolder()->SetStackAmount(0);
                         }
