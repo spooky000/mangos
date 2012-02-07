@@ -25,8 +25,6 @@
 #include "movement/MoveSplineInit.h"
 #include "movement/MoveSpline.h"
 
-#include <cmath>
-
 //-----------------------------------------------//
 template<class T, typename D>
 void TargetedMovementGeneratorMedium<T,D>::_setTargetLocation(T &owner)
