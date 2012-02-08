@@ -592,11 +592,14 @@ bool Unit::CanReachWithMeleeAttack(Unit* pVictim, float flat_mod /*= 0.0f*/) con
 
 void Unit::GetRandomContactPoint(const Unit* obj, float &x, float &y, float &z, float distance2dMin, float distance2dMax) const
 {
-    int32 attacker_number = GetMap()->GetAttackersFor(GetObjectGuid()).size();
-    if (attacker_number > 0)
-        --attacker_number;
+    int32 attackers = GetMap()->GetAttackersFor(GetObjectGuid()).size();
+    if (attackers > 0)
+        --attackers;
 
-    float angle = ((attacker_number) ? (frand(-0.7f, 0.7f)) : 0);
+    if (attackers >= 7)
+        attackers = 7;
+
+    float angle = ((attackers) ? (frand(-0.1f * attackers, 0.1f * attackers)) : 0);
     GetNearPoint(obj, x, y, z, obj->GetCombatReach(), distance2dMin + (distance2dMax - distance2dMin) * (float)rand_norm()
         , GetAngle(obj) + angle);
 }
