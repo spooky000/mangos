@@ -213,7 +213,7 @@ ChatCommand * ChatHandler::getCommandTable()
         { "rename",         SEC_GAMEMASTER,     true,  &ChatHandler::HandleCharacterRenameCommand,     "", NULL },
         { "reputation",     SEC_GAMEMASTER,     true,  &ChatHandler::HandleCharacterReputationCommand, "", NULL },
         { "titles",         SEC_GAMEMASTER,     true,  &ChatHandler::HandleCharacterTitlesCommand,     "", NULL },
-        { "whisper",        SEC_CONSOLE,        true,  &ChatHandler::HandleCharacterWhisperCommand,    "", NULL },
+        { "whisper",        SEC_ADMINISTRATOR,  true,  &ChatHandler::HandleCharacterWhisperCommand,    "", NULL },
         { NULL,             0,                  false, NULL,                                           "", NULL }
     };
 
