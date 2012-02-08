@@ -526,31 +526,83 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                         return;
                     }
                     // Light spells (ToC twins)
-                    case 65767: case 67274: case 67275: case 67276:     // Light Surge
                     case 66048: case 67203: case 67204: case 67205:     // Light Vortex
                     case 65795: case 67238: case 67239: case 67240:     // Unleashed Light
                     {
                         // dont do anything if the player doesnt have Light Essence buff
                         if (unitTarget && (unitTarget->HasAura(65686) || unitTarget->HasAura(67222) || unitTarget->HasAura(67223) || unitTarget->HasAura(67224)))
                         {
-                            unitTarget->CastSpell(unitTarget, 67604, true);
-                            if (roll_chance_i(2))
-                                // 2% chance to give the speed buff
+                            uint32 chargeAmount = m_spellInfo->EffectBasePoints[0] / 1000;
+                            uint32 poweringId;   // Powering up debuff id
+
+                            switch (m_caster->GetMap()->GetDifficulty())
+                            {
+                                case RAID_DIFFICULTY_10MAN_NORMAL:
+                                    poweringId = 67590;
+                                    break;
+                                case RAID_DIFFICULTY_25MAN_NORMAL:
+                                    poweringId = 67602;
+                                    break;
+                                case RAID_DIFFICULTY_10MAN_HEROIC:
+                                    poweringId = 67603;
+                                    break;
+                                case RAID_DIFFICULTY_25MAN_HEROIC:
+                                    poweringId = 67604;
+                                    break;
+                            }
+
+                            if (SpellAuraHolderPtr holder = unitTarget->GetSpellAuraHolder(poweringId))
+                                holder->ModStackAmount(chargeAmount);
+                            else
+                            {
+                                unitTarget->CastSpell(unitTarget, poweringId, true);
+                                if (SpellAuraHolderPtr holder = unitTarget->GetSpellAuraHolder(poweringId))
+                                    holder->SetStackAmount(chargeAmount);
+                            }
+
+                            if (roll_chance_i(10))
+                                // 10% chance to give the speed buff
                                 unitTarget->CastSpell(unitTarget, 67243, true);
                         }
                         break;
                     }
                     // Dark spells (ToC twins)
-                    case 65769: case 67265: case 67266: case 67267:     // Dark Surge
                     case 66059: case 67155: case 67156: case 67157:     // Dark Vortex
                     case 65808: case 67172: case 67173: case 67174:     // Unleashed Dark
                     {
                         // dont do anything if the player doesnt have Dark Essence buff
                         if (unitTarget && (unitTarget->HasAura(65684) || unitTarget->HasAura(67176) || unitTarget->HasAura(67177) || unitTarget->HasAura(67178)))
                         {
-                            unitTarget->CastSpell(unitTarget, 67604, true);
-                            if (roll_chance_i(2))
-                                // 2% chance to give the speed buff
+                            uint32 chargeAmount = m_spellInfo->EffectBasePoints[0] / 1000;
+                            uint32 poweringId;
+
+                            switch (m_caster->GetMap()->GetDifficulty())
+                            {
+                                case RAID_DIFFICULTY_10MAN_NORMAL:
+                                    poweringId = 67590;
+                                    break;
+                                case RAID_DIFFICULTY_25MAN_NORMAL:
+                                    poweringId = 67602;
+                                    break;
+                                case RAID_DIFFICULTY_10MAN_HEROIC:
+                                    poweringId = 67603;
+                                    break;
+                                case RAID_DIFFICULTY_25MAN_HEROIC:
+                                    poweringId = 67604;
+                                    break;
+                            }
+
+                            if (SpellAuraHolderPtr holder = unitTarget->GetSpellAuraHolder(poweringId))
+                                holder->ModStackAmount(chargeAmount);
+                            else
+                            {
+                                unitTarget->CastSpell(unitTarget, poweringId, true);
+                                if (SpellAuraHolderPtr holder = unitTarget->GetSpellAuraHolder(poweringId))
+                                    holder->SetStackAmount(chargeAmount);
+                            }
+
+                            if (roll_chance_i(10))
+                                // 10% chance to give the speed buff
                                 unitTarget->CastSpell(unitTarget, 67243, true);
                         }
                         break;
