@@ -7175,3 +7175,8 @@ bool ChatHandler::HandleShowGearScoreCommand(char *args)
 
     return true;
 }
+
+bool ChatHandler::HandleShowMapCount(char *args)
+{
+    PSendSysMessage("Maps count: %u", sMapMgr.Maps().size());
+}
