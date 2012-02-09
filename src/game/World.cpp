@@ -1504,7 +1504,10 @@ void World::Update(uint32 diff)
 
     /// Handle weekly quests reset time
     if (m_gameTime > m_NextWeeklyQuestReset)
+    {
         ResetWeeklyQuests();
+        SelectRandomWeeklyQuest();
+    }
 
     /// Handle monthly quests reset time
     if (m_gameTime > m_NextMonthlyQuestReset)
@@ -2219,6 +2222,22 @@ void World::ResetMonthlyQuests()
             itr->second->GetPlayer()->ResetMonthlyQuestStatus();
 
     SetMonthlyQuestResetTime(false);
+}
+
+void World::SelectRandomWeeklyQuest()
+{
+
+    //Delay all events
+    for(uint8 eventId = 0; eventId < MAX_WEEKLY_RAID_EVENT; ++eventId)
+    {
+        sGameEventMgr.StopEvent(WEEKLY_SARTHARION+eventId);
+        WorldDatabase.PExecute("UPDATE game_event SET occurence = 5184000 WHERE entry = %u", WEEKLY_SARTHARION + eventId);
+    }
+
+    //Start new event for Weekly Raid quest
+    uint8 RandomWeekly = urand(0, MAX_WEEKLY_RAID_EVENT-1);
+    sGameEventMgr.StartEvent(WEEKLY_SARTHARION + RandomWeekly);
+    WorldDatabase.PExecute("UPDATE game_event SET occurence = 1400 WHERE entry = %u", WEEKLY_SARTHARION + RandomWeekly);
 }
 
 void World::SetPlayerLimit( int32 limit, bool needUpdate )

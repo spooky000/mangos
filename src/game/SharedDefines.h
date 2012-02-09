@@ -2868,6 +2868,24 @@ enum ArenaType
     ARENA_TYPE_5v5          = 5
 };
 
+enum WeeklyRandomQuest
+{
+    WEEKLY_SARTHARION = 100,
+    WEEKLY_ANUBREKHAN,
+    WEEKLY_NOTH_THE_PLAGUEBRINGER,
+    WEEKLY_INSTRUCTOR_RAZUVIOUS,
+    WEEKLY_PATCHWERK,
+    WEEKLY_MALYGOS,
+    WEEKLY_FLAME_LEVIATHAN,
+    WEEKLY_RAZORSCALE,
+    WEEKLY_IGNIS_THE_FURNACE_MASTER,
+    WEEKLY_XT002_DECONSTRUCTOR,
+    WEEKLY_LORD_JARAXXUS,
+    WEEKLY_MARROWGAR,
+};
+
+#define MAX_WEEKLY_RAID_EVENT   12
+
 inline bool IsArenaTypeValid(ArenaType type) { return type == ARENA_TYPE_2v2 || type == ARENA_TYPE_3v3 || type == ARENA_TYPE_5v5; }
 
 enum MailResponseType
