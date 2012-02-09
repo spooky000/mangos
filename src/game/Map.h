@@ -54,6 +54,7 @@ class BattleGroundPersistentState;
 struct ScriptInfo;
 class BattleGround;
 class GridMap;
+namespace MaNGOS { struct ObjectUpdater; }
 
 // GCC have alternative #pragma pack(N) syntax and old gcc version not support pack(push,N), also any gcc version not support it at some platform
 #if defined( __GNUC__ )
@@ -121,6 +122,7 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
 
         void DeleteFromWorld(Player* player);                   // player object will deleted at call
 
+        void VisitNearbyCellsOf(WorldObject* obj, TypeContainerVisitor<MaNGOS::ObjectUpdater, GridTypeMapContainer> &gridVisitor, TypeContainerVisitor<MaNGOS::ObjectUpdater, WorldTypeMapContainer> &worldVisitor);
         virtual void Update(const uint32&);
 
         void MessageBroadcast(Player *, WorldPacket *, bool to_self);
