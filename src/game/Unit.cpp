@@ -9494,6 +9494,8 @@ bool Unit::isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, boo
                 if((*iter)->GetMiscValue() == uint8(invisible ? DISPEL_INVISIBILITY : DISPEL_STEALTH))
                     return true;
 
+            if (u->GetEntry() == 1863)
+                return true;
             // else apply detecting check for stealth
         }
 
