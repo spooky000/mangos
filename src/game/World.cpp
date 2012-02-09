@@ -1500,6 +1500,7 @@ void World::Update(uint32 diff)
     {
         ResetDailyQuests();
         ResetRandomBG();
+        SelectRandomTrashDaily();
     }
 
     /// Handle weekly quests reset time
@@ -2230,14 +2231,29 @@ void World::SelectRandomWeeklyQuest()
     //Delay all events
     for(uint8 eventId = 0; eventId < MAX_WEEKLY_RAID_EVENT; ++eventId)
     {
-        sGameEventMgr.StopEvent(WEEKLY_SARTHARION+eventId);
+        sGameEventMgr.StopEvent(WEEKLY_SARTHARION + eventId);
         WorldDatabase.PExecute("UPDATE game_event SET occurence = 5184000 WHERE entry = %u", WEEKLY_SARTHARION + eventId);
     }
 
     //Start new event for Weekly Raid quest
-    uint8 RandomWeekly = urand(0, MAX_WEEKLY_RAID_EVENT-1);
+    uint8 RandomWeekly = urand(0, MAX_WEEKLY_RAID_EVENT - 1);
     sGameEventMgr.StartEvent(WEEKLY_SARTHARION + RandomWeekly);
     WorldDatabase.PExecute("UPDATE game_event SET occurence = 1400 WHERE entry = %u", WEEKLY_SARTHARION + RandomWeekly);
+}
+
+void World::SelectRandomTrashDaily()
+{
+    //Delay all events
+    for(uint8 eventId = 0; eventId < MAX_TF_DAILY_EVENT; ++eventId)
+    {
+        sGameEventMgr.StopEvent(TF_DAILY_CENTRIFUGE + eventId);
+        WorldDatabase.PExecute("UPDATE game_event SET occurence = 5184000 WHERE entry = %u", TF_DAILY_CENTRIFUGE + eventId);
+    }
+
+    //Start new event for heroic trash daily
+    uint8 RandomWeekly = urand(0, TF_DAILY_CENTRIFUGE - 1);
+    sGameEventMgr.StartEvent(TF_DAILY_CENTRIFUGE + RandomWeekly);
+    WorldDatabase.PExecute("UPDATE game_event SET occurence = 1400 WHERE entry = %u", TF_DAILY_CENTRIFUGE + RandomWeekly);
 }
 
 void World::SetPlayerLimit( int32 limit, bool needUpdate )

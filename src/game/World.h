@@ -633,6 +633,7 @@ class World
         void ResetMonthlyQuests();
         void ResetRandomBG();
 
+        void SelectRandomTrashDaily();
         void SelectRandomWeeklyQuest();
 
     private:

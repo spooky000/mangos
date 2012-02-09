@@ -2868,6 +2868,7 @@ enum ArenaType
     ARENA_TYPE_5v5          = 5
 };
 
+// Weekly Raid quests
 enum WeeklyRandomQuest
 {
     WEEKLY_SARTHARION = 100,
@@ -2884,7 +2885,17 @@ enum WeeklyRandomQuest
     WEEKLY_MARROWGAR,
 };
 
+// Heroic dungeon trash dailies
+enum RandomTimearForesees
+{
+    TF_DAILY_CENTRIFUGE         = 120,
+    TF_DAILY_YMIRON,
+    TF_DAILY_INFINITE,
+    TF_DAILY_TITANIUM,
+};
+
 #define MAX_WEEKLY_RAID_EVENT   12
+#define MAX_TF_DAILY_EVENT      4
 
 inline bool IsArenaTypeValid(ArenaType type) { return type == ARENA_TYPE_2v2 || type == ARENA_TYPE_3v3 || type == ARENA_TYPE_5v5; }
 
