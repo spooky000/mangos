@@ -2010,6 +2010,10 @@ void Player::RewardRage( uint32 damage, uint32 weaponSpeedHitFactor, bool attack
 
     float rageconversion = float((0.0091107836 * getLevel()*getLevel())+3.225598133*getLevel())+4.2652911f;
 
+    // Rage calculation mismatch (based on wowwiki and other pages calculation)
+    if(getLevel() == 80)
+        rageconversion = 453.3f
+
     if(attacker)
     {
         addRage = ((damage/rageconversion*7.5f + weaponSpeedHitFactor)/2.0f);
