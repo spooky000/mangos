@@ -8739,6 +8739,9 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
             break;
         }
         case 66242: // Burning Inferno (ToC: Lord Jaraxxus - target only players)
+        case 67059:
+        case 67060:
+        case 67061:
         {
             UnitList tmpUnitMap;
             FillAreaTargets(tmpUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_FRIENDLY);
