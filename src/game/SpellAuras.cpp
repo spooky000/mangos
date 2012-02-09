@@ -6088,6 +6088,26 @@ void Aura::HandlePeriodicTriggerSpell(bool apply, bool /*Real*/)
                 }
 
                 return;
+            case 66237:                                     // Incinerate Flesh (ToC Lord Jaraxxus)
+                if (m_removeMode == AURA_REMOVE_BY_EXPIRE)
+                    target->CastSpell(target, 66242, true);
+
+                return;
+            case 67049:                                     // Incinerate Flesh (ToC Lord Jaraxxus)
+                if (m_removeMode == AURA_REMOVE_BY_EXPIRE)
+                    target->CastSpell(target, 67059, true);
+
+                return;
+            case 67050:                                     // Incinerate Flesh (ToC Lord Jaraxxus)
+                if (m_removeMode == AURA_REMOVE_BY_EXPIRE)
+                    target->CastSpell(target, 67060, true);
+
+                return;
+            case 67051:                                     // Incinerate Flesh (ToC Lord Jaraxxus)
+                if (m_removeMode == AURA_REMOVE_BY_EXPIRE)
+                    target->CastSpell(target, 67061, true);
+
+                return;
             case 70405:                                     // Mutated Transformation (Putricide)
             case 72508:
             case 72509:
