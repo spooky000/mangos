@@ -2251,7 +2251,7 @@ void World::SelectRandomTrashDaily()
     }
 
     //Start new event for heroic trash daily
-    uint8 RandomWeekly = urand(0, TF_DAILY_CENTRIFUGE - 1);
+    uint8 RandomWeekly = urand(0, MAX_TF_DAILY_EVENT - 1);
     sGameEventMgr.StartEvent(TF_DAILY_CENTRIFUGE + RandomWeekly);
     WorldDatabase.PExecute("UPDATE game_event SET occurence = 1400 WHERE entry = %u", TF_DAILY_CENTRIFUGE + RandomWeekly);
 }
