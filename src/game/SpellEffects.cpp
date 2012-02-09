@@ -9830,7 +9830,7 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     return;
                 }
                 // Lightwell
-                case 60123: 
+                case 60123:
                 {
                    if (m_caster->GetTypeId() != TYPEID_UNIT)
                        return;
