@@ -2012,7 +2012,7 @@ void Player::RewardRage( uint32 damage, uint32 weaponSpeedHitFactor, bool attack
 
     // Rage calculation mismatch (based on wowwiki and other pages calculation)
     if(getLevel() == 80)
-        rageconversion = 453.3f
+        rageconversion = 453.3f;
 
     if(attacker)
     {
