@@ -135,6 +135,10 @@ void Totem::UnSummon()
                 owner->RemoveAurasDueToSpell(spellId);
         }
 
+        // Remove Sentry Totem aura on totem unsummon
+        if (GetEntry() == SENTRY_TOTEM_ENTRY)
+            owner->RemoveAurasDueToSpell(6495);
+
         //remove aura all party members too
         if (owner->GetTypeId() == TYPEID_PLAYER)
         {
