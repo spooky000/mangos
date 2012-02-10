@@ -8399,6 +8399,11 @@ uint32 Unit::SpellHealingBonusTaken(Unit *pCaster, SpellEntry const *spellProto,
     // Healing taken percent
     float  TakenTotalMod = GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALING_PCT);
 
+    // some spells shouldnt be affected by healing debuffs
+    if (spellProto->Id == 65875 || spellProto->Id == 65876 || spellProto->Id == 67308 || spellProto->Id == 67304 ||     // Twin's pact
+        spellProto->Id == 66118 || spellProto->Id == 67630 || spellProto->Id == 68646 || spellProto->Id == 68647)       // Leeching Swarm
+        TakenTotalMod = 1;
+
     // No heal amount for this class spells
     if (spellProto->DmgClass == SPELL_DAMAGE_CLASS_NONE)
     {
