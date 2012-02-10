@@ -38,7 +38,6 @@ void WorldSession::HandleAutostoreLootItemOpcode( WorldPacket & recv_data )
     ObjectGuid lguid = player->GetLootGuid();
     Loot    *loot;
     uint8    lootSlot;
-    Item* pItem = NULL;
 
     recv_data >> lootSlot;
 
@@ -60,7 +59,7 @@ void WorldSession::HandleAutostoreLootItemOpcode( WorldPacket & recv_data )
         }
         case HIGHGUID_ITEM:
         {
-            pItem = player->GetItemByGuid( lguid );
+            Item* pItem = player->GetItemByGuid(lguid);
 
             if (!pItem || !pItem->HasGeneratedLoot())
             {

@@ -16606,6 +16606,9 @@ bool Player::isAllowedToLoot(Creature* creature)
     if (!creature->HasFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_TAPPED))
         return false;
 
+    if (HasPendingBind())
+        return false;
+
     if (Player* recipient = creature->GetLootRecipient())
     {
         if (recipient == this)
