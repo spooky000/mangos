@@ -6362,6 +6362,16 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
                     }
                     return;
                 }
+                case 66118:                                 // Leeching Swarm (ToC - Anub'arak)
+                case 67630:
+                case 68646:
+                case 68647:
+                {
+                    if (target->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    break;
+                }
                 case 73001:                                   // Shadow Prison
                 {
                     if (target)
