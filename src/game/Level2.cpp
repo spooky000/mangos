@@ -5461,7 +5461,7 @@ bool ChatHandler::HandleArenaQueueCommand(char* args)
 
     GroupJoinBattlegroundResult err = (GroupJoinBattlegroundResult)bg->GetTypeID();
 
-        uint32 avgTime = 0;
+    uint32 avgTime = 0;
 
     if(err > 0)
     {
