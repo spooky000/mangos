@@ -9483,6 +9483,11 @@ void ObjectMgr::LoadGCNews()
     sLog.outString( ">> Loaded %d GC News Data ", count );
 }
 
+void ObjectMgr::CleanupItemSoulboundTrade()
+{
+    WorldDatabase.Query("DELETE t2 FROM item_soulbound_trade_data AS t2 left outer join item_instance AS t1 on t1.guid = t2.itemGuid where  t1.guid IS NULL");
+}
+
 CreatureInfo const* GetCreatureTemplateStore(uint32 entry)
 {
     return sCreatureStorage.LookupEntry<CreatureInfo>(entry);

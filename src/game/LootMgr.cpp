@@ -472,35 +472,56 @@ bool Loot::FillLoot(uint32 loot_id, LootStore const& store, Player* loot_owner, 
     tab->Process(*this, store,store.IsRatesAllowed ());     // Processing is done there, callback via Loot::AddItem()
 
     // Setting access rights for group loot case
-    Group * pGroup=loot_owner->GetGroup();
-    if(!personal && pGroup)
+    Group* pGroup = loot_owner->GetGroup();
+    if (!personal && pGroup)
     {
-        for(GroupReference *itr = pGroup->GetFirstMember(); itr != NULL; itr = itr->next())
-            if(Player* pl = itr->getSource())
-                FillNotNormalLootFor(pl);
+        for (GroupReference *itr = pGroup->GetFirstMember(); itr != NULL; itr = itr->next())
+            if (Player* player = itr->getSource())
+                FillNotNormalLootFor(player, player->IsAtGroupRewardDistance(loot_owner));
     }
     // ... for personal loot
     else
-        FillNotNormalLootFor(loot_owner);
+        FillNotNormalLootFor(loot_owner, true);
 
     return true;
 }
 
-void Loot::FillNotNormalLootFor(Player* pl)
+void Loot::FillNotNormalLootFor(Player* player, bool presentAtLooting)
 {
-    uint32 plguid = pl->GetGUIDLow();
+    uint32 plguid = player->GetGUIDLow();
 
     QuestItemMap::const_iterator qmapitr = m_playerQuestItems.find(plguid);
     if (qmapitr == m_playerQuestItems.end())
-        FillQuestLoot(pl);
+        FillQuestLoot(player);
 
     qmapitr = m_playerFFAItems.find(plguid);
     if (qmapitr == m_playerFFAItems.end())
-        FillFFALoot(pl);
+        FillFFALoot(player);
 
     qmapitr = m_playerNonQuestNonFFAConditionalItems.find(plguid);
     if (qmapitr == m_playerNonQuestNonFFAConditionalItems.end())
-        FillNonQuestNonFFAConditionalLoot(pl);
+        FillNonQuestNonFFAConditionalLoot(player);
+
+    // if not auto-processed player will have to come and pick it up manually
+    if (!presentAtLooting)
+        return;
+
+    // Process currency items
+    uint32 max_slot = GetMaxSlotInLootFor(player);
+    LootItem const* item = NULL;
+    uint32 itemsSize = uint32(items.size());
+    for (uint32 i = 0; i < max_slot; ++i)
+    {
+        if (i < items.size())
+            item = &items[i];
+        else
+            item = &m_questItems[i-itemsSize];
+
+        if (!item->is_looted && item->freeforall && item->AllowedForPlayer(player))
+            if (ItemPrototype const* proto = sObjectMgr.GetItemPrototype(item->itemid))
+                if (proto->BagFamily & BAG_FAMILY_MASK_CURRENCY_TOKENS)
+                    player->StoreLootItem(i, this);
+    }
 }
 
 QuestItemList* Loot::FillFFALoot(Player* player)

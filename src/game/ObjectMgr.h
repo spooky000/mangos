@@ -819,6 +819,7 @@ class ObjectMgr
 
         void LoadVehicleAccessories();
         void LoadGCNews();
+        void CleanupItemSoulboundTrade();
 
         void LoadSpellDisabledEntrys();
         bool IsSpellDisabled(uint32 spellid)

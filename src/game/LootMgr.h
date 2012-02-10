@@ -122,7 +122,7 @@ struct LootItem
     LootSlotType GetSlotTypeForSharedLoot(PermissionTypes permission, Player* viewer, bool condition_ok = false) const;
 
     void AddAllowedLooter(Player const* player);
-    AllowedLooterSet* GetAllowedLooters() { return &allowedGUIDs; }
+    const AllowedLooterSet & GetAllowedLooters() const { return allowedGUIDs; }
 };
 
 typedef std::vector<LootItem> LootItemList;
@@ -302,7 +302,7 @@ struct Loot
     uint32 GetMaxSlotInLootFor(Player* player) const;
 
     private:
-        void FillNotNormalLootFor(Player* player);
+        void FillNotNormalLootFor(Player* player, bool presentAtLooting);
         QuestItemList* FillFFALoot(Player* player);
         QuestItemList* FillQuestLoot(Player* player);
         QuestItemList* FillNonQuestNonFFAConditionalLoot(Player* player);

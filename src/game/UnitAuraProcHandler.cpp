@@ -3268,7 +3268,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     return SPELL_AURA_PROC_FAILED;
 
                 Player *player = (Player*)this;
-                for (uint32 i = 0; i < MAX_RUNES; ++i)
+                for (uint8 i = 0; i < MAX_RUNES; ++i)
                 {
                     if (player->GetCurrentRune(i) == RUNE_BLOOD)
                     {
@@ -3301,7 +3301,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     return SPELL_AURA_PROC_FAILED;
 
                 Player *player = (Player*)this;
-                for (uint32 i = 0; i < MAX_RUNES; ++i)
+                for (uint8 i = 0; i < MAX_RUNES; ++i)
                 {
                     RuneType currRune = player->GetCurrentRune(i);
                     if (currRune == RUNE_UNHOLY || currRune == RUNE_FROST)

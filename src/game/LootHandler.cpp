@@ -105,74 +105,7 @@ void WorldSession::HandleAutostoreLootItemOpcode( WorldPacket & recv_data )
         }
     }
 
-    QuestItem *qitem = NULL;
-    QuestItem *ffaitem = NULL;
-    QuestItem *conditem = NULL;
-
-    LootItem *item = loot->LootItemInSlot(lootSlot,player,&qitem,&ffaitem,&conditem);
-
-    if(!item)
-    {
-        player->SendEquipError( EQUIP_ERR_ALREADY_LOOTED, NULL, NULL );
-        return;
-    }
-
-    // questitems use the blocked field for other purposes
-    if (!qitem && item->is_blocked)
-    {
-        player->SendLootRelease(lguid);
-        return;
-    }
-
-    if (pItem)
-        pItem->SetLootState(ITEM_LOOT_CHANGED);
-
-    ItemPosCountVec dest;
-    InventoryResult msg = player->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, item->itemid, item->count );
-    if ( msg == EQUIP_ERR_OK )
-    {
-        AllowedLooterSet* looters = item->GetAllowedLooters();
-        Item * newitem = player->StoreNewItem( dest, item->itemid, true, item->randomPropertyId, (looters->size() > 1) ? looters : NULL);
-
-        if (qitem)
-        {
-            qitem->is_looted = true;
-            //freeforall is 1 if everyone's supposed to get the quest item.
-            if (item->freeforall || loot->GetPlayerQuestItems().size() == 1)
-                player->SendNotifyLootItemRemoved(lootSlot);
-            else
-                loot->NotifyQuestItemRemoved(qitem->index);
-        }
-        else
-        {
-            if (ffaitem)
-            {
-                //freeforall case, notify only one player of the removal
-                ffaitem->is_looted=true;
-                player->SendNotifyLootItemRemoved(lootSlot);
-            }
-            else
-            {
-                //not freeforall, notify everyone
-                if(conditem)
-                    conditem->is_looted=true;
-                loot->NotifyItemRemoved(lootSlot);
-            }
-        }
-
-        //if only one person is supposed to loot the item, then set it to looted
-        if (!item->freeforall)
-            item->is_looted = true;
-
-        --loot->unlootedCount;
-
-        player->SendNewItem(newitem, uint32(item->count), false, false, true);
-        player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_ITEM, item->itemid, item->count);
-        player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_TYPE, loot->loot_type, item->count);
-        player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_EPIC_ITEM, item->itemid, item->count);
-    }
-    else
-        player->SendEquipError( msg, NULL, NULL, item->itemid );
+    player->StoreLootItem(lootSlot, loot);
 }
 
 void WorldSession::HandleLootMoneyOpcode( WorldPacket & /*recv_data*/ )
@@ -570,11 +503,11 @@ void WorldSession::HandleLootMasterGiveOpcode( WorldPacket & recv_data )
     }
 
     // list of players allowed to receive this item in trade
-    AllowedLooterSet* looters = item.GetAllowedLooters();
+    AllowedLooterSet looters = item.GetAllowedLooters();
 
     // now move item from loot to target inventory
-    Item* newitem = target->StoreNewItem( dest, item.itemid, true, item.randomPropertyId, (looters->size() > 1) ? looters : NULL);
-    target->SendNewItem(newitem, uint32(item.count), false, false, true );
+    Item* newitem = target->StoreNewItem(dest, item.itemid, true, item.randomPropertyId, looters);
+    target->SendNewItem(newitem, uint32(item.count), false, false, true);
     target->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_ITEM, item.itemid, item.count);
     target->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_TYPE, pLoot->loot_type, item.count);
     target->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_EPIC_ITEM, item.itemid, item.count);
