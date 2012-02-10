@@ -1304,7 +1304,7 @@ void World::SetInitialWorldSettings()
     sLog.outString( "Loading GM tickets...");
     sTicketMgr.LoadGMTickets();
 
-    sLog.outString("Cleaning up souldound trading table...");
+    sLog.outString("Cleaning up soulbound trading table...");
     sObjectMgr.CleanupItemSoulboundTrade();
 
     ///- Handle outdated emails (delete/return)
