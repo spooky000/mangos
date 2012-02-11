@@ -8481,12 +8481,12 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                 if (!creature->lootForBody)
                 {
                     creature->lootForBody = true;
-                    loot->clear();
+                    /*loot->clear();
 
                     if (uint32 lootid = creature->GetCreatureInfo()->lootid)
                         loot->FillLoot(lootid, LootTemplates_Creature, recipient, false);
 
-                    loot->generateMoneyLoot(creature->GetCreatureInfo()->mingold,creature->GetCreatureInfo()->maxgold);
+                    loot->generateMoneyLoot(creature->GetCreatureInfo()->mingold,creature->GetCreatureInfo()->maxgold);*/
 
                     if (Group* group = creature->GetGroupLootRecipient())
                     {

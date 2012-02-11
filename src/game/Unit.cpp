@@ -919,6 +919,24 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
                 group_tap->BroadcastPacket(&data, false, group_tap->GetMemberGroup(player_tap->GetObjectGuid()),player_tap->GetObjectGuid());
 
             player_tap->SendDirectMessage(&data);
+
+
+            Creature* creature = NULL;
+            if(pVictim->GetTypeId() == TYPEID_PLAYER)
+                creature = (Creature*)pVictim;
+
+            if (creature)
+            {
+                Loot* loot = &creature->loot;
+                if (creature->lootForPickPocketed)
+                    creature->lootForPickPocketed = false;
+
+                loot->clear();
+                if (uint32 lootid = creature->GetCreatureInfo()->lootid)
+                    loot->FillLoot(lootid, LootTemplates_Creature, player_tap, false, false);
+
+                loot->generateMoneyLoot(creature->GetCreatureInfo()->mingold,creature->GetCreatureInfo()->maxgold);
+            }
         }
 
         // Reward player, his pets, and group/raid members
@@ -1025,9 +1043,13 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             {
                 cVictim->DeleteThreatList();
                 // only lootable if it has loot or can drop gold
-                cVictim->PrepareBodyLootState();
+                //cVictim->PrepareBodyLootState();
                 // may have no loot, so update death timer if allowed
-                cVictim->AllLootRemovedFromCorpse();
+                //cVictim->AllLootRemovedFromCorpse();
+
+                CreatureInfo const* cInfo = cVictim->GetCreatureInfo();
+                if (cInfo && (cInfo->lootid || cInfo->maxgold > 0))
+                    cVictim->SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
             }
 
             // if vehicle and has passengers - remove his
