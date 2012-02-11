@@ -16609,6 +16609,10 @@ bool Player::isAllowedToLoot(Creature* creature)
     if (HasPendingBind())
         return false;
 
+    const Loot* loot = &creature->loot;
+    if (loot->isLooted()) // nothing to loot or everything looted.
+        return false;
+
     if (Player* recipient = creature->GetLootRecipient())
     {
         if (recipient == this)
