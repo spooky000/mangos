@@ -48,8 +48,8 @@ Object::Object( )
     m_objectTypeId      = TYPEID_OBJECT;
     m_objectType        = TYPEMASK_OBJECT;
 
-    m_uint32Values      = 0;
-    m_uint32Values_mirror = 0;
+    m_uint32Values      = NULL;
+    _changedFields      = NULL;
     m_valuesCount       = 0;
 
     m_inWorld           = false;
@@ -75,7 +75,7 @@ Object::~Object( )
     {
         //DEBUG_LOG("Object desctr 1 check (%p)",(void*)this);
         delete [] m_uint32Values;
-        delete [] m_uint32Values_mirror;
+        delete [] _changedFields;
         //DEBUG_LOG("Object desctr 2 check (%p)",(void*)this);
     }
 }
@@ -85,8 +85,8 @@ void Object::_InitValues()
     m_uint32Values = new uint32[ m_valuesCount ];
     memset(m_uint32Values, 0, m_valuesCount*sizeof(uint32));
 
-    m_uint32Values_mirror = new uint32[ m_valuesCount ];
-    memset(m_uint32Values_mirror, 0, m_valuesCount*sizeof(uint32));
+    _changedFields = new bool[m_valuesCount];
+    memset(_changedFields, 0, m_valuesCount*sizeof(bool));
 
     m_objectUpdated = false;
 }
@@ -124,6 +124,29 @@ void Object::SendForcedObjectUpdate()
         packet.clear();                                     // clean the string
     }
 }
+
+void Object::AddToWorld()
+{
+    if (m_inWorld)
+        return;
+
+    m_inWorld = true;
+
+    // synchronize values mirror with values array (changes will send in updatecreate opcode any way
+    ClearUpdateMask(true);
+}
+
+void Object::RemoveFromWorld()
+{
+    if (!m_inWorld)
+        return;
+
+    m_inWorld = false;
+
+    // if we remove from world then sending changes not required
+    ClearUpdateMask(true);
+}
+
 
 void Object::BuildMovementUpdateBlock(UpdateData * data, uint16 flags ) const
 {
@@ -223,6 +246,7 @@ void Object::BuildValuesUpdateBlockForPlayer(UpdateData *data, Player *target) c
     updateMask.SetCount(m_valuesCount);
 
     _SetUpdateBits(&updateMask, target);
+
     BuildValuesUpdate(UPDATETYPE_VALUES, &buf, &updateMask, target);
 
     data->AddUpdateBlock(buf);
@@ -615,14 +639,7 @@ void Object::BuildValuesUpdate(uint8 updatetype, ByteBuffer * data, UpdateMask *
 
 void Object::ClearUpdateMask(bool remove)
 {
-    if(m_uint32Values)
-    {
-        for( uint16 index = 0; index < m_valuesCount; ++index )
-        {
-            if(m_uint32Values_mirror[index]!= m_uint32Values[index])
-                m_uint32Values_mirror[index] = m_uint32Values[index];
-        }
-    }
+    memset(_changedFields, 0, m_valuesCount*sizeof(bool));
 
     if(m_objectUpdated)
     {
@@ -642,22 +659,21 @@ bool Object::LoadValues(const char* data)
         return false;
 
     for (uint16 index = 0; index < m_valuesCount; ++index)
+    {
         m_uint32Values[index] = atol(tokens[index]);
+        _changedFields[index] = true;
+    }
 
     return true;
 }
 
 void Object::_SetUpdateBits(UpdateMask *updateMask, Player* /*target*/) const
 {
-    for( uint16 index = 0; index < m_valuesCount; ++index )
-    {
-        if(m_uint32Values_mirror[index]!= m_uint32Values[index])
+    bool* indexes = _changedFields;
+
+    for (uint16 index = 0; index < m_valuesCount; ++index, ++indexes)
+        if (*indexes)
             updateMask->SetBit(index);
-    }
-  
-    // always update this field to prevent problems with shapeshifting
-    if (GetTypeId() == TYPEID_PLAYER)
-        updateMask->SetBit(UNIT_FIELD_BYTES_2);
 }
 
 void Object::_SetCreateBits(UpdateMask *updateMask, Player* /*target*/) const
@@ -669,53 +685,58 @@ void Object::_SetCreateBits(UpdateMask *updateMask, Player* /*target*/) const
     }
 }
 
-void Object::SetInt32Value( uint16 index, int32 value )
+void Object::SetInt32Value(uint16 index, int32 value)
 {
-    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
+    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true) );
 
-    if(m_int32Values[ index ] != value)
+    if(m_int32Values[index] != value)
     {
-        m_int32Values[ index ] = value;
+        m_int32Values[index] = value;
+         _changedFields[index] = true;
         MarkForClientUpdate();
     }
 }
 
-void Object::SetUInt32Value( uint16 index, uint32 value )
+void Object::SetUInt32Value(uint16 index, uint32 value)
 {
-    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
+    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true) );
 
-    if(m_uint32Values[ index ] != value)
+    if(m_uint32Values[index] != value)
     {
-        m_uint32Values[ index ] = value;
+        m_uint32Values[index] = value;
+        _changedFields[index] = true;
         MarkForClientUpdate();
     }
 }
 
-void Object::SetUInt64Value( uint16 index, const uint64 &value )
+void Object::SetUInt64Value(uint16 index, const uint64 &value)
 {
-    MANGOS_ASSERT( index + 1 < m_valuesCount || PrintIndexError( index, true ) );
-    if(*((uint64*)&(m_uint32Values[ index ])) != value)
+    MANGOS_ASSERT( index + 1 < m_valuesCount || PrintIndexError( index, true) );
+    if(*((uint64*)&(m_uint32Values[index])) != value)
     {
-        m_uint32Values[ index ] = *((uint32*)&value);
-        m_uint32Values[ index + 1 ] = *(((uint32*)&value) + 1);
+        m_uint32Values[index] = *((uint32*)&value);
+        m_uint32Values[index + 1] = *(((uint32*)&value) + 1);
+        _changedFields[index] = true;
+        _changedFields[index + 1] = true;
         MarkForClientUpdate();
     }
 }
 
-void Object::SetFloatValue( uint16 index, float value )
+void Object::SetFloatValue(uint16 index, float value)
 {
-    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
+    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true) );
 
-    if(m_floatValues[ index ] != value)
+    if(m_floatValues[index] != value)
     {
-        m_floatValues[ index ] = value;
+        m_floatValues[index] = value;
+        _changedFields[index] = true;
         MarkForClientUpdate();
     }
 }
 
-void Object::SetByteValue( uint16 index, uint8 offset, uint8 value )
+void Object::SetByteValue(uint16 index, uint8 offset, uint8 value)
 {
-    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
+    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true) );
 
     if(offset > 4)
     {
@@ -723,17 +744,18 @@ void Object::SetByteValue( uint16 index, uint8 offset, uint8 value )
         return;
     }
 
-    if(uint8(m_uint32Values[ index ] >> (offset * 8)) != value)
+    if(uint8(m_uint32Values[index] >> (offset * 8)) != value)
     {
-        m_uint32Values[ index ] &= ~uint32(uint32(0xFF) << (offset * 8));
-        m_uint32Values[ index ] |= uint32(uint32(value) << (offset * 8));
+        m_uint32Values[index] &= ~uint32(uint32(0xFF) << (offset * 8));
+        m_uint32Values[index] |= uint32(uint32(value) << (offset * 8));
+        _changedFields[index] = true;
         MarkForClientUpdate();
     }
 }
 
-void Object::SetUInt16Value( uint16 index, uint8 offset, uint16 value )
+void Object::SetUInt16Value(uint16 index, uint8 offset, uint16 value)
 {
-    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
+    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true) );
 
     if(offset > 2)
     {
@@ -741,15 +763,16 @@ void Object::SetUInt16Value( uint16 index, uint8 offset, uint16 value )
         return;
     }
 
-    if(uint16(m_uint32Values[ index ] >> (offset * 16)) != value)
+    if(uint16(m_uint32Values[index] >> (offset * 16)) != value)
     {
-        m_uint32Values[ index ] &= ~uint32(uint32(0xFFFF) << (offset * 16));
-        m_uint32Values[ index ] |= uint32(uint32(value) << (offset * 16));
+        m_uint32Values[index] &= ~uint32(uint32(0xFFFF) << (offset * 16));
+        m_uint32Values[index] |= uint32(uint32(value) << (offset * 16));
+        _changedFields[index] = true;
         MarkForClientUpdate();
     }
 }
 
-void Object::SetStatFloatValue( uint16 index, float value)
+void Object::SetStatFloatValue(uint16 index, float value)
 {
     if(value < 0)
         value = 0.0f;
@@ -757,7 +780,7 @@ void Object::SetStatFloatValue( uint16 index, float value)
     SetFloatValue(index, value);
 }
 
-void Object::SetStatInt32Value( uint16 index, int32 value)
+void Object::SetStatInt32Value(uint16 index, int32 value)
 {
     if(value < 0)
         value = 0;
@@ -799,33 +822,35 @@ void Object::ApplyModPositiveFloatValue(uint16 index, float  val, bool apply)
 
 void Object::SetFlag( uint16 index, uint32 newFlag )
 {
-    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
-    uint32 oldval = m_uint32Values[ index ];
+    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true) );
+    uint32 oldval = m_uint32Values[index];
     uint32 newval = oldval | newFlag;
 
     if(oldval != newval)
     {
-        m_uint32Values[ index ] = newval;
+        m_uint32Values[index] = newval;
+        _changedFields[index] = true;
         MarkForClientUpdate();
     }
 }
 
 void Object::RemoveFlag( uint16 index, uint32 oldFlag )
 {
-    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
-    uint32 oldval = m_uint32Values[ index ];
+    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true) );
+    uint32 oldval = m_uint32Values[index];
     uint32 newval = oldval & ~oldFlag;
 
     if(oldval != newval)
     {
-        m_uint32Values[ index ] = newval;
+        m_uint32Values[index] = newval;
+        _changedFields[index] = true;
         MarkForClientUpdate();
     }
 }
 
 void Object::SetByteFlag( uint16 index, uint8 offset, uint8 newFlag )
 {
-    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
+    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true) );
 
     if(offset > 4)
     {
@@ -833,16 +858,17 @@ void Object::SetByteFlag( uint16 index, uint8 offset, uint8 newFlag )
         return;
     }
 
-    if(!(uint8(m_uint32Values[ index ] >> (offset * 8)) & newFlag))
+    if(!(uint8(m_uint32Values[index] >> (offset * 8)) & newFlag))
     {
-        m_uint32Values[ index ] |= uint32(uint32(newFlag) << (offset * 8));
+        m_uint32Values[index] |= uint32(uint32(newFlag) << (offset * 8));
+        _changedFields[index] = true;
         MarkForClientUpdate();
     }
 }
 
 void Object::RemoveByteFlag( uint16 index, uint8 offset, uint8 oldFlag )
 {
-    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true ) );
+    MANGOS_ASSERT( index < m_valuesCount || PrintIndexError( index, true) );
 
     if(offset > 4)
     {
@@ -850,9 +876,10 @@ void Object::RemoveByteFlag( uint16 index, uint8 offset, uint8 oldFlag )
         return;
     }
 
-    if(uint8(m_uint32Values[ index ] >> (offset * 8)) & oldFlag)
+    if(uint8(m_uint32Values[index] >> (offset * 8)) & oldFlag)
     {
-        m_uint32Values[ index ] &= ~uint32(uint32(oldFlag) << (offset * 8));
+        m_uint32Values[index] &= ~uint32(uint32(oldFlag) << (offset * 8));
+        _changedFields[index] = true;
         MarkForClientUpdate();
     }
 }
@@ -864,6 +891,7 @@ void Object::SetShortFlag(uint16 index, bool highpart, uint16 newFlag)
     if (!(uint16(m_uint32Values[index] >> (highpart ? 16 : 0)) & newFlag))
     {
         m_uint32Values[index] |= uint32(uint32(newFlag) << (highpart ? 16 : 0));
+        _changedFields[index] = true;
         MarkForClientUpdate();
     }
 }
@@ -875,8 +903,15 @@ void Object::RemoveShortFlag(uint16 index, bool highpart, uint16 oldFlag)
     if (uint16(m_uint32Values[index] >> (highpart ? 16 : 0)) & oldFlag)
     {
         m_uint32Values[index] &= ~uint32(uint32(oldFlag) << (highpart ? 16 : 0));
+        _changedFields[index] = true;
         MarkForClientUpdate();
     }
+}
+
+void Object::ForceValuesUpdateAtIndex(uint16 index)
+{
+    _changedFields[index] = true;
+    MarkForClientUpdate();
 }
 
 bool Object::PrintIndexError(uint32 index, bool set) const
@@ -1912,25 +1947,25 @@ void WorldObject::SetPhaseMask(uint32 newPhaseMask, bool update)
         UpdateVisibilityAndView();
 }
 
-void WorldObject::PlayDistanceSound( uint32 sound_id, Player* target /*= NULL*/ )
+void WorldObject::PlayDistanceSound(uint32 sound_id, Player* target /*= NULL*/)
 {
-    WorldPacket data(SMSG_PLAY_OBJECT_SOUND,4+8);
+    WorldPacket data(SMSG_PLAY_OBJECT_SOUND, 4+8);
     data << uint32(sound_id);
     data << GetObjectGuid();
     if (target)
-        target->SendDirectMessage( &data );
+        target->SendDirectMessage(&data);
     else
-        SendMessageToSet( &data, true );
+        SendMessageToSet(&data, true);
 }
 
-void WorldObject::PlayDirectSound( uint32 sound_id, Player* target /*= NULL*/ )
+void WorldObject::PlayDirectSound(uint32 sound_id, Player* target /*= NULL*/)
 {
     WorldPacket data(SMSG_PLAY_SOUND, 4);
     data << uint32(sound_id);
     if (target)
-        target->SendDirectMessage( &data );
+        target->SendDirectMessage(&data);
     else
-        SendMessageToSet( &data, true );
+        SendMessageToSet(&data, true);
 }
 
 //return closest creature alive in grid, with range from pSource
