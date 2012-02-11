@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
@@ -920,9 +921,8 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
 
             player_tap->SendDirectMessage(&data);
 
-
             Creature* creature = NULL;
-            if(pVictim->GetTypeId() == TYPEID_PLAYER)
+            if(pVictim->GetTypeId() == TYPEID_UNIT)
                 creature = (Creature*)pVictim;
 
             if (creature)
