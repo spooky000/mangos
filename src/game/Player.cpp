@@ -8481,12 +8481,6 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                 if (!creature->lootForBody)
                 {
                     creature->lootForBody = true;
-                    /*loot->clear();
-
-                    if (uint32 lootid = creature->GetCreatureInfo()->lootid)
-                        loot->FillLoot(lootid, LootTemplates_Creature, recipient, false);
-
-                    loot->generateMoneyLoot(creature->GetCreatureInfo()->mingold,creature->GetCreatureInfo()->maxgold);*/
 
                     if (Group* group = creature->GetGroupLootRecipient())
                     {
@@ -8515,13 +8509,8 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                 {
                     if (!creature->lootForSkin)
                     {
-                        //creature->lootForSkin = true;
                         loot->clear();
                         loot->FillLoot(creature->GetCreatureInfo()->SkinLootId, LootTemplates_Skinning, this, true);
-
-                        // let reopen skinning loot if will closed.
-                        /*if (!loot->empty())
-                            creature->SetUInt32Value(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);*/
 
                         permission = OWNER_PERMISSION;
                     }

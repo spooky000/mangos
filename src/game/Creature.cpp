@@ -1526,7 +1526,7 @@ void Creature::SetDeathState(DeathState s)
         SetTargetGuid(ObjectGuid());                        // remove target selection in any cases (can be set at aura remove in Unit::SetDeathState)
         SetUInt32Value(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_NONE);
 
-        if (!isPet() && GetCreatureInfo()->SkinLootId)
+        if (!IsPet() && GetCreatureInfo()->SkinLootId)
             if (LootTemplates_Skinning.HaveLootFor(GetCreatureInfo()->SkinLootId))
                 if (HasLootRecipient())
                     SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
