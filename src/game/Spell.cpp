@@ -6258,10 +6258,8 @@ SpellCastResult Spell::CheckCast(bool strict)
                     return SPELL_FAILED_TARGET_UNSKINNABLE;
 
                 Creature* creature = (Creature*)m_targets.getUnitTarget();
-                if ( creature->GetCreatureType() != CREATURE_TYPE_CRITTER && ( !creature->lootForBody || creature->lootForSkin || !creature->loot.empty() ) )
-                {
+                if (creature->GetCreatureType() != CREATURE_TYPE_CRITTER && !creature->loot.isLooted() && !creature->lootForSkin)
                     return SPELL_FAILED_TARGET_NOT_LOOTED;
-                }
 
                 uint32 skill = creature->GetCreatureInfo()->GetRequiredLootSkill();
 

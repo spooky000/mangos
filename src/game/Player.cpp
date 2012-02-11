@@ -8515,13 +8515,13 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                 {
                     if (!creature->lootForSkin)
                     {
-                        creature->lootForSkin = true;
+                        //creature->lootForSkin = true;
                         loot->clear();
-                        loot->FillLoot(creature->GetCreatureInfo()->SkinLootId, LootTemplates_Skinning, this, false);
+                        loot->FillLoot(creature->GetCreatureInfo()->SkinLootId, LootTemplates_Skinning, this, true);
 
                         // let reopen skinning loot if will closed.
-                        if (!loot->empty())
-                            creature->SetUInt32Value(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
+                        /*if (!loot->empty())
+                            creature->SetUInt32Value(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);*/
 
                         permission = OWNER_PERMISSION;
                     }

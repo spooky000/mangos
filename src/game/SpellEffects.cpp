@@ -11925,6 +11925,11 @@ void Spell::EffectSkinning(SpellEffectIndex /*eff_idx*/)
     uint32 skill = creature->GetCreatureInfo()->GetRequiredLootSkill();
 
     ((Player*)m_caster)->SendLoot(creature->GetObjectGuid(),LOOT_SKINNING);
+
+    if(creature->lootForSkin) // If lootForSkin already opened, do not proceed to skill skill point distribution
+        return;
+
+    creature->lootForSkin = true;
     creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
 
     int32 reqValue = targetLevel < 10 ? 0 : targetLevel < 20 ? (targetLevel-10)*10 : targetLevel*5;
