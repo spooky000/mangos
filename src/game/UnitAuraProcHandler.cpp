@@ -4290,6 +4290,18 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
     // dummy basepoints or other customs
     switch(trigger_spell_id)
     {
+        case 52914: // Turn the Tables
+        case 52915:
+        case 52910:
+        {
+            target = triggeredByAura->GetCaster();
+            if (!target)
+                return SPELL_AURA_PROC_FAILED;
+
+            target->CastSpell(target, trigger_spell_id, true);
+
+            return SPELL_AURA_PROC_OK;
+        }
         // Cast positive spell on enemy target
         case 7099:  // Curse of Mending
         case 39647: // Curse of Mending
