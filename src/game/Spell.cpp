@@ -8736,6 +8736,12 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
             FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
             break;
         }
+        case 65980: // Bloodlust (ToC Champions)
+        case 65983: // Heroism (ToC Champions)
+        {
+            FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_NOT_HOSTILE);
+            break;
+        }
         case 66242: // Burning Inferno (ToC: Lord Jaraxxus - target only players)
         case 67059:
         case 67060:
