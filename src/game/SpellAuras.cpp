@@ -6362,16 +6362,6 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
                     }
                     return;
                 }
-                case 66118:                                 // Leeching Swarm (ToC - Anub'arak)
-                case 67630:
-                case 68646:
-                case 68647:
-                {
-                    if (target->GetTypeId() != TYPEID_PLAYER)
-                        return;
-
-                    break;
-                }
                 case 73001:                                   // Shadow Prison
                 {
                     if (target)
@@ -9736,6 +9726,9 @@ void Aura::PeriodicDummyTick()
                 case 66118:                                 // Leeching Swarm 10 man
                 case 68646:
                 {
+                    if (target->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
                     int32 damage = (m_modifier.m_amount * target->GetHealth()) / 100;
                     if (damage < 250)
                         damage = 250;
@@ -9748,6 +9741,9 @@ void Aura::PeriodicDummyTick()
                 case 67630:                                 // Leeching Swarm 25 man
                 case 68647:
                 {
+                    if (target->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
                     int32 damage = (m_modifier.m_amount * target->GetHealth()) / 100;
                     if (damage < 250)
                         damage = 250;

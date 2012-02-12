@@ -525,6 +525,15 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                             }
                         return;
                     }
+                    // Touch of Light / Darkness (ToC Twins)
+                    case 65951:
+                    case 66002:
+                    {
+                        if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                            return;
+
+                        return;
+                    }
                     // Light spells (ToC twins)
                     case 66048: case 67203: case 67204: case 67205:     // Light Vortex
                     case 65795: case 67238: case 67239: case 67240:     // Unleashed Light
