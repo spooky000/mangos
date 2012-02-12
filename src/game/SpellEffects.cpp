@@ -527,6 +527,8 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                     }
                     // Touch of Light / Darkness (ToC Twins)
                     case 65951:
+                    case 65952:
+                    case 66000:
                     case 66002:
                     {
                         if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
