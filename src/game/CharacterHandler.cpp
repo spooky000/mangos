@@ -1397,15 +1397,15 @@ void WorldSession::HandleCharFactionOrRaceChangeOpcode(WorldPacket& recv_data)
         // Reset homebind
         CharacterDatabase.PExecute("DELETE FROM `character_homebind` WHERE guid = '%u'", guid.GetCounter());
         if (team == BG_TEAM_ALLIANCE)
-            CharacterDatabase.PExecute("INSERT INTO `character_homebind` VALUES ('%u','0','1519','-8867.68','673.373','97.9034')", guid.GetCounter());
+            CharacterDatabase.PExecute("INSERT INTO `character_homebind` VALUES ('%u','571','4395','5717.49','682.961','645.752')", guid.GetCounter());
         else
-            CharacterDatabase.PExecute("INSERT INTO `character_homebind` VALUES ('%u','1','1637','1633.33','-4439.11','15.7588')", guid.GetCounter());
+            CharacterDatabase.PExecute("INSERT INTO `character_homebind` VALUES ('%u','571','4395','5848.04','635.892','647.512')", guid.GetCounter());
 
         // Teleport to new homebind
         if (team == BG_TEAM_ALLIANCE)
-            CharacterDatabase.PExecute("UPDATE IGNORE `characters` SET position_x = '-8867.68', position_y = '673.373', position_z = '97.9034', map = '0', orientation = '5.204' WHERE guid = '%u'", guid.GetCounter());
+            CharacterDatabase.PExecute("UPDATE IGNORE `characters` SET position_x = '5717.49', position_y = '682.961', position_z = '645.752', map = '571', orientation = '0.171' WHERE guid = '%u'", guid.GetCounter());
         else
-            CharacterDatabase.PExecute("UPDATE IGNORE `characters` SET position_x = '1633.33', position_y = '-4439.11', position_z = '15.75', map = '1', orientation = '2.718' WHERE guid = '%u'", guid.GetCounter());
+            CharacterDatabase.PExecute("UPDATE IGNORE `characters` SET position_x = '5848.04', position_y = '635.892', position_z = '647.512', map = '571', orientation = '6.273' WHERE guid = '%u'", guid.GetCounter());
 
         // Achievement conversion
         if (QueryResult *result2 = WorldDatabase.Query("SELECT alliance_id, horde_id FROM player_factionchange_achievements"))
