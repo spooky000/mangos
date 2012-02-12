@@ -12961,32 +12961,6 @@ void Spell::EffectServerSide(SpellEffectIndex eff_idx)
 
     switch(m_spellInfo->Id)
     {
-        case 18350:
-        {
-
-            switch (triggerID)
-            {
-                case 67712:
-                case 67758:
-                {
-                    if (SpellAuraHolderPtr holder = unitTarget->GetSpellAuraHolder((triggerID == 67712 ? 67713 : 67759)))
-                    {
-                        if ( holder->GetStackAmount() + 1 > uint32(triggerSpell->EffectBasePoints[EFFECT_INDEX_0] ))
-                        {
-                            unitTarget->RemoveAurasDueToSpell(triggerID == 67712 ? 67713 : 67759);
-                            if (unitTarget->getVictim())
-                                unitTarget->CastSpell(unitTarget->getVictim(), (triggerID == 67712 ? 67714 : 67760), true);
-                            return;
-                        }
-                    }
-                    unitTarget->CastSpell(unitTarget,triggerID == 67712 ? 67713 : 67759, true);
-                    return;
-                }
-                default:
-                    break;
-            }
-            break;
-        }
         case 63974: // Synthetic spell for Glyph of shred
         {
             if (SpellAuraHolderPtr holder = GetCaster()->GetSpellAuraHolder(m_spellInfo->Id))
@@ -13045,10 +13019,23 @@ void Spell::EffectSuspendGravity(SpellEffectIndex eff_idx)
     if (!unitTarget)
         return;
 
-    float fTargetX, fTargetY, fTargetZ;
-    unitTarget->GetPosition(fTargetX, fTargetY, fTargetZ);
-    float mapZ = unitTarget->GetTerrain()->GetHeight(fTargetX, fTargetY, fTargetZ);
-    float radius = m_spellInfo->EffectMiscValue[eff_idx]/10;
-    if (fTargetZ < mapZ + 0.5)
-        unitTarget->KnockBackFrom(m_caster, -radius, radius);
+    float x,y,z;
+
+    if (m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
+    {
+        x = m_targets.m_destX;
+        y = m_targets.m_destY;
+        z = m_targets.m_destZ;
+    }
+    else
+    {
+        m_caster->GetClosePoint(x, y, z, m_caster->GetObjectBoundingRadius(), 0.0f, m_caster->GetAngle(unitTarget));
+    }
+
+    unitTarget->UpdateAllowedPositionZ(x, y, z);
+
+    float speed  = float(m_spellInfo->EffectMiscValue[eff_idx]/2.0f);
+    float height = float(unitTarget->GetDistance(x,y,z) / 10.0f);
+
+    unitTarget->MonsterMoveJump(x, y, z + 0.1f, unitTarget->GetOrientation(), speed, height, true, m_caster == unitTarget ? NULL : m_caster);
 }
