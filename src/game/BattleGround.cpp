@@ -1239,6 +1239,7 @@ void BattleGround::RemovePlayerAtLeave(ObjectGuid guid, bool Transport, bool Sen
             if (!team) team = plr->GetTeam();
 
             plr->RemoveArenaAuras(true);                    // removes debuffs / dots etc., we don't want the player to die after porting out
+            plr->SetStandState(UNIT_STAND_STATE_STAND);
             // if arena, remove the specific arena auras
             if (isArena())
             {
