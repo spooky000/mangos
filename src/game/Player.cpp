@@ -16570,13 +16570,17 @@ bool Player::isAllowedToLoot(Creature* creature)
     if (!creature->HasFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_TAPPED))
         return false;
 
-    // player that hasn't accepted instance-bind yet
-    if (HasPendingBind())
-        return false;
-
     const Loot* loot = &creature->loot;
     // nothing to loot or everything looted.
     if (loot->isLooted())
+        return false;
+
+    // allow game-master seeing every loot
+    if(isGameMaster())
+        return true;
+
+    // player that hasn't accepted instance-bind yet
+    if (HasPendingBind())
         return false;
 
     Group* thisGroup = GetGroup();
