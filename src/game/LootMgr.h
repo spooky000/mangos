@@ -34,11 +34,12 @@
 
 enum PermissionTypes
 {
-    ALL_PERMISSION    = 0,
-    GROUP_PERMISSION  = 1,
-    MASTER_PERMISSION = 2,
-    OWNER_PERMISSION  = 3,                                  // for single player only loots
-    NONE_PERMISSION   = 4
+    ALL_PERMISSION              = 0,
+    GROUP_PERMISSION            = 1,
+    MASTER_PERMISSION           = 2,
+    ROUND_ROBIN_PERMISSION      = 3,
+    OWNER_PERMISSION            = 4,
+    NONE_PERMISSION             = 5,
 };
 
 enum LootType
@@ -249,9 +250,10 @@ struct Loot
     LootItemList items;
     uint32 gold;
     uint8 unlootedCount;
+    ObjectGuid roundRobinPlayer;
     LootType loot_type;                                     // required for achievement system
 
-    Loot(uint32 _gold = 0) : gold(_gold), unlootedCount(0), loot_type(LOOT_CORPSE) {}
+    Loot(uint32 _gold = 0) : gold(_gold), unlootedCount(0), roundRobinPlayer(ObjectGuid()), loot_type(LOOT_CORPSE) {}
     ~Loot() { clear(); }
 
     // if loot becomes invalid this reference is used to inform the listener
@@ -280,6 +282,7 @@ struct Loot
         m_questItems.clear();
         gold = 0;
         unlootedCount = 0;
+        roundRobinPlayer.Clear();
         m_LootValidatorRefManager.clearReferences();
     }
 
@@ -300,6 +303,8 @@ struct Loot
 
     LootItem* LootItemInSlot(uint32 lootslot, Player* player, QuestItem** qitem = NULL, QuestItem** ffaitem = NULL, QuestItem** conditem = NULL);
     uint32 GetMaxSlotInLootFor(Player* player) const;
+    bool hasItemFor(Player* player) const;
+    bool hasOverThresholdItem() const;
 
     private:
         void FillNotNormalLootFor(Player* player, bool presentAtLooting);

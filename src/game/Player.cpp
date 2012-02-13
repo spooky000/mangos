@@ -8230,13 +8230,6 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
 
             loot = &go->loot;
 
-            Player* recipient = go->GetLootRecipient();
-            if (!recipient)
-            {
-                go->SetLootRecipient(this);
-                recipient = this;
-            }
-
             // generate loot only if ready for open and spawned in world
             if (go->getLootState() == GO_READY && go->isSpawned())
             {
@@ -8250,107 +8243,81 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                                 return;
                             }
 
-                if (Group* group = this->GetGroup())
-                {
-                    if (go->GetGoType() == GAMEOBJECT_TYPE_CHEST)
-                    {
-                        if (go->GetGOInfo()->chest.groupLootRules == 1)
-                        {
-                            group->UpdateLooterGuid(go,true);
-                            switch (group->GetLootMethod())
-                            {
-                                case GROUP_LOOT:
-                                // GroupLoot delete items over threshold (threshold even not implemented), and roll them. Items with quality<threshold, round robin
-                                     group->GroupLoot(go, loot);
-                                     permission = GROUP_PERMISSION;
-                                     break;
-                                case NEED_BEFORE_GREED:
-                                     group->NeedBeforeGreed(go, loot);
-                                     permission = GROUP_PERMISSION;
-                                     break;
-                                case MASTER_LOOT:
-                                     group->MasterLoot(go, loot);
-                                     permission = MASTER_PERMISSION;
-                                     break;
-                                default:
-                                     break;
-                             }
-                         }
-                         else
-                             permission = GROUP_PERMISSION;
-                     }
-                 }
-
                 // Entry 0 in fishing loot template used for store junk fish loot at fishing fail it junk allowed by config option
                 // this is overwrite fishinghole loot for example
                 if (loot_type == LOOT_FISHING_FAIL)
+                {
                     loot->FillLoot(0, LootTemplates_Fishing, this, true);
+                }
                 else if (lootid)
                 {
-                    DEBUG_LOG("       if(lootid)");
                     loot->clear();
-                    loot->FillLoot(lootid, LootTemplates_Gameobject, this, false);
+
+                    Group* group = GetGroup();
+                    bool groupRules = (group && go->GetGOInfo()->type == GAMEOBJECT_TYPE_CHEST && go->GetGOInfo()->chest.groupLootRules);
+
+                    // check current RR player and get next if necessary
+                    if (groupRules)
+                        group->UpdateLooterGuid(go, true);
+
+                    loot->FillLoot(lootid, LootTemplates_Gameobject, this, !groupRules);
                     loot->generateMoneyLoot(go->GetGOInfo()->MinMoneyLoot, go->GetGOInfo()->MaxMoneyLoot);
 
-                    if (go->GetGoType() == GAMEOBJECT_TYPE_CHEST && go->GetGOInfo()->chest.groupLootRules)
-                    {
-                        if (Group* group = go->GetGroupLootRecipient())
-                        {
-                            group->UpdateLooterGuid(go, true);
+                    // get next RR player (for next loot)
+                    if (groupRules)
+                        group->UpdateLooterGuid(go);
+                }
 
-                            switch (group->GetLootMethod())
-                            {
-                                case GROUP_LOOT:
-                                    // GroupLoot delete items over threshold (threshold even not implemented), and roll them. Items with quality<threshold, round robin
-                                    group->GroupLoot(go, loot);
-                                    permission = GROUP_PERMISSION;
-                                    break;
-                                case NEED_BEFORE_GREED:
-                                    group->NeedBeforeGreed(go, loot);
-                                    permission = GROUP_PERMISSION;
-                                    break;
-                                case MASTER_LOOT:
-                                    group->MasterLoot(go, loot);
-                                    permission = MASTER_PERMISSION;
-                                    break;
-                                default:
-                                    break;
-                            }
+                if (loot_type == LOOT_FISHING)
+                    go->getFishLoot(loot,this);
+
+                if (go->GetGOInfo()->type == GAMEOBJECT_TYPE_CHEST && go->GetGOInfo()->chest.groupLootRules)
+                {
+                    if (Group* group = GetGroup())
+                    {
+                        switch (group->GetLootMethod())
+                        {
+                            case GROUP_LOOT:
+                                // GroupLoot: rolls items over threshold. Items with quality < threshold, round robin
+                                group->GroupLoot(go, loot);
+                                break;
+                            case NEED_BEFORE_GREED:
+                                group->NeedBeforeGreed(go, loot);
+                                break;
+                            case MASTER_LOOT:
+                                group->MasterLoot(go, loot);
+                                break;
+                            default:
+                                break;
                         }
                     }
                 }
-                else if (loot_type == LOOT_FISHING)
-                    go->getFishLoot(loot,this);
 
                 go->SetLootState(GO_ACTIVATED);
             }
 
             if ((go->getLootState() == GO_ACTIVATED) && (go->GetGoType() == GAMEOBJECT_TYPE_CHEST))
             {
-                if (go->GetGOInfo()->chest.groupLootRules)
+                if (Group* group = GetGroup())
                 {
-                    if(Group* group = GetGroup())
+                    switch (group->GetLootMethod())
                     {
-                        if (group == go->GetGroupLootRecipient())
-                        {
-                            if (group->GetLootMethod() == FREE_FOR_ALL)
-                                permission = ALL_PERMISSION;
-                            else if (group->GetLooterGuid() == GetObjectGuid())
-                            {
-                                if (group->GetLootMethod() == MASTER_LOOT)
-                                    permission = MASTER_PERMISSION;
-                                else
-                                    permission = ALL_PERMISSION;
-                            }
-                            else
-                                permission = GROUP_PERMISSION;
-                        }
-                        else
-                            permission = NONE_PERMISSION;
+                        case MASTER_LOOT:
+                            permission = MASTER_PERMISSION;
+                            break;
+                        case FREE_FOR_ALL:
+                            permission = ALL_PERMISSION;
+                            break;
+                        case ROUND_ROBIN:
+                            permission = ROUND_ROBIN_PERMISSION;
+                            break;
+                        default:
+                            permission = GROUP_PERMISSION;
+                            break;
                     }
-               }
-               else
-                   permission = ALL_PERMISSION;
+                }
+                else
+                    permission = ALL_PERMISSION;
             }
             break;
         }
@@ -8484,7 +8451,7 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
 
                     if (Group* group = creature->GetGroupLootRecipient())
                     {
-                        group->UpdateLooterGuid(creature,true);
+                        //group->UpdateLooterGuid(creature,true);
 
                         switch (group->GetLootMethod())
                         {
@@ -8512,27 +8479,35 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                         loot->clear();
                         loot->FillLoot(creature->GetCreatureInfo()->SkinLootId, LootTemplates_Skinning, this, true);
 
+                        // let reopen skinning loot if will closed.
+                        if (!loot->empty())
+                            creature->SetUInt32Value(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
+
                         permission = OWNER_PERMISSION;
                     }
                 }
                 // set group rights only for loot_type != LOOT_SKINNING
                 else
                 {
-                    if(Group* group = creature->GetGroupLootRecipient())
+                    if (Group* group = GetGroup())
                     {
-                        if (group == GetGroup())
+                        if (group == recipient->GetGroup())
                         {
-                            if (group->GetLootMethod() == FREE_FOR_ALL)
-                                permission = ALL_PERMISSION;
-                            else if (group->GetLooterGuid() == GetObjectGuid())
+                            switch (group->GetLootMethod())
                             {
-                                if (group->GetLootMethod() == MASTER_LOOT)
+                                case MASTER_LOOT:
                                     permission = MASTER_PERMISSION;
-                                else
+                                    break;
+                                case FREE_FOR_ALL:
                                     permission = ALL_PERMISSION;
+                                    break;
+                                case ROUND_ROBIN:
+                                    permission = ROUND_ROBIN_PERMISSION;
+                                    break;
+                                default:
+                                    permission = GROUP_PERMISSION;
+                                    break;
                             }
-                            else
-                                permission = GROUP_PERMISSION;
                         }
                         else
                             permission = NONE_PERMISSION;
@@ -16595,31 +16570,48 @@ bool Player::isAllowedToLoot(Creature* creature)
     if (!creature->HasFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_TAPPED))
         return false;
 
+    // player that hasn't accepted instance-bind yet
     if (HasPendingBind())
         return false;
 
     const Loot* loot = &creature->loot;
-    if (loot->isLooted()) // nothing to loot or everything looted.
+    // nothing to loot or everything looted.
+    if (loot->isLooted())
         return false;
 
-    if (Player* recipient = creature->GetLootRecipient())
+    Group* thisGroup = GetGroup();
+    if (!thisGroup)
+        return this == creature->GetLootRecipient();
+    else if (thisGroup != creature->GetGroupLootRecipient())
+        return false;
+
+    switch (thisGroup->GetLootMethod())
     {
-        if (recipient == this)
+        case FREE_FOR_ALL:
             return true;
+        case ROUND_ROBIN:
+            // may only loot if the player is the loot roundrobin player
+            // or if there are free/quest/conditional item for the player
+            if (loot->roundRobinPlayer.IsEmpty() || loot->roundRobinPlayer == GetObjectGuid())
+                return true;
 
-        if (Group* otherGroup = recipient->GetGroup())
-        {
-            Group* thisGroup = GetGroup();
-            if (!thisGroup)
-                return false;
+            return loot->hasItemFor(this);
+        case MASTER_LOOT:
+        case GROUP_LOOT:
+        case NEED_BEFORE_GREED:
+            // may only loot if the player is the loot roundrobin player
+            // or item over threshold (so roll(s) can be launched)
+            // or if there are free/quest/conditional item for the player
+            if (loot->roundRobinPlayer.IsEmpty() || loot->roundRobinPlayer == GetObjectGuid())
+                return true;
 
-            return thisGroup == otherGroup;
-        }
-        return false;
+            if (loot->hasOverThresholdItem())
+                return true;
+
+            return loot->hasItemFor(this);
     }
-    else
-        // prevent other players from looting if the recipient got disconnected
-        return !creature->HasLootRecipient();
+
+    return false;
 }
 
 void Player::_LoadActions(QueryResult *result)

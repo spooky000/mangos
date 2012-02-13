@@ -333,8 +333,24 @@ void WorldSession::DoLootRelease(ObjectGuid lguid)
                 loot->clear();
             }
             else
+            {
                 // not fully looted object
                 go->SetLootState(GO_ACTIVATED);
+
+                // if the round robin player release, reset it.
+                if (player->GetObjectGuid() == loot->roundRobinPlayer)
+                {
+                    if (Group* group = player->GetGroup())
+                    {
+                        if (group->GetLootMethod() != MASTER_LOOT)
+                        {
+                            loot->roundRobinPlayer.Clear();
+                        }
+                    }
+                    else
+                        loot->roundRobinPlayer.Clear();
+                }
+            }
             break;
         }
         case HIGHGUID_CORPSE:                               // ONLY remove insignia at BG
@@ -412,11 +428,6 @@ void WorldSession::DoLootRelease(ObjectGuid lguid)
 
             loot = &pCreature->loot;
 
-            // update next looter
-            if(Group* group = pCreature->GetGroupLootRecipient())
-                if (group->GetLooterGuid() == player->GetObjectGuid())
-                    group->UpdateLooterGuid(pCreature);
-
             if (loot->isLooted())
             {
                 // for example skinning after normal loot
@@ -424,6 +435,27 @@ void WorldSession::DoLootRelease(ObjectGuid lguid)
 
                 if(!pCreature->isAlive())
                     pCreature->AllLootRemovedFromCorpse();
+
+                pCreature->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
+                loot->clear();
+            }
+            else
+            {
+                // if the round robin player release, reset it and allow rest of people looting.
+                if (player->GetObjectGuid() == loot->roundRobinPlayer)
+                {
+                    if (Group* group = player->GetGroup())
+                    {
+                        // Loot is allowed at any loot-type on release, availability to get item is checked on threshold handling.
+                        loot->roundRobinPlayer.Clear();
+                        group->SendLooter(pCreature, NULL);
+
+                        // Send forced update so rest of players can see creature as lootable again.
+                        pCreature->ForceValuesUpdateAtIndex(UNIT_DYNAMIC_FLAGS);
+                    }
+                    else
+                        loot->roundRobinPlayer.Clear();
+                }
             }
             break;
         }

@@ -1,4 +1,3 @@
-
 /*
  * Copyright (C) 2005-2012 MaNGOS <http://getmangos.com/>
  *
@@ -916,16 +915,54 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             data << player_tap->GetObjectGuid();            //player with killing blow
             data << pVictim->GetObjectGuid();              //victim
 
-            if (group_tap)
-                group_tap->BroadcastPacket(&data, false, group_tap->GetMemberGroup(player_tap->GetObjectGuid()),player_tap->GetObjectGuid());
+            Player* pLooter = player_tap;
 
-            player_tap->SendDirectMessage(&data);
-
-            Creature* creature = NULL;
+            Creature * creature = NULL;
             if(pVictim->GetTypeId() == TYPEID_UNIT)
                 creature = (Creature*)pVictim;
 
-            if (creature)
+            if (group_tap)
+            {
+                group_tap->BroadcastPacket(&data, false, group_tap->GetMemberGroup(player_tap->GetObjectGuid()),player_tap->GetObjectGuid());
+
+                if (pVictim->GetTypeId() == TYPEID_UNIT)
+                {
+                    // Select new looter
+                    group_tap->UpdateLooterGuid(creature, true);
+                    if (group_tap->GetLooterGuid())
+                    {
+                        // Set Round-Robin for Master Looting type
+                        if(group_tap->GetLootMethod() == MASTER_LOOT)
+                            pLooter = ObjectMgr::GetPlayer(group_tap->GetMLRoundLooterGuid());
+                        else // Set Normal Looter for rest
+                            pLooter = ObjectMgr::GetPlayer(group_tap->GetLooterGuid());
+
+                        if (pLooter)
+                        {
+                            creature->SetLootRecipient(pLooter);        // update creature loot recipient to the allowed looter.
+                            group_tap->SendLooter(creature, pLooter);   // send loot owner indication to nearby group players
+                        }
+                        else // if no looter selected remove loot owner indicator
+                            group_tap->SendLooter(creature, NULL);
+                    }
+                    else
+                        group_tap->SendLooter(creature, NULL);
+
+                    group_tap->UpdateLooterGuid(creature);
+                }
+            }
+            else
+            {
+                player_tap->SendDirectMessage(&data);
+
+                WorldPacket data2(SMSG_LOOT_LIST, (8+1+1));
+                data2 << creature->GetObjectGuid();
+                data2 << uint8(0); // unk1
+                data2 << uint8(0); // no group looter
+                player_tap->SendMessageToSetInRange(&data2, GetMap()->GetVisibilityDistance(), true);
+            }
+
+            if (creature) // Fill loot at death
             {
                 Loot* loot = &creature->loot;
                 if (creature->lootForPickPocketed)
@@ -933,7 +970,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
 
                 loot->clear();
                 if (uint32 lootid = creature->GetCreatureInfo()->lootid)
-                    loot->FillLoot(lootid, LootTemplates_Creature, player_tap, false, false);
+                    loot->FillLoot(lootid, LootTemplates_Creature, pLooter, false, false);
 
                 loot->generateMoneyLoot(creature->GetCreatureInfo()->mingold,creature->GetCreatureInfo()->maxgold);
             }

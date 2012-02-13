@@ -408,7 +408,13 @@ void WorldSession::HandleLootMethodOpcode( WorldPacket & recv_data )
 
     // everything is fine, do it
     group->SetLootMethod((LootMethod)lootMethod);
-    group->SetLooterGuid(lootMaster);
+
+    // Assign leader as default looter
+    if(lootMethod != MASTER_LOOT && lootMethod != FREE_FOR_ALL)
+        group->SetLooterGuid(group->GetLeaderGuid());
+    else
+        group->SetLooterGuid(lootMaster);
+
     group->SetLootThreshold((ItemQualities)lootThreshold);
     group->SendUpdate();
 }

@@ -257,6 +257,7 @@ class MANGOS_DLL_SPEC Group
         void   SetLootMethod(LootMethod method) { m_lootMethod = method; }
         void   SetLooterGuid(ObjectGuid guid) { m_looterGuid = guid; }
         void   UpdateLooterGuid(WorldObject* pSource, bool ifneed = false);
+        void   SetMLRoundRobinLooter(ObjectGuid guid) { m_roundLooterGuid = guid; }
         void   SetLootThreshold(ItemQualities threshold) { m_lootThreshold = threshold; }
         void   Disband(bool hideDestroy=false);
 
@@ -271,6 +272,7 @@ class MANGOS_DLL_SPEC Group
         const char * GetLeaderName() const { return m_leaderName.c_str(); }
         LootMethod    GetLootMethod() const { return m_lootMethod; }
         ObjectGuid GetLooterGuid() const { return m_looterGuid; }
+        ObjectGuid GetMLRoundLooterGuid() const { return m_roundLooterGuid; }
         ItemQualities GetLootThreshold() const { return m_lootThreshold; }
 
         // member manipulation methods
@@ -355,6 +357,7 @@ class MANGOS_DLL_SPEC Group
         void SendLootRoll(ObjectGuid const& targetGuid, uint8 rollNumber, uint8 rollType, const Roll &r);
         void SendLootRollWon(ObjectGuid const& targetGuid, uint8 rollNumber, RollVote rollType, const Roll &r);
         void SendLootAllPassed(const Roll &r);
+        void SendLooter(Creature* creature, Player* pLooter);
         void GroupLoot(WorldObject* pSource, Loot* loot);
         void NeedBeforeGreed(WorldObject* pSource, Loot* loot);
         void MasterLoot(WorldObject* pSource, Loot* loot);
@@ -453,6 +456,7 @@ class MANGOS_DLL_SPEC Group
         LootMethod          m_lootMethod;
         ItemQualities       m_lootThreshold;
         ObjectGuid          m_looterGuid;
+        ObjectGuid          m_roundLooterGuid;
         Rolls               RollId;
         BoundInstancesMap   m_boundInstances[MAX_DIFFICULTY];
         uint8*              m_subGroupsCounts;
