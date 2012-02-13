@@ -955,11 +955,14 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             {
                 player_tap->SendDirectMessage(&data);
 
-                WorldPacket data2(SMSG_LOOT_LIST, (8+1+1));
-                data2 << creature->GetObjectGuid();
-                data2 << uint8(0); // unk1
-                data2 << uint8(0); // no group looter
-                player_tap->SendMessageToSetInRange(&data2, GetMap()->GetVisibilityDistance(), true);
+                if(creature)
+                {
+                    WorldPacket data2(SMSG_LOOT_LIST, (8+1+1));
+                    data2 << creature->GetObjectGuid();
+                    data2 << uint8(0); // unk1
+                    data2 << uint8(0); // no group looter
+                    player_tap->SendMessageToSetInRange(&data2, GetMap()->GetVisibilityDistance(), true);
+                }
             }
 
             if (creature) // Fill loot at death
