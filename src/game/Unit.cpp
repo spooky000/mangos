@@ -925,7 +925,7 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             {
                 group_tap->BroadcastPacket(&data, false, group_tap->GetMemberGroup(player_tap->GetObjectGuid()),player_tap->GetObjectGuid());
 
-                if (pVictim->GetTypeId() == TYPEID_UNIT)
+                if (creature)
                 {
                     // Select new looter
                     group_tap->UpdateLooterGuid(creature, true);
