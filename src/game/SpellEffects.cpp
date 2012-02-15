@@ -12363,16 +12363,14 @@ void Spell::EffectTransmitted(SpellEffectIndex eff_idx)
             float max_angle = (max_dis - min_dis)/(max_dis + m_caster->GetObjectBoundingRadius());
             float angle_offset = max_angle * (rand_norm_f() - 0.5f);
             m_caster->GetNearPoint2D(fx, fy, dis, m_caster->GetOrientation() + angle_offset);
-            float waterZ = m_caster->GetTerrain()->GetWaterOrGroundLevel(fx, fy, m_caster->GetPositionZ());
-            GridMapLiquidData liqData;
-            if (!m_caster->GetTerrain()->IsInWater(fx, fy, waterZ, &liqData, 0.5f))
+
+            if (!m_caster->GetTerrain()->IsAboveWater(fx, fy, m_caster->GetPositionZ() + 0.5f, &fz))
             {
                 SendCastResult(SPELL_FAILED_NOT_FISHABLE);
                 SendChannelUpdate(0);
                 return;
             }
 
-            fz = liqData.level;
             // finally, check LoS
             if (!m_caster->IsWithinLOS(fx, fy, fz))
             {
@@ -12961,6 +12959,32 @@ void Spell::EffectServerSide(SpellEffectIndex eff_idx)
 
     switch(m_spellInfo->Id)
     {
+        case 18350:
+        {
+
+            switch (triggerID)
+            {
+                case 67712:
+                case 67758:
+                {
+                    if (SpellAuraHolderPtr holder = unitTarget->GetSpellAuraHolder((triggerID == 67712 ? 67713 : 67759)))
+                    {
+                        if ( holder->GetStackAmount() + 1 > uint32(triggerSpell->EffectBasePoints[EFFECT_INDEX_0] ))
+                        {
+                            unitTarget->RemoveAurasDueToSpell(triggerID == 67712 ? 67713 : 67759);
+                            if (unitTarget->getVictim())
+                                unitTarget->CastSpell(unitTarget->getVictim(), (triggerID == 67712 ? 67714 : 67760), true);
+                            return;
+                        }
+                    }
+                    unitTarget->CastSpell(unitTarget,triggerID == 67712 ? 67713 : 67759, true);
+                    return;
+                }
+                default:
+                    break;
+            }
+            break;
+        }
         case 63974: // Synthetic spell for Glyph of shred
         {
             if (SpellAuraHolderPtr holder = GetCaster()->GetSpellAuraHolder(m_spellInfo->Id))
