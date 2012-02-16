@@ -292,7 +292,7 @@ void Map::AddProcessedObject(uint8 typeId, bool type)
 
 void Map::PrintStatistic()
 {
-    sLog.outDetail("Map::Statistic map (id %u, inst %u, diff %u): AVG exec time %f ms, objects/type: %u/%u %u/%u %u/%u %u/%u %u/%u %u/%u %u/%u %u/%u",
+    sLog.outError("Map::Statistic map (id %u, inst %u, diff %u): AVG exec time %f ms, objects/type: %u/%u %u/%u %u/%u %u/%u %u/%u %u/%u %u/%u %u/%u",
     GetId(), GetInstanceId(), GetDifficulty(),
     ((float)m_executionTime/(float)m_updatesCount),
     m_objectCount[TYPEID_OBJECT],TYPEID_OBJECT,
