@@ -278,6 +278,11 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         // Get Holder for Creature Linking
         CreatureLinkingHolder* GetCreatureLinkingHolder() { return &m_creatureLinkingHolder; }
 
+        // map restarting system
+        bool const IsBroken() { return m_broken; };
+        void SetBroken( bool _value = true ) { m_broken = _value; };
+        void ForcedUnload();
+
     private:
         void LoadMapAndVMap(int gx, int gy);
 
@@ -371,6 +376,7 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
 
         ObjectLockType      i_lock[MAP_LOCK_TYPE_MAX];
         AttackersMap        m_attackersMap;
+        bool                m_broken;
 };
 
 class MANGOS_DLL_SPEC WorldMap : public Map
