@@ -8661,6 +8661,20 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
             }
             break;
         }
+        case 50294: // Starfall triggered in-range damage (all ranks)
+        case 53188:
+        case 53189:
+        case 53190:
+        {
+            Unit* unitTarget = m_targets.getUnitTarget();
+            FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            if  (unitTarget)
+            {
+                targetUnitMap.remove(unitTarget);
+                m_targets.setDestination(unitTarget->GetPositionX(), unitTarget->GetPositionY(), unitTarget->GetPositionZ());
+            }
+            break;
+        }
         case 54148: // Svala Choose Only Player
         {
             UnitList tmpUnitMap;
