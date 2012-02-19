@@ -34,9 +34,6 @@ FleeingMovementGenerator<T>::_setTargetLocation(T &owner)
     if( !&owner )
         return;
 
-    if (owner.IsCrowdControlled())
-        return;
-
     // ignore in case other no reaction state
     if (owner.hasUnitState(UNIT_STAT_CAN_NOT_REACT & ~UNIT_STAT_FLEEING))
         return;
