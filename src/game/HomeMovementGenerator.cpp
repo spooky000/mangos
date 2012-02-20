@@ -46,26 +46,28 @@ void HomeMovementGenerator<Creature>::_setTargetLocation(Creature & owner)
         owner.GetRespawnCoord(x, y, z, &o);
         init.SetFacing(o);
     }
-
-    init.MoveTo(x, y, z, true);
+    init.MoveTo(x,y,z);
     init.SetWalk(false);
     init.Launch();
 
+    arrived = false;
     owner.clearUnitState(UNIT_STAT_ALL_STATE);
 }
 
 bool HomeMovementGenerator<Creature>::Update(Creature &owner, const uint32& time_diff)
 {
-    return !owner.movespline->Finalized();
+    arrived = owner.movespline->Finalized();
+    return !arrived;
 }
 
 void HomeMovementGenerator<Creature>::Finalize(Creature& owner)
 {
-    if (i_travel_timer == 0)
+    if (arrived)
     {
         if (owner.GetTemporaryFactionFlags() & TEMPFACTION_RESTORE_REACH_HOME)
             owner.ClearTemporaryFaction();
 
+        owner.SetWalk(true);
         owner.LoadCreatureAddon(true);
         owner.AI()->JustReachedHome();
     }

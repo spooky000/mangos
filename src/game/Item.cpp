@@ -1332,24 +1332,25 @@ bool Item::IsEligibleForRefund()
     return true;
 }
 
-void Item::SetSoulboundTradeable(AllowedLooterSet* allowedLooters, Player* currentOwner, bool apply)
+void Item::SetSoulboundTradeable(AllowedLooterSet& allowedLooters)
 {
-    if (apply)
-    {
-        SetFlag(ITEM_FIELD_FLAGS, ITEM_DYNFLAG_BOP_TRADEABLE);
-        allowedGUIDs = *allowedLooters;
-    }
-    else
-    {
-        RemoveFlag(ITEM_FIELD_FLAGS, ITEM_DYNFLAG_BOP_TRADEABLE);
-        if (allowedGUIDs.empty())
-            return;
+    SetFlag(ITEM_FIELD_FLAGS, ITEM_DYNFLAG_BOP_TRADEABLE);
+    allowedGUIDs = allowedLooters;
+}
 
-        allowedGUIDs.clear();
-        SetState(ITEM_CHANGED, currentOwner);
+void Item::ClearSoulboundTradeable(Player* currentOwner)
+{
+    RemoveFlag(ITEM_FIELD_FLAGS, ITEM_DYNFLAG_BOP_TRADEABLE);
+    if (allowedGUIDs.empty())
+        return;
 
-        CharacterDatabase.PExecute( "DELETE FROM item_soulbound_trade_data WHERE itemGuid = '%u'", GetGUIDLow() );
-    }
+    allowedGUIDs.clear();
+    SetState(ITEM_CHANGED, currentOwner);
+
+    static SqlStatementID bopItem ;
+    SqlStatement stmt = CharacterDatabase.CreateStatement(bopItem, "DELETE FROM item_soulbound_trade_data WHERE itemGuid = ?");
+    stmt.addUInt32(GetGUIDLow());
+    stmt.Execute();
 }
 
 bool Item::CheckSoulboundTradeExpire()
@@ -1357,7 +1358,7 @@ bool Item::CheckSoulboundTradeExpire()
     // called from owner's update - GetOwner() MUST be valid
     if (GetUInt32Value(ITEM_FIELD_CREATE_PLAYED_TIME) + 2*HOUR < GetOwner()->GetTotalPlayedTime())
     {
-        SetSoulboundTradeable(NULL, GetOwner(), false);
+        ClearSoulboundTradeable(GetOwner());
         return true; // remove from tradeable list
     }
 

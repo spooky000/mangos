@@ -622,17 +622,8 @@ bool IsSingleFromSpellSpecificPerTarget(SpellSpecific spellSpec1,SpellSpecific s
     }
 }
 
-bool IsPositiveTarget(uint32 targetA, uint32 targetB, uint32 spellId)
+bool IsPositiveTarget(uint32 targetA, uint32 targetB)
 {
-    switch(spellId)
-    {
-        // special spell exclusion
-        case 54798:
-            return false;
-        default:
-            break;
-    }
-
     switch(targetA)
     {
         // non-positive targets
@@ -652,7 +643,7 @@ bool IsPositiveTarget(uint32 targetA, uint32 targetB, uint32 spellId)
             break;
     }
     if (targetB)
-        return IsPositiveTarget(targetB, 0, spellId);
+        return IsPositiveTarget(targetB, 0);
     return true;
 }
 
@@ -892,7 +883,8 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
                             {
                                 // if non-positive trigger cast targeted to positive target this main cast is non-positive
                                 // this will place this spell auras as debuffs
-                                if (IsPositiveTarget(spellTriggeredProto->EffectImplicitTargetA[i], spellTriggeredProto->EffectImplicitTargetB[i], spellTriggeredProto->Id) &&
+                                if (spellTriggeredProto->Effect[i] &&
+                                    IsPositiveTarget(spellTriggeredProto->EffectImplicitTargetA[i], spellTriggeredProto->EffectImplicitTargetB[i]) &&
                                     !IsPositiveEffect(spellTriggeredProto, SpellEffectIndex(i)))
                                     return false;
                             }
@@ -1044,7 +1036,7 @@ bool IsPositiveEffect(SpellEntry const *spellproto, SpellEffectIndex effIndex)
     }
 
     // non-positive targets
-    if(!IsPositiveTarget(spellproto->EffectImplicitTargetA[effIndex],spellproto->EffectImplicitTargetB[effIndex], spellproto->Id))
+    if(!IsPositiveTarget(spellproto->EffectImplicitTargetA[effIndex],spellproto->EffectImplicitTargetB[effIndex]))
         return false;
 
     // AttributesEx check
@@ -4356,12 +4348,12 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
         }
         case SPELLFAMILY_PALADIN:
         {
-            // Judgement of Justice - Limit to 10 seconds in PvP
+            // Judgement of Justice - limit to 10 seconds in PvP
             if (spellproto->SpellFamilyFlags.test<CF_PALADIN_JUDGEMENT_OF_JUSTICE>())
                 return DIMINISHING_LIMITONLY;
-            // Turn Evil - limit to 10 seconds in PvP
+            // Turn Evil
             else if (spellproto->SpellFamilyFlags.test<CF_PALADIN_TURN_EVIL>())
-                return DIMINISHING_LIMITONLY;
+                return DIMINISHING_FEAR_CHARM_BLIND;
             break;
         }
         case SPELLFAMILY_WARLOCK:

@@ -52,7 +52,6 @@
 #include "BattleGroundMgr.h"
 #include "TemporarySummon.h"
 #include "VMapFactory.h"
-#include "MoveMap.h"
 #include "GameEventMgr.h"
 #include "PoolManager.h"
 #include "Database/DatabaseImpl.h"
@@ -137,7 +136,6 @@ World::~World()
         delete command;
 
     VMAP::VMapFactory::clear();
-    MMAP::MMapFactory::clear();
 
     //TODO free addSessQueue
 }
@@ -447,6 +445,18 @@ void World::LoadConfigSettings(bool reload)
     ///- Read the player limit and the Message of the day from the config file
     SetPlayerLimit( sConfig.GetIntDefault("PlayerLimit", DEFAULT_PLAYER_LIMIT), true );
     SetMotd( sConfig.GetStringDefault("Motd", "Welcome to the Massive Network Game Object Server." ) );
+
+    // VMSS system
+    setConfig(CONFIG_BOOL_VMSS_ENABLE,                "VMSS.Enable", false);
+    setConfig(CONFIG_UINT32_VMSS_MAXTHREADBREAKS,     "VMSS.MaxThreadBreaks",5);
+    setConfig(CONFIG_UINT32_VMSS_TBREMTIME,           "VMSS.ThreadBreakRememberTime",3600);
+    setConfig(CONFIG_UINT32_VMSS_MAPFREEMETHOD,       "VMSS.MapFreeMethod",0);
+    setConfig(CONFIG_UINT32_VMSS_FREEZECHECKPERIOD,   "VMSS.FreezeCheckPeriod",1000);
+    setConfig(CONFIG_UINT32_VMSS_FREEZEDETECTTIME,    "VMSS.MapFreezeDetectTime",1000);
+    // VMSS system statistic collector
+    setConfig(CONFIG_BOOL_VMSS_STATISTIC_ENABLE,        "VMSS.Statistic.Enable", false);
+    setConfig(CONFIG_UINT32_VMSS_STATISTIC_THREADSCOUNT,"VMSS.Statistic.Threads",1);
+    setConfig(CONFIG_UINT32_VMSS_STATISTIC_INTERVAL,    "VMSS.Statistic.Interval",60000);
 
     ///- Read all rates from the config file
     setConfigPos(CONFIG_FLOAT_RATE_HEALTH, "Rate.Health", 1.0f);
@@ -909,11 +919,6 @@ void World::LoadConfigSettings(bool reload)
     sLog.outString( "WORLD: VMap support included. LineOfSight:%i, getHeight:%i, indoorCheck:%i",
         enableLOS, enableHeight, getConfig(CONFIG_BOOL_VMAP_INDOOR_CHECK) ? 1 : 0);
     sLog.outString( "WORLD: VMap data directory is: %svmaps",m_dataPath.c_str());
-
-    setConfig(CONFIG_BOOL_MMAP_ENABLED, "mmap.enabled", true);
-    std::string ignoreMapIds = sConfig.GetStringDefault("mmap.ignoreMapIds", "");
-    MMAP::MMapFactory::preventPathfindingOnMaps(ignoreMapIds.c_str());
-    sLog.outString("WORLD: mmap pathfinding %sabled", getConfig(CONFIG_BOOL_MMAP_ENABLED) ? "en" : "dis");
 }
 
 /// Initialize the World
@@ -924,9 +929,6 @@ void World::SetInitialWorldSettings()
 
     ///- Time server startup
     uint32 uStartTime = WorldTimer::getMSTime();
-
-    ///- Initialize detour memory management
-    dtAllocSetCustom(dtCustomAlloc, dtCustomFree);
 
     ///- Initialize config settings
     LoadConfigSettings();
@@ -1313,6 +1315,9 @@ void World::SetInitialWorldSettings()
 
     sLog.outString( "Loading GM tickets...");
     sTicketMgr.LoadGMTickets();
+
+    sLog.outString("Cleaning up soulbound trading table...");
+    sObjectMgr.CleanupItemSoulboundTrade();
 
     ///- Handle outdated emails (delete/return)
     sLog.outString( "Returning old mails..." );

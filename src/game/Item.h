@@ -392,7 +392,8 @@ class MANGOS_DLL_SPEC Item : public Object
         uint32 GetPlayedtimeField() { return GetInt32Value(ITEM_FIELD_CREATE_PLAYED_TIME); }
 
         // Soulbound trade system
-        void SetSoulboundTradeable(AllowedLooterSet* allowedLooters, Player* currentOwner, bool apply);
+        void SetSoulboundTradeable(AllowedLooterSet& allowedLooters);
+        void ClearSoulboundTradeable(Player* currentOwner);
         bool CheckSoulboundTradeExpire();
 
         AllowedLooterSet allowedGUIDs;

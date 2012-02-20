@@ -168,15 +168,6 @@ BindIP = "0.0.0.0"
 #        More distance let have better performence, less distance let have more sensitive reaction at target move.
 #        Default: 1.5
 #
-#    mmap.enabled
-#        Enable/Disable pathfinding using mmaps
-#        Default: 1 (enable)
-#                 0 (disable)
-#
-#    mmap.ignoreMapIds
-#        Disable mmap pathfinding on the listed maps.
-#        List of map ids with delimiter ','
-#
 #    UpdateUptimeInterval
 #        Update realm uptime period in minutes (for save data in 'uptime' table). Must be > 0
 #        Default: 10 (minutes)
@@ -218,8 +209,6 @@ vmap.ignoreSpellIds = "7720"
 vmap.enableIndoorCheck = 1
 DetectPosCollision = 1
 TargetPosRecalculateRange = 1.5
-mmap.enabled = 1
-mmap.ignoreMapIds = ""
 UpdateUptimeInterval = 10
 MaxCoreStuckTime = 0
 AddonChannel = 1
@@ -271,7 +260,6 @@ CleanCharacterDB = 1
 #    LogFilter_VisibilityChanges
 #    LogFilter_Weather
 #    LogFilter_DbStrictedCheck
-#    LogFilter_Pathfinding
 #        Log filters (active by default)
 #        Default: 1 - not include with any log level
 #                 0 - include in log if log level permit
@@ -361,7 +349,6 @@ LogFilter_TransportMoves = 1
 LogFilter_VisibilityChanges = 1
 LogFilter_Weather = 1
 LogFilter_DbStrictedCheck = 1
-LogFilter_Pathfinding = 1
 LogFilter_PeriodicAffects = 0
 LogFilter_PlayerMoves = 0
 LogFilter_SQLText = 0
@@ -1700,3 +1687,61 @@ LFG.Debug               = 0
 LFR.Extend              = 0
 LFG.MaxKicks            = 5
 LFG.OnlyLastEncounterForCompleteDungeon = 0
+
+###################################################################################################################
+# Virtual map serving system (VMSS) configuration
+#
+#    VMSS.Enable
+#        Enabling VMSS support (signals handling)
+#        Default: 0 - off
+#                 1 - on
+#
+#    VMSS.MaxThreadBreaks
+#        Maximum single instance map fails before stopping world
+#        Default: 5
+#
+#    VMSS.ThreadBreakRememberTime
+#        Time (in seconds) before cleaning counter of MaxThreadBreaks
+#        Default: 3600 (1 hour)
+#
+#    VMSS.MapFreeMethod
+#        Method for freeing breaked map
+#        0 - safe cleaning (clean auras, save and logout player)
+#        1 - not safe cleaning (kick players, not clean auras, not save players/worldstates)
+#        2 - not safe cleaning (another type - logout players without save)
+#        Default: 0
+#
+#    VMSS.FreezeCheckPeriod
+#        Time period (in milliseconds) for activate FreezeDetect thread
+#        Default: 1000 (1 sec) - default mangos freeze detect period.
+#
+#    VMSS.MapFreezeDetectTime
+#        Time (in milliseconds) for detect freeze in map thread
+#        Default: 1000 (1 sec)
+#
+#    VMSS thread/map statistic system (independent with VMSS, but use same code)
+#    VMSS.Statistic.Enable
+#        Enabling VMSS statistic collect
+#        Default: 0 - off
+#                 1 - on
+#
+#    VMSS.Statistic.Threads
+#        Maximum threads count for output statistic
+#        Default: 1
+#
+#    VMSS.Statistic.Interval
+#        Time interval for logging
+#        Default: 60000 (1 min)
+#
+###################################################################################################################
+
+VMSS.Enable = 0
+VMSS.MaxThreadBreaks = 5
+VMSS.ThreadBreakRememberTime = 3600
+VMSS.MapFreeMethod = 0
+VMSS.FreezeCheckPeriod = 1000
+VMSS.MapFreezeDetectTime = 1000
+
+VMSS.Statistic.Enable = 0
+VMSS.Statistic.Threads = 1
+VMSS.Statistic.Interval = 300000

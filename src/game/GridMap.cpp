@@ -27,13 +27,12 @@
 #include "DBCStores.h"
 #include "GridMap.h"
 #include "VMapFactory.h"
-#include "MoveMap.h"
 #include "World.h"
 #include "Policies/SingletonImp.h"
 #include "Util.h"
 
 char const* MAP_MAGIC         = "MAPS";
-char const* MAP_VERSION_MAGIC = "v1.2";
+char const* MAP_VERSION_MAGIC = "v1.1";
 char const* MAP_AREA_MAGIC    = "AREA";
 char const* MAP_HEIGHT_MAGIC  = "MHGT";
 char const* MAP_LIQUID_MAGIC  = "MLIQ";
@@ -648,7 +647,6 @@ TerrainInfo::~TerrainInfo()
             delete m_GridMaps[i][k];
 
     VMAP::VMapFactory::createOrGetVMapManager()->unloadMap(m_mapId);
-    MMAP::MMapFactory::createOrGetMMapManager()->unloadMap(m_mapId);
 }
 
 GridMap * TerrainInfo::Load(const uint32 x, const uint32 y)
@@ -709,9 +707,6 @@ void TerrainInfo::CleanUpGrids(const uint32 diff)
 
                 //unload VMAPS...
                 VMAP::VMapFactory::createOrGetVMapManager()->unloadMap(m_mapId, x, y);
-
-                //unload mmap...
-                MMAP::MMapFactory::createOrGetMMapManager()->unloadMap(m_mapId, x, y);
             }
         }
     }
@@ -1167,12 +1162,36 @@ bool TerrainInfo::IsInWater(float x, float y, float pZ, GridMapLiquidData *data,
     return false;
 }
 
-bool TerrainInfo::IsUnderWater(float x, float y, float z) const
+bool TerrainInfo::IsAboveWater(float x, float y, float z, float* pWaterZ/*= NULL*/) const
 {
     if (const_cast<TerrainInfo*>(this)->GetGrid(x, y))
     {
-        if (getLiquidStatus(x, y, z, MAP_LIQUID_TYPE_WATER|MAP_LIQUID_TYPE_OCEAN) & LIQUID_MAP_UNDER_WATER)
+        GridMapLiquidData mapData;
+
+        if (getLiquidStatus(x, y, z, MAP_LIQUID_TYPE_WATER|MAP_LIQUID_TYPE_OCEAN, &mapData) & LIQUID_MAP_ABOVE_WATER)
+        {
+            if (pWaterZ)
+                *pWaterZ = mapData.level;
+
             return true;
+        }
+    }
+    return false;
+}
+
+bool TerrainInfo::IsUnderWater(float x, float y, float z, float* pWaterZ/*= NULL*/) const
+{
+    if (const_cast<TerrainInfo*>(this)->GetGrid(x, y))
+    {
+        GridMapLiquidData mapData;
+
+        if (getLiquidStatus(x, y, z, MAP_LIQUID_TYPE_WATER|MAP_LIQUID_TYPE_OCEAN, &mapData) & LIQUID_MAP_UNDER_WATER)
+        {
+            if (pWaterZ)
+                *pWaterZ = mapData.level;
+
+            return true;
+        }
     }
     return false;
 }
@@ -1270,9 +1289,6 @@ GridMap * TerrainInfo::LoadMapAndVMap( const uint32 x, const uint32 y )
                 DEBUG_LOG("Ignored VMAP name:%s, id:%d, x:%d, y:%d (vmap rep.: x:%d, y:%d)", mapName, m_mapId, x,y,x,y);
                 break;
             }
-
-            // load navmesh
-            MMAP::MMapFactory::createOrGetMMapManager()->loadMap(m_mapId, x, y);
         }
     }
 

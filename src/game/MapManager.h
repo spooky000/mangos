@@ -120,7 +120,7 @@ class MANGOS_DLL_DECL MapManager : public MaNGOS::Singleton<MapManager, MaNGOS::
         {
             // fmod only supports positive numbers. Thus we have
             // to emulate negative numbers
-            if (o < 0)
+            if(o < 0)
             {
                 float mod = o *-1;
                 mod = fmod(mod, 2.0f*M_PI_F);
@@ -154,6 +154,11 @@ class MANGOS_DLL_DECL MapManager : public MaNGOS::Singleton<MapManager, MaNGOS::
         template<typename Do>
         void DoForAllMapsWithMapId(uint32 mapId, Do& _do);
 
+        MapUpdater* GetMapUpdater() { return &m_updater; };
+
+        void UpdateStatisticForMap(Map* map);
+        void PrintStatistic();
+
     private:
 
         // debugging code, should be deleted some day
@@ -177,6 +182,9 @@ class MANGOS_DLL_DECL MapManager : public MaNGOS::Singleton<MapManager, MaNGOS::
 
         uint32 i_gridCleanUpDelay;
         MapMapType i_maps;
+
+        uint32 m_statisticInterval;
+        std::vector<Map*> m_statMaps;
 
         MapUpdater m_updater;
         IntervalTimer i_timer;

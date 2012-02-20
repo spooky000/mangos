@@ -433,7 +433,7 @@ Spell::Spell( Unit* caster, SpellEntry const *info, bool triggered, ObjectGuid o
             if (m_spellInfo->Effect[j] == 0)
                 continue;
 
-            if (IsPositiveTarget(m_spellInfo->EffectImplicitTargetA[j], m_spellInfo->EffectImplicitTargetB[j], m_spellInfo->Id) && !(m_spellInfo->AttributesEx & SPELL_ATTR_EX_NEGATIVE))
+            if (IsPositiveTarget(m_spellInfo->EffectImplicitTargetA[j], m_spellInfo->EffectImplicitTargetB[j]) && !(m_spellInfo->AttributesEx & SPELL_ATTR_EX_NEGATIVE))
                 continue;
             else
                 m_canReflect = true;
@@ -6258,10 +6258,8 @@ SpellCastResult Spell::CheckCast(bool strict)
                     return SPELL_FAILED_TARGET_UNSKINNABLE;
 
                 Creature* creature = (Creature*)m_targets.getUnitTarget();
-                if ( creature->GetCreatureType() != CREATURE_TYPE_CRITTER && ( !creature->lootForBody || creature->lootForSkin || !creature->loot.empty() ) )
-                {
+                if (creature->GetCreatureType() != CREATURE_TYPE_CRITTER && !creature->loot.isLooted() && !creature->lootForSkin)
                     return SPELL_FAILED_TARGET_NOT_LOOTED;
-                }
 
                 uint32 skill = creature->GetCreatureInfo()->GetRequiredLootSkill();
 
@@ -8663,6 +8661,20 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
             }
             break;
         }
+        case 50294: // Starfall triggered in-range damage (all ranks)
+        case 53188:
+        case 53189:
+        case 53190:
+        {
+            Unit* unitTarget = m_targets.getUnitTarget();
+            FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            if  (unitTarget)
+            {
+                targetUnitMap.remove(unitTarget);
+                m_targets.setDestination(unitTarget->GetPositionX(), unitTarget->GetPositionY(), unitTarget->GetPositionZ());
+            }
+            break;
+        }
         case 54148: // Svala Choose Only Player
         {
             UnitList tmpUnitMap;
@@ -8738,6 +8750,12 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
             FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
             break;
         }
+        case 65980: // Bloodlust (ToC Champions)
+        case 65983: // Heroism (ToC Champions)
+        {
+            FillAreaTargets(targetUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_NOT_HOSTILE);
+            break;
+        }
         case 66242: // Burning Inferno (ToC: Lord Jaraxxus - target only players)
         case 67059:
         case 67060:
@@ -8788,6 +8806,20 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
                     std::advance(iter, urand(0, t-1));
                     if (*iter)
                         (*iter)->CastSpell((*iter), 67574, true);
+                }
+            }
+            break;
+        }
+        case 68508: // Crushing Leap (IoC bosses)
+        {
+            UnitList tmpUnitMap;
+            FillAreaTargets(tmpUnitMap, radius, PUSH_DEST_CENTER, SPELL_TARGETS_AOE_DAMAGE);
+            if (!tmpUnitMap.empty())
+            {
+                for (UnitList::const_iterator itr = tmpUnitMap.begin(); itr != tmpUnitMap.end(); ++itr)
+                {
+                    if (*itr && (*itr)->GetTypeId() == TYPEID_PLAYER && !(*itr)->m_movementInfo.HasMovementFlag(MovementFlags(MOVEFLAG_FALLING)))
+                        targetUnitMap.push_back(*itr);
                 }
             }
             break;
@@ -9086,7 +9118,7 @@ bool Spell::FillCustomTargetMap(SpellEffectIndex i, UnitList &targetUnitMap)
             {
                 for (UnitList::const_iterator iter = tempTargetUnitMap.begin(); iter != tempTargetUnitMap.end(); ++iter)
                 {
-                    if ((*iter)->getPowerType() == POWER_MANA)
+                    if ((*iter)->getPowerType() == POWER_MANA && (*iter)->GetCharmerOrOwnerPlayerOrPlayerItself())
                         targetUnitMap.push_back(*iter);
                 }
             }

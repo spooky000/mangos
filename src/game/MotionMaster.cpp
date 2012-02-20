@@ -60,8 +60,14 @@ void MotionMaster::Initialize()
 
 MotionMaster::~MotionMaster()
 {
-    // clear ALL movement generators (including default)
-    DirectClean(false,true);
+    // just deallocate movement generator, but do not Finalize since it may access to already deallocated owner's memory
+    while(!empty())
+    {
+        MovementGenerator * m = top();
+        pop();
+        if (!isStatic(m))
+            delete m;
+    }
 }
 
 void MotionMaster::UpdateMotion(uint32 diff)
@@ -316,14 +322,14 @@ void MotionMaster::MoveFollow(Unit* target, float dist, float angle)
         Mutate(new FollowMovementGenerator<Creature>(*target,dist,angle));
 }
 
-void MotionMaster::MovePoint(uint32 id, float x, float y, float z, bool generatePath)
+void MotionMaster::MovePoint(uint32 id, float x, float y, float z)
 {
     DEBUG_FILTER_LOG(LOG_FILTER_AI_AND_MOVEGENSS, "%s targeted point (Id: %u X: %f Y: %f Z: %f)", m_owner->GetGuidStr().c_str(), id, x, y, z );
 
     if (m_owner->GetTypeId() == TYPEID_PLAYER)
-        Mutate(new PointMovementGenerator<Player>(id,x,y,z,generatePath));
+        Mutate(new PointMovementGenerator<Player>(id,x,y,z));
     else
-        Mutate(new PointMovementGenerator<Creature>(id,x,y,z,generatePath));
+        Mutate(new PointMovementGenerator<Creature>(id,x,y,z));
 }
 
 void MotionMaster::MoveSeekAssistance(float x, float y, float z)
@@ -458,10 +464,12 @@ void MotionMaster::propagateSpeedChange()
 
 MovementGeneratorType MotionMaster::GetCurrentMovementGeneratorType() const
 {
-    if (empty())
-        return IDLE_MOTION_TYPE;
+    MovementGenerator* curr = empty() ? NULL : top();
 
-    return top()->GetMovementGeneratorType();
+    if (curr)
+        return curr->GetMovementGeneratorType();
+    else
+        return IDLE_MOTION_TYPE;
 }
 
 bool MotionMaster::GetDestination(float &x, float &y, float &z)

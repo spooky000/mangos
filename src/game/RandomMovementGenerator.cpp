@@ -25,30 +25,66 @@
 #include "movement/MoveSpline.h"
 
 template<>
-void RandomMovementGenerator<Creature>::_setRandomLocation(Creature &creature)
+void
+RandomMovementGenerator<Creature>::_setRandomLocation(Creature &creature)
 {
-    float respX, respY, respZ, respO, wander_distance;
+    float respX, respY, respZ, respO, currZ, destX, destY, destZ, wander_distance, travelDistZ;
+
     creature.GetRespawnCoord(respX, respY, respZ, &respO, &wander_distance);
+
+    currZ = creature.GetPositionZ();
+    TerrainInfo const* map = creature.GetTerrain();
+
+    // For 2D/3D system selection
+    //bool is_land_ok  = creature.CanWalk();                // not used?
+    //bool is_water_ok = creature.CanSwim();                // not used?
+    bool is_air_ok = creature.CanFly();
 
     const float angle = rand_norm_f() * (M_PI_F*2.0f);
     const float range = rand_norm_f() * wander_distance;
+    const float distanceX = range * cos(angle);
+    const float distanceY = range * sin(angle);
 
-    float destX = respX + range * cos(angle);
-    float destY = respY + range * sin(angle);
-    float destZ = creature.GetPositionZ();
-    creature.UpdateAllowedPositionZ(destX, destY, destZ);
+    destX = respX + distanceX;
+    destY = respY + distanceY;
+
+    // prevent invalid coordinates generation
+    MaNGOS::NormalizeMapCoord(destX);
+    MaNGOS::NormalizeMapCoord(destY);
+
+    travelDistZ = distanceX*distanceX + distanceY*distanceY;
+
+    if (is_air_ok)                                          // 3D system above ground and above water (flying mode)
+    {
+        // Limit height change
+        const float distanceZ = rand_norm_f() * sqrtf(travelDistZ)/2.0f;
+        destZ = respZ + distanceZ;
+        float levelZ = map->GetWaterOrGroundLevel(destX, destY, destZ-2.0f);
+
+        // Problem here, we must fly above the ground and water, not under. Let's try on next tick
+        if (levelZ >= destZ)
+            return;
+    }
+    //else if (is_water_ok)                                 // 3D system under water and above ground (swimming mode)
+    else                                                    // 2D only
+    {
+        destZ = respZ;
+        if(!map->IsNextZcoordOK(destX, destY, destZ, travelDistZ))
+            return;                                         // let's forget this bad coords where a z cannot be find and retry at next tick
+        creature.UpdateGroundPositionZ(destX, destY, destZ, travelDistZ);
+    }
+
+    if (is_air_ok)
+        i_nextMoveTime.Reset(0);
+    else
+        i_nextMoveTime.Reset(urand(500, 10000));
 
     creature.addUnitState(UNIT_STAT_ROAMING_MOVE);
 
     Movement::MoveSplineInit init(creature);
-    init.MoveTo(destX, destY, destZ, true);
+    init.MoveTo(destX, destY, destZ);
     init.SetWalk(true);
     init.Launch();
-
-    if (creature.CanFly())
-        i_nextMoveTime.Reset(0);
-    else
-        i_nextMoveTime.Reset(urand(500, 10000));
 }
 
 template<>

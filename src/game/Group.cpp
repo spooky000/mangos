@@ -132,6 +132,7 @@ bool Group::Create(ObjectGuid guid, const char * name)
     m_lootMethod = GROUP_LOOT;
     m_lootThreshold = ITEM_QUALITY_UNCOMMON;
     m_looterGuid = guid;
+    m_roundLooterGuid = guid;
 
     m_dungeonDifficulty = DUNGEON_DIFFICULTY_NORMAL;
     m_raidDifficulty = RAID_DIFFICULTY_10MAN_NORMAL;
@@ -610,6 +611,23 @@ void Group::SendLootAllPassed(Roll const& r)
     }
 }
 
+// notify group members which player is the allowed looter for the given creature
+void Group::SendLooter(Creature* creature, Player* pLooter)
+{
+    MANGOS_ASSERT(creature);
+
+    WorldPacket data(SMSG_LOOT_LIST, (8+8));
+    data << creature->GetObjectGuid();
+    data << uint8(0); // unk1
+
+    if (pLooter)
+        data << pLooter->GetPackGUID();
+    else
+        data << uint8(0);
+
+    BroadcastPacket(&data, false);
+}
+
 void Group::GroupLoot(WorldObject* pSource, Loot* loot)
 {
     uint32 maxEnchantingSkill = GetMaxSkillValueForGroup(SKILL_ENCHANTING);
@@ -617,6 +635,10 @@ void Group::GroupLoot(WorldObject* pSource, Loot* loot)
     for(uint8 itemSlot = 0; itemSlot < loot->items.size(); ++itemSlot)
     {
         LootItem& lootItem = loot->items[itemSlot];
+
+        if(lootItem.freeforall)
+            continue;
+
         ItemPrototype const *itemProto = ObjectMgr::GetItemPrototype(lootItem.itemid);
         if (!itemProto)
         {
@@ -625,7 +647,7 @@ void Group::GroupLoot(WorldObject* pSource, Loot* loot)
         }
 
         //roll for over-threshold item if it's one-player loot
-        if (itemProto->Quality >= uint32(m_lootThreshold) && !lootItem.freeforall)
+        if (itemProto->Quality >= uint32(m_lootThreshold))
             StartLootRool(pSource, GROUP_LOOT, loot, itemSlot, maxEnchantingSkill);
         else
             lootItem.is_underthreshold = 1;
@@ -872,14 +894,14 @@ void Group::CountTheRoll(Rolls::iterator& rollI)
 
                 ItemPosCountVec dest;
                 LootItem *item = &(roll->getLoot()->items[roll->itemSlot]);
-                InventoryResult msg = player->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count );
-                if ( msg == EQUIP_ERR_OK )
+                InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count);
+                if (msg == EQUIP_ERR_OK)
                 {
                     item->is_looted = true;
                     roll->getLoot()->NotifyItemRemoved(roll->itemSlot);
-                    --roll->getLoot()->unlootedCount;
-                    AllowedLooterSet* looters = item->GetAllowedLooters();
-                    player->StoreNewItem( dest, roll->itemid, true, item->randomPropertyId, (looters->size() > 1) ? looters : NULL);
+                    roll->getLoot()->unlootedCount--;
+                    AllowedLooterSet looters = item->GetAllowedLooters();
+                    player->StoreNewItem(dest, roll->itemid, true, item->randomPropertyId, looters);
                     player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_ITEM, roll->itemid, item->count);
                     player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_TYPE, roll->getLoot()->loot_type, item->count);
                     player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_EPIC_ITEM, roll->itemid, item->count);
@@ -887,7 +909,7 @@ void Group::CountTheRoll(Rolls::iterator& rollI)
                 else
                 {
                     item->is_blocked = false;
-                    player->SendEquipError( msg, NULL, NULL, roll->itemid );
+                    player->SendEquipError(msg, NULL, NULL, roll->itemid);
                 }
             }
         }
@@ -928,29 +950,30 @@ void Group::CountTheRoll(Rolls::iterator& rollI)
                 if(rollvote == ROLL_GREED)
                 {
                     ItemPosCountVec dest;
-                    InventoryResult msg = player->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count );
-                    if ( msg == EQUIP_ERR_OK )
+                    InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count);
+                    if (msg == EQUIP_ERR_OK)
                     {
                         item->is_looted = true;
                         roll->getLoot()->NotifyItemRemoved(roll->itemSlot);
-                        --roll->getLoot()->unlootedCount;
-                        AllowedLooterSet* looters = item->GetAllowedLooters();
-                        player->StoreNewItem( dest, roll->itemid, true, item->randomPropertyId, (looters->size() > 1) ? looters : NULL);
+                        roll->getLoot()->unlootedCount--;
+                        AllowedLooterSet looters = item->GetAllowedLooters();
+                        player->StoreNewItem( dest, roll->itemid, true, item->randomPropertyId, looters);
                         player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_ITEM, roll->itemid, item->count);
                         player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_TYPE, roll->getLoot()->loot_type, item->count);
                         player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_EPIC_ITEM, roll->itemid, item->count);
+
                     }
                     else
                     {
                         item->is_blocked = false;
-                        player->SendEquipError( msg, NULL, NULL, roll->itemid );
+                        player->SendEquipError(msg, NULL, NULL, roll->itemid);
                     }
                 }
                 else if(rollvote == ROLL_DISENCHANT)
                 {
                     item->is_looted = true;
                     roll->getLoot()->NotifyItemRemoved(roll->itemSlot);
-                    --roll->getLoot()->unlootedCount;
+                    roll->getLoot()->unlootedCount--;
 
                     ItemPrototype const *pProto = ObjectMgr::GetItemPrototype(roll->itemid);
                     player->AutoStoreLoot(pProto->DisenchantID, LootTemplates_Disenchant, true);
@@ -1189,19 +1212,13 @@ bool Group::_addMember(ObjectGuid guid, const char* name)
 
 bool Group::_addMember(ObjectGuid guid, const char* name, uint8 group, GroupFlagMask flags, uint8 roles)
 {
-    if (IsFull())
+    if(IsFull())
         return false;
 
     if (!guid)
         return false;
 
-    Player* player = sObjectMgr.GetPlayer(guid, false);
-
-    uint32 lastMap = 0;
-    if (player && player->IsInWorld())
-        lastMap = player->GetMapId();
-    else if (player && player->IsBeingTeleported())
-        lastMap = player->GetTeleportDest().mapid;
+    Player *player = sObjectMgr.GetPlayer(guid);
 
     MemberSlot member;
     member.guid      = guid;
@@ -1209,8 +1226,6 @@ bool Group::_addMember(ObjectGuid guid, const char* name, uint8 group, GroupFlag
     member.group     = group;
     member.flags     = flags;
     member.roles     = roles;
-    //member.assistant = isAssistant;
-    //member.lastMap   = lastMap;
     m_memberSlots.push_back(member);
 
     SubGroupCounterIncrease(group);
@@ -1222,19 +1237,16 @@ bool Group::_addMember(ObjectGuid guid, const char* name, uint8 group, GroupFlag
         if (player->GetGroup() && isBGGroup())
             player->SetBattleGroundRaid(this, group);
         //if player is in bg raid and we are adding him to normal group, then call SetOriginalGroup()
-        else if (player->GetGroup())
+        else if ( player->GetGroup() )
             player->SetOriginalGroup(this, group);
         //if player is not in group, then call set group
         else
             player->SetGroup(this, group);
 
-        if (player->IsInWorld())
-        {
-            // if the same group invites the player back, cancel the homebind timer
-            if (InstanceGroupBind* bind = GetBoundInstance(player->GetMapId(), player))
-                if (bind->state->GetInstanceId() == player->GetInstanceId())
-                    player->m_InstanceValid = true;
-        }
+        // if the same group invites the player back, cancel the homebind timer
+        if (InstanceGroupBind *bind = GetBoundInstance(player->GetMapId(), player))
+            if (bind->state->GetInstanceId() == player->GetInstanceId())
+                player->m_InstanceValid = true;
     }
 
     if (!isRaidGroup())                                     // reset targetIcons for non-raid-groups
@@ -1547,79 +1559,82 @@ uint32 Group::GetMaxSkillValueForGroup( SkillType skill )
     return maxvalue;
 }
 
-void Group::UpdateLooterGuid(WorldObject* pSource, bool ifneed)
+void Group::UpdateLooterGuid(WorldObject* pLootedObject, bool ifneed)
 {
-    switch (GetLootMethod())
+    LootMethod method = GetLootMethod();
+    switch (method)
     {
-        case MASTER_LOOT:
         case FREE_FOR_ALL:
             return;
         default:
-            // round robin style looting applies for all low
-            // quality items in each loot method except free for all and master loot
+            // round robin style looting applies for every loot type under selected threshold
             break;
     }
 
-    member_citerator guid_itr = _getMemberCSlot(GetLooterGuid());
+    ObjectGuid oldLooterGUID = GetLooterGuid();
+
+    // At ML use RoundRobin guid because Looter Guid is reserved for Master Looter
+    if(method == MASTER_LOOT)
+        oldLooterGUID = GetMLRoundLooterGuid();
+
+    member_citerator guid_itr = _getMemberCSlot(oldLooterGUID);
     if (guid_itr != m_memberSlots.end())
     {
         if (ifneed)
         {
             // not update if only update if need and ok
             Player* looter = ObjectAccessor::FindPlayer(guid_itr->guid);
-            if (looter && looter->IsWithinDist(pSource, sWorld.getConfig(CONFIG_FLOAT_GROUP_XP_DISTANCE), false))
+            if (looter && looter->IsWithinDistInMap(pLootedObject, sWorld.getConfig(CONFIG_FLOAT_GROUP_XP_DISTANCE), false))
                 return;
         }
         ++guid_itr;
     }
 
     // search next after current
-    if (guid_itr != m_memberSlots.end())
+    Player* pNewLooter = NULL;
+    for (member_citerator itr = guid_itr; itr != m_memberSlots.end(); ++itr)
     {
-        for(member_citerator itr = guid_itr; itr != m_memberSlots.end(); ++itr)
-        {
-            if (Player* pl = ObjectAccessor::FindPlayer(itr->guid))
+        if (Player* player = ObjectAccessor::FindPlayer(itr->guid))
+            if (player->IsWithinDistInMap(pLootedObject, sWorld.getConfig(CONFIG_FLOAT_GROUP_XP_DISTANCE), false))
             {
-                if (pl->IsWithinDist(pSource, sWorld.getConfig(CONFIG_FLOAT_GROUP_XP_DISTANCE), false))
+                pNewLooter = player;
+                break;
+            }
+    }
+
+    if (!pNewLooter)
+    {
+        // search from start
+        for (member_citerator itr = m_memberSlots.begin(); itr != guid_itr; ++itr)
+        {
+            if (Player* player = ObjectAccessor::FindPlayer(itr->guid))
+                if (player->IsWithinDistInMap(pLootedObject, sWorld.getConfig(CONFIG_FLOAT_GROUP_XP_DISTANCE), false))
                 {
-                    bool refresh = pl->GetLootGuid() == pSource->GetObjectGuid();
-
-                    //if(refresh)                           // update loot for new looter
-                    //    pl->GetSession()->DoLootRelease(pl->GetLootGUID());
-                    SetLooterGuid(pl->GetObjectGuid());
-                    SendUpdate();
-
-                    if (refresh)                            // update loot for new looter
-                        pl->SendLoot(pSource->GetObjectGuid(), LOOT_CORPSE);
-                    return;
+                    pNewLooter = player;
+                    break;
                 }
-            }
         }
     }
 
-    // search from start
-    for(member_citerator itr = m_memberSlots.begin(); itr != guid_itr; ++itr)
+    if (pNewLooter)
     {
-        if (Player* pl = ObjectAccessor::FindPlayer(itr->guid))
+        if (oldLooterGUID != pNewLooter->GetObjectGuid())
         {
-            if (pl->IsWithinDist(pSource, sWorld.getConfig(CONFIG_FLOAT_GROUP_XP_DISTANCE), false))
+            if(GetLootMethod() == MASTER_LOOT) // Set new round robin looter (no update needed because its reserved for Master Looter
+                SetMLRoundRobinLooter(pNewLooter->GetObjectGuid());
+            else
             {
-                bool refresh = pl->GetLootGuid() == pSource->GetObjectGuid();
-
-                //if(refresh)                               // update loot for new looter
-                //    pl->GetSession()->DoLootRelease(pl->GetLootGUID());
-                SetLooterGuid(pl->GetObjectGuid());
+                SetLooterGuid(pNewLooter->GetObjectGuid());
                 SendUpdate();
-
-                if (refresh)                                // update loot for new looter
-                    pl->SendLoot(pSource->GetObjectGuid(), LOOT_CORPSE);
-                return;
             }
         }
     }
-
-    SetLooterGuid(ObjectGuid());
-    SendUpdate();
+    else
+    {
+        SetLooterGuid(ObjectGuid());
+        SetMLRoundRobinLooter(ObjectGuid());
+        SendUpdate();
+    }
 }
 
 GroupJoinBattlegroundResult Group::CanJoinBattleGroundQueue(BattleGround const* bgOrTemplate, BattleGroundQueueTypeId bgQueueTypeId, uint32 MinPlayerCount, uint32 MaxPlayerCount, bool isRated, uint32 arenaSlot)

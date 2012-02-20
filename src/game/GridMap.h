@@ -48,8 +48,6 @@ struct GridMapFileHeader
     uint32 heightMapSize;
     uint32 liquidMapOffset;
     uint32 liquidMapSize;
-    uint32 holesOffset;
-    uint32 holesSize;
 };
 
 #define MAP_AREA_NO_AREA      0x0001
@@ -222,7 +220,8 @@ public:
     float GetWaterLevel(float x, float y, float z, float* pGround = NULL) const;
     float GetWaterOrGroundLevel(float x, float y, float z, float* pGround = NULL, bool swim = false) const;
     bool IsInWater(float x, float y, float z, GridMapLiquidData *data = 0, float min_depth = 2.0f) const;
-    bool IsUnderWater(float x, float y, float z) const;
+    bool IsAboveWater(float x, float y, float z, float* pWaterZ = NULL) const;
+    bool IsUnderWater(float x, float y, float z, float* pWaterZ = NULL) const;
 
     GridMapLiquidStatus getLiquidStatus(float x, float y, float z, uint8 ReqLiquidType, GridMapLiquidData *data = 0) const;
 

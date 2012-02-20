@@ -20,18 +20,7 @@
 SUBDIRS = vmap
 
 ## CPP flags for includes, defines, etc.
-AM_CPPFLAGS = $(MANGOS_INCLUDES) -I$(top_builddir)/src/shared 
--I$(srcdir) 
--I$(srcdir)/../../dep/tbb/include 
--I$(srcdir)/../../dep/include 
--I$(srcdir)/../../dep/recastnavigation
--I$(srcdir)/../../dep/recastnavigation/Detour
--I$(srcdir)/../framework 
--I$(srcdir)/../shared 
--I$(srcdir)/vmap 
--I$(srcdir)/../realmd 
--I$(srcdir)/../../dep/include/g3dlite 
--DSYSCONFDIR=\"$(sysconfdir)/\"
+AM_CPPFLAGS = $(MANGOS_INCLUDES) -I$(top_builddir)/src/shared -I$(srcdir) -I$(srcdir)/../../dep/tbb/include -I$(srcdir)/../../dep/include -I$(srcdir)/../framework -I$(srcdir)/../shared -I$(srcdir)/vmap -I$(srcdir)/../realmd -I$(srcdir)/../../dep/include/g3dlite -DSYSCONFDIR=\"$(sysconfdir)/\"
 
 ## Build MaNGOS game library as convenience library.
 #  All libraries will be convenience libraries. Might be changed to shared
@@ -198,9 +187,6 @@ libmangosgame_a_SOURCES = \
 	MiscHandler.cpp \
 	MotionMaster.cpp \
 	MotionMaster.h \
-	MoveMap.cpp \
-	MoveMap.h \
-	MoveMapSharedDefines.h \
 	MovementGenerator.cpp \
 	MovementGenerator.h \
 	MovementGeneratorImpl.h \
@@ -224,8 +210,6 @@ libmangosgame_a_SOURCES = \
 	Opcodes.cpp \
 	Opcodes.h \
 	Path.h \
-	PathFinder.cpp \
-	PathFinder.h \
 	PetAI.cpp \
 	PetAI.h \
 	Pet.cpp \

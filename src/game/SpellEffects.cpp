@@ -525,6 +525,17 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                             }
                         return;
                     }
+                    // Touch of Light / Darkness (ToC Twins)
+                    case 65951:
+                    case 65952:
+                    case 66000:
+                    case 66002:
+                    {
+                        if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                            return;
+
+                        return;
+                    }
                     // Light spells (ToC twins)
                     case 66048: case 67203: case 67204: case 67205:     // Light Vortex
                     case 65795: case 67238: case 67239: case 67240:     // Unleashed Light
@@ -7342,7 +7353,7 @@ void Spell::EffectEnchantItemPerm(SpellEffectIndex eff_idx)
     // add new enchanting if equipped
     item_owner->ApplyEnchantment(itemTarget,PERM_ENCHANTMENT_SLOT,true);
 
-    itemTarget->SetSoulboundTradeable(NULL, item_owner, false);
+    itemTarget->ClearSoulboundTradeable(item_owner);
 }
 
 void Spell::EffectEnchantItemPrismatic(SpellEffectIndex eff_idx)
@@ -7402,7 +7413,7 @@ void Spell::EffectEnchantItemPrismatic(SpellEffectIndex eff_idx)
     // add new enchanting if equipped
     item_owner->ApplyEnchantment(itemTarget,PRISMATIC_ENCHANTMENT_SLOT,true);
 
-    itemTarget->SetSoulboundTradeable(NULL, item_owner, false);
+    itemTarget->ClearSoulboundTradeable(item_owner);
 }
 
 void Spell::EffectEnchantItemTmp(SpellEffectIndex eff_idx)
@@ -8815,7 +8826,6 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
                     }
 
                     // Teleport target to the spectral realm, add debuff and force faction
-                    unitTarget->CastSpell(unitTarget, 44852, true);
                     unitTarget->CastSpell(unitTarget, 46019, true);
                     unitTarget->CastSpell(unitTarget, 46021, true);
                     return;
@@ -11925,7 +11935,12 @@ void Spell::EffectSkinning(SpellEffectIndex /*eff_idx*/)
     uint32 skill = creature->GetCreatureInfo()->GetRequiredLootSkill();
 
     ((Player*)m_caster)->SendLoot(creature->GetObjectGuid(),LOOT_SKINNING);
-    creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
+
+    if(creature->lootForSkin) // If lootForSkin already opened, do not proceed to skill skill point distribution
+        return;
+
+    creature->lootForSkin = true;
+    //creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
 
     int32 reqValue = targetLevel < 10 ? 0 : targetLevel < 20 ? (targetLevel-10)*10 : targetLevel*5;
 
@@ -11960,7 +11975,7 @@ void Spell::EffectCharge(SpellEffectIndex /*eff_idx*/)
     }
 
     // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
-    m_caster->MonsterMoveWithSpeed(x, y, z, 24.f, true, true);
+    m_caster->MonsterMoveWithSpeed(x, y, z, 100.f);
 
     // not all charge effects used in negative spells
     if (unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
@@ -11992,7 +12007,7 @@ void Spell::EffectCharge2(SpellEffectIndex /*eff_idx*/)
     unitTarget->UpdateGroundPositionZ(x, y, z, 7.0f);
 
     // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
-    m_caster->MonsterMoveWithSpeed(x, y, z, 24.f, true, true);
+    m_caster->MonsterMoveWithSpeed(x, y, z, 100.f);
 
     // not all charge effects used in negative spells
     if (unitTarget && unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
@@ -12347,16 +12362,14 @@ void Spell::EffectTransmitted(SpellEffectIndex eff_idx)
             float max_angle = (max_dis - min_dis)/(max_dis + m_caster->GetObjectBoundingRadius());
             float angle_offset = max_angle * (rand_norm_f() - 0.5f);
             m_caster->GetNearPoint2D(fx, fy, dis, m_caster->GetOrientation() + angle_offset);
-            float waterZ = m_caster->GetTerrain()->GetWaterOrGroundLevel(fx, fy, m_caster->GetPositionZ());
-            GridMapLiquidData liqData;
-            if (!m_caster->GetTerrain()->IsInWater(fx, fy, waterZ, &liqData, 0.5f))
+
+            if (!m_caster->GetTerrain()->IsAboveWater(fx, fy, m_caster->GetPositionZ() + 0.5f, &fz))
             {
                 SendCastResult(SPELL_FAILED_NOT_FISHABLE);
                 SendChannelUpdate(0);
                 return;
             }
 
-            fz = liqData.level;
             // finally, check LoS
             if (!m_caster->IsWithinLOS(fx, fy, fz))
             {
@@ -13029,10 +13042,23 @@ void Spell::EffectSuspendGravity(SpellEffectIndex eff_idx)
     if (!unitTarget)
         return;
 
-    float fTargetX, fTargetY, fTargetZ;
-    unitTarget->GetPosition(fTargetX, fTargetY, fTargetZ);
-    float mapZ = unitTarget->GetTerrain()->GetHeight(fTargetX, fTargetY, fTargetZ);
-    float radius = m_spellInfo->EffectMiscValue[eff_idx]/10;
-    if (fTargetZ < mapZ + 0.5)
-        unitTarget->KnockBackFrom(m_caster, -radius, radius);
+    float x,y,z;
+
+    if (m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
+    {
+        x = m_targets.m_destX;
+        y = m_targets.m_destY;
+        z = m_targets.m_destZ;
+    }
+    else
+    {
+        m_caster->GetClosePoint(x, y, z, m_caster->GetObjectBoundingRadius(), 0.0f, m_caster->GetAngle(unitTarget));
+    }
+
+    unitTarget->UpdateAllowedPositionZ(x, y, z);
+
+    float speed  = float(m_spellInfo->EffectMiscValue[eff_idx]/2.0f);
+    float height = float(unitTarget->GetDistance(x,y,z) / 10.0f);
+
+    unitTarget->MonsterMoveJump(x, y, z + 0.1f, unitTarget->GetOrientation(), speed, height, true, m_caster == unitTarget ? NULL : m_caster);
 }

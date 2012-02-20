@@ -3268,7 +3268,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     return SPELL_AURA_PROC_FAILED;
 
                 Player *player = (Player*)this;
-                for (uint32 i = 0; i < MAX_RUNES; ++i)
+                for (uint8 i = 0; i < MAX_RUNES; ++i)
                 {
                     if (player->GetCurrentRune(i) == RUNE_BLOOD)
                     {
@@ -3301,7 +3301,7 @@ SpellAuraProcResult Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, Aura
                     return SPELL_AURA_PROC_FAILED;
 
                 Player *player = (Player*)this;
-                for (uint32 i = 0; i < MAX_RUNES; ++i)
+                for (uint8 i = 0; i < MAX_RUNES; ++i)
                 {
                     RuneType currRune = player->GetCurrentRune(i);
                     if (currRune == RUNE_UNHOLY || currRune == RUNE_FROST)
@@ -4290,6 +4290,18 @@ SpellAuraProcResult Unit::HandleProcTriggerSpellAuraProc(Unit *pVictim, uint32 d
     // dummy basepoints or other customs
     switch(trigger_spell_id)
     {
+        case 52914: // Turn the Tables
+        case 52915:
+        case 52910:
+        {
+            target = triggeredByAura->GetCaster();
+            if (!target)
+                return SPELL_AURA_PROC_FAILED;
+
+            target->CastSpell(target, trigger_spell_id, true);
+
+            return SPELL_AURA_PROC_OK;
+        }
         // Cast positive spell on enemy target
         case 7099:  // Curse of Mending
         case 39647: // Curse of Mending

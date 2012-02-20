@@ -829,7 +829,7 @@ namespace MaNGOS
             WorldObject const& GetFocusObject() const { return *i_obj; }
             bool operator()(Unit* u)
             {
-                if(u->isAlive() && i_obj->IsWithinDistInMap(u, i_range) && !i_funit->IsFriendlyTo(u))
+                if(u->isAlive() && i_obj->IsWithinDistInMap(u, i_range) && !i_funit->IsFriendlyTo(u) && u->isTargetableForAttack())
                     return true;
                 else
                     return false;
@@ -840,10 +840,10 @@ namespace MaNGOS
             float i_range;
     };
 
-    class AnyUnfriendlyVisibleUnitInObjectRangeCheck
+    class AnyUnfriendlyAttackableVisibleUnitInObjectRangeCheck
     {
         public:
-            AnyUnfriendlyVisibleUnitInObjectRangeCheck(WorldObject const* obj, Unit const* funit, float range)
+            AnyUnfriendlyAttackableVisibleUnitInObjectRangeCheck(WorldObject const* obj, Unit const* funit, float range)
                 : i_obj(obj), i_funit(funit), i_range(range) {}
             WorldObject const& GetFocusObject() const { return *i_obj; }
             bool operator()(Unit* u)
@@ -851,6 +851,7 @@ namespace MaNGOS
                 return u->isAlive()
                     && i_obj->IsWithinDistInMap(u, i_range)
                     && !i_funit->IsFriendlyTo(u)
+                    && u->isTargetableForAttack()
                     && u->isVisibleForOrDetect(i_funit,i_funit,false);
             }
         private:

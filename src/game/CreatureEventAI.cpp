@@ -192,7 +192,7 @@ bool CreatureEventAI::ProcessEvent(CreatureEventAIHolder& pHolder, Unit* pAction
             pHolder.UpdateRepeatTimer(m_creature,event.timer.repeatMin,event.timer.repeatMax);
             break;
         case EVENT_T_TIMER_OOC:
-            if (m_creature->isInCombat() || m_creature->IsInEvadeMode())
+            if (m_creature->isInCombat())
                 return false;
 
             //Repeat Timers
@@ -713,7 +713,8 @@ void CreatureEventAI::ProcessAction(CreatureEventAI_Action const& action, uint32
             EnterEvadeMode();
             break;
         case ACTION_T_FLEE_FOR_ASSIST:
-            m_creature->DoFleeToGetAssistance();
+            if (!m_creature->IsCrowdControlled())
+                m_creature->DoFleeToGetAssistance();
             break;
         case ACTION_T_QUEST_EVENT_ALL:
             if (pActionInvoker && pActionInvoker->GetTypeId() == TYPEID_PLAYER)
@@ -1199,6 +1200,10 @@ void CreatureEventAI::UpdateAI(const uint32 diff)
 {
     //Check if we are in combat (also updates calls threat update code)
     bool Combat = m_creature->SelectHostileTarget() && m_creature->getVictim();
+
+    //Must return if creature isn't alive. Normally select hostil target and get victim prevent this
+    if (!m_creature->isAlive())
+        return;
 
     if (!m_bEmptyList)
     {

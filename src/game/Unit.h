@@ -372,8 +372,7 @@ enum DeathState
     CORPSE         = 2,                                     // corpse state, for player this also meaning that player not leave corpse
     DEAD           = 3,                                     // for creature despawned state (corpse despawned), for player CORPSE/DEAD not clear way switches (FIXME), and use m_deathtimer > 0 check for real corpse state
     JUST_ALIVED    = 4,                                     // temporary state at resurrection, for creature auto converted to ALIVE, for player at next update call
-    GHOULED        = 5,
-    CORPSE_FALLING = 6,                                     // corpse state in case when corpse still falling to ground
+    GHOULED        = 5
 };
 
 // internal state flags for some auras and movement generators, other.
@@ -405,8 +404,7 @@ enum UnitState
     UNIT_STAT_FOLLOW_MOVE     = 0x00010000,
     UNIT_STAT_FLEEING         = 0x00020000,                     // FleeMovementGenerator/TimedFleeingMovementGenerator active/onstack
     UNIT_STAT_FLEEING_MOVE    = 0x00040000,
-    UNIT_STAT_IGNORE_PATHFINDING = 0x00080000,               // do not use pathfinding in any MovementGenerator
-    UNIT_STAT_ON_VEHICLE      = 0x00100000,                     // Unit is on vehicle
+    UNIT_STAT_ON_VEHICLE      = 0x00080000,                     // Unit is on vehicle
 
     // masks (only for check)
 
@@ -1501,14 +1499,13 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
 
         void NearTeleportTo(float x, float y, float z, float orientation, bool casting = false);
         void MonsterMoveJump(float x, float y, float z, float o, float speed, float height, bool isKnockBack = false, Unit* target = NULL);
-        void MonsterMoveWithSpeed(float x, float y, float z, float speed, bool generatePath = false, bool forceDestination = false);
+        void MonsterMoveWithSpeed(float x, float y, float z, float speed);
 
         // recommend use MonsterMove/MonsterMoveWithSpeed for most case that correctly work with movegens
         // if used additional args in ... part then floats must explicitly casted to double
         void SendMonsterMoveTransport(WorldObject *transport, SplineType type, SplineFlags flags, uint32 moveTime, ...);
 
         virtual bool SetPosition(float x, float y, float z, float orientation, bool teleport = false);
-
         // recommend use MonsterMove/MonsterMoveWithSpeed for most case that correctly work with movegens
         // if used additional args in ... part then floats must explicitly casted to double
         void SendHeartBeat();

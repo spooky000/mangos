@@ -278,6 +278,19 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         // Get Holder for Creature Linking
         CreatureLinkingHolder* GetCreatureLinkingHolder() { return &m_creatureLinkingHolder; }
 
+        // map restarting system
+        bool const IsBroken() { return m_broken; };
+        void SetBroken( bool _value = true ) { m_broken = _value; };
+        void ForcedUnload();
+
+        // Map execution statistic system
+        void SetProcessingTime(bool stage = true);
+        void ResetStatistic(bool full = false);
+        void AddProcessedObject(uint8 typeId, bool type = true);
+        void PrintStatistic();
+        uint32 GetUpdatesCount() const { return  m_updatesCount; };
+        uint64 GetExecutionTime() const {return  m_executionTime;};
+
     private:
         void LoadMapAndVMap(int gx, int gy);
 
@@ -307,7 +320,7 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
             return i_grids[x][y];
         }
 
-        bool isGridObjectDataLoaded(uint32 x, uint32 y) const { return getNGrid(x,y)->isGridObjectDataLoaded(); }
+        bool isGridObjectDataLoaded(uint32 x, uint32 y) const { return getNGrid(x,y) ? getNGrid(x,y)->isGridObjectDataLoaded() : false; }
         void setGridObjectDataLoaded(bool pLoaded, uint32 x, uint32 y) { getNGrid(x,y)->setGridObjectDataLoaded(pLoaded); }
 
         void setNGrid(NGridType* grid, uint32 x, uint32 y);
@@ -371,6 +384,13 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
 
         ObjectLockType      i_lock[MAP_LOCK_TYPE_MAX];
         AttackersMap        m_attackersMap;
+        bool                m_broken;
+
+        // Map execution statistic system
+        uint32              m_lastStartTime;
+        uint32              m_objectCount[MAX_TYPE_ID];
+        uint32              m_updatesCount;
+        uint64              m_executionTime;
 };
 
 class MANGOS_DLL_SPEC WorldMap : public Map

@@ -9726,6 +9726,9 @@ void Aura::PeriodicDummyTick()
                 case 66118:                                 // Leeching Swarm 10 man
                 case 68646:
                 {
+                    if (target->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
                     int32 damage = (m_modifier.m_amount * target->GetHealth()) / 100;
                     if (damage < 250)
                         damage = 250;
@@ -9738,6 +9741,9 @@ void Aura::PeriodicDummyTick()
                 case 67630:                                 // Leeching Swarm 25 man
                 case 68647:
                 {
+                    if (target->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
                     int32 damage = (m_modifier.m_amount * target->GetHealth()) / 100;
                     if (damage < 250)
                         damage = 250;
@@ -9923,8 +9929,8 @@ void Aura::PeriodicDummyTick()
                         // eff_radius ==0
                         float radius = GetSpellMaxRange(sSpellRangeStore.LookupEntry(spell->rangeIndex));
 
-                        MaNGOS::AnyUnfriendlyVisibleUnitInObjectRangeCheck u_check(target, target, radius);
-                        MaNGOS::UnitListSearcher<MaNGOS::AnyUnfriendlyVisibleUnitInObjectRangeCheck> checker(targets, u_check);
+                        MaNGOS::AnyUnfriendlyAttackableVisibleUnitInObjectRangeCheck u_check(target, target, radius);
+                        MaNGOS::UnitListSearcher<MaNGOS::AnyUnfriendlyAttackableVisibleUnitInObjectRangeCheck> checker(targets, u_check);
                         Cell::VisitAllObjects(target, checker, radius);
                     }
 

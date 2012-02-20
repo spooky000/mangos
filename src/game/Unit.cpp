@@ -322,6 +322,9 @@ void Unit::Update( uint32 update_diff, uint32 p_time )
     if (!IsInWorld())
         return;
 
+    if (GetMap())
+        GetMap()->AddProcessedObject(GetTypeId());
+
     /*if (p_time > m_AurasCheck)
     {
     m_AurasCheck = 2000;
@@ -915,10 +918,68 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             data << player_tap->GetObjectGuid();            //player with killing blow
             data << pVictim->GetObjectGuid();              //victim
 
+            Player* pLooter = player_tap;
+
+            Creature * creature = NULL;
+            if(pVictim->GetTypeId() == TYPEID_UNIT)
+                creature = (Creature*)pVictim;
+
             if (group_tap)
+            {
                 group_tap->BroadcastPacket(&data, false, group_tap->GetMemberGroup(player_tap->GetObjectGuid()),player_tap->GetObjectGuid());
 
-            player_tap->SendDirectMessage(&data);
+                if (creature)
+                {
+                    // Select new looter
+                    group_tap->UpdateLooterGuid(creature, true);
+                    if (group_tap->GetLooterGuid())
+                    {
+                        // Set Round-Robin for Master Looting type
+                        if(group_tap->GetLootMethod() == MASTER_LOOT)
+                            pLooter = ObjectMgr::GetPlayer(group_tap->GetMLRoundLooterGuid());
+                        else // Set Normal Looter for rest
+                            pLooter = ObjectMgr::GetPlayer(group_tap->GetLooterGuid());
+
+                        if (pLooter)
+                        {
+                            creature->SetLootRecipient(pLooter);        // update creature loot recipient to the allowed looter.
+                            group_tap->SendLooter(creature, pLooter);   // send loot owner indication to nearby group players
+                        }
+                        else // if no looter selected remove loot owner indicator
+                            group_tap->SendLooter(creature, NULL);
+                    }
+                    else
+                        group_tap->SendLooter(creature, NULL);
+
+                    group_tap->UpdateLooterGuid(creature);
+                }
+            }
+            else
+            {
+                player_tap->SendDirectMessage(&data);
+
+                if(creature)
+                {
+                    WorldPacket data2(SMSG_LOOT_LIST, (8+1+1));
+                    data2 << creature->GetObjectGuid();
+                    data2 << uint8(0); // unk1
+                    data2 << uint8(0); // no group looter
+                    player_tap->SendMessageToSetInRange(&data2, GetMap()->GetVisibilityDistance(), true);
+                }
+            }
+
+            if (creature) // Fill loot at death
+            {
+                Loot* loot = &creature->loot;
+                if (creature->lootForPickPocketed)
+                    creature->lootForPickPocketed = false;
+
+                loot->clear();
+                if (uint32 lootid = creature->GetCreatureInfo()->lootid)
+                    loot->FillLoot(lootid, LootTemplates_Creature, pLooter, false, false);
+
+                loot->generateMoneyLoot(creature->GetCreatureInfo()->mingold,creature->GetCreatureInfo()->maxgold);
+            }
         }
 
         // Reward player, his pets, and group/raid members
@@ -1025,9 +1086,13 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             {
                 cVictim->DeleteThreatList();
                 // only lootable if it has loot or can drop gold
-                cVictim->PrepareBodyLootState();
+                //cVictim->PrepareBodyLootState();
                 // may have no loot, so update death timer if allowed
-                cVictim->AllLootRemovedFromCorpse();
+                //cVictim->AllLootRemovedFromCorpse();
+
+                CreatureInfo const* cInfo = cVictim->GetCreatureInfo();
+                if (cInfo && (cInfo->lootid || cInfo->maxgold > 0))
+                    cVictim->SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
             }
 
             // if vehicle and has passengers - remove his
@@ -8399,6 +8464,11 @@ uint32 Unit::SpellHealingBonusTaken(Unit *pCaster, SpellEntry const *spellProto,
     // Healing taken percent
     float  TakenTotalMod = GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALING_PCT);
 
+    // some spells shouldnt be affected by healing debuffs
+    if (spellProto->Id == 65875 || spellProto->Id == 65876 || spellProto->Id == 67308 || spellProto->Id == 67304 ||     // Twin's pact
+        spellProto->Id == 66118 || spellProto->Id == 67630 || spellProto->Id == 68646 || spellProto->Id == 68647)       // Leeching Swarm
+        TakenTotalMod = 1;
+
     // No heal amount for this class spells
     if (spellProto->DmgClass == SPELL_DAMAGE_CLASS_NONE)
     {
@@ -10173,32 +10243,6 @@ bool Unit::SelectHostileTarget()
             SetInFront(target);
             if (oldTarget != target)
                 ((Creature*)this)->AI()->AttackStart(target);
-
-            // check if currently selected target is reachable
-            // NOTE: path alrteady generated from AttackStart()
-            if(!GetMotionMaster()->operator->()->IsReachable())
-            {
-                // remove all taunts
-                RemoveSpellsCausingAura(SPELL_AURA_MOD_TAUNT);
-
-                if(m_ThreatManager.getThreatList().size() < 2)
-                {
-                    // only one target in list, we have to evade after timer
-                    // TODO: make timer - inside Creature class
-                    ((Creature*)this)->AI()->EnterEvadeMode();
-                }
-                else
-                {
-                    // remove unreachable target from our threat list
-                    // next iteration we will select next possible target
-                    m_HostileRefManager.deleteReference(target);
-                    m_ThreatManager.modifyThreatPercent(target, -101);
-
-                    //_removeAttacker(target);
-                }
-
-                return false;
-            }
         }
         return true;
     }
@@ -11304,6 +11348,9 @@ void Unit::DoPetAction( Player* owner, uint8 flag, uint32 spellid, ObjectGuid pe
 
                     // not let attack friendly units.
                     if(owner->IsFriendlyTo(TargetUnit))
+                        return;
+                    // Not let attack through obstructions
+                    if(!IsWithinLOSInMap(TargetUnit))
                         return;
 
                     // This is true if pet has no target or has target but targets differs.
@@ -12595,10 +12642,10 @@ void Unit::NearTeleportTo( float x, float y, float z, float orientation, bool ca
     }
 }
 
-void Unit::MonsterMoveWithSpeed(float x, float y, float z, float speed, bool generatePath, bool forceDestination)
+void Unit::MonsterMoveWithSpeed(float x, float y, float z, float speed)
 {
     Movement::MoveSplineInit init(*this);
-    init.MoveTo(x,y,z, generatePath, forceDestination);
+    init.MoveTo(x,y,z);
     init.SetVelocity(speed);
     init.Launch();
 }

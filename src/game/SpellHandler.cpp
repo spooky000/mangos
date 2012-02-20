@@ -729,6 +729,9 @@ void WorldSession::HandleGetMirrorimageData(WorldPacket& recv_data)
 
     Unit* pCaster = images.front()->GetCaster();
 
+    if(!pCaster)
+        return;
+
     WorldPacket data(SMSG_MIRRORIMAGE_DATA, 68);
 
     data << guid;

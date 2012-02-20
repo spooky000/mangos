@@ -123,22 +123,9 @@ class MANGOS_DLL_SPEC Object
         virtual ~Object ( );
 
         const bool& IsInWorld() const { return m_inWorld; }
-        virtual void AddToWorld()
-        {
-            if(m_inWorld)
-                return;
 
-            m_inWorld = true;
-
-            // synchronize values mirror with values array (changes will send in updatecreate opcode any way
-            ClearUpdateMask(false);                         // false - we can't have update data in update queue before adding to world
-        }
-        virtual void RemoveFromWorld()
-        {
-            // if we remove from world then sending changes not required
-            ClearUpdateMask(true);
-            m_inWorld = false;
-        }
+        virtual void AddToWorld();
+        virtual void RemoveFromWorld();
 
         ObjectGuid const& GetObjectGuid() const { return GetGuidValue(OBJECT_FIELD_GUID); }
         uint32 GetGUIDLow() const { return GetObjectGuid().GetCounter(); }
@@ -357,6 +344,8 @@ class MANGOS_DLL_SPEC Object
 
         void InitValues() { _InitValues(); }
 
+        void ForceValuesUpdateAtIndex(uint16 index);
+
         virtual bool HasQuest(uint32 /* quest_id */) const { return false; }
         virtual bool HasInvolvedQuest(uint32 /* quest_id */) const { return false; }
     protected:
@@ -387,7 +376,7 @@ class MANGOS_DLL_SPEC Object
             float  *m_floatValues;
         };
 
-        uint32 *m_uint32Values_mirror;
+        bool *_changedFields;
 
         uint16 m_valuesCount;
 

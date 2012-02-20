@@ -614,10 +614,6 @@ void Creature::Update(uint32 update_diff, uint32 diff)
             RegenerateAll(update_diff);
             break;
         }
-        case CORPSE_FALLING:
-        {
-            SetDeathState(CORPSE);
-        }
         default:
             break;
     }
@@ -1530,15 +1526,19 @@ void Creature::SetDeathState(DeathState s)
         SetTargetGuid(ObjectGuid());                        // remove target selection in any cases (can be set at aura remove in Unit::SetDeathState)
         SetUInt32Value(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_NONE);
 
+        if (!IsPet() && GetCreatureInfo()->SkinLootId)
+            if (LootTemplates_Skinning.HaveLootFor(GetCreatureInfo()->SkinLootId))
+                if (HasLootRecipient())
+                    SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
+
         if (HasSearchedAssistance())
         {
             SetNoSearchAssistance(false);
             UpdateSpeed(MOVE_RUN, false);
         }
 
-        // return, since we promote to CORPSE_FALLING. CORPSE_FALLING is promoted to CORPSE at next update.
-        if (CanFly() && FallGround())
-            return;
+        if (CanFly())
+            i_motionMaster.MoveFall();
 
         Unit::SetDeathState(CORPSE);
     }
@@ -1571,44 +1571,6 @@ void Creature::SetDeathState(DeathState s)
         SetUInt32Value(UNIT_NPC_FLAGS, cinfo->npcflag);
         RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
     }
-}
-
-bool Creature::FallGround()
-{
-    // Only if state is JUST_DIED. CORPSE_FALLING is set below and promoted to CORPSE later
-    if (getDeathState() != JUST_DIED)
-        return false;
-
-    // use larger distance for vmap height search than in most other cases
-    float tz = GetTerrain()->GetHeight(GetPositionX(), GetPositionY(), GetPositionZ(), true, MAX_FALL_DISTANCE);
-
-    if (tz <= INVALID_HEIGHT)
-    {
-        DEBUG_LOG("FallGround: creature %u at map %u (x: %f, y: %f, z: %f), not able to retrive a proper GetHeight (z: %f).",
-            GetEntry(), GetMap()->GetId(), GetPositionX(), GetPositionX(), GetPositionZ(), tz);
-        return false;
-    }
-
-    // Abort too if the ground is very near
-    if (fabs(GetPositionZ() - tz) < 0.1f)
-        return false;
-
-    Unit::SetDeathState(CORPSE_FALLING);
-
-    // For creatures that are moving towards target and dies, the visual effect is not nice.
-    // It is possibly caused by a xyz mismatch in DestinationHolder's GetLocationNow and the location
-    // of the mob in client. For mob that are already reached target or dies while not moving
-    // the visual appear to be fairly close to the expected.
-
-    Movement::MoveSplineInit init(*this);
-    init.MoveTo(GetPositionX(),GetPositionY(),tz);
-    init.SetFall();
-    init.Launch();
-
-    // hacky solution: by some reason died creatures not updated, that's why need finalize movement state
-    GetMap()->CreatureRelocation(this, GetPositionX(), GetPositionY(), tz, GetOrientation());
-    movespline->_Finalize();
-    return true;
 }
 
 void Creature::Respawn()

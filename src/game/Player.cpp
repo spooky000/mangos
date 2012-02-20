@@ -8230,13 +8230,6 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
 
             loot = &go->loot;
 
-            Player* recipient = go->GetLootRecipient();
-            if (!recipient)
-            {
-                go->SetLootRecipient(this);
-                recipient = this;
-            }
-
             // generate loot only if ready for open and spawned in world
             if (go->getLootState() == GO_READY && go->isSpawned())
             {
@@ -8250,107 +8243,81 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                                 return;
                             }
 
-                if (Group* group = this->GetGroup())
-                {
-                    if (go->GetGoType() == GAMEOBJECT_TYPE_CHEST)
-                    {
-                        if (go->GetGOInfo()->chest.groupLootRules == 1)
-                        {
-                            group->UpdateLooterGuid(go,true);
-                            switch (group->GetLootMethod())
-                            {
-                                case GROUP_LOOT:
-                                // GroupLoot delete items over threshold (threshold even not implemented), and roll them. Items with quality<threshold, round robin
-                                     group->GroupLoot(go, loot);
-                                     permission = GROUP_PERMISSION;
-                                     break;
-                                case NEED_BEFORE_GREED:
-                                     group->NeedBeforeGreed(go, loot);
-                                     permission = GROUP_PERMISSION;
-                                     break;
-                                case MASTER_LOOT:
-                                     group->MasterLoot(go, loot);
-                                     permission = MASTER_PERMISSION;
-                                     break;
-                                default:
-                                     break;
-                             }
-                         }
-                         else
-                             permission = GROUP_PERMISSION;
-                     }
-                 }
-
                 // Entry 0 in fishing loot template used for store junk fish loot at fishing fail it junk allowed by config option
                 // this is overwrite fishinghole loot for example
                 if (loot_type == LOOT_FISHING_FAIL)
+                {
                     loot->FillLoot(0, LootTemplates_Fishing, this, true);
+                }
                 else if (lootid)
                 {
-                    DEBUG_LOG("       if(lootid)");
                     loot->clear();
-                    loot->FillLoot(lootid, LootTemplates_Gameobject, this, false);
+
+                    Group* group = GetGroup();
+                    bool groupRules = (group && go->GetGOInfo()->type == GAMEOBJECT_TYPE_CHEST && go->GetGOInfo()->chest.groupLootRules);
+
+                    // check current RR player and get next if necessary
+                    if (groupRules)
+                        group->UpdateLooterGuid(go, true);
+
+                    loot->FillLoot(lootid, LootTemplates_Gameobject, this, !groupRules);
                     loot->generateMoneyLoot(go->GetGOInfo()->MinMoneyLoot, go->GetGOInfo()->MaxMoneyLoot);
 
-                    if (go->GetGoType() == GAMEOBJECT_TYPE_CHEST && go->GetGOInfo()->chest.groupLootRules)
-                    {
-                        if (Group* group = go->GetGroupLootRecipient())
-                        {
-                            group->UpdateLooterGuid(go, true);
+                    // get next RR player (for next loot)
+                    if (groupRules)
+                        group->UpdateLooterGuid(go);
+                }
 
-                            switch (group->GetLootMethod())
-                            {
-                                case GROUP_LOOT:
-                                    // GroupLoot delete items over threshold (threshold even not implemented), and roll them. Items with quality<threshold, round robin
-                                    group->GroupLoot(go, loot);
-                                    permission = GROUP_PERMISSION;
-                                    break;
-                                case NEED_BEFORE_GREED:
-                                    group->NeedBeforeGreed(go, loot);
-                                    permission = GROUP_PERMISSION;
-                                    break;
-                                case MASTER_LOOT:
-                                    group->MasterLoot(go, loot);
-                                    permission = MASTER_PERMISSION;
-                                    break;
-                                default:
-                                    break;
-                            }
+                if (loot_type == LOOT_FISHING)
+                    go->getFishLoot(loot,this);
+
+                if (go->GetGOInfo()->type == GAMEOBJECT_TYPE_CHEST && go->GetGOInfo()->chest.groupLootRules)
+                {
+                    if (Group* group = GetGroup())
+                    {
+                        switch (group->GetLootMethod())
+                        {
+                            case GROUP_LOOT:
+                                // GroupLoot: rolls items over threshold. Items with quality < threshold, round robin
+                                group->GroupLoot(go, loot);
+                                break;
+                            case NEED_BEFORE_GREED:
+                                group->NeedBeforeGreed(go, loot);
+                                break;
+                            case MASTER_LOOT:
+                                group->MasterLoot(go, loot);
+                                break;
+                            default:
+                                break;
                         }
                     }
                 }
-                else if (loot_type == LOOT_FISHING)
-                    go->getFishLoot(loot,this);
 
                 go->SetLootState(GO_ACTIVATED);
             }
 
             if ((go->getLootState() == GO_ACTIVATED) && (go->GetGoType() == GAMEOBJECT_TYPE_CHEST))
             {
-                if (go->GetGOInfo()->chest.groupLootRules)
+                if (Group* group = GetGroup())
                 {
-                    if(Group* group = GetGroup())
+                    switch (group->GetLootMethod())
                     {
-                        if (group == go->GetGroupLootRecipient())
-                        {
-                            if (group->GetLootMethod() == FREE_FOR_ALL)
-                                permission = ALL_PERMISSION;
-                            else if (group->GetLooterGuid() == GetObjectGuid())
-                            {
-                                if (group->GetLootMethod() == MASTER_LOOT)
-                                    permission = MASTER_PERMISSION;
-                                else
-                                    permission = ALL_PERMISSION;
-                            }
-                            else
-                                permission = GROUP_PERMISSION;
-                        }
-                        else
-                            permission = NONE_PERMISSION;
+                        case MASTER_LOOT:
+                            permission = MASTER_PERMISSION;
+                            break;
+                        case FREE_FOR_ALL:
+                            permission = ALL_PERMISSION;
+                            break;
+                        case ROUND_ROBIN:
+                            permission = ROUND_ROBIN_PERMISSION;
+                            break;
+                        default:
+                            permission = GROUP_PERMISSION;
+                            break;
                     }
-               }
-               else
-                   permission = ALL_PERMISSION;
+                }
+                else
+                    permission = ALL_PERMISSION;
             }
             break;
         }
@@ -8481,16 +8448,10 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                 if (!creature->lootForBody)
                 {
                     creature->lootForBody = true;
-                    loot->clear();
-
-                    if (uint32 lootid = creature->GetCreatureInfo()->lootid)
-                        loot->FillLoot(lootid, LootTemplates_Creature, recipient, false);
-
-                    loot->generateMoneyLoot(creature->GetCreatureInfo()->mingold,creature->GetCreatureInfo()->maxgold);
 
                     if (Group* group = creature->GetGroupLootRecipient())
                     {
-                        group->UpdateLooterGuid(creature,true);
+                        //group->UpdateLooterGuid(creature,true);
 
                         switch (group->GetLootMethod())
                         {
@@ -8515,9 +8476,8 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                 {
                     if (!creature->lootForSkin)
                     {
-                        creature->lootForSkin = true;
                         loot->clear();
-                        loot->FillLoot(creature->GetCreatureInfo()->SkinLootId, LootTemplates_Skinning, this, false);
+                        loot->FillLoot(creature->GetCreatureInfo()->SkinLootId, LootTemplates_Skinning, this, true);
 
                         // let reopen skinning loot if will closed.
                         if (!loot->empty())
@@ -8529,21 +8489,25 @@ void Player::SendLoot(ObjectGuid guid, LootType loot_type)
                 // set group rights only for loot_type != LOOT_SKINNING
                 else
                 {
-                    if(Group* group = creature->GetGroupLootRecipient())
+                    if (Group* group = GetGroup())
                     {
-                        if (group == GetGroup())
+                        if (group == recipient->GetGroup())
                         {
-                            if (group->GetLootMethod() == FREE_FOR_ALL)
-                                permission = ALL_PERMISSION;
-                            else if (group->GetLooterGuid() == GetObjectGuid())
+                            switch (group->GetLootMethod())
                             {
-                                if (group->GetLootMethod() == MASTER_LOOT)
+                                case MASTER_LOOT:
                                     permission = MASTER_PERMISSION;
-                                else
+                                    break;
+                                case FREE_FOR_ALL:
                                     permission = ALL_PERMISSION;
+                                    break;
+                                case ROUND_ROBIN:
+                                    permission = ROUND_ROBIN_PERMISSION;
+                                    break;
+                                default:
+                                    permission = GROUP_PERMISSION;
+                                    break;
                             }
-                            else
-                                permission = GROUP_PERMISSION;
                         }
                         else
                             permission = NONE_PERMISSION;
@@ -11469,8 +11433,14 @@ void Player::RemoveAmmo()
         UpdateDamagePhysical(RANGED_ATTACK);
 }
 
+Item* Player::StoreNewItem(ItemPosCountVec const& dest, uint32 item, bool update, int32 randomPropertyId)
+{
+    AllowedLooterSet allowedLooters;
+    return StoreNewItem(dest, item, update, randomPropertyId, allowedLooters);
+}
+
 // Return stored item (if stored to stack, it can diff. from pItem). And pItem ca be deleted in this case.
-Item* Player::StoreNewItem(ItemPosCountVec const& dest, uint32 item, bool update,int32 randomPropertyId , AllowedLooterSet* allowedLooters)
+Item* Player::StoreNewItem(ItemPosCountVec const& dest, uint32 item, bool update,int32 randomPropertyId , AllowedLooterSet& allowedLooters)
 {
     uint32 count = 0;
     for(ItemPosCountVec::const_iterator itr = dest.begin(); itr != dest.end(); ++itr)
@@ -11482,23 +11452,27 @@ Item* Player::StoreNewItem(ItemPosCountVec const& dest, uint32 item, bool update
         ResetCachedGearScore();
         ItemAddedQuestCheck( item, count );
         GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_RECEIVE_EPIC_ITEM, item, count);
+        GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_OWN_ITEM, item);
         pItem = StoreItem( dest, pItem, update );
 
-        if (allowedLooters && pItem->GetProto()->GetMaxStackSize() == 1 && pItem->IsSoulBound())
+        if (allowedLooters.size() > 1 && pItem->GetProto()->GetMaxStackSize() == 1 && pItem->IsSoulBound())
         {
-            pItem->SetSoulboundTradeable(allowedLooters, this, true);
+            pItem->SetSoulboundTradeable(allowedLooters);
             pItem->SetUInt32Value(ITEM_FIELD_CREATE_PLAYED_TIME, GetTotalPlayedTime());
             m_itemSoulboundTradeable.push_back(pItem);
 
             // save data
             std::ostringstream ss;
-            ss << "REPLACE INTO `item_soulbound_trade_data` VALUES (";
-            ss << pItem->GetGUIDLow();
-            ss << ", '";
-            for (AllowedLooterSet::iterator itr = allowedLooters->begin(); itr != allowedLooters->end(); ++itr)
-                ss << *itr << " ";
-            ss << "');";
-            CharacterDatabase.PExecute(ss.str().c_str());
+            AllowedLooterSet::const_iterator itr = allowedLooters.begin();
+            ss << *itr;
+            for (++itr; itr != allowedLooters.end(); ++itr)
+                ss << ' ' << *itr;
+
+            static SqlStatementID bopItem ;
+            SqlStatement stmt = CharacterDatabase.CreateStatement(bopItem, "INSERT INTO item_soulbound_trade_data VALUES (?, ?)");
+            stmt.addUInt32(pItem->GetGUIDLow());
+            stmt.addString(ss.str());
+            stmt.Execute();
         }
     }
     return pItem;
@@ -11526,7 +11500,7 @@ Item* Player::StoreItem( ItemPosCountVec const& dest, Item* pItem, bool update )
 
         lastItem = _StoreItem(pos,pItem,count,true,update);
     }
-    GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_OWN_ITEM, entry);
+
     return lastItem;
 }
 
@@ -11624,7 +11598,7 @@ Item* Player::_StoreItem( uint16 pos, Item *pItem, uint32 count, bool clone, boo
             RemoveItemDurations(pItem);
 
             pItem->SetOwnerGuid(GetObjectGuid());           // prevent error at next SetState in case trade/mail/buy from vendor
-            pItem->SetSoulboundTradeable(NULL, this, false);
+            pItem->ClearSoulboundTradeable(this);
             RemoveTradeableItem(pItem);
             pItem->SetState(ITEM_REMOVED, this);
         }
@@ -11739,7 +11713,7 @@ Item* Player::EquipItem( uint16 pos, Item *pItem, bool update )
         RemoveItemDurations(pItem);
 
         pItem->SetOwnerGuid(GetObjectGuid());               // prevent error at next SetState in case trade/mail/buy from vendor
-        pItem->SetSoulboundTradeable(NULL, this, false);
+        pItem->ClearSoulboundTradeable(this);
         RemoveTradeableItem(pItem);
         pItem->SetState(ITEM_REMOVED, this);
         pItem2->SetState(ITEM_CHANGED, this);
@@ -11984,7 +11958,9 @@ void Player::DestroyItem( uint8 bag, uint8 slot, bool update )
 
         if (IsEquipmentPos(bag, slot) || IsInventoryPos(bag, slot))
             ApplyItemOnStoreSpell(pItem, false);
-        pItem->SetSoulboundTradeable(NULL, this, false);
+
+        RemoveRefundableItem(pItem->GetObjectGuid());
+        pItem->ClearSoulboundTradeable(this);
         RemoveTradeableItem(pItem);
 
         ItemRemovedQuestCheck( pItem->GetEntry(), pItem->GetCount() );
@@ -12843,17 +12819,17 @@ void Player::UpdateSoulboundTradeItems()
     {
         if (!*itr)
         {
-            itr = m_itemSoulboundTradeable.erase(itr++);
+            m_itemSoulboundTradeable.erase(itr++);
             continue;
         }
         if ((*itr)->GetOwnerGuid() != GetObjectGuid())
         {
-            itr = m_itemSoulboundTradeable.erase(itr++);
+            m_itemSoulboundTradeable.erase(itr++);
             continue;
         }
         if ((*itr)->CheckSoulboundTradeExpire())
         {
-            itr = m_itemSoulboundTradeable.erase(itr++);
+            m_itemSoulboundTradeable.erase(itr++);
             continue;
         }
         ++itr;
@@ -12862,14 +12838,7 @@ void Player::UpdateSoulboundTradeItems()
 
 void Player::RemoveTradeableItem(Item* item)
 {
-    for (ItemDurationList::iterator itr = m_itemSoulboundTradeable.begin(); itr != m_itemSoulboundTradeable.end(); ++itr)
-    {
-        if ((*itr) == item)
-        {
-            m_itemSoulboundTradeable.erase(itr);
-            break;
-        }
-    }
+    m_itemSoulboundTradeable.remove(item);
 }
 
 void Player::UpdateItemDuration(uint32 time, bool realtimeonly)
@@ -16601,24 +16570,52 @@ bool Player::isAllowedToLoot(Creature* creature)
     if (!creature->HasFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_TAPPED))
         return false;
 
-    if (Player* recipient = creature->GetLootRecipient())
-    {
-        if (recipient == this)
-            return true;
-
-        if (Group* otherGroup = recipient->GetGroup())
-        {
-            Group* thisGroup = GetGroup();
-            if (!thisGroup)
-                return false;
-
-            return thisGroup == otherGroup;
-        }
+    const Loot* loot = &creature->loot;
+    // nothing to loot or everything looted.
+    if (loot->isLooted())
         return false;
+
+    // allow game-master seeing every loot
+    if(isGameMaster())
+        return true;
+
+    // player that hasn't accepted instance-bind yet
+    if (HasPendingBind())
+        return false;
+
+    Group* thisGroup = GetGroup();
+    if (!thisGroup)
+        return this == creature->GetLootRecipient();
+    else if (thisGroup != creature->GetGroupLootRecipient())
+        return false;
+
+    switch (thisGroup->GetLootMethod())
+    {
+        case FREE_FOR_ALL:
+            return true;
+        case ROUND_ROBIN:
+            // may only loot if the player is the loot roundrobin player
+            // or if there are free/quest/conditional item for the player
+            if (loot->roundRobinPlayer.IsEmpty() || loot->roundRobinPlayer == GetObjectGuid())
+                return true;
+
+            return loot->hasItemFor(this);
+        case MASTER_LOOT:
+        case GROUP_LOOT:
+        case NEED_BEFORE_GREED:
+            // may only loot if the player is the loot roundrobin player
+            // or item over threshold (so roll(s) can be launched)
+            // or if there are free/quest/conditional item for the player
+            if (loot->roundRobinPlayer.IsEmpty() || loot->roundRobinPlayer == GetObjectGuid())
+                return true;
+
+            if (loot->hasOverThresholdItem())
+                return true;
+
+            return loot->hasItemFor(this);
     }
-    else
-        // prevent other players from looting if the recipient got disconnected
-        return !creature->HasLootRecipient();
+
+    return false;
 }
 
 void Player::_LoadActions(QueryResult *result)
@@ -16894,7 +16891,7 @@ void Player::_LoadInventory(QueryResult *result, uint32 timediff)
                     AllowedLooterSet looters;
                     for (Tokens::iterator itr = GUIDlist.begin(); itr != GUIDlist.end(); ++itr)
                         looters.insert(atol(*itr));
-                    item->SetSoulboundTradeable(&looters, this, true);
+                    item->SetSoulboundTradeable(looters);
                     m_itemSoulboundTradeable.push_back(item);
                 }
             }
@@ -22531,6 +22528,75 @@ void Player::AutoStoreLoot(Loot& loot, bool broadcast, uint8 bag, uint8 slot)
     }
 }
 
+void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
+{
+    QuestItem* qitem = NULL;
+    QuestItem* ffaitem = NULL;
+    QuestItem* conditem = NULL;
+
+    LootItem* item = loot->LootItemInSlot(lootSlot, this, &qitem, &ffaitem, &conditem);
+
+    if (!item)
+    {
+        SendEquipError(EQUIP_ERR_ALREADY_LOOTED, NULL, NULL);
+        return;
+    }
+
+    // questitems use the blocked field for other purposes
+    if (!qitem && item->is_blocked)
+    {
+        SendLootRelease(GetLootGuid());
+        return;
+    }
+
+    ItemPosCountVec dest;
+    InventoryResult msg = CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, item->itemid, item->count);
+    if (msg == EQUIP_ERR_OK)
+    {
+        AllowedLooterSet looters = item->GetAllowedLooters();
+        Item* newitem = StoreNewItem(dest, item->itemid, true, item->randomPropertyId, looters);
+
+        if (qitem)
+        {
+            qitem->is_looted = true;
+            //freeforall is 1 if everyone's supposed to get the quest item.
+            if (item->freeforall || loot->GetPlayerQuestItems().size() == 1)
+                SendNotifyLootItemRemoved(lootSlot);
+            else
+                loot->NotifyQuestItemRemoved(qitem->index);
+        }
+        else
+        {
+            if (ffaitem)
+            {
+                //freeforall case, notify only one player of the removal
+                ffaitem->is_looted = true;
+                SendNotifyLootItemRemoved(lootSlot);
+            }
+            else
+            {
+                //not freeforall, notify everyone
+                if (conditem)
+                    conditem->is_looted = true;
+                loot->NotifyItemRemoved(lootSlot);
+            }
+        }
+
+        //if only one person is supposed to loot the item, then set it to looted
+        if (!item->freeforall)
+            item->is_looted = true;
+
+        --loot->unlootedCount;
+
+        SendNewItem(newitem, uint32(item->count), false, false, true);
+        GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_ITEM, item->itemid, item->count);
+        GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_TYPE, loot->loot_type, item->count);
+        GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_EPIC_ITEM, item->itemid, item->count);
+    }
+    else
+        SendEquipError(msg, NULL, NULL, item->itemid);
+}
+
 Item* Player::ConvertItem(Item* item, uint32 newItemId)
 {
     uint16 pos = item->GetPos();
@@ -24104,7 +24170,7 @@ float Player::GetAverageItemLevel()
         if (m_items[i] && m_items[i]->GetProto())
             sum += m_items[i]->GetProto()->GetItemLevelIncludingQuality();
 
-        count++;
+        ++count;
     }
 
     return ((float)sum) / count;
@@ -24740,6 +24806,7 @@ void Player::HandleRatesWindow()
 
     player->PlayerTalkClass->SendGossipMenu(text, player->GetObjectGuid());
 }
+
 float Player::GetCollisionHeight(bool mounted)
 {
     if (mounted)
