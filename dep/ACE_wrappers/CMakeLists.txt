@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2005-2011 MaNGOS project <http://getmangos.com/>
+# Copyright (C) 2005-2012 MaNGOS project <http://getmangos.com/>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -66,7 +66,7 @@ elseif(UNIX)
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}
     INSTALL_DIR ${CMAKE_INSTALL_PREFIX}
     DOWNLOAD_COMMAND ""
-    CONFIGURE_COMMAND <SOURCE_DIR>/configure --prefix=<INSTALL_DIR> --disable-ssl
+    CONFIGURE_COMMAND <SOURCE_DIR>/configure --prefix=<INSTALL_DIR> --disable-ssl CFLAGS=${CMAKE_C_FLAGS} CXXFLAGS=${CMAKE_CXX_FLAGS} CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER}
     BUILD_COMMAND ${ACE_BUILD_TOOL} -j2 # export arch="ia32" &&
     INSTALL_COMMAND ${ACE_BUILD_TOOL} install
   )
