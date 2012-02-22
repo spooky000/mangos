@@ -595,7 +595,7 @@ LogColors = ""
 #        Default: 10
 #
 #   BirthdayTime
-#        Set to birthday (date in unix time), By default 28th August 2005, when MaNGOS got it’s name
+#        Set to birthday (date in unix time), By default 28th August 2005, when MaNGOS got it's name
 #        Default: 1125180000
 #
 #    Instance.IgnoreLevel
@@ -777,8 +777,8 @@ LogColors = ""
 #        Default: 10
 #
 #    CheckGOInPath
-#        very simple checking for GO in unit path (for avoid problems with teleport throwgh door ).
-#        may use many CPU resources!
+#        Very simple check for gameobjects' presence on unit path (for example to avoid problems with teleport through closed doors).
+#        May use many CPU resources!
 #        Default: 0
 #
 #    CrowdControlHPBase
@@ -1769,11 +1769,12 @@ LFG.OnlyLastEncounterForCompleteDungeon = 0
 
 VMSS.Enable = 0
 VMSS.MaxThreadBreaks = 5
-VMSS.ThreadBreakRememberTime = 3600
-VMSS.MapFreeMethod = 0
+VMSS.ThreadBreakRememberTime = 600
+VMSS.MapFreeMethod = 1
 VMSS.FreezeCheckPeriod = 1000
-VMSS.MapFreezeDetectTime = 1000
-
+VMSS.MapFreezeDetectTime = 2000
+VMSS.TrySkipFirstThreadBreak = 1
+VMSS.ForceUnloadDelay = 3000
 VMSS.Statistic.Enable = 0
 VMSS.Statistic.Threads = 1
 VMSS.Statistic.Interval = 300000
