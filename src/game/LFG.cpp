@@ -138,6 +138,7 @@ bool LFGPlayerState::IsSingleRole()
 
 void LFGPlayerState::SetComment(std::string comment)
 {
+    LFGMgr::WriteGuard Guard(sLFGMgr.GetLock());
     m_comment.clear();
     if (!comment.empty())
     {
@@ -290,9 +291,9 @@ LFGAnswer LFGGroupState::GetBootResult()
 }
 
 void  LFGGroupState::DecreaseKicksLeft()
-{ 
+{
     LFGMgr::WriteGuard Guard(sLFGMgr.GetLock());
-    if (m_kicksLeft > 0) 
+    if (m_kicksLeft > 0)
         --m_kicksLeft;
 };
 

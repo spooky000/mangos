@@ -922,6 +922,14 @@ bool Object::PrintIndexError(uint32 index, bool set) const
     return false;
 }
 
+bool Object::PrintEntryError(char const* descr) const
+{
+    sLog.outError("Object Type %u, Entry %u (lowguid %u) with invalid call for %s", GetTypeId(), GetEntry(), GetObjectGuid().GetCounter(), descr);
+
+    // always false for continue assert fail
+    return false;
+}
+
 void Object::BuildUpdateDataForPlayer(Player* pl, UpdateDataMapType& update_players)
 {
     UpdateDataMapType::iterator iter = update_players.find(pl);
@@ -1123,7 +1131,7 @@ bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool
     float dx = GetPositionX() - obj->GetPositionX();
     float dy = GetPositionY() - obj->GetPositionY();
     float distsq = dx*dx + dy*dy;
-    if(is3D)
+    if (is3D)
     {
         float dz = GetPositionZ() - obj->GetPositionZ();
         distsq += dz*dz;
@@ -1164,9 +1172,11 @@ bool WorldObject::_IsWithinDist(WorldObject const* obj, float dist2compare, bool
     return distsq < maxdist * maxdist;
 }
 
-bool WorldObject::IsWithinLOSInMap(const WorldObject* obj) const
+bool WorldObject::IsWithinLOSInMap(const WorldObject* obj, bool strict) const
 {
-    if (!IsInMap(obj)) return false;
+    if (!IsInMap(obj))
+        return false;
+
     float ox,oy,oz;
     obj->GetPosition(ox,oy,oz);
 
@@ -1188,18 +1198,23 @@ bool WorldObject::IsWithinLOSInMap(const WorldObject* obj) const
         }
     }
 
-    return(IsWithinLOS(ox, oy, oz ));
+    return(IsWithinLOS(ox, oy, oz, strict ));
 }
 
-bool WorldObject::IsWithinLOS(float ox, float oy, float oz) const
+bool WorldObject::IsWithinLOS(float ox, float oy, float oz, bool strict) const
 {
     if(GetMapId() == 616) // Uber Eye of Eternity hack :D
         return true;
 
     float x,y,z;
     GetPosition(x,y,z);
-    VMAP::IVMapManager *vMapManager = VMAP::VMapFactory::createOrGetVMapManager();
-    return vMapManager->isInLineOfSight(GetMapId(), x, y, z+2.0f, ox, oy, oz+2.0f);
+
+    Unit* searcher = GetObjectGuid().IsUnit() ? (Unit*)this : NULL;
+
+    VMAP::IVMapManager* vMapManager = VMAP::VMapFactory::createOrGetVMapManager();
+    return vMapManager->isInLineOfSight(GetMapId(), x, y, z + 2.0f, ox, oy, oz + 2.0f) ?
+            (strict ? GetTerrain()->CheckPathAccurate(x,y,z, ox, oy, oz, sWorld.getConfig(CONFIG_BOOL_CHECK_GO_IN_PATH) ? searcher : NULL ) : true) :
+            false;
 }
 
 bool WorldObject::GetDistanceOrder(WorldObject const* obj1, WorldObject const* obj2, bool is3D /* = true */) const
@@ -1207,7 +1222,7 @@ bool WorldObject::GetDistanceOrder(WorldObject const* obj1, WorldObject const* o
     float dx1 = GetPositionX() - obj1->GetPositionX();
     float dy1 = GetPositionY() - obj1->GetPositionY();
     float distsq1 = dx1*dx1 + dy1*dy1;
-    if(is3D)
+    if (is3D)
     {
         float dz1 = GetPositionZ() - obj1->GetPositionZ();
         distsq1 += dz1*dz1;
@@ -1313,18 +1328,24 @@ bool WorldObject::IsInBetween(const WorldObject *obj1, const WorldObject *obj2, 
 
 float WorldObject::GetAngle(const WorldObject* obj) const
 {
-    if(!obj) 
-        return 0;
+    if (!obj)
+        return 0.0f;
+
+//    MANGOS_ASSERT(obj != this || PrintEntryError("GetAngle (for self)"));
+
+    if (obj == this)
+        return 0.0f;
+
     return GetAngle(obj->GetPositionX(), obj->GetPositionY());
 }
 
 // Return angle in range 0..2*pi
-float WorldObject::GetAngle( const float x, const float y ) const
+float WorldObject::GetAngle(const float x, const float y) const
 {
     float dx = x - GetPositionX();
     float dy = y - GetPositionY();
 
-    float ang = atan2(dy, dx);
+    float ang = atan2(dy, dx);                              // returns value between -Pi..Pi
     ang = (ang >= 0) ? ang : 2 * M_PI_F + ang;
     return MapManager::NormalizeOrientation(ang);
 }
@@ -1833,7 +1854,7 @@ void WorldObject::GetNearPoint2D(float &x, float &y, float distance2d, float abs
 void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, float &z, float searcher_bounding_radius, float distance2d, float absAngle) const
 {
     GetNearPoint2D(x, y, distance2d + searcher_bounding_radius, absAngle);
-    z = GetPositionZ();
+    const float init_z = z = GetPositionZ();
 
     // if detection disabled, return first point
     if(!sWorld.getConfig(CONFIG_BOOL_DETECT_POS_COLLISION))
@@ -1850,8 +1871,10 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
     float first_y = y;
     bool first_los_conflict = false;                        // first point LOS problems
 
+    const float dist = distance2d + searcher_bounding_radius + GetObjectBoundingRadius();
+
     // prepare selector for work
-    ObjectPosSelector selector(GetPositionX(), GetPositionY(), distance2d + searcher_bounding_radius + GetObjectBoundingRadius(), searcher_bounding_radius);
+    ObjectPosSelector selector(GetPositionX(), GetPositionY(), dist, searcher_bounding_radius);
 
     // adding used positions around object
     {
@@ -1861,17 +1884,15 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
         Cell::VisitAllObjects(this, worker, distance2d + searcher_bounding_radius);
     }
 
-    UpdateGroundPositionZ(x, y, z);
-
     // maybe can just place in primary position
-    /*if (selector.CheckOriginalAngle())
+    if (selector.CheckOriginalAngle())
     {
         if (searcher)
             searcher->UpdateAllowedPositionZ(x, y, z);      // update to LOS height if available
         else
             UpdateGroundPositionZ(x, y, z);
 
-        if (IsWithinLOS(x, y, z))
+        if (fabs(init_z - z) < dist && IsWithinLOS(x, y, z))
             return;
 
         first_los_conflict = true;                          // first point have LOS problems
@@ -1893,7 +1914,7 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
         else
             UpdateGroundPositionZ(x, y, z);
 
-        if (IsWithinLOS(x, y, z))
+        if (fabs(init_z - z) < dist && IsWithinLOS(x, y, z))
             return;
     }
 
@@ -1925,7 +1946,7 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
         else
             UpdateGroundPositionZ(x, y, z);
 
-        if (IsWithinLOS(x, y, z))
+        if (fabs(init_z - z) < dist && IsWithinLOS(x, y, z))
             return;
     }
 
@@ -1936,14 +1957,14 @@ void WorldObject::GetNearPoint(WorldObject const* searcher, float &x, float &y, 
     if (searcher)
         searcher->UpdateAllowedPositionZ(x, y, z);          // update to LOS height if available
     else
-        UpdateGroundPositionZ(x, y, z);*/
+        UpdateGroundPositionZ(x, y, z);
 }
 
 void WorldObject::SetPhaseMask(uint32 newPhaseMask, bool update)
 {
     m_phaseMask = newPhaseMask;
 
-    if(update && IsInWorld())
+    if (update && IsInWorld())
         UpdateVisibilityAndView();
 }
 

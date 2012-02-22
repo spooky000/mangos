@@ -90,6 +90,7 @@ bool PathFinder::calculate(float destX, float destY, float destZ, bool forceDest
     else
     {
         // target moved, so we need to update the poly path
+        ReadGuard Guard(MMAP::MMapFactory::createOrGetMMapManager()->GetLock(m_sourceUnit->GetMapId()));
         BuildPolyPath(start, dest);
         return true;
     }
@@ -259,8 +260,8 @@ void PathFinder::BuildPolyPath(const Vector3 &startPos, const Vector3 &endPos)
     {
         for (pathStartIndex = 0; pathStartIndex < m_polyLength; ++pathStartIndex)
         {
-            // here to carch few bugs
-            MANGOS_ASSERT(m_pathPolyRefs[pathStartIndex] != INVALID_POLYREF);
+            // here to catch few bugs
+            MANGOS_ASSERT(m_pathPolyRefs[pathStartIndex] != INVALID_POLYREF || m_sourceUnit->PrintEntryError("PathFinder::BuildPolyPath"));
 
             if (m_pathPolyRefs[pathStartIndex] == startPoly)
             {

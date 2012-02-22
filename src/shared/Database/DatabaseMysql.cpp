@@ -133,7 +133,7 @@ bool MySQLConnection::Initialize(const char *infoString)
     if (!mMysql)
     {
         sLog.outError( "Could not connect to MySQL database at %s: %s\n",
-            host.c_str(),mysql_error(mysqlInit));
+        host.c_str(),mysql_error(mysqlInit));
         mysql_close(mysqlInit);
         return false;
     }
@@ -330,7 +330,7 @@ bool MySqlPreparedStatement::prepare()
     m_stmt = mysql_stmt_init(m_pMySQLConn);
     if (!m_stmt)
     {
-        sLog.outError("SQL: mysql_stmt_init()() failed ");
+        sLog.outError("SQL: mysql_stmt_init() failed ");
         return false;
     }
 

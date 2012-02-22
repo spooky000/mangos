@@ -37,13 +37,13 @@ ConfVersion=2010100901
 #                    hostname;port;username;password;database
 #                    .;/path/to/unix_socket/DIRECTORY or . for default path;username;password;database - use Unix sockets at Unix/Linux
 #
-#	LoginDatabaseConnections
-#	WorldDatabaseConnections
-#	CharacterDatabaseConnections
-#		 Amount of connections to database which will be used for SELECT queries. Maximum 16 connections per database.
-#		 Please, note, for data consistency only one connection for each database is used for transactions and async SELECTs.
-#		 So formula to find out how many connections will be established: X = ¹_connections + 1
-#		 Default: 1 connection for SELECT statements
+#   LoginDatabaseConnections
+#   WorldDatabaseConnections
+#   CharacterDatabaseConnections
+#        Amount of connections to database which will be used for SELECT queries. Maximum 16 connections per database.
+#        Please, note, for data consistency only one connection for each database is used for transactions and async SELECTs.
+#        So formula to find out how many connections will be established: X = n_connections + 1
+#        Default: 1 connection for SELECT statements
 #
 #    MaxPingTime
 #        Settings for maximum database-ping interval (minutes between pings)
@@ -140,10 +140,7 @@ BindIP = "0.0.0.0"
 #
 #    vmap.enableLOS
 #    vmap.enableHeight
-#        Enable/Disable VMaps support for line of sight and height calculation
-#        You need to extract the VMaps in order to enable those options
-#        Default: 0 (disable)
-#                 1 (enable)
+#       Deprecated (always enable)
 #
 #    vmap.ignoreSpellIds
 #        These spells are ignored for LoS calculation
@@ -168,6 +165,15 @@ BindIP = "0.0.0.0"
 #        More distance let have better performence, less distance let have more sensitive reaction at target move.
 #        Default: 1.5
 #
+#    mmap.enabled
+#        Enable/Disable pathfinding using mmaps
+#        Default: 1 (enable)
+#                 0 (disable)
+#
+#    mmap.ignoreMapIds
+#        Disable mmap pathfinding on the listed maps.
+#        List of map ids with delimiter ','
+#
 #    UpdateUptimeInterval
 #        Update realm uptime period in minutes (for save data in 'uptime' table). Must be > 0
 #        Default: 10 (minutes)
@@ -188,6 +194,18 @@ BindIP = "0.0.0.0"
 #        Default: 1 (Enable)
 #                 0 (Disabled)
 #
+#    MapUpdate.DynamicThreadsCount
+#        Use dynamic threads number for update maps. Count changed in dependent ot server load from 1 to MapUpdate.Threads
+#        Default: 0 (Disabled)
+#                 1 (Enabled)
+#
+#    MapUpdate.LoadBalanceHighValue
+#    MapUpdate.LoadBalanceLowValue
+#        Used only if MapUpdate.DynamicThreadsCount is enabled. Fix high and low load value for change dynamic thread num
+#        Default: 0.8 (80%)  /0.2 (20%)
+#        Min:     0.5 (50%)  /0.0 (0%)
+#        Max:     1.0 (100%) /0.5 (50%)
+#
 ###################################################################################################################
 
 UseProcessors = 0
@@ -203,16 +221,20 @@ ChangeWeatherInterval = 600000
 PlayerSave.Interval = 900000
 PlayerSave.Stats.MinLevel = 0
 PlayerSave.Stats.SaveOnlyOnLogout = 1
-vmap.enableLOS = 1
-vmap.enableHeight = 1
 vmap.ignoreSpellIds = "7720"
 vmap.enableIndoorCheck = 1
 DetectPosCollision = 1
 TargetPosRecalculateRange = 1.5
+mmap.enabled = 1
+mmap.ignoreMapIds = ""
 UpdateUptimeInterval = 10
 MaxCoreStuckTime = 0
 AddonChannel = 1
 CleanCharacterDB = 1
+MapUpdate.Threads = 1
+MapUpdate.DynamicThreadsCount = 0
+MapUpdate.LoadBalanceHighValue = 0.8
+MapUpdate.LoadBalanceLowValue = 0.2
 
 ###################################################################################################################
 # SERVER LOGGING
@@ -260,6 +282,7 @@ CleanCharacterDB = 1
 #    LogFilter_VisibilityChanges
 #    LogFilter_Weather
 #    LogFilter_DbStrictedCheck
+#    LogFilter_Pathfinding
 #        Log filters (active by default)
 #        Default: 1 - not include with any log level
 #                 0 - include in log if log level permit
@@ -278,7 +301,8 @@ CleanCharacterDB = 1
 #
 #    WorldLogFile
 #        Packet logging file for the worldserver
-#        Default: "world.log" - recommended name to create a log file
+#        Default: ""          - no log file created
+#                 "world.log" - recommended name to create a log file
 #
 #    WorldLogTimestamp
 #        Logfile with timestamp of server start in name
@@ -349,6 +373,7 @@ LogFilter_TransportMoves = 1
 LogFilter_VisibilityChanges = 1
 LogFilter_Weather = 1
 LogFilter_DbStrictedCheck = 1
+LogFilter_Pathfinding = 1
 LogFilter_PeriodicAffects = 0
 LogFilter_PlayerMoves = 0
 LogFilter_SQLText = 0
@@ -762,6 +787,12 @@ LogColors = ""
 #        min:     0.0  (default mangos method)
 #        max:     1.0  (full CrowdControl, auras like Fear not breaked by damage anyway)
 #
+#    AllowTransferToCustomMap
+#        Allowing moving to maps, enter for which absent in AraeTrigger.dbc (by custom areatrigger_teleport entryes)
+#        Attention! Changing this option "on-the-fly" required reload areatrigger_teleport table!
+#        Default: 0 - disabled (only GM's may transfer to this maps
+#                 1 - enabled  (any player, fit to custom areatrigger_teleport condition, may transfer to this maps).
+#
 ###################################################################################################################
 
 GameType = 1
@@ -837,6 +868,7 @@ Motd = "Welcome to the Massive Network Game Object Server."
 Raid.MinLevel = 10
 CheckGOInPath = 0
 CrowdControlHPBase = 0.1
+AllowTransferToCustomMap = 0
 
 ###################################################################################################################
 # PLAYER INTERACTION
@@ -965,11 +997,11 @@ TalentsInspecting = 1
 #
 #    ListenRange.Say
 #        Distance from player to listen text that creature (or other world object) say
-#        Default: 25
+#        Default: 40
 #
 #    ListenRange.TextEmote
 #        Distance from player to listen textemote that creature (or other world object) say
-#        Default: 25
+#        Default: 40
 #
 #    ListenRange.Yell
 #        Distance from player to listen text that creature (or other world object) yell

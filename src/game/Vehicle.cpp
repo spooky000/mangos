@@ -31,7 +31,7 @@ VehicleInfo::VehicleInfo(VehicleEntry const* entry) :
 {
 }
 
-VehicleKit::VehicleKit(Unit* base) : m_pBase(base), m_uiNumFreeSeats(0)
+VehicleKit::VehicleKit(Unit* base) :  m_pBase(base), m_uiNumFreeSeats(0)
 {
     for (uint32 i = 0; i < MAX_VEHICLE_SEAT; ++i)
     {
@@ -119,7 +119,8 @@ int8 VehicleKit::GetNextEmptySeat(int8 seatId, bool next) const
     if (m_Seats.empty() || seatId >= MAX_VEHICLE_SEAT)
         return -1;
 
-    // some weird behaviour of some vehicles: Abomination (Putricide), Val'kyrs and Strangulate Vehicle (Lich King)
+    // some vehicles (those - found in ICC) dont return proper seatID
+    // maybe some wrong flags interpretation? (usable)
     if (m_pBase->GetEntry() == 37672 || m_pBase->GetEntry() == 38285 ||
         m_pBase->GetEntry() == 36609 || m_pBase->GetEntry() == 36598 ||
         m_pBase->GetEntry() == 37187)
@@ -150,8 +151,10 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
     if (seatId < 0) // no specific seat requirement
     {
         for (seat = m_Seats.begin(); seat != m_Seats.end(); ++seat)
+        {
             if (!seat->second.passenger && (seat->second.seatInfo->IsUsable() || (seat->second.seatInfo->m_flags & SEAT_FLAG_UNCONTROLLED)))
                 break;
+        }
 
         if (seat == m_Seats.end()) // no available seat
             return false;
@@ -208,6 +211,7 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
         seatInfo->m_attachmentOffsetX, seatInfo->m_attachmentOffsetY, seatInfo->m_attachmentOffsetZ,
         seatInfo->m_passengerYaw, WorldTimer::getMSTime(), seat->first, seatInfo);
     }
+
     if (passenger->GetTypeId() == TYPEID_PLAYER)
     {
         ((Player*)passenger)->GetCamera().SetView(m_pBase);
@@ -269,8 +273,8 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
 
             if (CharmInfo* charmInfo = m_pBase->InitCharmInfo(m_pBase))
             {
+                charmInfo->SetState(CHARM_STATE_ACTION,ACTIONS_DISABLE);
                 charmInfo->InitVehicleCreateSpells(seat->first);
-                charmInfo->SetReactState(REACT_PASSIVE);
             }
 
             Player* player = (Player*)passenger;
@@ -299,7 +303,6 @@ bool VehicleKit::AddPassenger(Unit *passenger, int8 seatId)
         if (passenger->GetTypeId() == TYPEID_PLAYER)
         {
             Player* player = (Player*)passenger;
-            //player->SetMover(m_pBase);
             player->SetClientControl(m_pBase, 0);
         }
     }
@@ -360,7 +363,6 @@ void VehicleKit::RemovePassenger(Unit *passenger, bool dismount)
         if (passenger->GetTypeId() == TYPEID_PLAYER)
         {
             Player* player = (Player*)passenger;
-            player->SetMover(NULL);
             player->SetClientControl(m_pBase, 0);
             player->RemovePetActionBar();
         }
@@ -371,12 +373,15 @@ void VehicleKit::RemovePassenger(Unit *passenger, bool dismount)
 
     if (passenger->GetTypeId() == TYPEID_PLAYER)
     {
-        ((Player*)passenger)->GetCamera().ResetView();
+        Player* player = (Player*)passenger;
+        player->GetCamera().ResetView();
 
         WorldPacket data(SMSG_FORCE_MOVE_UNROOT, 8+4);
         data << passenger->GetPackGUID();
         data << uint32(2);
         passenger->SendMessageToSet(&data, true);
+
+        player->SetMover(player);
     }
     UpdateFreeSeatCount();
 
@@ -429,7 +434,7 @@ void VehicleKit::InstallAccessory(VehicleAccessory const* accessory)
         SetDestination(accessory->m_offsetX,accessory->m_offsetY,accessory->m_offsetZ,accessory->m_offsetO,0.0f,0.0f);
         summoned->SetCreatorGuid(ObjectGuid());
         summoned->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
-        summoned->EnterVehicle(this, accessory->uiSeat);
+        summoned->EnterVehicle(m_pBase, accessory->uiSeat);
         SetDestination();
         if (summoned->GetVehicle())
             DEBUG_LOG("Vehicle::InstallAccessory %s accessory added, seat %u of %s",summoned->GetObjectGuid().GetString().c_str(), accessory->uiSeat, m_pBase->GetObjectGuid().GetString().c_str());
@@ -504,12 +509,12 @@ void VehicleKit::Dismount(Unit* passenger, VehicleSeatEntry const* seatInfo)
     if (!passenger)
         return;
 
-    float ox, oy, oz, oo;
+    float ox, oy, oz/*, oo*/; /* oo can be used, but not at the moment*/
 
     Unit* base = m_pBase->GetVehicle() ? m_pBase->GetVehicle()->GetBase() : m_pBase;
 
     base->GetPosition(ox, oy, oz);
-    oo = base->GetOrientation();
+    /*oo = base->GetOrientation();*/
 
     passenger->m_movementInfo = base->m_movementInfo;
 

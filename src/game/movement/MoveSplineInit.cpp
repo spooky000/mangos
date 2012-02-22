@@ -50,7 +50,7 @@ namespace Movement
         return MOVE_RUN;
     }
 
-    void MoveSplineInit::Launch()
+    int32 MoveSplineInit::Launch()
     {
         MoveSpline& move_spline = *unit.movespline;
 
@@ -77,12 +77,12 @@ namespace Movement
             moveFlags &= ~MOVEFLAG_WALK_MODE;
 
         moveFlags |= (MOVEFLAG_SPLINE_ENABLED|MOVEFLAG_FORWARD);
-        
+
         if (fabs(args.velocity) < M_NULL_F)
             args.velocity = unit.GetSpeed(SelectSpeedType(moveFlags));
 
         if (!args.Validate())
-            return;
+            return 0;
 
         unit.m_movementInfo.SetMovementFlags((MovementFlags)moveFlags);
         move_spline.Initialize(args);
@@ -91,6 +91,8 @@ namespace Movement
         data << unit.GetPackGUID();
         PacketBuilder::WriteMonsterMove(move_spline, data);
         unit.SendMessageToSet(&data,true);
+
+        return move_spline.Duration();
     }
 
     MoveSplineInit::MoveSplineInit(Unit& m) : unit(m)

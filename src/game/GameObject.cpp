@@ -1003,6 +1003,12 @@ void GameObject::SwitchDoorOrButton(bool activate, bool alternative /* = false *
 
 void GameObject::Use(Unit* user)
 {
+    if (!user)
+        return;
+
+    // user must be provided
+    MANGOS_ASSERT(user || PrintEntryError("GameObject::Use (without user)"));
+
     // by default spell caster is user
     Unit* spellCaster = user;
     uint32 spellId = 0;
@@ -1578,12 +1584,9 @@ void GameObject::Use(Unit* user)
                     switch(info->id)
                     {
                         case 179785:                        // Silverwing Flag
-                            // check if it's correct bg
-                            if (bg->GetTypeID(true) == BATTLEGROUND_WS)
-                                bg->EventPlayerClickedOnFlag(player, this);
-                            break;
                         case 179786:                        // Warsong Flag
-                            if (bg->GetTypeID(true) == BATTLEGROUND_WS)
+                            // check if it's correct bg
+                            if (bg->GetTypeID() == BATTLEGROUND_WS)
                                 bg->EventPlayerClickedOnFlag(player, this);
                             break;
                         case 184142:                        // Netherstorm Flag
@@ -1600,11 +1603,12 @@ void GameObject::Use(Unit* user)
         }
         case GAMEOBJECT_TYPE_CAPTURE_POINT:                 // 29
         {
-            // Code here is not even halfway complete, and only added for further development.
-            // Computer may very well blow up after stealing your bank accounts and wreck your car.
-            // Use() object at own risk.
+            // ToDo- research: could dummy creatures be involved?
 
-            GameObjectInfo const* info = GetGOInfo();
+            //if (user->GetTypeId() != TYPEID_PLAYER)
+            //    return;
+
+            GameObjectInfo const* info = GetGOInfo(); // already checked if go is null
 
             if (!info)
                 return;
@@ -1924,21 +1928,21 @@ bool GameObject::IsHostileTo(Unit const* unit) const
     // faction base cases
     FactionTemplateEntry const*tester_faction = sFactionTemplateStore.LookupEntry(GetGOInfo()->faction);
     FactionTemplateEntry const*target_faction = unit->getFactionTemplateEntry();
-    if(!tester_faction || !target_faction)
+    if (!tester_faction || !target_faction)
         return false;
 
     // GvP forced reaction and reputation case
-    if(unit->GetTypeId()==TYPEID_PLAYER)
+    if (unit->GetTypeId() == TYPEID_PLAYER)
     {
-        // forced reaction
-        if(tester_faction->faction)
+        if (tester_faction->faction)
         {
-            if(ReputationRank const* force = ((Player*)unit)->GetReputationMgr().GetForcedRankIfAny(tester_faction))
+            // forced reaction
+            if (ReputationRank const* force = ((Player*)unit)->GetReputationMgr().GetForcedRankIfAny(tester_faction))
                 return *force <= REP_HOSTILE;
 
             // apply reputation state
             FactionEntry const* raw_tester_faction = sFactionStore.LookupEntry(tester_faction->faction);
-            if(raw_tester_faction && raw_tester_faction->reputationListID >=0 )
+            if (raw_tester_faction && raw_tester_faction->reputationListID >= 0)
                 return ((Player const*)unit)->GetReputationMgr().GetRank(raw_tester_faction) <= REP_HOSTILE;
         }
     }
@@ -1967,21 +1971,21 @@ bool GameObject::IsFriendlyTo(Unit const* unit) const
     // faction base cases
     FactionTemplateEntry const*tester_faction = sFactionTemplateStore.LookupEntry(GetGOInfo()->faction);
     FactionTemplateEntry const*target_faction = unit->getFactionTemplateEntry();
-    if(!tester_faction || !target_faction)
+    if (!tester_faction || !target_faction)
         return false;
 
     // GvP forced reaction and reputation case
-    if(unit->GetTypeId()==TYPEID_PLAYER)
+    if (unit->GetTypeId() == TYPEID_PLAYER)
     {
-        // forced reaction
-        if(tester_faction->faction)
+        if (tester_faction->faction)
         {
-            if(ReputationRank const* force =((Player*)unit)->GetReputationMgr().GetForcedRankIfAny(tester_faction))
+            // forced reaction
+            if (ReputationRank const* force =((Player*)unit)->GetReputationMgr().GetForcedRankIfAny(tester_faction))
                 return *force >= REP_FRIENDLY;
 
             // apply reputation state
-            if(FactionEntry const* raw_tester_faction = sFactionStore.LookupEntry(tester_faction->faction))
-                if(raw_tester_faction->reputationListID >=0 )
+            if (FactionEntry const* raw_tester_faction = sFactionStore.LookupEntry(tester_faction->faction))
+                if (raw_tester_faction->reputationListID >= 0)
                     return ((Player const*)unit)->GetReputationMgr().GetRank(raw_tester_faction) >= REP_FRIENDLY;
         }
     }
@@ -2075,7 +2079,27 @@ bool GameObject::HasStaticDBSpawnData() const
     return sObjectMgr.GetGOData(GetGUIDLow()) != NULL;
 }
 
-float GameObject::GetDeterminativeSize() const
+bool GameObject::IsWildSummoned() const
+{
+    // All Wild GOs are summoned by a spell and have no owner entry
+    if (!GetSpellId() || !GetOwnerGuid().IsEmpty())
+        return false;
+
+    // This check is likely not needed
+    if (SpellEntry const* spellInfo = sSpellStore.LookupEntry(GetSpellId()))
+    {
+        for (int eff_idx = 0; eff_idx < MAX_EFFECT_INDEX; ++eff_idx)
+        {
+            if (spellInfo->Effect[eff_idx] == SPELL_EFFECT_SUMMON_OBJECT_WILD && GetEntry() == (uint32)spellInfo->EffectMiscValue[eff_idx])
+                return true;
+        }
+    }
+
+    // Also possible add MANGOS_ASSERT(false) or weaker bug-report to note this unexpected case.
+    return false;
+}
+
+float GameObject::GetDeterminativeSize(bool b_priorityZ) const
 {
     if (!IsInWorld())
         return 0.0f;
@@ -2087,7 +2111,6 @@ float GameObject::GetDeterminativeSize() const
     float dx = info->maxX - info->minX;
     float dy = info->maxY - info->minY;
     float dz = info->maxZ - info->minZ;
-    float _size = sqrt(dx*dx + dy*dy +dz*dz);
 
-    return _size;
+    return b_priorityZ ? dz : sqrt(dx*dx + dy*dy +dz*dz);
 }

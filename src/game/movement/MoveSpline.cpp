@@ -52,7 +52,7 @@ Location MoveSpline::ComputePosition() const
         else if (splineflags.final_point)
             c.orientation = atan2(facing.f.y-c.y, facing.f.x-c.x);
         //nothing to do for MoveSplineFlag::Final_Target flag
-    } 
+    }
     else
     {
         if (!splineflags.hasFlag(MoveSplineFlag::OrientationFixed|MoveSplineFlag::Falling))
@@ -199,7 +199,7 @@ bool MoveSplineInitArgs::Validate() const
 #define CHECK(exp) \
     if (!(exp))\
     {\
-        DEBUG_LOG("MoveSplineInitArgs::Validate: expression '%s' failed", #exp);\
+        sLog.outError("MoveSplineInitArgs::Validate: expression '%s' failed", #exp);\
         return false;\
     }
     CHECK(path.size() > 1);

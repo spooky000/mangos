@@ -715,17 +715,17 @@
 				>
 			</File>
 			<File
-                                RelativePath="..\..\src\game\CombatHandler.cpp"
-                                >
-                        </File>
-                        <File
-                                RelativePath="..\..\src\game\CreatureLinkingMgr.cpp"
-                                >
-                        </File>
-                        <File
-                                RelativePath="..\..\src\game\CreatureLinkingMgr.h"
-                                >
-                        </File>
+				RelativePath="..\..\src\game\CombatHandler.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\CreatureLinkingMgr.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\CreatureLinkingMgr.h"
+				>
+			</File>
 			<File
 				RelativePath="..\..\src\game\DuelHandler.cpp"
 				>
@@ -899,6 +899,18 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\game\MoveMap.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\MoveMap.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\MoveMapSharedDefines.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\game\MovementHandler.cpp"
 				>
 			</File>
@@ -960,22 +972,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\game\ScriptMgr.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\game\SkillDiscovery.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\game\SkillDiscovery.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\game\SkillExtraItems.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\game\SkillExtraItems.h"
 				>
 			</File>
 			<File
@@ -1124,6 +1120,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\game\MovementGenerator.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\PathFinder.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\PathFinder.h"
 				>
 			</File>
 			<File

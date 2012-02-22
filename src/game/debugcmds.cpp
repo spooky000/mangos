@@ -63,6 +63,24 @@ bool ChatHandler::HandleDebugSendSpellFailCommand(char* args)
     return true;
 }
 
+bool ChatHandler::HandleDebugSendCalendarResultCommand(char* args)
+{
+    if (!*args)
+        return false;
+
+    char* c_val = strtok((char*)args, " ");
+    if (!c_val)
+        return false;
+
+    int Value = atoi(c_val);
+
+    char* c_str = strtok(NULL, "");
+    std::string str = c_str;
+
+    m_session->GetPlayer()->SendCalendarResult(CalendarResponseResult(Value), str);
+    return true;
+}
+
 bool ChatHandler::HandleDebugSendPoiCommand(char* args)
 {
     Player *pPlayer = m_session->GetPlayer();
@@ -1157,42 +1175,14 @@ bool ChatHandler::HandleDebugEnterVehicleCommand(char* args)
     if (!target->GetVehicleKit())
         return false;
 
-    uint32 seat;
-    if (!ExtractUInt32(&args, seat))
-    {
-        seat = 0;
-    }
+    if (!*args)
+        return false;
+
+    uint32 seat = atoi(args);
 
     if (!target->GetVehicleKit()->HasEmptySeat(seat))
         return false;
-    
+
     m_session->GetPlayer()->EnterVehicle(target->GetVehicleKit(), seat);
-    return true;
-}
-
-bool ChatHandler::HandleDebugSetVehicleIdCommand(char* args)
-{
-    Unit* target = getSelectedUnit();
-    if (!target)
-    {
-        SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
-        SetSentErrorMessage(true);
-        return false;
-    }
-
-    uint32 vehicleId;
-    if (!ExtractUInt32(&args, vehicleId))
-        return false;
-
-    VehicleEntry const* vehicleInfo = sVehicleStore.LookupEntry(vehicleId);
-    if(!vehicleInfo)
-    {
-        SendSysMessage("Vehicle ID is invalid.");
-        SetSentErrorMessage(true);
-        return false;
-    }
-
-    target->RemoveVehicleKit();
-    target->SetVehicleId(vehicleId);
     return true;
 }

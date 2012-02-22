@@ -24,6 +24,7 @@
 #include "Player.h"
 #include "ObjectAccessor.h"
 #include "UnitEvents.h"
+#include "SpellMgr.h"
 
 //==============================================================
 //================= ThreatCalcHelper ===========================
@@ -33,12 +34,12 @@
 float ThreatCalcHelper::CalcThreat(Unit* pHatedUnit, Unit* /*pHatingUnit*/, float threat, bool crit, SpellSchoolMask schoolMask, SpellEntry const *pThreatSpell)
 {
     // all flat mods applied early
-    if (!threat)
+    if (fabs(threat) < M_NULL_F)
         return 0.0f;
 
     if (pThreatSpell)
     {
-        if (pThreatSpell->AttributesEx & SPELL_ATTR_EX_NO_THREAT)
+        if (pThreatSpell->AttributesEx & SPELL_ATTR_EX_NO_THREAT && !IsSpellReduceThreat(pThreatSpell))
             return 0.0f;
 
         if (Player* modOwner = pHatedUnit->GetSpellModOwner())
@@ -252,7 +253,15 @@ HostileReference* ThreatContainer::addThreat(Unit* pVictim, float pThreat)
 void ThreatContainer::modifyThreatPercent(Unit *pVictim, int32 pPercent)
 {
     if(HostileReference* ref = getReferenceByTarget(pVictim))
-        ref->addThreatPercent(pPercent);
+    {
+        if(pPercent < -100)
+        {
+            ref->removeReference();
+            delete ref;
+        }
+        else
+            ref->addThreatPercent(pPercent);
+    }
 }
 
 //============================================================
@@ -276,6 +285,24 @@ void ThreatContainer::update()
 }
 
 //============================================================
+// Check if a target is a second choice target for the attacker
+// if (bCheckThreatArea) consider IsOutOfThreatArea - expected to be only set for pCurrentVictim
+//     This prevents dropping valid targets due to 1.1 or 1.3 threat rule vs invalid current target
+// if (bCheckMeleeRange) consider CanReachWithMeleeAttack
+//     This is important for mobs that are stationary in combat
+
+// TODO - should such a independend function be made static?
+bool ThreatContainer::IsSecondChoiceTarget(Creature* pAttacker, Unit* pTarget, bool bCheckThreatArea, bool bCheckMeleeRange)
+{
+    // This function must only be called for valid pAttacker and valid pTarget
+    return
+        pTarget->IsImmunedToDamage(pAttacker->GetMeleeDamageSchoolMask()) ||
+        pTarget->hasNegativeAuraWithInterruptFlag(AURA_INTERRUPT_FLAG_DAMAGE) ||
+        (bCheckThreatArea && pAttacker->IsOutOfThreatArea(pTarget)) ||
+        (bCheckMeleeRange && !pAttacker->CanReachWithMeleeAttack(pTarget));
+}
+
+//============================================================
 // return the next best victim
 // could be the current victim
 
@@ -287,7 +314,7 @@ HostileReference* ThreatContainer::selectNextVictim(Creature* pAttacker, Hostile
     bool checkedCurrentVictim = false;
 
     ThreatList::const_iterator lastRef = iThreatList.end();
-    lastRef--;
+    --lastRef;
 
     for (ThreatList::const_iterator iter = iThreatList.begin(); iter != iThreatList.end() && !found;)
     {
@@ -423,7 +450,7 @@ void ThreatManager::addThreat(Unit* pVictim, float pThreat, bool crit, SpellScho
 
     float threat = ThreatCalcHelper::CalcThreat(pVictim, iOwner, pThreat, crit, schoolMask, pThreatSpell);
 
-    if (threat > 0.0f)
+    if (threat > M_NULL_F)
     {
         if (float redirectedMod = pVictim->getHostileRefManager().GetThreatRedirectionMod())
         {
@@ -507,7 +534,7 @@ void ThreatManager::tauntApply(Unit* pTaunter)
             // Ok, temp threat is unused
             if(fabs(ref->getTempThreatModifyer()) < M_NULL_F)
             {
-                ref->setTempThreat(getCurrentVictim()->getThreat());
+                ref->setTempThreat(getCurrentVictim()->getThreat()*1.4f);
                 iUpdateNeed = true;
             }
         }

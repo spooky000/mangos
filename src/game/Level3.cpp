@@ -41,9 +41,8 @@
 #include "CellImpl.h"
 #include "Weather.h"
 #include "PointMovementGenerator.h"
+#include "PathFinder.h"
 #include "TargetedMovementGenerator.h"
-#include "SkillDiscovery.h"
-#include "SkillExtraItems.h"
 #include "SystemConfig.h"
 #include "Config/Config.h"
 #include "Mail.h"
@@ -243,7 +242,6 @@ bool ChatHandler::HandleReloadAllCommand(char* /*args*/)
     HandleReloadReservedNameCommand((char*)"");
     HandleReloadMangosStringCommand((char*)"");
     HandleReloadGameTeleCommand((char*)"");
-
     return true;
 }
 
@@ -719,7 +717,7 @@ bool ChatHandler::HandleReloadReputationSpilloverTemplateCommand(char* /*args*/)
 bool ChatHandler::HandleReloadSkillDiscoveryTemplateCommand(char* /*args*/)
 {
     sLog.outString( "Re-Loading Skill Discovery Table..." );
-    LoadSkillDiscoveryTable();
+    sSpellMgr.LoadSkillDiscoveryTable();
     SendGlobalSysMessage("DB table `skill_discovery_template` (recipes discovered at crafting) reloaded.");
     return true;
 }
@@ -727,7 +725,7 @@ bool ChatHandler::HandleReloadSkillDiscoveryTemplateCommand(char* /*args*/)
 bool ChatHandler::HandleReloadSkillExtraItemTemplateCommand(char* /*args*/)
 {
     sLog.outString( "Re-Loading Skill Extra Item Table..." );
-    LoadSkillExtraItemTable();
+    sSpellMgr.LoadSkillExtraItemTable();
     SendGlobalSysMessage("DB table `skill_extra_item_template` (extra item creation when crafting) reloaded.");
     return true;
 }
@@ -3911,7 +3909,13 @@ bool ChatHandler::HandleDamageCommand(char* args)
     {
         m_session->GetPlayer()->DealDamage(target, damage, NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
         if (target != m_session->GetPlayer())
-            m_session->GetPlayer()->SendAttackStateUpdate (HITINFO_NORMALSWING2, target, 1, SPELL_SCHOOL_MASK_NORMAL, damage, 0, 0, VICTIMSTATE_NORMAL, 0);
+        {
+            DamageInfo damageInfo  = DamageInfo(m_session->GetPlayer(), target);
+            damageInfo.damage      = damage;
+            damageInfo.HitInfo     = HITINFO_NORMALSWING2;
+            damageInfo.TargetState = VICTIMSTATE_NORMAL;
+            m_session->GetPlayer()->SendAttackStateUpdate(&damageInfo);
+        }
         return true;
     }
 
@@ -3921,6 +3925,11 @@ bool ChatHandler::HandleDamageCommand(char* args)
 
     if(school >= MAX_SPELL_SCHOOL)
         return false;
+
+    // number or [name] Shift-click form |color|Hspell:spell_id|h[name]|h|r or Htalent form
+    uint32 spellid = ExtractSpellIdFromLink(&args);
+    if (!spellid || !sSpellStore.LookupEntry(spellid))
+        spellid = 0;
 
     SpellSchoolMask schoolmask = SpellSchoolMask(1 << school);
 
@@ -3942,16 +3951,18 @@ bool ChatHandler::HandleDamageCommand(char* args)
 
         m_session->GetPlayer()->DealDamageMods(target,damage,&absorb);
         m_session->GetPlayer()->DealDamage(target, damage, NULL, DIRECT_DAMAGE, schoolmask, NULL, false);
-        m_session->GetPlayer()->SendAttackStateUpdate (HITINFO_NORMALSWING2, target, 1, schoolmask, damage, absorb, resist, VICTIMSTATE_NORMAL, 0);
+        DamageInfo damageInfo  = DamageInfo(m_session->GetPlayer(), target, spellid);
+        damageInfo.damage      = damage;
+        damageInfo.absorb      = absorb;
+        damageInfo.resist      = resist;
+        damageInfo.HitInfo     = HITINFO_NORMALSWING2;
+        damageInfo.TargetState = VICTIMSTATE_NORMAL;
+        m_session->GetPlayer()->SendAttackStateUpdate(&damageInfo);
         return true;
     }
 
     // non-melee damage
 
-    // number or [name] Shift-click form |color|Hspell:spell_id|h[name]|h|r or Htalent form
-    uint32 spellid = ExtractSpellIdFromLink(&args);
-    if (!spellid || !sSpellStore.LookupEntry(spellid))
-        return false;
 
     m_session->GetPlayer()->SpellNonMeleeDamageLog(target, spellid, damage);
     return true;
@@ -7176,8 +7187,64 @@ bool ChatHandler::HandleShowGearScoreCommand(char *args)
     return true;
 }
 
-bool ChatHandler::HandleShowMapCount(char *args)
+bool ChatHandler::HandleMmap(char* args)
 {
-    PSendSysMessage("Maps count: %u", sMapMgr.Maps().size());
+    bool on;
+    if (ExtractOnOff(&args, on))
+    {
+        if (on)
+        {
+            sWorld.setConfig(CONFIG_BOOL_MMAP_ENABLED, true);
+            SendSysMessage("WORLD: mmaps are now ENABLED (individual map settings still in effect)");
+        }
+        else
+        {
+            sWorld.setConfig(CONFIG_BOOL_MMAP_ENABLED, false);
+            SendSysMessage("WORLD: mmaps are now DISABLED");
+        }
+        return true;
+    }
+
+    on = sWorld.getConfig(CONFIG_BOOL_MMAP_ENABLED);
+    PSendSysMessage("mmaps are %sabled", on ? "en" : "dis");
+
+    return true;
+}
+
+bool ChatHandler::HandleMmapTestArea(char* args)
+{
+    float radius = 40.0f;
+    ExtractFloat(&args, radius);
+
+    std::list<Creature*> creatureList;
+    MaNGOS::AnyUnitInObjectRangeCheck go_check(m_session->GetPlayer(), radius);
+    MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInObjectRangeCheck> go_search(creatureList, go_check);
+    // Get Creatures
+    Cell::VisitGridObjects(m_session->GetPlayer(), go_search, radius);
+
+    if (!creatureList.empty())
+    {
+        PSendSysMessage("Found %i Creatures.", creatureList.size());
+
+        uint32 paths = 0;
+        uint32 uStartTime = WorldTimer::getMSTime();
+
+        float gx,gy,gz;
+        m_session->GetPlayer()->GetPosition(gx,gy,gz);
+        for (std::list<Creature*>::iterator itr = creatureList.begin(); itr != creatureList.end(); ++itr)
+        {
+            PathFinder path(*itr);
+            path.calculate(gx, gy, gz);
+            ++paths;
+        }
+
+        uint32 uPathLoadTime = WorldTimer::getMSTimeDiff(uStartTime, WorldTimer::getMSTime());
+        PSendSysMessage("Generated %i paths in %i ms", paths, uPathLoadTime);
+    }
+    else
+    {
+        PSendSysMessage("No creatures in %f yard range.", radius);
+    }
+
     return true;
 }

@@ -31,8 +31,6 @@
 #include "WorldPacket.h"
 #include "Weather.h"
 #include "Player.h"
-#include "SkillExtraItems.h"
-#include "SkillDiscovery.h"
 #include "AccountMgr.h"
 #include "AchievementMgr.h"
 #include "AuctionHouseMgr.h"
@@ -52,6 +50,7 @@
 #include "BattleGroundMgr.h"
 #include "TemporarySummon.h"
 #include "VMapFactory.h"
+#include "MoveMap.h"
 #include "GameEventMgr.h"
 #include "PoolManager.h"
 #include "Database/DatabaseImpl.h"
@@ -136,6 +135,7 @@ World::~World()
         delete command;
 
     VMAP::VMapFactory::clear();
+    MMAP::MMapFactory::clear();
 
     //TODO free addSessQueue
 }
@@ -521,9 +521,9 @@ void World::LoadConfigSettings(bool reload)
     setConfigPos(CONFIG_FLOAT_RATE_DURABILITY_LOSS_PARRY,  "DurabilityLossChance.Parry",  0.05f);
     setConfigPos(CONFIG_FLOAT_RATE_DURABILITY_LOSS_BLOCK,  "DurabilityLossChance.Block",  0.05f);
 
-    setConfigPos(CONFIG_FLOAT_LISTEN_RANGE_SAY,       "ListenRange.Say",       25.0f);
+    setConfigPos(CONFIG_FLOAT_LISTEN_RANGE_SAY,       "ListenRange.Say",       40.0f);
     setConfigPos(CONFIG_FLOAT_LISTEN_RANGE_YELL,      "ListenRange.Yell",     300.0f);
-    setConfigPos(CONFIG_FLOAT_LISTEN_RANGE_TEXTEMOTE, "ListenRange.TextEmote", 25.0f);
+    setConfigPos(CONFIG_FLOAT_LISTEN_RANGE_TEXTEMOTE, "ListenRange.TextEmote", 40.0f);
 
     setConfigPos(CONFIG_FLOAT_GROUP_XP_DISTANCE, "MaxGroupXPDistance", 74.0f);
     setConfigPos(CONFIG_FLOAT_SIGHT_GUARDER,     "GuarderSight",       50.0f);
@@ -546,6 +546,11 @@ void World::LoadConfigSettings(bool reload)
         sMapMgr.SetGridCleanUpDelay(getConfig(CONFIG_UINT32_INTERVAL_GRIDCLEAN));
 
     setConfig(CONFIG_UINT32_NUMTHREADS, "MapUpdate.Threads", 1);
+    setConfig(CONFIG_BOOL_THREADS_DYNAMIC,"MapUpdate.DynamicThreadsCount", false);
+
+    setConfigMinMax(CONFIG_FLOAT_LOADBALANCE_HIGHVALUE, "MapUpdate.LoadBalanceHighValue", 0.8f, 0.5f, 1.0f);
+    setConfigMinMax(CONFIG_FLOAT_LOADBALANCE_LOWVALUE, "MapUpdate.LoadBalanceLowValue", 0.2f, 0.0f, 0.5f);
+
     setConfigMin(CONFIG_UINT32_INTERVAL_MAPUPDATE, "MapUpdateInterval", 100, MIN_MAP_UPDATE_DELAY);
     if (reload)
         sMapMgr.SetMapUpdateInterval(getConfig(CONFIG_UINT32_INTERVAL_MAPUPDATE));
@@ -605,7 +610,9 @@ void World::LoadConfigSettings(bool reload)
     setConfig(CONFIG_BOOL_LFR_EXTEND, "LFR.Extend",false);
     setConfigMinMax(CONFIG_UINT32_LFG_MAXKICKS, "LFG.MaxKicks", 5, 1, 10);
 
-    setConfig(CONFIG_BOOL_CHECK_GO_IN_PATH, "CheckGOInPath",false);
+    setConfig(CONFIG_BOOL_CHECK_GO_IN_PATH, "CheckGOInPath", false);
+
+    setConfig(CONFIG_BOOL_ALLOW_CUSTOM_MAPS, "AllowTransferToCustomMap", false);
 
     setConfigMinMax(CONFIG_UINT32_GEAR_CALC_BASE, "Player.GSCalculationBase", 190, 1, 384);
 
@@ -906,8 +913,8 @@ void World::LoadConfigSettings(bool reload)
     }
 
     setConfig(CONFIG_BOOL_VMAP_INDOOR_CHECK, "vmap.enableIndoorCheck", true);
-    bool enableLOS = sConfig.GetBoolDefault("vmap.enableLOS", false);
-    bool enableHeight = sConfig.GetBoolDefault("vmap.enableHeight", false);
+    bool enableLOS = true;
+    bool enableHeight = true;
     std::string ignoreSpellIds = sConfig.GetStringDefault("vmap.ignoreSpellIds", "");
 
     if (!enableHeight)
@@ -919,6 +926,11 @@ void World::LoadConfigSettings(bool reload)
     sLog.outString( "WORLD: VMap support included. LineOfSight:%i, getHeight:%i, indoorCheck:%i",
         enableLOS, enableHeight, getConfig(CONFIG_BOOL_VMAP_INDOOR_CHECK) ? 1 : 0);
     sLog.outString( "WORLD: VMap data directory is: %svmaps",m_dataPath.c_str());
+
+    setConfig(CONFIG_BOOL_MMAP_ENABLED, "mmap.enabled", true);
+    std::string ignoreMapIds = sConfig.GetStringDefault("mmap.ignoreMapIds", "");
+    MMAP::MMapFactory::preventPathfindingOnMaps(ignoreMapIds.c_str());
+    sLog.outString("WORLD: mmap pathfinding %sabled", getConfig(CONFIG_BOOL_MMAP_ENABLED) ? "en" : "dis");
 }
 
 /// Initialize the World
@@ -929,6 +941,9 @@ void World::SetInitialWorldSettings()
 
     ///- Time server startup
     uint32 uStartTime = WorldTimer::getMSTime();
+
+    ///- Initialize detour memory management
+    dtAllocSetCustom(dtCustomAlloc, dtCustomFree);
 
     ///- Initialize config settings
     LoadConfigSettings();
@@ -1027,9 +1042,6 @@ void World::SetInitialWorldSettings()
 
     sLog.outString( "Loading Spell Bonus Data..." );
     sSpellMgr.LoadSpellBonuses();                           // must be after LoadSpellChains
-
-    sLog.outString( "Loading Spell Disabled Data...");
-    sObjectMgr.LoadSpellDisabledEntrys();
 
     sLog.outString( "Loading Spell Proc Item Enchant..." );
     sSpellMgr.LoadSpellProcItemEnchant();                   // must be after LoadSpellChains
@@ -1210,6 +1222,9 @@ void World::SetInitialWorldSettings()
     sLog.outString( "Loading Player level dependent mail rewards..." );
     sObjectMgr.LoadMailLevelRewards();
 
+    sLog.outString( "Loading Spell disabled..." );
+    sObjectMgr.LoadSpellDisabledEntrys();
+
     sLog.outString( "Loading Loot Tables..." );
     sLog.outString();
     LoadLootTables();
@@ -1217,10 +1232,10 @@ void World::SetInitialWorldSettings()
     sLog.outString();
 
     sLog.outString( "Loading Skill Discovery Table..." );
-    LoadSkillDiscoveryTable();
+    sSpellMgr.LoadSkillDiscoveryTable();
 
     sLog.outString( "Loading Skill Extra Item Table..." );
-    LoadSkillExtraItemTable();
+    sSpellMgr.LoadSkillExtraItemTable();
 
     sLog.outString( "Loading Skill Fishing base level requirements..." );
     sObjectMgr.LoadFishingBaseSkillLevel();

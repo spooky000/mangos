@@ -198,7 +198,7 @@ bool changetokGuid(std::string &str, int n, std::map<uint32, uint32> &guidMap, u
         return true;                                        // not an error
 
     uint32 newGuid = registerNewGuid(oldGuid, guidMap, hiGuid);
-    snprintf(chritem, 20, "%d", newGuid);
+    snprintf(chritem, 20, "%u", newGuid);
 
     return changetoknth(str, n, chritem, false, nonzero);
 }

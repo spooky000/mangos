@@ -76,10 +76,10 @@ RollVoteMask Roll::GetVoteMaskFor(Player* player) const
 //===================================================
 
 Group::Group() : m_Guid(ObjectGuid()), m_groupType(GROUPTYPE_NORMAL),
-    m_dungeonDifficulty(REGULAR_DIFFICULTY), m_raidDifficulty(REGULAR_DIFFICULTY),
     m_bgGroup(NULL), m_lootMethod(FREE_FOR_ALL), m_lootThreshold(ITEM_QUALITY_UNCOMMON),
     m_subGroupsCounts(NULL)
 {
+    m_Difficulty = 0;
     m_LFGState = new LFGGroupState(this);
 }
 
@@ -134,8 +134,9 @@ bool Group::Create(ObjectGuid guid, const char * name)
     m_looterGuid = guid;
     m_roundLooterGuid = guid;
 
-    m_dungeonDifficulty = DUNGEON_DIFFICULTY_NORMAL;
-    m_raidDifficulty = RAID_DIFFICULTY_10MAN_NORMAL;
+    SetDungeonDifficulty(DUNGEON_DIFFICULTY_NORMAL);
+    SetRaidDifficulty(RAID_DIFFICULTY_10MAN_NORMAL);
+
     if (!isBGGroup())
     {
         m_Guid = ObjectGuid(HIGHGUID_GROUP,sObjectMgr.GenerateGroupLowGuid());
@@ -143,8 +144,8 @@ bool Group::Create(ObjectGuid guid, const char * name)
         Player *leader = sObjectMgr.GetPlayer(guid);
         if(leader)
         {
-            m_dungeonDifficulty = leader->GetDungeonDifficulty();
-            m_raidDifficulty = leader->GetRaidDifficulty();
+            SetDungeonDifficulty(leader->GetDungeonDifficulty());
+            SetRaidDifficulty(leader->GetRaidDifficulty());
         }
 
         Player::ConvertInstancesToGroup(leader, this, guid);
@@ -161,9 +162,9 @@ bool Group::Create(ObjectGuid guid, const char * name)
             m_targetIcons[2].GetRawValue(), m_targetIcons[3].GetRawValue(),
             m_targetIcons[4].GetRawValue(), m_targetIcons[5].GetRawValue(),
             m_targetIcons[6].GetRawValue(), m_targetIcons[7].GetRawValue(),
-            uint8(m_groupType), uint32(m_dungeonDifficulty), uint32(m_raidDifficulty));
+            uint8(m_groupType), uint32(GetDungeonDifficulty()), uint32(GetRaidDifficulty()));
     }
-    else 
+    else
         m_Guid =  ObjectGuid(HIGHGUID_GROUP,uint32(0));
 
     if (!AddMember(guid, name))
@@ -195,12 +196,12 @@ bool Group::LoadGroupFromDB(Field* fields)
     uint32 diff = fields[12].GetUInt8();
     if (diff >= MAX_DUNGEON_DIFFICULTY)
         diff = DUNGEON_DIFFICULTY_NORMAL;
-    m_dungeonDifficulty = Difficulty(diff);
+    SetDungeonDifficulty(Difficulty(diff));
 
     uint32 r_diff = fields[13].GetUInt8();
     if (r_diff >= MAX_RAID_DIFFICULTY)
         r_diff = RAID_DIFFICULTY_10MAN_NORMAL;
-    m_raidDifficulty = Difficulty(r_diff);
+    SetRaidDifficulty(Difficulty(r_diff));
 
     m_lootMethod = LootMethod(fields[0].GetUInt8());
     m_looterGuid = ObjectGuid(HIGHGUID_PLAYER, fields[1].GetUInt32());
@@ -327,7 +328,7 @@ bool Group::AddMember(ObjectGuid guid, const char* name)
     if (isLFDGroup())
         sLFGMgr.AddMemberToLFDGroup(guid);
 
-    if (Player *player = sObjectMgr.GetPlayer(guid))
+    if (Player* player = sObjectMgr.GetPlayer(guid))
     {
         if (!IsLeader(player->GetObjectGuid()) && !isBGGroup())
         {
@@ -894,12 +895,12 @@ void Group::CountTheRoll(Rolls::iterator& rollI)
 
                 ItemPosCountVec dest;
                 LootItem *item = &(roll->getLoot()->items[roll->itemSlot]);
-                InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count);
-                if (msg == EQUIP_ERR_OK)
+                InventoryResult msg = player->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count );
+                if ( msg == EQUIP_ERR_OK )
                 {
                     item->is_looted = true;
                     roll->getLoot()->NotifyItemRemoved(roll->itemSlot);
-                    roll->getLoot()->unlootedCount--;
+                    --roll->getLoot()->unlootedCount;
                     AllowedLooterSet looters = item->GetAllowedLooters();
                     player->StoreNewItem(dest, roll->itemid, true, item->randomPropertyId, looters);
                     player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_ITEM, roll->itemid, item->count);
@@ -909,7 +910,7 @@ void Group::CountTheRoll(Rolls::iterator& rollI)
                 else
                 {
                     item->is_blocked = false;
-                    player->SendEquipError(msg, NULL, NULL, roll->itemid);
+                    player->SendEquipError( msg, NULL, NULL, roll->itemid );
                 }
             }
         }
@@ -950,30 +951,29 @@ void Group::CountTheRoll(Rolls::iterator& rollI)
                 if(rollvote == ROLL_GREED)
                 {
                     ItemPosCountVec dest;
-                    InventoryResult msg = player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count);
-                    if (msg == EQUIP_ERR_OK)
+                    InventoryResult msg = player->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count );
+                    if ( msg == EQUIP_ERR_OK )
                     {
                         item->is_looted = true;
                         roll->getLoot()->NotifyItemRemoved(roll->itemSlot);
-                        roll->getLoot()->unlootedCount--;
+                        --roll->getLoot()->unlootedCount;
                         AllowedLooterSet looters = item->GetAllowedLooters();
                         player->StoreNewItem( dest, roll->itemid, true, item->randomPropertyId, looters);
                         player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_ITEM, roll->itemid, item->count);
                         player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_TYPE, roll->getLoot()->loot_type, item->count);
                         player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_EPIC_ITEM, roll->itemid, item->count);
-
                     }
                     else
                     {
                         item->is_blocked = false;
-                        player->SendEquipError(msg, NULL, NULL, roll->itemid);
+                        player->SendEquipError( msg, NULL, NULL, roll->itemid );
                     }
                 }
                 else if(rollvote == ROLL_DISENCHANT)
                 {
                     item->is_looted = true;
                     roll->getLoot()->NotifyItemRemoved(roll->itemSlot);
-                    roll->getLoot()->unlootedCount--;
+                    --roll->getLoot()->unlootedCount;
 
                     ItemPrototype const *pProto = ObjectMgr::GetItemPrototype(roll->itemid);
                     player->AutoStoreLoot(pProto->DisenchantID, LootTemplates_Disenchant, true);
@@ -1117,8 +1117,8 @@ void Group::SendUpdate()
             data << uint8(m_lootMethod);                    // loot method
             data << m_looterGuid;                           // looter guid
             data << uint8(m_lootThreshold);                 // loot threshold
-            data << uint8(m_dungeonDifficulty);             // Dungeon Difficulty
-            data << uint8(m_raidDifficulty);                // Raid Difficulty
+            data << uint8(GetDungeonDifficulty());          // Dungeon Difficulty
+            data << uint8(GetRaidDifficulty());             // Raid Difficulty
             data << uint8(0);                               // 3.3, dynamic difficulty?
         }
         player->GetSession()->SendPacket( &data );
@@ -1147,7 +1147,7 @@ void Group::BroadcastPacket(WorldPacket *packet, bool ignorePlayersInBGRaid, int
     for(GroupReference *itr = GetFirstMember(); itr != NULL; itr = itr->next())
     {
         Player *pl = itr->getSource();
-        if (!pl || (ignore && pl->GetObjectGuid() == ignore) || (ignorePlayersInBGRaid && pl->GetGroup() != this) )
+        if (!pl || (ignore && pl->GetObjectGuid() == ignore) || (ignorePlayersInBGRaid && pl->GetGroup() != this) || !pl->IsInWorld())
             continue;
 
         if (pl->GetSession() && (group == -1 || itr->getSubGroup() == group))
@@ -1160,7 +1160,7 @@ void Group::BroadcastReadyCheck(WorldPacket *packet)
     for(GroupReference *itr = GetFirstMember(); itr != NULL; itr = itr->next())
     {
         Player *pl = itr->getSource();
-        if (pl && pl->GetSession())
+        if (pl && pl->GetSession() && pl->IsInWorld())
             if (IsLeader(pl->GetObjectGuid()) || IsAssistant(pl->GetObjectGuid()))
                 pl->GetSession()->SendPacket(packet);
     }
@@ -1212,13 +1212,19 @@ bool Group::_addMember(ObjectGuid guid, const char* name)
 
 bool Group::_addMember(ObjectGuid guid, const char* name, uint8 group, GroupFlagMask flags, uint8 roles)
 {
-    if(IsFull())
+    if (IsFull())
         return false;
 
-    if (!guid)
+    if (!guid || !guid.IsPlayer())
         return false;
 
-    Player *player = sObjectMgr.GetPlayer(guid);
+    Player* player = sObjectMgr.GetPlayer(guid, false);
+
+    uint32 lastMap = 0;
+    if (player && player->IsInWorld())
+        lastMap = player->GetMapId();
+    else if (player && player->IsBeingTeleported())
+        lastMap = player->GetTeleportDest().mapid;
 
     MemberSlot member;
     member.guid      = guid;
@@ -1226,6 +1232,7 @@ bool Group::_addMember(ObjectGuid guid, const char* name, uint8 group, GroupFlag
     member.group     = group;
     member.flags     = flags;
     member.roles     = roles;
+    member.lastMap   = lastMap;
     m_memberSlots.push_back(member);
 
     SubGroupCounterIncrease(group);
@@ -1237,16 +1244,19 @@ bool Group::_addMember(ObjectGuid guid, const char* name, uint8 group, GroupFlag
         if (player->GetGroup() && isBGGroup())
             player->SetBattleGroundRaid(this, group);
         //if player is in bg raid and we are adding him to normal group, then call SetOriginalGroup()
-        else if ( player->GetGroup() )
+        else if (player->GetGroup())
             player->SetOriginalGroup(this, group);
         //if player is not in group, then call set group
         else
             player->SetGroup(this, group);
 
-        // if the same group invites the player back, cancel the homebind timer
-        if (InstanceGroupBind *bind = GetBoundInstance(player->GetMapId(), player))
-            if (bind->state->GetInstanceId() == player->GetInstanceId())
-                player->m_InstanceValid = true;
+        if (player->IsInWorld())
+        {
+            // if the same group invites the player back, cancel the homebind timer
+            if (InstanceGroupBind* bind = GetBoundInstance(player->GetMapId(), player))
+                if (bind->state->GetInstanceId() == player->GetInstanceId())
+                    player->m_InstanceValid = true;
+        }
     }
 
     if (!isRaidGroup())                                     // reset targetIcons for non-raid-groups
@@ -1715,9 +1725,9 @@ GroupJoinBattlegroundResult Group::CanJoinBattleGroundQueue(BattleGround const* 
 
 void Group::SetDungeonDifficulty(Difficulty difficulty)
 {
-    m_dungeonDifficulty = difficulty;
+    m_Difficulty = (m_Difficulty & 0xFF00) | uint32(difficulty);
     if(!isBGGroup())
-        CharacterDatabase.PExecute("UPDATE groups SET difficulty = %u WHERE groupId='%u'", m_dungeonDifficulty, m_Guid.GetCounter());
+        CharacterDatabase.PExecute("UPDATE groups SET difficulty = %u WHERE groupId='%u'", GetDungeonDifficulty(), m_Guid.GetCounter());
 
     for(GroupReference *itr = GetFirstMember(); itr != NULL; itr = itr->next())
     {
@@ -1731,9 +1741,9 @@ void Group::SetDungeonDifficulty(Difficulty difficulty)
 
 void Group::SetRaidDifficulty(Difficulty difficulty)
 {
-    m_raidDifficulty = difficulty;
+    m_Difficulty = (m_Difficulty & 0x00FF) | (uint32(difficulty) << 8);
     if(!isBGGroup())
-        CharacterDatabase.PExecute("UPDATE groups SET raiddifficulty = %u WHERE groupId='%u'", m_raidDifficulty, m_Guid.GetCounter());
+        CharacterDatabase.PExecute("UPDATE groups SET raiddifficulty = %u WHERE groupId='%u'", GetRaidDifficulty(), m_Guid.GetCounter());
 
     for(GroupReference *itr = GetFirstMember(); itr != NULL; itr = itr->next())
     {
@@ -1760,9 +1770,21 @@ bool Group::InCombatToInstance(uint32 instanceId)
     return false;
 }
 
+bool Group::SetPlayerMap(ObjectGuid guid, uint32 mapid)
+{
+    member_witerator slot = _getMemberWSlot(guid);
+    if (slot != m_memberSlots.end())
+    {
+        slot->lastMap = mapid;
+        DEBUG_LOG("Group::SetPlayerMap> map is updated");
+        return true;
+    }
+    return false;
+}
+
 void Group::ResetInstances(InstanceResetMethod method, bool isRaid, Player* SendMsgTo)
 {
-    if(isBGGroup())
+    if (isBGGroup())
         return;
 
     // method can be INSTANCE_RESET_ALL, INSTANCE_RESET_CHANGE_DIFFICULTY, INSTANCE_RESET_GROUP_DISBAND
@@ -1770,17 +1792,30 @@ void Group::ResetInstances(InstanceResetMethod method, bool isRaid, Player* Send
     // we assume that when the difficulty changes, all instances that can be reset will be
     Difficulty diff = GetDifficulty(isRaid);
 
-    for(BoundInstancesMap::iterator itr = m_boundInstances[diff].begin(); itr != m_boundInstances[diff].end();)
+    typedef std::set<uint32> OfflineMapSet;
+    OfflineMapSet mapsWithOfflinePlayer;                    // to store map of offline players
+
+    if (method != INSTANCE_RESET_GROUP_DISBAND)
     {
-        DungeonPersistentState *state = itr->second.state;
-        const MapEntry *entry = sMapStore.LookupEntry(itr->first);
+        // Store maps in which are offline members for instance reset check.
+        for (member_citerator itr = m_memberSlots.begin(); itr != m_memberSlots.end(); ++itr)
+        {
+            if (!ObjectAccessor::FindPlayer(itr->guid))
+                mapsWithOfflinePlayer.insert(itr->lastMap); // add last map from offline player
+        }
+    }
+
+    for (BoundInstancesMap::iterator itr = m_boundInstances[diff].begin(); itr != m_boundInstances[diff].end();)
+    {
+        DungeonPersistentState* state = itr->second.state;
+        const MapEntry* entry = sMapStore.LookupEntry(itr->first);
         if (!entry || entry->IsRaid() != isRaid || (!state->CanReset() && method != INSTANCE_RESET_GROUP_DISBAND))
         {
             ++itr;
             continue;
         }
 
-        if(method == INSTANCE_RESET_ALL)
+        if (method == INSTANCE_RESET_ALL)
         {
             // the "reset all instances" method can only reset normal maps
             if (entry->map_type == MAP_RAID || diff == DUNGEON_DIFFICULTY_HEROIC)
@@ -1791,9 +1826,13 @@ void Group::ResetInstances(InstanceResetMethod method, bool isRaid, Player* Send
         }
 
         bool isEmpty = true;
-        // if the map is loaded, reset it
-        if (Map *map = sMapMgr.FindMap(state->GetMapId(), state->GetInstanceId()))
-            if (map->IsDungeon() && !(method == INSTANCE_RESET_GROUP_DISBAND && !state->CanReset()))
+        // check if there are offline members on the map
+        if (method != INSTANCE_RESET_GROUP_DISBAND && mapsWithOfflinePlayer.find(state->GetMapId()) != mapsWithOfflinePlayer.end())
+            isEmpty = false;
+
+        // if the map is loaded, reset it if can
+        if (isEmpty && entry->IsDungeon() && !(method == INSTANCE_RESET_GROUP_DISBAND && !state->CanReset()))
+            if (Map* map = sMapMgr.FindMap(state->GetMapId(), state->GetInstanceId()))
                 isEmpty = ((DungeonMap*)map)->Reset(method);
 
         if (SendMsgTo)
@@ -1804,6 +1843,7 @@ void Group::ResetInstances(InstanceResetMethod method, bool isRaid, Player* Send
                 SendMsgTo->SendResetInstanceFailed(0, state->GetMapId());
         }
 
+        // TODO - Adapt here when clear how difficulty changes must be handled
         if (isEmpty || method == INSTANCE_RESET_GROUP_DISBAND || method == INSTANCE_RESET_CHANGE_DIFFICULTY)
         {
             // do not reset the instance, just unbind if others are permanently bound to it

@@ -1350,6 +1350,11 @@ struct MapEntry
     {
         return MapID == 0 || MapID == 1 || MapID == 530 || MapID == 571;
     }
+
+    bool IsTransport() const
+    {
+        return map_type == MAP_COMMON &&  mapFlags == 1;
+    }
 };
 
 struct MapDifficultyEntry

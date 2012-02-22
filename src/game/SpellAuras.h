@@ -121,7 +121,7 @@ class MANGOS_DLL_SPEC SpellAuraHolder
 
         void SetInUse(bool state)
         {
-            if(state)
+            if (state)
                 ++m_in_use;
             else
             {
@@ -173,7 +173,6 @@ class MANGOS_DLL_SPEC SpellAuraHolder
 
         void SetVisibleAura(bool remove);
         void SetRemoveMode(AuraRemoveMode mode) { m_removeMode = mode; }
-
         void SetLoadedState(ObjectGuid const& casterGUID, ObjectGuid const& itemGUID, uint32 stackAmount, uint32 charges, int32 maxduration, int32 duration)
         {
             m_casterGuid   = casterGUID;
@@ -399,17 +398,16 @@ class MANGOS_DLL_SPEC Aura
         void HandlePreventFleeing(bool apply, bool Real);
         void HandleManaShield(bool apply, bool Real);
         void HandleArenaPreparation(bool apply, bool Real);
+        void HandleAuraMirrorImage(bool apply, bool Real);
         void HandleAuraConvertRune(bool apply, bool Real);
         void HandleAuraIncreaseBaseHealthPercent(bool Apply, bool Real);
         void HandleNoReagentUseAura(bool Apply, bool Real);
         void HandlePhase(bool Apply, bool Real);
         void HandleModTargetArmorPct(bool Apply, bool Real);
         void HandleAuraModAllCritChance(bool Apply, bool Real);
+        void HandleAuraLinked(bool Apply, bool Real);
         void HandleAuraOpenStable(bool apply, bool Real);
-        void HandleCharmConvert(bool apply, bool Real);
-        void HandleAuraMirrorImage(bool Apply, bool Real);
         void HandleAuraAddMechanicAbilities(bool apply, bool Real);
-        void HandleAuraLinked(bool apply, bool Real);
         void HandleAuraSetVehicle(bool apply, bool Real);
         void HandleAuraStopNaturalManaRegen(bool apply, bool Real);
         void HandleAuraAoECharm(bool apply, bool real);
@@ -450,7 +448,7 @@ class MANGOS_DLL_SPEC Aura
             m_modifier.m_amount = damage;
             m_modifier.periodictime = periodicTime;
 
-            if(uint32 maxticks = GetAuraMaxTicks())
+            if (uint32 maxticks = GetAuraMaxTicks())
                 m_periodicTick = maxticks - GetAuraDuration() / m_modifier.periodictime;
         }
 
@@ -463,7 +461,7 @@ class MANGOS_DLL_SPEC Aura
 
         void SetInUse(bool state)
         {
-            if(state)
+            if (state)
                 ++m_in_use;
             else
             {

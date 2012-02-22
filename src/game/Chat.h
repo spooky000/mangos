@@ -217,7 +217,7 @@ class MANGOS_DLL_SPEC ChatHandler
         bool HandleDebugSpellModsCommand(char* args);
         bool HandleDebugUpdateWorldStateCommand(char* args);
         bool HandleDebugEnterVehicleCommand(char* args);
-        bool HandleDebugSetVehicleIdCommand(char* args);
+        bool HandleDebugSendCalendarResultCommand(char* args);
 
         bool HandleDebugPlayCinematicCommand(char* args);
         bool HandleDebugPlayMovieCommand(char* args);
@@ -306,6 +306,7 @@ class MANGOS_DLL_SPEC ChatHandler
         bool HandleLookupAccountEmailCommand(char* args);
         bool HandleLookupAccountIpCommand(char* args);
         bool HandleLookupAccountNameCommand(char* args);
+
         bool HandleLookupAchievementCommand(char* args);
         bool HandleLookupAreaCommand(char* args);
         bool HandleLookupCreatureCommand(char* args);
@@ -616,7 +617,13 @@ class MANGOS_DLL_SPEC ChatHandler
         bool HandleWaterwalkCommand(char* args);
         bool HandleQuitCommand(char* args);
         bool HandleShowGearScoreCommand(char* args);
-        bool HandleShowMapCount(char* args);
+
+        bool HandleMmapPathCommand(char* args);
+        bool HandleMmapLocCommand(char* args);
+        bool HandleMmapLoadedTilesCommand(char* args);
+        bool HandleMmapStatsCommand(char* args);
+        bool HandleMmap(char* args);
+        bool HandleMmapTestArea(char* args);
 
         //! Development Commands
         bool HandleSaveAllCommand(char* args);

@@ -202,7 +202,7 @@ uint32 TimeStringToSecs(const std::string& timestring)
     uint32 buffer     = 0;
     uint32 multiplier = 0;
 
-    for(std::string::const_iterator itr = timestring.begin(); itr != timestring.end(); itr++ )
+    for(std::string::const_iterator itr = timestring.begin(); itr != timestring.end(); ++itr)
     {
         if(isdigit(*itr))
         {

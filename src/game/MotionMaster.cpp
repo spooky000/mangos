@@ -232,7 +232,7 @@ void MotionMaster::MoveIdle()
         push(&si_idleMovement);
 }
 
-void MotionMaster::MoveRandom(float spawndist)
+void MotionMaster::MoveRandom()
 {
     if (m_owner->GetTypeId() == TYPEID_PLAYER)
     {
@@ -322,14 +322,14 @@ void MotionMaster::MoveFollow(Unit* target, float dist, float angle)
         Mutate(new FollowMovementGenerator<Creature>(*target,dist,angle));
 }
 
-void MotionMaster::MovePoint(uint32 id, float x, float y, float z)
+void MotionMaster::MovePoint(uint32 id, float x, float y, float z, bool generatePath)
 {
     DEBUG_FILTER_LOG(LOG_FILTER_AI_AND_MOVEGENSS, "%s targeted point (Id: %u X: %f Y: %f Z: %f)", m_owner->GetGuidStr().c_str(), id, x, y, z );
 
     if (m_owner->GetTypeId() == TYPEID_PLAYER)
-        Mutate(new PointMovementGenerator<Player>(id,x,y,z));
+        Mutate(new PointMovementGenerator<Player>(id,x,y,z,generatePath));
     else
-        Mutate(new PointMovementGenerator<Creature>(id,x,y,z));
+        Mutate(new PointMovementGenerator<Creature>(id,x,y,z,generatePath));
 }
 
 void MotionMaster::MoveSeekAssistance(float x, float y, float z)

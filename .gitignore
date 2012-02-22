@@ -39,6 +39,7 @@ autom4te.cache
 *~
 *.bak
 *.orig
+*.rej
 *.patch
 callgrind.out.*
 
@@ -109,3 +110,5 @@ dep/ACE_wrappers/ace/config.h
 !dep/ACE_wrappers/lib/.empty
 !dep/tbb/src/Makefile
 
+# recastnavigation directory needs exception
+!dep/recastnavigation/RecastDemo/Build/

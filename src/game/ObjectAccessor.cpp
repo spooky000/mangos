@@ -73,21 +73,19 @@ Corpse* ObjectAccessor::GetCorpseInMap(ObjectGuid guid, uint32 mapid)
     return ret;
 }
 
-Player*
-ObjectAccessor::FindPlayer(ObjectGuid guid)
+Player* ObjectAccessor::FindPlayer(ObjectGuid guid, bool inWorld /*= true*/)
 {
     if (!guid)
         return NULL;
 
-    Player * plr = HashMapHolder<Player>::Find(guid);;
-    if (!plr || !plr->IsInWorld())
+    Player* plr = HashMapHolder<Player>::Find(guid);;
+    if (!plr || (!plr->IsInWorld() && inWorld))
         return NULL;
 
     return plr;
 }
 
-Player*
-ObjectAccessor::FindPlayerByName(const char *name)
+Player* ObjectAccessor::FindPlayerByName(const char *name)
 {
     HashMapHolder<Player>::ReadGuard g(HashMapHolder<Player>::GetLock());
     HashMapHolder<Player>::MapType& m = sObjectAccessor.GetPlayers();
@@ -170,7 +168,7 @@ ObjectAccessor::AddCorpse(Corpse *corpse)
 void
 ObjectAccessor::AddCorpsesToGrid(GridPair const& gridpair,GridType& grid,Map* map)
 {
-    WriteGuard guard(i_guard);
+    ReadGuard guard(i_guard);
     for(Player2CorpsesMapType::iterator iter = i_player2corpse.begin(); iter != i_player2corpse.end(); ++iter)
         if(iter->second->GetGrid() == gridpair)
     {
@@ -281,3 +279,4 @@ template <class T> ACE_RW_Thread_Mutex HashMapHolder<T>::i_lock;
 template class HashMapHolder<Player>;
 template class HashMapHolder<Corpse>;
 template class HashMapHolder<Pet>;
+

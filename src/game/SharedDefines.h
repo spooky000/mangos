@@ -310,7 +310,7 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 
 #define SPELL_ATTR2_ALLOW_DEAD_TARGET             0x00000001            // 0 can target dead unit or corpse
 #define SPELL_ATTR_EX2_UNK1                       0x00000002            // 1 vanish, shadowform, Ghost Wolf and other
-#define SPELL_ATTR_EX2_CANT_REFLECTED             0x00000004            // 2 ? used for detect can or not spell reflected // do not need LOS (e.g. 18220 since 3.3.3)
+#define SPELL_ATTR_EX2_IGNORE_LOS                 0x00000004            // 2 do not need LOS (e.g. 18220 since 3.3.3)
 #define SPELL_ATTR_EX2_UNK3                       0x00000008            // 3 auto targeting? (e.g. fishing skill enhancement items since 3.3.3)
 #define SPELL_ATTR_EX2_UNK4                       0x00000010            // 4 client displays icon in stance bar when learned, even if not shapeshift
 #define SPELL_ATTR_EX2_AUTOREPEAT_FLAG            0x00000020            // 5
@@ -463,7 +463,7 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_EX6_UNK20                      0x00100000            // 20
 #define SPELL_ATTR_EX6_UNK21                      0x00200000            // 21 it's only client-side attribute
 #define SPELL_ATTR_EX6_UNK22                      0x00400000            // 22
-#define SPELL_ATTR_EX6_NO_STACK_DEBUFF            0x00800000            // 23 only debuff and debuff-like spells in 3.3.5a
+#define SPELL_ATTR_EX6_NO_STACK_DEBUFF_MAJOR      0x00800000            // 23 only debuff and debuff-like spells in 3.3.5a
 #define SPELL_ATTR_EX6_UNK24                      0x01000000            // 24 not set in 3.0.3
 #define SPELL_ATTR_EX6_UNK25                      0x02000000            // 25 not set in 3.0.3
 #define SPELL_ATTR_EX6_NO_STACK_BUFF              0x04000000            // 26 not set in 3.0.3
@@ -1074,10 +1074,10 @@ enum AuraState
     AURA_STATE_DEADLY_POISON                = 16,           //   T |
     AURA_STATE_ENRAGE                       = 17,           // C   |
     AURA_STATE_BLEEDING                     = 18,           // C  t|
-    AURA_STATE_DARK_STATE                   = 19,           //     | darkness aurastate, used at ToC twins
+    AURA_STATE_DARK_TARGET                  = 19,           //     | targeting for light/Gas spells
     //AURA_STATE_UNKNOWN20                  = 20,           //  c  | only (45317 Suicide)
-    //AURA_STATE_UNKNOWN21                  = 21,           //     | not used
-    AURA_STATE_LIGHT_STATE                  = 22,           // C   | light aurastate, used at ToC twins
+    AURA_STATE_SPELLFIRE                    = 21,           //     | Spellfire (targeting, NYI)
+    AURA_STATE_LIGHT_TARGET                 = 22,           // C   | targeting for dark/Ooze spells
     AURA_STATE_HEALTH_ABOVE_75_PERCENT      = 23,           // C   |
 };
 
