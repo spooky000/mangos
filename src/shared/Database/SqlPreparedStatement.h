@@ -75,7 +75,7 @@ class MANGOS_DLL_SPEC SqlStmtFieldData
         void set(T1 param1);
 
         //getters
-        bool toBool() const { MANGOS_ASSERT(m_type == FIELD_BOOL); return m_binaryData.boolean; }
+        bool toBool() const { MANGOS_ASSERT(m_type == FIELD_BOOL); return static_cast<bool>(m_binaryData.ui8); }
         uint8 toUint8() const { MANGOS_ASSERT(m_type == FIELD_UI8); return m_binaryData.ui8; }
         int8 toInt8() const { MANGOS_ASSERT(m_type == FIELD_I8); return m_binaryData.i8; }
         uint16 toUint16() const { MANGOS_ASSERT(m_type == FIELD_UI16); return m_binaryData.ui16; }
@@ -99,7 +99,7 @@ class MANGOS_DLL_SPEC SqlStmtFieldData
             switch (m_type)
             {
                 case FIELD_NONE:    return 0;
-                case FIELD_BOOL:    return sizeof(bool);
+                case FIELD_BOOL:    //return sizeof(bool);
                 case FIELD_UI8:     return sizeof(uint8);
                 case FIELD_UI16:    return sizeof(uint16);
                 case FIELD_UI32:    return sizeof(uint32);
@@ -124,7 +124,7 @@ class MANGOS_DLL_SPEC SqlStmtFieldData
 };
 
 //template specialization
-template<> inline void SqlStmtFieldData::set(bool val) { m_type = FIELD_BOOL; m_binaryData.boolean = val; }
+template<> inline void SqlStmtFieldData::set(bool val) { m_type = FIELD_BOOL; m_binaryData.ui8 = val; }
 template<> inline void SqlStmtFieldData::set(uint8 val) { m_type = FIELD_UI8; m_binaryData.ui8 = val; }
 template<> inline void SqlStmtFieldData::set(int8 val) { m_type = FIELD_I8; m_binaryData.i8 = val; }
 template<> inline void SqlStmtFieldData::set(uint16 val) { m_type = FIELD_UI16; m_binaryData.ui16 = val; }
@@ -316,7 +316,8 @@ class MANGOS_DLL_SPEC SqlPreparedStatement
         virtual bool execute() = 0;
 
     protected:
-        SqlPreparedStatement(const std::string& fmt, SqlConnection& conn) : m_szFmt(fmt), m_nParams(0), m_nColumns(0), m_bPrepared(false), m_bIsQuery(false), m_pConn(conn) {}
+        SqlPreparedStatement(const std::string& fmt, SqlConnection& conn):
+            m_nParams(0), m_nColumns(0), m_bIsQuery(false), m_bPrepared(false), m_szFmt(fmt), m_pConn(conn) {}
 
         uint32 m_nParams;
         uint32 m_nColumns;

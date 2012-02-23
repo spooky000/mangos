@@ -89,7 +89,7 @@ class DBCFileLoader
         Record getRecord(size_t id);
         /// Get begin iterator over records
 
-        uint32 GetNumRows() const { return recordCount;}
+        uint32 GetNumRows() const { return recordCount; }
         uint32 GetRowSize() const { return recordSize; }
         uint32 GetCols() const { return fieldCount; }
         uint32 GetOffset(size_t id) const { return (fieldsOffset != NULL && id < fieldCount) ? fieldsOffset[id] : 0; }

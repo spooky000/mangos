@@ -66,6 +66,8 @@ MapManager::Initialize()
     m_workTimeStorage = 0;
     m_sleepTimeStorage = 0;
     m_tickCount = 0;
+
+    m_statisticInterval = sWorld.getConfig(CONFIG_UINT32_VMSS_STATISTIC_INTERVAL);
 }
 
 void MapManager::InitStateMachine()

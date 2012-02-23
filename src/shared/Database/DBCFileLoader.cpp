@@ -180,7 +180,7 @@ char* DBCFileLoader::AutoProduceData(const char* format, uint32& records, char**
         }
 
         // If higher index avalible from sql - use it instead of dbcs
-        if (sqlHighestIndex > maxi)	
+        if (sqlHighestIndex > maxi)
             maxi = sqlHighestIndex;
 
         ++maxi;
