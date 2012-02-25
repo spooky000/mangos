@@ -501,6 +501,8 @@ ObjectGuid const& Aura::GetCastItemGuid() const { return GetHolder() ? GetHolder
 
 ObjectGuid const& Aura::GetCasterGuid() const { return GetHolder() ? GetHolder()->GetCasterGuid() : ObjectGuid::Null; }
 
+ObjectGuid const& Aura::GetAffectiveCasterGuid() const { return GetHolder() ? GetHolder()->GetAffectiveCasterGuid() : ObjectGuid::Null; }
+
 void Aura::AreaAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBasePoints, SpellAuraHolderPtr holder, Unit *target,Unit *caster, Item* castItem)
 {
     m_isAreaAura = true;
@@ -509,7 +511,7 @@ void Aura::AreaAura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *c
     Unit* caster_ptr = caster ? caster : target;
 
     m_radius = GetSpellRadius(sSpellRadiusStore.LookupEntry(spellproto->EffectRadiusIndex[m_effIndex]));
-    if(Player* modOwner = caster_ptr->GetSpellModOwner())
+    if (Player* modOwner = caster_ptr->GetSpellModOwner())
         modOwner->ApplySpellMod(spellproto->Id, SPELLMOD_RADIUS, m_radius);
 
     switch(spellproto->Effect[eff])
@@ -859,7 +861,7 @@ void Aura::AreaAuraUpdate(uint32 diff)
                                 break;
                             case AREA_AURA_RAID:
                                 // non caster self-casted auras (stacked from diff. casters)
-                                if (aur->GetModifier()->m_auraname != SPELL_AURA_NONE  || i->second->GetCasterGuid() == GetCasterGuid())
+                                if (aur->GetModifier()->m_auraname != SPELL_AURA_NONE  || i->second->GetCasterGuid() == GetAffectiveCasterGuid())
                                     apply = false;
                                 break;
                             default:
@@ -883,13 +885,13 @@ void Aura::AreaAuraUpdate(uint32 diff)
                     if (actualSpellInfo != GetSpellProto())
                         actualBasePoints = actualSpellInfo->CalculateSimpleValue(m_effIndex);
 
-                    SpellAuraHolderPtr holder = i_target->GetSpellAuraHolder(actualSpellInfo->Id, GetCasterGuid());
+                    SpellAuraHolderPtr holder = i_target->GetSpellAuraHolder(actualSpellInfo->Id, GetAffectiveCasterGuid());
 
                     if (!holder || holder->IsDeleted())
                     {
-                        SpellAuraHolderPtr newholder = CreateSpellAuraHolder(actualSpellInfo, i_target, caster);
+                        SpellAuraHolderPtr newholder = CreateSpellAuraHolder(actualSpellInfo, i_target,  GetAffectiveCaster());
                         newholder->SetAuraDuration(GetAuraDuration());
-                        Aura* aura = newholder->CreateAura(AURA_CLASS_AREA_AURA, m_effIndex, &actualBasePoints, newholder, i_target, caster, NULL);
+                        Aura* aura = newholder->CreateAura(AURA_CLASS_AREA_AURA, m_effIndex, &actualBasePoints, newholder, i_target, GetAffectiveCaster(), NULL);
                         i_target->AddSpellAuraHolder(newholder);
                     }
                     else
@@ -906,7 +908,7 @@ void Aura::AreaAuraUpdate(uint32 diff)
                         }
                         else
                         {
-                            Aura* aura = holder->CreateAura(AURA_CLASS_AREA_AURA, m_effIndex, &actualBasePoints, holder, i_target, caster, NULL);
+                            Aura* aura = holder->CreateAura(AURA_CLASS_AREA_AURA, m_effIndex, &actualBasePoints, holder, i_target, GetAffectiveCaster(), NULL);
                             i_target->AddAuraToModList(aura);
                             holder->SetInUse(true);
                             aura->ApplyModifier(true,true);
@@ -920,6 +922,7 @@ void Aura::AreaAuraUpdate(uint32 diff)
     }
     else                                                    // aura at non-caster
     {
+        Unit* realcaster = GetAffectiveCaster();
         Unit* caster = GetCaster();
         Unit* target = GetTarget();
 
@@ -930,45 +933,45 @@ void Aura::AreaAuraUpdate(uint32 diff)
         // or caster is (no longer) friendly
         bool needFriendly = (m_areaAuraType == AREA_AURA_ENEMY ? false : true);
         if ( !caster || caster->hasUnitState(UNIT_STAT_ISOLATED) ||
-            !caster->IsInMap(target)      ||
+            !realcaster->IsInMap(target)      ||
             !caster->IsWithinDistInMap(target, m_radius)      ||
             !caster->HasAura(GetId(), GetEffIndex())            ||
             caster->IsFriendlyTo(target) != needFriendly
            )
         {
-            target->RemoveSingleAuraFromSpellAuraHolder(GetId(), GetEffIndex(), GetCasterGuid());
+            target->RemoveSingleAuraFromSpellAuraHolder(GetId(), GetEffIndex(), GetAffectiveCasterGuid());
         }
-        else if( m_areaAuraType == AREA_AURA_PARTY)         // check if in same sub group
+        else if ( m_areaAuraType == AREA_AURA_PARTY)         // check if in same sub group
         {
             // not check group if target == owner or target == pet
-            if (caster->GetCharmerOrOwnerGuid() != target->GetObjectGuid() && caster->GetObjectGuid() != target->GetCharmerOrOwnerGuid())
+            if (realcaster->GetCharmerOrOwnerGuid() != target->GetObjectGuid() && realcaster->GetObjectGuid() != target->GetCharmerOrOwnerGuid())
             {
-                Player* check = caster->GetCharmerOrOwnerPlayerOrPlayerItself();
+                Player* check = realcaster->GetCharmerOrOwnerPlayerOrPlayerItself();
 
                 Group *pGroup = check ? check->GetGroup() : NULL;
-                if( pGroup )
+                if ( pGroup )
                 {
                     Player* checkTarget = target->GetCharmerOrOwnerPlayerOrPlayerItself();
                     if(!checkTarget || !pGroup->SameSubGroup(check, checkTarget))
-                        target->RemoveSingleAuraFromSpellAuraHolder(GetId(), GetEffIndex(), GetCasterGuid());
+                        target->RemoveSingleAuraFromSpellAuraHolder(GetId(), GetEffIndex(), GetAffectiveCasterGuid());
                 }
                 else
-                    target->RemoveSingleAuraFromSpellAuraHolder(GetId(), GetEffIndex(), GetCasterGuid());
+                    target->RemoveSingleAuraFromSpellAuraHolder(GetId(), GetEffIndex(), GetAffectiveCasterGuid());
             }
         }
-        else if( m_areaAuraType == AREA_AURA_RAID)          // TODO: fix me!
+        else if ( m_areaAuraType == AREA_AURA_RAID)          // TODO: fix me!
         {
             // not check group if target == owner or target == pet
-            if (caster->GetCharmerOrOwnerGuid() != target->GetObjectGuid() && caster->GetObjectGuid() != target->GetCharmerOrOwnerGuid())
+            if (realcaster->GetCharmerOrOwnerGuid() != target->GetObjectGuid() && realcaster->GetObjectGuid() != target->GetCharmerOrOwnerGuid())
             {
-                Player* check = caster->GetCharmerOrOwnerPlayerOrPlayerItself();
+                Player* check = realcaster->GetCharmerOrOwnerPlayerOrPlayerItself();
 
                 Group *pGroup = check ? check->GetGroup() : NULL;
-                if( pGroup )
+                if ( pGroup )
                 {
                     Player* checkTarget = target->GetCharmerOrOwnerPlayerOrPlayerItself();
                     if(!checkTarget)
-                        target->RemoveSingleAuraFromSpellAuraHolder(GetId(), GetEffIndex(), GetCasterGuid());
+                        target->RemoveSingleAuraFromSpellAuraHolder(GetId(), GetEffIndex(), GetAffectiveCasterGuid());
                 }
                 else
                     target->RemoveSingleAuraFromSpellAuraHolder(GetId(), GetEffIndex(), GetCasterGuid());
@@ -976,8 +979,8 @@ void Aura::AreaAuraUpdate(uint32 diff)
         }
         else if (m_areaAuraType == AREA_AURA_PET || m_areaAuraType == AREA_AURA_OWNER)
         {
-            if (target->GetObjectGuid() != caster->GetCharmerOrOwnerGuid())
-                target->RemoveSingleAuraFromSpellAuraHolder(GetId(), GetEffIndex(), GetCasterGuid());
+            if (target->GetObjectGuid() != realcaster->GetCharmerOrOwnerGuid())
+                target->RemoveSingleAuraFromSpellAuraHolder(GetId(), GetEffIndex(), GetAffectiveCasterGuid());
         }
     }
 }
@@ -988,7 +991,7 @@ void Aura::PersistentAreaAuraUpdate(uint32 diff)
 
     // remove the aura if its caster or the dynamic object causing it was removed
     // or if the target moves too far from the dynamic object
-    if(Unit *caster = GetCaster())
+    if (Unit *caster = GetCaster())
     {
         DynamicObject *dynObj = caster->GetDynObject(GetId(), GetEffIndex());
         if (dynObj)
@@ -1007,7 +1010,7 @@ void Aura::PersistentAreaAuraUpdate(uint32 diff)
 
     Update(diff);
 
-    if(remove)
+    if (remove)
         GetTarget()->RemoveAura(GetId(), GetEffIndex());
 }
 
@@ -1017,7 +1020,7 @@ void Aura::ApplyModifier(bool apply, bool Real)
 
     GetHolder()->SetInUse(true);
     SetInUse(true);
-    if(aura < TOTAL_AURAS)
+    if (aura < TOTAL_AURAS)
         (*this.*AuraHandler [aura])(apply, Real);
     SetInUse(false);
     GetHolder()->SetInUse(false);
@@ -7257,20 +7260,37 @@ void Aura::HandleAuraModIncreaseEnergyPercent(bool apply, bool /*Real*/)
 
 void Aura::HandleAuraModIncreaseHealthPercent(bool apply, bool /*Real*/)
 {
-    Unit *target = GetTarget();
+    Unit* target = GetTarget();
+
+    if (!target)
+        return;
+
+    uint32 oldhealth = target->GetHealth();
 
     target->HandleStatModifier(UNIT_MOD_HEALTH, TOTAL_PCT, float(m_modifier.m_amount), apply);
 
     // spell special cases when current health set to max value at apply
-    switch (GetId())
+    if (apply)
     {
-        case 60430:                                         // Molten Fury
-        case 64193:                                         // Heartbreak
-        case 65737:                                         // Heartbreak
+        switch (GetId())
+        {
+            case 60430:                                         // Molten Fury
+            case 64193:                                         // Heartbreak
+            case 65737:                                         // Heartbreak
+                target->SetHealth(target->GetMaxHealth());
+                break;
+            default:
+                if (oldhealth > target->GetMaxHealth())
+                    target->SetHealth(target->GetMaxHealth());
+                break;
+        }
+    }
+    else
+    {
+        if (oldhealth > target->GetMaxHealth())
             target->SetHealth(target->GetMaxHealth());
-            break;
-        default:
-            break;
+        else
+            target->SetHealth(oldhealth);
     }
 }
 
@@ -8534,7 +8554,7 @@ void Aura::PeriodicTick()
             if (!target->IsInWorld() ||  !target->isAlive())
                 return;
 
-            Unit *pCaster = GetCaster();
+            Unit* pCaster = GetAffectiveCaster();
             if (!pCaster)
                 return;
 
@@ -8746,7 +8766,7 @@ void Aura::PeriodicTick()
             target->CalculateDamageAbsorbAndResist(pCaster, damageInfo.SchoolMask(), DOT, damageInfo.damage, &damageInfo.absorb, &damageInfo.resist, !(GetSpellProto()->AttributesEx & SPELL_ATTR_EX_CANT_REFLECTED));
 
             DETAIL_FILTER_LOG(LOG_FILTER_PERIODIC_AFFECTS, "PeriodicTick: %s attacked %s for %u dmg inflicted by %u abs is %u",
-                GetCasterGuid().GetString().c_str(), target->GetGuidStr().c_str(), damageInfo.damage, GetId(), damageInfo.absorb);
+                GetAffectiveCasterGuid().GetString().c_str(), target->GetGuidStr().c_str(), damageInfo.damage, GetId(), damageInfo.absorb);
 
             pCaster->DealDamageMods(target, damageInfo.damage, &damageInfo.absorb);
 
@@ -8794,7 +8814,7 @@ void Aura::PeriodicTick()
             if (!target->IsInWorld() ||  !target->isAlive())
                 return;
 
-            Unit *pCaster = GetCaster();
+            Unit *pCaster = GetAffectiveCaster();
             if (!pCaster)
                 return;
 
@@ -8837,13 +8857,13 @@ void Aura::PeriodicTick()
 
             // only from players
             // FIXME: need use SpellDamageBonus instead?
-            if (GetCasterGuid().IsPlayer())
+            if (GetAffectiveCasterGuid().IsPlayer())
                 damageInfo.damage -= target->GetSpellDamageReduction(damageInfo.damage);
 
             target->CalculateDamageAbsorbAndResist(pCaster, GetSpellSchoolMask(spellProto), DOT, damageInfo.damage, &damageInfo.absorb, &damageInfo.resist, !(spellProto->AttributesEx & SPELL_ATTR_EX_CANT_REFLECTED));
 
             DETAIL_FILTER_LOG(LOG_FILTER_PERIODIC_AFFECTS, "PeriodicTick: %s health leech of %s for %u dmg inflicted by %u abs is %u",
-                GetCasterGuid().GetString().c_str(), target->GetGuidStr().c_str(), damageInfo.damage, GetId(),damageInfo.absorb);
+                GetAffectiveCasterGuid().GetString().c_str(), target->GetGuidStr().c_str(), damageInfo.damage, GetId(),damageInfo.absorb);
 
             pCaster->DealDamageMods(target, damageInfo.damage, &damageInfo.absorb);
 
@@ -8888,7 +8908,7 @@ void Aura::PeriodicTick()
             if (!target->isAlive())
                 return;
 
-            Unit *pCaster = GetCaster();
+            Unit *pCaster = GetAffectiveCaster();
             if (!pCaster)
                 return;
 
@@ -8933,7 +8953,7 @@ void Aura::PeriodicTick()
             damageInfo.damage -= damageInfo.absorb;
 
             DETAIL_FILTER_LOG(LOG_FILTER_PERIODIC_AFFECTS, "PeriodicTick: %s heal of %s for %u health  (absorbed %u) inflicted by %u",
-                GetCasterGuid().GetString().c_str(), target->GetGuidStr().c_str(), damageInfo.damage, damageInfo.absorb, GetId());
+                GetAffectiveCasterGuid().GetString().c_str(), target->GetGuidStr().c_str(), damageInfo.damage, damageInfo.absorb, GetId());
 
             int32 gain = target->ModifyHealth(damageInfo.damage);
             damageInfo.cleanDamage = damageInfo.damage;
@@ -8956,10 +8976,10 @@ void Aura::PeriodicTick()
             target->getHostileRefManager().threatAssist(pCaster, float(gain) * 0.5f * sSpellMgr.GetSpellThreatMultiplier(spellProto), spellProto);
 
             // heal for caster damage
-            if(target != pCaster && spellProto->SpellVisual[0] == 163)
+            if (target != pCaster && spellProto->SpellVisual[0] == 163)
             {
                 uint32 dmg = spellProto->manaPerSecond;
-                if(pCaster->GetHealth() <= dmg && pCaster->GetTypeId()==TYPEID_PLAYER)
+                if (pCaster->GetHealth() <= dmg && pCaster->GetTypeId()==TYPEID_PLAYER)
                 {
                     pCaster->RemoveAurasDueToSpell(GetId());
 
@@ -8988,7 +9008,7 @@ void Aura::PeriodicTick()
 //            uint32 procAttacker = PROC_FLAG_ON_DO_PERIODIC;//   | PROC_FLAG_SUCCESSFUL_HEAL;
 //            uint32 procVictim   = 0;//ROC_FLAG_ON_TAKE_PERIODIC | PROC_FLAG_TAKEN_HEAL;
             // ignore item heals
-//            if(procSpell && !haveCastItem)
+//            if (procSpell && !haveCastItem)
 //                pCaster->ProcDamageAndSpell(target, procAttacker, procVictim, PROC_EX_NORMAL_HIT, pdamage, BASE_ATTACK, spellProto);
             break;
         }
@@ -9002,7 +9022,7 @@ void Aura::PeriodicTick()
             if (target->hasUnitState(UNIT_STAT_ISOLATED))
                 return;
 
-            if(m_modifier.m_miscvalue < 0 || m_modifier.m_miscvalue >= MAX_POWERS)
+            if (m_modifier.m_miscvalue < 0 || m_modifier.m_miscvalue >= MAX_POWERS)
                 return;
 
             Powers power = Powers(m_modifier.m_miscvalue);
@@ -9011,7 +9031,7 @@ void Aura::PeriodicTick()
             if (target->getPowerType() != power)
                 return;
 
-            Unit* pCaster = GetCaster();
+            Unit* pCaster = GetAffectiveCaster();
             if (!pCaster)
                 return;
 
@@ -9041,7 +9061,7 @@ void Aura::PeriodicTick()
             }
 
             DETAIL_FILTER_LOG(LOG_FILTER_PERIODIC_AFFECTS, "PeriodicTick: %s power leech of %s for %u dmg inflicted by %u",
-                GetCasterGuid().GetString().c_str(), target->GetGuidStr().c_str(), pdamage, GetId());
+                GetAffectiveCasterGuid().GetString().c_str(), target->GetGuidStr().c_str(), pdamage, GetId());
 
             int32 drain_amount = target->GetPower(power) > pdamage ? pdamage : target->GetPower(power);
 
@@ -9140,7 +9160,7 @@ void Aura::PeriodicTick()
             uint32 pdamage = m_modifier.m_amount > 0 ? m_modifier.m_amount : 0;
 
             DETAIL_FILTER_LOG(LOG_FILTER_PERIODIC_AFFECTS, "PeriodicTick: %s energize %s for %u dmg inflicted by %u",
-                GetCasterGuid().GetString().c_str(), target->GetGuidStr().c_str(), pdamage, GetId());
+                GetAffectiveCasterGuid().GetString().c_str(), target->GetGuidStr().c_str(), pdamage, GetId());
 
             if (m_modifier.m_miscvalue < 0 || m_modifier.m_miscvalue >= MAX_POWERS)
                 break;
@@ -9177,7 +9197,7 @@ void Aura::PeriodicTick()
             uint32 pdamage = uint32(target->GetMaxPower(powerType) * amount / 100);
 
             DETAIL_FILTER_LOG(LOG_FILTER_PERIODIC_AFFECTS, "PeriodicTick: %s energize %s for %u power %u inflicted by %u",
-                GetCasterGuid().GetString().c_str(), target->GetGuidStr().c_str(), pdamage, powerType, GetId());
+                GetAffectiveCasterGuid().GetString().c_str(), target->GetGuidStr().c_str(), pdamage, powerType, GetId());
 
             if (target->GetMaxPower(powerType) == 0)
                 break;
@@ -9197,7 +9217,7 @@ void Aura::PeriodicTick()
             if (!target->isAlive())
                 return;
 
-            Unit *pCaster = GetCaster();
+            Unit *pCaster = GetAffectiveCaster();
             if (!pCaster)
                 return;
 
@@ -9254,7 +9274,7 @@ void Aura::PeriodicTick()
                 return;
 
             int32 gain = target->ModifyHealth(m_modifier.m_amount);
-            if (Unit *caster = GetCaster())
+            if (Unit *caster = GetAffectiveCaster())
                 target->getHostileRefManager().threatAssist(caster, float(gain) * 0.5f  * sSpellMgr.GetSpellThreatMultiplier(spellProto), spellProto);
             break;
         }
@@ -9346,11 +9366,12 @@ void Aura::PeriodicDummyTick()
                     // 7053 Forsaken Skill: Shadow
                     return;
                 }
-                // Steal Flesh
+                // Steal Flesh (The Culling of Stratholme - Salramm the Fleshcrafter)
                 case 52708:
                 {
                     if (Unit *caster = GetCaster())
                         caster->CastSpell(caster, 52712, true );
+
                     target->CastSpell(target, 52711, true);
                     return;
                 }
@@ -10661,7 +10682,7 @@ m_permanent(false), m_isRemovedOnShapeLost(true), m_deleted(false), m_in_use(0)
     MANGOS_ASSERT(spellproto && spellproto == sSpellStore.LookupEntry( spellproto->Id ) && "`info` must be pointer to sSpellStore element");
     m_aurasStorage.clear();
 
-    if(!caster)
+    if (!caster)
         m_casterGuid = target->GetObjectGuid();
     else
     {
@@ -10669,6 +10690,8 @@ m_permanent(false), m_isRemovedOnShapeLost(true), m_deleted(false), m_in_use(0)
         MANGOS_ASSERT(caster->isType(TYPEMASK_UNIT))
         m_casterGuid = caster->GetObjectGuid();
     }
+
+    m_originalCasterGuid = m_casterGuid;  // Must be setted after by special case
 
     m_applyTime      = time(NULL);
     m_isPassive      = IsPassiveSpell(spellproto);
@@ -11200,6 +11223,25 @@ Unit* SpellAuraHolder::GetCaster() const
     return ObjectAccessor::GetUnit(*m_target, m_casterGuid);// player will search at any maps
 }
 
+Unit* SpellAuraHolder::GetAffectiveCaster() const
+{
+    if (!m_target)
+        return NULL;
+
+    return GetAffectiveCasterGuid() != GetCasterGuid() ?
+        ObjectAccessor::GetUnit(*m_target, GetAffectiveCasterGuid()) :
+        GetCaster();
+}
+
+void SpellAuraHolder::SetAffectiveCasterGuid(ObjectGuid guid)
+{
+    if (!guid || !guid.IsUnit() || !m_target)
+        return;
+
+    m_originalCasterGuid = guid;
+    SetCasterGuid(m_target->GetObjectGuid());
+};
+
 bool SpellAuraHolder::IsWeaponBuffCoexistableWith() const
 {
     // only item casted spells
@@ -11263,12 +11305,12 @@ void SpellAuraHolder::BuildUpdatePacket(WorldPacket& data) const
     uint32 stackCount = m_procCharges ? m_procCharges*m_stackAmount : m_stackAmount;
     data << uint8(stackCount <= 255 ? stackCount : 255);
 
-    if(!(auraFlags & AFLAG_NOT_CASTER))
+    if (!(auraFlags & AFLAG_NOT_CASTER))
     {
-        data << GetCasterGuid().WriteAsPacked();
+        data << GetAffectiveCasterGuid().WriteAsPacked();
     }
 
-    if(auraFlags & AFLAG_DURATION)
+    if (auraFlags & AFLAG_DURATION)
     {
         data << uint32(GetAuraMaxDuration());
         data << uint32(GetAuraDuration());
@@ -11280,7 +11322,7 @@ void SpellAuraHolder::SendAuraUpdate(bool remove) const
     WorldPacket data(SMSG_AURA_UPDATE);
     data << m_target->GetPackGUID();
 
-    if(remove)
+    if (remove)
     {
         data << uint8(GetAuraSlot());
         data << uint32(0);

@@ -1338,7 +1338,7 @@ void ObjectMgr::LoadCreatures()
         }
         else if(data.movementType == RANDOM_MOTION_TYPE)
         {
-            if (data.spawndist == 0.0f)
+            if(fabs(data.spawndist) < M_NULL_F)
             {
                 sLog.outErrorDb("Table `creature` have creature (GUID: %u Entry: %u) with `MovementType`=1 (random movement) but with `spawndist`=0, replace by idle movement type (0).",guid,data.id );
                 data.movementType = IDLE_MOTION_TYPE;
@@ -1346,7 +1346,7 @@ void ObjectMgr::LoadCreatures()
         }
         else if(data.movementType == IDLE_MOTION_TYPE)
         {
-            if (data.spawndist != 0.0f)
+            if(fabs(data.spawndist) > M_NULL_F)
             {
                 sLog.outErrorDb("Table `creature` have creature (GUID: %u Entry: %u) with `MovementType`=0 (idle) have `spawndist`<>0, set to 0.",guid,data.id );
                 data.spawndist = 0.0f;
@@ -1428,7 +1428,7 @@ void ObjectMgr::LoadVehicleAccessories()
         return;
     }
 
-    BarGoLink bar(result->GetRowCount());
+    BarGoLink bar((int)result->GetRowCount());
 
     do
     {
@@ -2846,7 +2846,7 @@ void ObjectMgr::LoadPetScalingData()
     //                                                 0               1     2           3       4          5       6    7    8    9     10
     QueryResult *result  = WorldDatabase.Query("SELECT creature_entry, aura, healthbase, health, powerbase, power,  str, agi, sta, inte, spi,"
     //                                          11     12           13           14           15           16           17
-                                               "armor, resistance1, resistance2, resistance3, resistance4, resistance5, resistance6," 
+                                               "armor, resistance1, resistance2, resistance3, resistance4, resistance5, resistance6,"
     //                                          18      19           20           21      22           23        24   25         26           27    28
                                                "apbase, apbasescale, attackpower, damage, spelldamage, spellhit, hit, expertize, attackspeed, crit, regen"
                                                " FROM pet_scaling_data");
@@ -2864,7 +2864,7 @@ void ObjectMgr::LoadPetScalingData()
         return;
     }
 
-    BarGoLink bar(result->GetRowCount());
+    BarGoLink bar((int)result->GetRowCount() );
 
     m_PetScalingData.clear();
 
@@ -3892,40 +3892,8 @@ void ObjectMgr::LoadGroups()
                 diff = REGULAR_DIFFICULTY;                  // default for both difficaly types
             }
 
-            if (resetTime > (time(NULL) + INSTANCE_MAX_RESET_OFFSET))
-            {
-                MapDifficultyEntry const* mapDiff = GetMapDifficultyData(mapId,diff);
-                resetTime = DungeonResetScheduler::CalculateNextResetTime(mapDiff, time(NULL));
-                sLog.outErrorDb("ObjectMgr::Wrong reset time in group_instance corrected to: " UI64FMTD, resetTime);
-            }
-
-            if (resetTime < (time(NULL)))
-            {
-                DEBUG_LOG("ObjectMgr::Loading extended instance for player: %d", leaderGuidLow);
-                bool isExtended = false;
-                QueryResult* result1 = CharacterDatabase.PQuery("SELECT COUNT(guid) FROM character_instance WHERE instance = '%u' AND extend = 1 ", fields[1].GetUInt32());
-                if (result1)
-                {
-                    Field *fields1=result->Fetch();
-                    isExtended = fields1[0].GetBool();
-                    delete result1;
-                }
-                if (isExtended)
-                {
-                    MapDifficultyEntry const* mapDiff = GetMapDifficultyData(mapId,diff);
-                    resetTime = DungeonResetScheduler::CalculateNextResetTime(mapDiff, time(NULL));
-                    DungeonPersistentState* state = (DungeonPersistentState*)sMapPersistentStateMgr.AddPersistentState(mapEntry, fields[2].GetUInt32(), Difficulty(diff), (time_t)resetTime, (fields[6].GetUInt32() == 0), true, true, encountersMask);
-                    state->SetExtended(isExtended);
-                    group->BindToInstance(state, true && isExtended, true);
-                }
-                else
-                    sLog.outErrorDb("ObjectMgr::Loaded instance %d with expired resetTime %u, but his not extended.", fields[2].GetUInt32(), resetTime);
-            }
-            else
-            {
-                DungeonPersistentState *state = (DungeonPersistentState*)sMapPersistentStateMgr.AddPersistentState(mapEntry, fields[2].GetUInt32(), Difficulty(diff), (time_t)resetTime, (fields[6].GetUInt32() == 0), true, true, encountersMask);
-                group->BindToInstance(state, fields[3].GetBool(), true);
-            }
+            DungeonPersistentState *state = (DungeonPersistentState*)sMapPersistentStateMgr.AddPersistentState(mapEntry, fields[2].GetUInt32(), Difficulty(diff), (time_t)fields[5].GetUInt64(), (fields[6].GetUInt32() == 0), true, true, fields[8].GetUInt32());
+            group->BindToInstance(state, fields[3].GetBool(), true);
 
         }while( result->NextRow() );
         delete result;
@@ -4882,7 +4850,7 @@ void ObjectMgr::LoadInstanceEncounters()
     m_DungeonEncounters.clear();         // need for reload case
 
     QueryResult* result = WorldDatabase.Query("SELECT entry, creditType, creditEntry, lastEncounterDungeon FROM instance_encounters");
-    
+
     if (!result)
     {
         BarGoLink bar(1);
@@ -4903,13 +4871,13 @@ void ObjectMgr::LoadInstanceEncounters()
 
         uint32 entry = fields[0].GetUInt32();
         DungeonEncounterEntry const* dungeonEncounter = sDungeonEncounterStore.LookupEntry(entry);
-        
+
         if (!dungeonEncounter)
         {
             sLog.outErrorDb("Table `instance_encounters` has an invalid encounter id %u, skipped!", entry);
             continue;
         }
-        
+
         uint8 creditType = fields[1].GetUInt8();
         uint32 creditEntry = fields[2].GetUInt32();
         switch (creditType)
@@ -7867,7 +7835,7 @@ bool PlayerCondition::Meets(Player const * player) const
             return player->GetQuestRewardStatus(value1);
         case CONDITION_QUESTTAKEN:
         {
-            return player->IsCurrentQuest(value1);
+            return player->IsCurrentQuest(value1, value2);
         }
         case CONDITION_AD_COMMISSION_AURA:
         {
@@ -8018,6 +7986,11 @@ bool PlayerCondition::Meets(Player const * player) const
 
             return false;
         }
+        case CONDITION_SKILL_BELOW:
+            if (value2 == 1)
+                return !player->HasSkill(value1);
+            else
+                return player->HasSkill(value1) && player->GetBaseSkillValue(value1) < value2;
         default:
             return false;
     }
@@ -8108,6 +8081,7 @@ bool PlayerCondition::IsValid(ConditionType condition, uint32 value1, uint32 val
             break;
         }
         case CONDITION_SKILL:
+        case CONDITION_SKILL_BELOW:
         {
             SkillLineEntry const *pSkill = sSkillLineStore.LookupEntry(value1);
             if (!pSkill)
@@ -8134,7 +8108,7 @@ bool PlayerCondition::IsValid(ConditionType condition, uint32 value1, uint32 val
                 return false;
             }
 
-            if (value2)
+            if (value2 && condition != CONDITION_QUESTTAKEN)
                 sLog.outErrorDb("Quest condition (%u) has useless data in value2 (%u)!", condition, value2);
             break;
         }
@@ -8153,7 +8127,7 @@ bool PlayerCondition::IsValid(ConditionType condition, uint32 value1, uint32 val
                 sLog.outErrorDb("Aura condition (%u) requires to have non existing spell (Id: %d), skipped", condition, value1);
                 return false;
             }
-            if (value2 > MAX_EFFECT_INDEX)
+            if (value2 >= MAX_EFFECT_INDEX)
             {
                 sLog.outErrorDb("Aura condition (%u) requires to have non existing effect index (%u) (must be 0..%u), skipped", condition, value2, MAX_EFFECT_INDEX-1);
                 return false;

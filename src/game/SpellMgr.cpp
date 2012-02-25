@@ -3520,7 +3520,7 @@ void SpellMgr::LoadPetDefaultSpells()
         for(int j = 0; j < MAX_CREATURE_SPELL_DATA_SLOT; ++j)
             petDefSpells.spellid[j] = spellDataEntry->spellId[j];
 
-        if(LoadPetDefaultSpells_helper(cInfo, petDefSpells))
+        if (LoadPetDefaultSpells_helper(cInfo, petDefSpells))
         {
             mPetDefaultSpellsMap[petSpellsId] = petDefSpells;
             ++countData;
@@ -4882,7 +4882,7 @@ bool SpellArea::IsFitToRequirements(Player const* player, uint32 newZone, uint32
     if(questStart)
     {
         // not in expected required quest state
-        if(!player || ((!questStartCanActive || !player->IsActiveQuest(questStart)) && !player->GetQuestRewardStatus(questStart)))
+        if(!player || (!questStartCanActive || !player->IsActiveQuest(questStart)) && !player->GetQuestRewardStatus(questStart))
             return false;
     }
 

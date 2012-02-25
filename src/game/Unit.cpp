@@ -590,7 +590,7 @@ void Unit::resetAttackTimer(WeaponAttackType type)
 float Unit::GetMeleeAttackDistance(Unit* pVictim /* NULL */) const
 {
     // The measured values show BASE_MELEE_OFFSET in (1.3224, 1.342)
-    float dist = GetFloatValue(UNIT_FIELD_COMBATREACH) + 
+    float dist = GetFloatValue(UNIT_FIELD_COMBATREACH) +
         (pVictim ? pVictim->GetFloatValue(UNIT_FIELD_COMBATREACH) : 0.0f) +
         BASE_MELEERANGE_OFFSET;
 
@@ -9554,8 +9554,8 @@ bool Unit::isVisibleForOrDetect(Unit const* u, WorldObject const* viewPoint, boo
             // else apply detecting check for stealth
         }
 
-        // none other cases for detect invisibility, so invisible
-        if(invisible)
+        // none other cases for detect invisibility, and self invisible
+        if (m_invisibilityMask != 0)
             return false;
 
         // else apply stealth detecting check
@@ -11269,18 +11269,18 @@ bool CharmInfo::RemoveSpellFromActionBar(uint32 spell_id)
 
 void CharmInfo::ToggleCreatureAutocast(uint32 spellid, bool apply)
 {
-    if(IsPassiveSpell(spellid))
+    if (IsPassiveSpell(spellid))
         return;
 
     for(uint32 x = 0; x < CREATURE_MAX_SPELLS; ++x)
-        if(spellid == m_charmspells[x].GetAction())
+        if (spellid == m_charmspells[x].GetAction())
             m_charmspells[x].SetType(apply ? ACT_ENABLED : ACT_DISABLED);
 }
 
 void CharmInfo::SetPetNumber(uint32 petnumber, bool statwindow)
 {
     m_petnumber = petnumber;
-    if(statwindow)
+    if (statwindow)
         m_unit->SetUInt32Value(UNIT_FIELD_PETNUMBER, m_petnumber);
     else
         m_unit->SetUInt32Value(UNIT_FIELD_PETNUMBER, 0);

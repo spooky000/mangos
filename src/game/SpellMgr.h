@@ -148,6 +148,7 @@ inline bool IsEffectHandledOnDelayedSpellLaunch(SpellEntry const *spellInfo, Spe
         case SPELL_EFFECT_WEAPON_PERCENT_DAMAGE:
         case SPELL_EFFECT_WEAPON_DAMAGE:
         case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
+        case SPELL_EFFECT_CHARGE:
             return true;
         default:
             return false;
@@ -677,6 +678,7 @@ enum ProcFlags
                                     PROC_FLAG_TAKEN_NEGATIVE_SPELL_HIT | \
                                     PROC_FLAG_TAKEN_ANY_DAMAGE | \
                                     PROC_FLAG_ON_TRAP_ACTIVATION)
+
 enum ProcFlagsEx
 {
     PROC_EX_NONE                = 0x0000000,                // If none can tigger on Hit/Crit only (passive spells MUST defined by SpellFamily flag)

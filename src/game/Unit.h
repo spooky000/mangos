@@ -205,7 +205,7 @@ enum UnitRename
     UNIT_CAN_BE_ABANDONED   = 0x02,
 };
 
-#define CREATURE_MAX_SPELLS     8
+#define CREATURE_MAX_SPELLS     4
 
 enum Swing
 {
@@ -461,6 +461,8 @@ enum UnitMoveType
 #define MAX_MOVE_TYPE     9
 
 extern float baseMoveSpeed[MAX_MOVE_TYPE];
+
+#define BASE_CHARGE_SPEED 27.0f
 
 enum CombatRating
 {
@@ -1362,7 +1364,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         bool IsNeutralToAll() const;
         bool IsContestedGuard() const
         {
-            if(FactionTemplateEntry const* entry = getFactionTemplateEntry())
+            if (FactionTemplateEntry const* entry = getFactionTemplateEntry())
                 return entry->IsContestedGuardFaction();
 
             return false;
@@ -1524,7 +1526,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         bool IsIgnoreUnitState(SpellEntry const *spell, IgnoreUnitState ignoreState);
 
         bool isTargetableForAttack(bool inversAlive = false) const;
-        bool isPassiveToHostile() { return HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PASSIVE); }
+        virtual bool isPassiveToHostile() { return HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PASSIVE); }
 
         virtual bool IsInWater() const;
         virtual bool IsUnderWater() const;
@@ -1725,7 +1727,7 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
             for(int i = STAT_STRENGTH; i < MAX_STATS; ++i) SetFloatValue(UNIT_FIELD_POSSTAT0+i, 0);
             for(int i = STAT_STRENGTH; i < MAX_STATS; ++i) SetFloatValue(UNIT_FIELD_NEGSTAT0+i, 0);
         }
-        void ApplyStatBuffMod(Stats stat, float val, bool apply) 
+        void ApplyStatBuffMod(Stats stat, float val, bool apply)
         {
             val *= GetModifierValue(UnitMods(UNIT_MOD_STAT_STRENGTH+stat), TOTAL_PCT);
             ApplyModSignedFloatValue((val > 0 ? UNIT_FIELD_POSSTAT0+stat : UNIT_FIELD_NEGSTAT0+stat), val, apply);
@@ -1866,14 +1868,14 @@ class MANGOS_DLL_SPEC Unit : public WorldObject
         uint32 GetVisibleAura(uint8 slot) const
         {
             VisibleAuraMap::const_iterator itr = m_visibleAuras.find(slot);
-            if(itr != m_visibleAuras.end())
+            if (itr != m_visibleAuras.end())
                 return itr->second;
             return 0;
         }
         void SetVisibleAura(uint8 slot, uint32 spellid)
         {
             MAPLOCK_WRITE(this,MAP_LOCK_TYPE_AURAS);
-            if(spellid == 0)
+            if (spellid == 0)
                 m_visibleAuras.erase(slot);
             else
                 m_visibleAuras[slot] = spellid;
@@ -2308,7 +2310,7 @@ bool Unit::CheckAllControlledUnits(Func const& func, uint32 controlledMask) cons
                    return true;
 
     if (controlledMask & CONTROLLED_MINIPET)
-        if(Unit const* mini = GetMiniPet())
+        if (Unit const* mini = GetMiniPet())
             if (func(mini))
                 return true;
 

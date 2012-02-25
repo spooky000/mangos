@@ -206,7 +206,8 @@ bool Pet::LoadPetFromDB( Player* owner, uint32 petentry, uint32 petnumber, bool 
     SetUInt32Value(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_NONE);
     SetName(std::string(fields[8].GetCppString()));
     SetUInt32Value(UNIT_FIELD_PETEXPERIENCE, fields[5].GetUInt32());
-    m_charmInfo->SetState(fields[6].GetUInt32());
+    GetCharmInfo()->SetState(fields[6].GetUInt32());
+    GetCharmInfo()->SetState(CHARM_STATE_ACTION,ACTIONS_ENABLE);
 
 
     // reget for sure use real creature info selected for Pet at load/creating
@@ -762,6 +763,9 @@ void Pet::Unsummon(PetSaveMode mode, Unit* owner /*= NULL*/)
 
     if (owner)
     {
+        if (GetOwnerGuid() != owner->GetObjectGuid())
+            return;
+
         Player* p_owner = owner->GetTypeId()==TYPEID_PLAYER ? (Player*)owner : NULL;
 
         if (p_owner)
@@ -1375,7 +1379,7 @@ void Pet::_LoadAuras(uint32 timediff)
 
             if (casterGuid.IsEmpty() || !casterGuid.IsUnit())
             {
-                sLog.outError("Pet::LoadAuras Unknown caster %u, ignore.",fields[0].GetUInt64());
+                sLog.outError("Pet::LoadAuras Unknown caster %llu, ignore.",fields[0].GetUInt64());
                 continue;
             }
 

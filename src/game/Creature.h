@@ -125,7 +125,6 @@ struct CreatureInfo
     int32   resistance6;
     uint32  spells[CREATURE_MAX_SPELLS];
     uint32  PetSpellDataId;
-    uint32  vehicleId;
     uint32  mingold;
     uint32  maxgold;
     char const* AIName;
@@ -137,6 +136,7 @@ struct CreatureInfo
     uint32  questItems[6];
     uint32  movementId;
     bool    RegenHealth;
+    uint32  vehicleId;
     uint32  equipmentId;
     uint32  trainerId;
     uint32  vendorId;
@@ -635,6 +635,11 @@ class MANGOS_DLL_SPEC Creature : public Unit
         bool CanAssistTo(const Unit* u, const Unit* enemy, bool checkfaction = true) const;
         bool CanInitiateAttack();
 
+        bool isPassiveToHostile()
+        {
+            return (IsCivilian() || Unit::isPassiveToHostile());
+        }
+
         MovementGeneratorType GetDefaultMovementType() const { return m_defaultMovementType; }
         void SetDefaultMovementType(MovementGeneratorType mgt) { m_defaultMovementType = mgt; }
 
@@ -680,7 +685,7 @@ class MANGOS_DLL_SPEC Creature : public Unit
         virtual uint8 GetPetAutoSpellSize() const { return CREATURE_MAX_SPELLS; }
         virtual uint32 GetPetAutoSpellOnPos(uint8 pos) const
         {
-            if (pos >= CREATURE_MAX_SPELLS || m_charmInfo->GetCharmSpell(pos)->GetType() != ACT_ENABLED)
+            if (pos >= CREATURE_MAX_SPELLS || !m_charmInfo->GetCharmSpell(pos) || m_charmInfo->GetCharmSpell(pos)->GetType() != ACT_ENABLED)
                 return 0;
             else
                 return m_charmInfo->GetCharmSpell(pos)->GetAction();
@@ -752,6 +757,7 @@ class MANGOS_DLL_SPEC Creature : public Unit
         Position m_summonPos;
 
         CreatureSpellsList m_spellOverride;
+
     private:
         GridReference<Creature> m_gridRef;
         CreatureInfo const* m_creatureInfo;                 // in difficulty mode > 0 can different from ObjMgr::GetCreatureTemplate(GetEntry())

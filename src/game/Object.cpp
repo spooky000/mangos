@@ -1730,7 +1730,7 @@ Creature* WorldObject::SummonCreature(uint32 id, float x, float y, float z, floa
 
     pCreature->Summon(spwtype, despwtime);
 
-    if(GetTypeId()==TYPEID_UNIT && ((Creature*)this)->AI())
+    if (GetTypeId()==TYPEID_UNIT && ((Creature*)this)->AI())
         ((Creature*)this)->AI()->JustSummoned(pCreature);
 
     // return the creature therewith the summoner has access to it

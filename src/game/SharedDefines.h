@@ -491,7 +491,7 @@ const uint32 ItemQualityColors[MAX_ITEM_QUALITY] = {
 #define SPELL_ATTR_EX7_UNK15                      0x00008000            // 15 Exorcism. Usable on players? 100% crit chance on undead and demons?
 #define SPELL_ATTR_EX7_UNK16                      0x00010000            // 16 Druid spells (29166, 54833, 64372, 68285).
 #define SPELL_ATTR_EX7_UNK17                      0x00020000            // 17 Only 27965 (Suicide) spell.
-#define SPELL_ATTR_EX7_UNK18                      0x00040000            // 18 Only spells that have Charge among effects.
+#define SPELL_ATTR_EX7_HAS_CHARGE_EFFECT          0x00040000            // 18 Only spell with Charge effect (used for calculate traectory/delay)
 #define SPELL_ATTR_EX7_UNK19                      0x00080000            // 19 Teleports to specific zones.
 #define SPELL_ATTR_EX7_UNK20                      0x00100000            // 20 Blink, Divine Shield, Ice Block
 #define SPELL_ATTR_EX7_UNK21                      0x00200000            // 21

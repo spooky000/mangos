@@ -6409,13 +6409,17 @@ void Spell::EffectApplyAreaAura(SpellEffectIndex eff_idx)
         return;
 
     m_spellAuraHolder->CreateAura(AURA_CLASS_AREA_AURA, eff_idx, &m_currentBasePoints[eff_idx], m_spellAuraHolder, unitTarget, m_caster, m_CastItem);
+
+    if (m_spellInfo->EffectImplicitTargetA[eff_idx] == TARGET_SINGLE_FRIEND &&
+        m_spellInfo->EffectImplicitTargetB[eff_idx] == TARGET_NONE)
+        m_spellAuraHolder->SetAffectiveCasterGuid(m_originalCasterGUID);
 }
 
 void Spell::EffectSummonType(SpellEffectIndex eff_idx)
 {
     uint32 prop_id = m_spellInfo->EffectMiscValueB[eff_idx];
     SummonPropertiesEntry const *summon_prop = sSummonPropertiesStore.LookupEntry(prop_id);
-    if(!summon_prop)
+    if (!summon_prop)
     {
         sLog.outError("EffectSummonType: Unhandled summon type %u", prop_id);
         return;
@@ -6664,7 +6668,12 @@ void Spell::DoSummonGroupPets(SpellEffectIndex eff_idx)
             delete pet;
             return;
         }
-        DEBUG_LOG("New Pet (guidlow %d, entry %d) summoned (default). Counter is %d ", pet->GetGUIDLow(), pet->GetEntry(), pet->GetPetCounter());
+        DEBUG_LOG("New Pet (%s) summoned (default). Counter is %d ", pet->GetObjectGuid().GetString().c_str(), pet->GetPetCounter());
+
+        if (m_caster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_caster)->AI())
+            ((Creature*)m_caster)->AI()->JustSummoned((Creature*)pet);
+        if (m_originalCaster && m_originalCaster != m_caster && m_originalCaster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_originalCaster)->AI())
+            ((Creature*)m_originalCaster)->AI()->JustSummoned((Creature*)pet);
     }
 }
 
@@ -6694,27 +6703,31 @@ void Spell::EffectSummonPossessed(SpellEffectIndex eff_idx)
 
 
     TempSummonType summonType = (duration == 0) ? TEMPSUMMON_DEAD_DESPAWN : TEMPSUMMON_TIMED_OR_DEAD_DESPAWN;
-    Creature* summon = m_caster->SummonCreature(creature_entry,px,py,pz,m_caster->GetOrientation(),summonType,duration,true);
+    Creature* spawnCreature = m_caster->SummonCreature(creature_entry,px,py,pz,m_caster->GetOrientation(),summonType,duration,true);
 
-    if (summon)
+    if (spawnCreature)
     {
-        summon->SetLevel(m_caster->getLevel());
+        spawnCreature->SetLevel(m_caster->getLevel());
 
-        if(CreatureAI* scriptedAI = sScriptMgr.GetCreatureAI(summon))
+        if (sScriptMgr.GetCreatureAI(spawnCreature))
         {
             // Prevent from ScriptedAI reinitialized
-            summon->LockAI(true);
-            m_caster->CastSpell(summon, 530, true);
-            summon->LockAI(false);
+            spawnCreature->LockAI(true);
+            m_caster->CastSpell(spawnCreature, 530, true);
+            spawnCreature->LockAI(false);
         }
         else
-            m_caster->CastSpell(summon, 530, true);
+            m_caster->CastSpell(spawnCreature, 530, true);
 
-        DEBUG_LOG("New possessed creature (guidlow %d, entry %d) summoned. Owner is %d ", summon->GetGUIDLow(), summon->GetEntry(), m_caster->GetGUIDLow());
+        DEBUG_LOG("New possessed creature (%s) summoned. Owner is %s ", spawnCreature->GetObjectGuid().GetString().c_str(), m_caster->GetObjectGuid().GetString().c_str());
     }
     else
-        sLog.outError("New possessed creature (entry %d) NOT summoned. Owner is %d ", summon->GetEntry(), m_caster->GetGUIDLow());
+        sLog.outError("New possessed creature (entry %d) NOT summoned. Owner is %s ", creature_entry, m_caster->GetObjectGuid().GetString().c_str());
 
+    if (m_caster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_caster)->AI())
+        ((Creature*)m_caster)->AI()->JustSummoned((Creature*)spawnCreature);
+    if (m_originalCaster && m_originalCaster != m_caster && m_originalCaster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_originalCaster)->AI())
+        ((Creature*)m_originalCaster)->AI()->JustSummoned((Creature*)spawnCreature);
 }
 
 void Spell::EffectLearnSpell(SpellEffectIndex eff_idx)
@@ -6955,7 +6968,7 @@ void Spell::EffectPickPocket(SpellEffectIndex /*eff_idx*/)
 
 void Spell::EffectAddFarsight(SpellEffectIndex eff_idx)
 {
-    if(m_caster->GetTypeId() != TYPEID_PLAYER)
+    if (m_caster->GetTypeId() != TYPEID_PLAYER)
         return;
 
     DynamicObject* dynObj = new DynamicObject;
@@ -6984,6 +6997,11 @@ void Spell::DoSummonWild(SpellEffectIndex eff_idx, uint32 forceFaction)
     float center_x = m_targets.m_destX;
     float center_y = m_targets.m_destY;
     float center_z = m_targets.m_destZ;
+
+    float ox, oy, oz;
+    m_caster->GetPosition(ox, oy, oz);
+    m_caster->GetTerrain()->CheckPathAccurate(ox,oy,oz, center_x, center_y, center_z, sWorld.getConfig(CONFIG_BOOL_CHECK_GO_IN_PATH) ? m_caster : NULL );
+    m_caster->UpdateAllowedPositionZ(center_x,center_y,center_z);
 
     float radius = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
     TempSummonType summonType = (m_duration == 0) ? TEMPSUMMON_DEAD_DESPAWN : TEMPSUMMON_TIMED_OR_DEAD_DESPAWN;
@@ -7026,6 +7044,9 @@ void Spell::DoSummonWild(SpellEffectIndex eff_idx, uint32 forceFaction)
             }
         }
 
+        m_caster->GetTerrain()->CheckPathAccurate(ox,oy,oz, px, py, pz, sWorld.getConfig(CONFIG_BOOL_CHECK_GO_IN_PATH) ? m_caster : NULL );
+        m_caster->UpdateAllowedPositionZ(px,py,pz);
+
         if (Creature* summon = m_caster->SummonCreature(creature_entry, px, py, pz, m_caster->GetOrientation(), summonType, m_duration))
         {
             summon->SetUInt32Value(UNIT_CREATED_BY_SPELL, m_spellInfo->Id);
@@ -7034,13 +7055,15 @@ void Spell::DoSummonWild(SpellEffectIndex eff_idx, uint32 forceFaction)
             // Does exceptions exist? If so, what are they?
             summon->SetCreatorGuid(m_caster->GetObjectGuid());
 
-            if(forceFaction)
+            if (forceFaction)
                 summon->setFaction(forceFaction);
 
             if(m_caster->GetTypeId() == TYPEID_PLAYER && summon->AI() )
                 summon->AI()->SummonedBySpell((Player*)m_caster);
 
             // Notify original caster if not done already
+            if (m_caster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_caster)->AI())
+                ((Creature*)m_caster)->AI()->JustSummoned((Creature*)summon);
             if (m_originalCaster && m_originalCaster != m_caster && m_originalCaster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_originalCaster)->AI())
                 ((Creature*)m_originalCaster)->AI()->JustSummoned(summon);
         }
@@ -7236,9 +7259,11 @@ void Spell::DoSummonVehicle(SpellEffectIndex eff_idx, uint32 forceFaction)
         // Notify Summoner
         if (m_caster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_caster)->AI())
             ((Creature*)m_caster)->AI()->JustSummoned(vehicle);
+        if (m_originalCaster && m_originalCaster != m_caster && m_originalCaster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_originalCaster)->AI())
+            ((Creature*)m_originalCaster)->AI()->JustSummoned(vehicle);
     }
     else
-        sLog.outError("Vehicle (guidlow %d, entry %d) NOT summoned by undefined reason. ", vehicle->GetGUIDLow(), vehicle->GetEntry());
+        sLog.outError("Vehicle (entry %d) NOT summoned by undefined reason. ", vehicle_entry);
 }
 
 void Spell::EffectTeleUnitsFaceCaster(SpellEffectIndex eff_idx)
@@ -7246,12 +7271,20 @@ void Spell::EffectTeleUnitsFaceCaster(SpellEffectIndex eff_idx)
     if (!unitTarget || unitTarget->IsTaxiFlying())
         return;
 
-    float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
+    if (m_targets.m_targetMask & TARGET_FLAG_DEST_LOCATION)
+    {
+        unitTarget->NearTeleportTo(m_targets.m_destX, m_targets.m_destY, m_targets.m_destZ, -m_caster->GetOrientation(), unitTarget == m_caster);
+    }
+    else
+    {
+        float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[eff_idx]));
 
-    float fx, fy, fz;
-    m_caster->GetClosePoint(fx, fy, fz, unitTarget->GetObjectBoundingRadius(), dis);
+        float fx, fy, fz;
+        m_caster->GetClosePoint(fx, fy, fz, unitTarget->GetObjectBoundingRadius(), dis);
 
-    unitTarget->NearTeleportTo(fx, fy, fz, -m_caster->GetOrientation(), unitTarget==m_caster);
+        unitTarget->NearTeleportTo(fx, fy, fz, -m_caster->GetOrientation(), unitTarget == m_caster);
+//        DEBUG_LOG("Spell::EffectTeleUnitsFaceCaster teleport %s  desination point not setted. Use old method.", unitTarget->GetObjectGuid().GetString().c_str()););
+    }
 }
 
 void Spell::EffectLearnSkill(SpellEffectIndex eff_idx)
@@ -7595,19 +7628,18 @@ void Spell::EffectTameCreature(SpellEffectIndex /*eff_idx*/)
 
 void Spell::EffectSummonPet(SpellEffectIndex eff_idx)
 {
-
     uint32 petentry = m_spellInfo->EffectMiscValue[eff_idx];
 
     Pet* OldSummon = m_caster->GetPet();
 
     // if pet requested type already exist
-    if( OldSummon )
+    if (OldSummon)
     {
         // Preview summon is loading or deleting
-        if(!OldSummon->IsInWorld())
+        if (!OldSummon->IsInWorld())
             return;
 
-        if (m_caster->GetTypeId() == TYPEID_PLAYER && (petentry == 0 || OldSummon->GetEntry() == petentry))
+        if ((m_caster->GetTypeId() == TYPEID_PLAYER && petentry == 0) || OldSummon->GetEntry() == petentry)
         {
             // pet in corpse state can't be summoned
             if (OldSummon->isDead())
@@ -7620,7 +7652,7 @@ void Spell::EffectSummonPet(SpellEffectIndex eff_idx)
             return;
         }
 
-        if(m_caster->GetTypeId() == TYPEID_PLAYER)
+        if (m_caster->GetTypeId() == TYPEID_PLAYER)
             OldSummon->Unsummon(OldSummon->getPetType() == HUNTER_PET ? PET_SAVE_AS_DELETED : PET_SAVE_NOT_IN_SLOT, m_caster);
         else
             return;
@@ -11323,7 +11355,7 @@ void Spell::EffectStuck(SpellEffectIndex /*eff_idx*/)
     DEBUG_LOG("Spell Effect: Stuck");
     DETAIL_LOG("Player %s (guid %u) used auto-unstuck future at map %u (%f, %f, %f)", pTarget->GetName(), pTarget->GetGUIDLow(), m_caster->GetMapId(), m_caster->GetPositionX(), pTarget->GetPositionY(), pTarget->GetPositionZ());
 
-    if(pTarget->IsTaxiFlying())
+    if (pTarget->IsTaxiFlying() || pTarget->InBattleGround())
         return;
 
     // homebind location is loaded always
@@ -11957,30 +11989,24 @@ void Spell::EffectSkinning(SpellEffectIndex /*eff_idx*/)
 
 void Spell::EffectCharge(SpellEffectIndex /*eff_idx*/)
 {
-    if (!unitTarget)
+    if (!unitTarget || !m_caster)
         return;
 
     //TODO: research more ContactPoint/attack distance.
     //3.666666 instead of ATTACK_DISTANCE(5.0f) in below seem to give more accurate result.
 
     float x, y, z;
-    unitTarget->GetContactPoint(m_caster, x, y, z, 1.5f);
+    unitTarget->GetContactPoint(m_caster, x, y, z);
 
     // Try to normalize Z coord cuz GetContactPoint do nothing with Z axis
-    unitTarget->UpdateGroundPositionZ(x, y, z, 7.0f);
+    m_caster->UpdateAllowedPositionZ(x, y, z);
 
     if (unitTarget->GetTypeId() != TYPEID_PLAYER)
-        ((Creature *)unitTarget)->StopMoving();
-    else
-    {   // Delay attack, otherwise player makes instant attack after cast
-        if (m_caster->GetAttackTime(BASE_ATTACK) < 300)
-            m_caster->setAttackTimer(BASE_ATTACK, m_caster->GetAttackTime(BASE_ATTACK) + 20 * m_caster->GetDistance(unitTarget));
-        if (m_caster->GetAttackTime(OFF_ATTACK) < 300)
-            m_caster->setAttackTimer(OFF_ATTACK,  m_caster->GetAttackTime(OFF_ATTACK)  + 20 * m_caster->GetDistance(unitTarget));
-    }
+        ((Creature*)unitTarget)->StopMoving();
 
-    // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
-    m_caster->MonsterMoveWithSpeed(x, y, z, 100.f, true, true);
+    float speed = m_spellInfo->speed ? m_spellInfo->speed : BASE_CHARGE_SPEED;
+
+    m_caster->MonsterMoveWithSpeed(x, y, z, speed, true, true);
 
     // not all charge effects used in negative spells
     if (unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
@@ -12004,15 +12030,17 @@ void Spell::EffectCharge2(SpellEffectIndex /*eff_idx*/)
             ((Creature *)unitTarget)->StopMoving();
     }
     else if (unitTarget && unitTarget != m_caster)
-        unitTarget->GetContactPoint(m_caster, x, y, z, 1.5f);
+        unitTarget->GetContactPoint(m_caster, x, y, z);
     else
         return;
 
     // Try to normalize Z coord cuz GetContactPoint do nothing with Z axis
-    unitTarget->UpdateGroundPositionZ(x, y, z, 7.0f);
+    m_caster->UpdateAllowedPositionZ(x, y, z);
+
+    float speed = m_spellInfo->speed ? m_spellInfo->speed : BASE_CHARGE_SPEED;
 
     // Only send MOVEMENTFLAG_WALK_MODE, client has strange issues with other move flags
-    m_caster->MonsterMoveWithSpeed(x, y, z, 100.f, true, true);
+    m_caster->MonsterMoveWithSpeed(x, y, z, speed, true, true);
 
     // not all charge effects used in negative spells
     if (unitTarget && unitTarget != m_caster && !IsPositiveSpell(m_spellInfo->Id))
@@ -12022,7 +12050,7 @@ void Spell::EffectCharge2(SpellEffectIndex /*eff_idx*/)
 void Spell::DoSummonCritter(SpellEffectIndex eff_idx, uint32 forceFaction)
 {
     uint32 pet_entry = m_spellInfo->EffectMiscValue[eff_idx];
-    if(!pet_entry)
+    if (!pet_entry)
         return;
 
     CreatureInfo const* cInfo = sCreatureStorage.LookupEntry<CreatureInfo>(pet_entry);
@@ -12463,7 +12491,6 @@ void Spell::EffectTransmitted(SpellEffectIndex eff_idx)
         ((Creature*)m_originalCaster)->AI()->JustSummoned(pGameObj);
 }
 
-
 void Spell::EffectProspecting(SpellEffectIndex /*eff_idx*/)
 {
     if (m_caster->GetTypeId() != TYPEID_PLAYER || !itemTarget)
@@ -12567,9 +12594,9 @@ void Spell::EffectStealBeneficialBuff(SpellEffectIndex eff_idx)
 
             int32 miss_chance = 0;
             // Apply dispel mod from aura caster
+            Unit* caster = holder->GetCaster();
+            Unit* target = holder->GetTarget();
 
-            Unit * caster = holder->GetCaster();
-            Unit * target = holder->GetTarget();
             if(!caster || !target)
                 continue;
 

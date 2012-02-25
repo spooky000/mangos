@@ -36,8 +36,8 @@
 #include "ObjectAccessor.h"
 #include "ObjectGuid.h"
 #include "Policies/Singleton.h"
-#include "SQLStorages.h"
 #include "Vehicle.h"
+#include "SQLStorages.h"
 
 #include <string>
 #include <map>
@@ -462,6 +462,9 @@ enum ConditionType
                                                             // True when player can learn ability (using min skill value from SkillLineAbility).
                                                             // Item_id can be defined in addition, to check if player has one (1) item in inventory or bank.
                                                             // When player has spell or has item (when defined), condition return false.
+    CONDITION_SKILL_BELOW           = 29,                   // skill_id     skill_value
+                                                            // True if player has skill skill_id and skill less than (and not equal) skill_value (for skill_value > 1)
+                                                            // If skill_value == 1, then true if player has not skill skill_id
 };
 
 struct PlayerCondition
@@ -1146,7 +1149,7 @@ class ObjectMgr
         {
             return m_ItemRequiredTarget.equal_range(uiItemEntry);
         }
-        
+
         DungeonEncounterMapBounds GetDungeonEncounterBounds(uint32 creditEntry) const
         {
             return m_DungeonEncounters.equal_range(creditEntry);

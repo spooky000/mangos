@@ -786,24 +786,24 @@ struct CreatureFamilyEntry
 
 struct CreatureModelDataEntry
 {
-    uint32 Id;
-    //uint32 Flags;
-    //char* ModelPath[16]
-    //uint32 Unk1;
-    float Scale;                                             // Used in calculation of unit collision data
-    //int32 Unk2
-    //int32 Unk3
-    //uint32 Unk4
-    //uint32 Unk5
-    //float Unk6
-    //uint32 Unk7
-    //float Unk8
-    //uint32 Unk9
-    //uint32 Unk10
-    //float CollisionWidth;
-    float CollisionHeight;
-    float MountHeight;                                       // Used in calculation of unit collision data when mounted
-    //float Unks[11]
+    uint32 Id;                                              // 1
+    //uint32 Flags;                                         // 2
+    //char* ModelPath[16]                                   // 3
+    //uint32 Unk1;                                          // 4
+    float Scale;                                            // 5 Used in calculation of unit collision data
+    //int32 Unk2                                            // 6
+    //int32 Unk3                                            // 7
+    //uint32 Unk4                                           // 8
+    //uint32 Unk5                                           // 9
+    //float Unk6                                            // 10
+    //uint32 Unk7                                           // 11
+    //float Unk8                                            // 12
+    //uint32 Unk9                                           // 13
+    //uint32 Unk10                                          // 14
+    //float CollisionWidth;                                 // 15
+    float CollisionHeight;                                  // 16
+    float MountHeight;                                      // 17 Used in calculation of unit collision data when mounted
+    //float Unks[11]                                        // 18-28
 };
 
 #define MAX_CREATURE_SPELL_DATA_SLOT 4
@@ -970,15 +970,15 @@ struct FactionTemplateEntry
 struct GameObjectDisplayInfoEntry
 {
     uint32      Displayid;                                  // 0        m_ID
-    // char* filename;                                      // 1
+    // char* filename;                                      // 1        m_modelName
     // uint32 unknown2[10];                                 // 2-11     m_Sound
-    float       minX;
-    float       minY;
-    float       minZ;
-    float       maxX;
-    float       maxY;
-    float       maxZ;
-    // uint32 unknown18;                                    // 18       unknown data
+    float       minX;                                       // 12       m_geoBoxMinX (use first value as interact dist, mostly in hacks way)
+    float       minY;                                       // 13       m_geoBoxMinY
+    float       minZ;                                       // 14       m_geoBoxMinZ
+    float       maxX;                                       // 15       m_geoBoxMaxX
+    float       maxY;                                       // 16       m_geoBoxMaxY
+    float       maxZ;                                       // 17       m_geoBoxMaxZ
+    // uint32 unknown18;                                    // 18       m_objectEffectPackageID
 };
 
 struct GemPropertiesEntry
@@ -2153,7 +2153,7 @@ struct SpellRangeEntry
 {
     uint32    ID;                                           // 0        m_ID
     float     minRange;                                     // 1        m_rangeMin[2]
-    float     minRangeFriendly;                             // 2 
+    float     minRangeFriendly;                             // 2
     float     maxRange;                                     // 3        m_rangeMax[2]
     float     maxRangeFriendly;                             // 4
     //uint32  Flags;                                        // 5        m_flags
