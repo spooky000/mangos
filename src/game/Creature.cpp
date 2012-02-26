@@ -47,6 +47,7 @@
 #include "GridNotifiers.h"
 #include "GridNotifiersImpl.h"
 #include "CellImpl.h"
+#include "TemporarySummon.h"
 #include "movement/MoveSplineInit.h"
 #include "movement/MoveSpline.h"
 #include "CreatureLinkingMgr.h"
@@ -553,7 +554,7 @@ void Creature::Update(uint32 update_diff, uint32 diff)
                 m_corpseDecayTimer -= update_diff;
                 if (m_groupLootId)
                 {
-                    if(update_diff < m_groupLootTimer)
+                    if (update_diff < m_groupLootTimer)
                         m_groupLootTimer -= update_diff;
                     else
                         StopGroupLoot();
@@ -1608,7 +1609,11 @@ void Creature::ForcedDespawn(uint32 timeMSToDespawn)
 
     RemoveCorpse();
     DisableSpline();
-    SetHealth(0);                                           // just for nice GM-mode view
+    if (IsInWorld())
+        SetHealth(0);                                           // just for nice GM-mode view
+
+    if (IsTemporarySummon())
+         ((TemporarySummon*)this)->UnSummon();
 }
 
 bool Creature::IsImmuneToSpell(SpellEntry const* spellInfo) const
@@ -2237,7 +2242,7 @@ bool Creature::HasSpell(uint32 spellID)
 time_t Creature::GetRespawnTimeEx() const
 {
     time_t now = time(NULL);
-    if(m_respawnTime > now)                                 // dead (no corpse)
+    if (m_respawnTime > now)                                 // dead (no corpse)
         return m_respawnTime;
     else if (m_corpseDecayTimer > 0)                        // dead (corpse)
         return now + m_respawnDelay + m_corpseDecayTimer / IN_MILLISECONDS;

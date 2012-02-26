@@ -125,6 +125,7 @@ struct CreatureInfo
     int32   resistance6;
     uint32  spells[CREATURE_MAX_SPELLS];
     uint32  PetSpellDataId;
+    uint32  vehicleId;
     uint32  mingold;
     uint32  maxgold;
     char const* AIName;
@@ -136,7 +137,6 @@ struct CreatureInfo
     uint32  questItems[6];
     uint32  movementId;
     bool    RegenHealth;
-    uint32  vehicleId;
     uint32  equipmentId;
     uint32  trainerId;
     uint32  vendorId;
