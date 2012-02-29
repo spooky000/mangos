@@ -64,6 +64,7 @@
 #include "CharacterDatabaseCleaner.h"
 #include "CreatureLinkingMgr.h"
 #include "LFGMgr.h"
+#include "CalendarMgr.h"
 
 INSTANTIATE_SINGLETON_1( World );
 

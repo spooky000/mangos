@@ -77,6 +77,8 @@ libmangosgame_a_SOURCES = \
 	Calendar.cpp \
 	Calendar.h \
 	CalendarHandler.cpp \
+	CalendarMgr.cpp \
+	CalendarMgr.h \
 	Camera.cpp \
 	Camera.h \
 	Cell.h \

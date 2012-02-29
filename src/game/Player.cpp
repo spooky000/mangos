@@ -17740,6 +17740,9 @@ void Player::UnbindInstance(BoundInstancesMap::iterator &itr, Difficulty difficu
             CharacterDatabase.PExecute("DELETE FROM character_instance WHERE guid = '%u' AND instance = '%u' AND extend = 0",
                 GetGUIDLow(), itr->second.state->GetInstanceId());
         itr->second.state->RemovePlayer(this);              // state can become invalid
+        if (itr->second.perm)
+            GetSession()->SendCalendarRaidLockout(itr->second.state, false);
+
         m_boundInstances[difficulty].erase(itr++);
     }
 }
@@ -17817,6 +17820,7 @@ void Player::BindToInstance()
     data << uint32(0);
     GetSession()->SendPacket(&data);
     BindToInstance(_pendingBind, true);
+    GetSession()->SendCalendarRaidLockout(_pendingBind, true);
 }
 
 void Player::SendRaidInfo()

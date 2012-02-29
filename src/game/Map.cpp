@@ -1491,6 +1491,7 @@ void DungeonMap::PermBindAllPlayers(Player *player, bool permanent)
             WorldPacket data(SMSG_INSTANCE_SAVE_CREATED, 4);
             data << uint32(0);
             plr->GetSession()->SendPacket(&data);
+            plr->GetSession()->SendCalendarRaidLockout(GetPersistanceState(), true);
         }
 
         // if the leader is not in the instance the group will not get a perm bind

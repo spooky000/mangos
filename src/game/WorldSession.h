@@ -36,8 +36,11 @@ struct AuctionEntry;
 struct AuctionHouseEntry;
 struct DeclinedName;
 
+class CalendarEvent;
+class CalendarInvite;
 class ObjectGuid;
 class Creature;
+class DungeonPersistentState;
 class Item;
 class Object;
 class Player;
@@ -818,6 +821,21 @@ class MANGOS_DLL_SPEC WorldSession
         void HandleCalendarEventModeratorStatus(WorldPacket& recv_data);
         void HandleCalendarComplain(WorldPacket& recv_data);
         void HandleCalendarGetNumPending(WorldPacket& recv_data);
+        void HandleCalendarEventSignup(WorldPacket& recv_data);
+
+        void SendCalendarEvent(CalendarEvent const& calendarEvent, CalendarSendEventType sendEventType);
+        void SendCalendarEventInvite(CalendarInvite const& invite, bool pending);
+        void SendCalendarEventInviteAlert(CalendarEvent const& calendarEvent, CalendarInvite const& calendarInvite);
+        void SendCalendarEventInviteRemove(CalendarInvite const& invite, uint32 flags);
+        void SendCalendarEventInviteRemoveAlert(CalendarEvent const& calendarEvent, CalendarInviteStatus status);
+        void SendCalendarEventRemovedAlert(CalendarEvent const& calendarEvent);
+        void SendCalendarEventUpdateAlert(CalendarEvent const& calendarEvent, CalendarSendEventType sendEventType);
+        void SendCalendarEventStatus(CalendarEvent const& calendarEvent, CalendarInvite const& invite);
+        void SendCalendarEventModeratorStatusAlert(CalendarInvite const& invite);
+        void SendCalendarClearPendingAction();
+        void SendCalendarRaidLockout(DungeonPersistentState const* save, bool add);
+        void SendCalendarRaidLockoutUpdated(DungeonPersistentState const* save);
+        void SendCalendarCommandResult(CalendarResponseResult err, char const* param = NULL);
 
         void HandleSpellClick(WorldPacket& recv_data);
         void HandleGetMirrorimageData(WorldPacket& recv_data);

@@ -2864,7 +2864,7 @@ void ObjectMgr::LoadPetScalingData()
         return;
     }
 
-    BarGoLink bar((int)result->GetRowCount() );
+    BarGoLink bar((int)result->GetRowCount());
 
     m_PetScalingData.clear();
 
