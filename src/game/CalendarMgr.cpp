@@ -1,22 +1,4 @@
 /*
- * Copyright (C) 2008-2012 TrinityCore <http://www.trinitycore.org/>
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program. If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
-
 DROP TABLE IF EXISTS `calendar_events`;
 CREATE TABLE IF NOT EXISTS `calendar_events` (
   `id` int(11) unsigned NOT NULL DEFAULT '0',
@@ -62,7 +44,7 @@ CalendarMgr::~CalendarMgr()
 {
 }
 
-uint32 CalendarMgr::GetPlayerNumPending(uint64 guid)
+uint32 CalendarMgr::GetPlayerNumPending(ObjectGuid guid)
 {
     if (!guid)
         return 0;
@@ -83,12 +65,12 @@ uint32 CalendarMgr::GetPlayerNumPending(uint64 guid)
     return pendingNum;
 }
 
-CalendarInviteIdList const& CalendarMgr::GetPlayerInvites(uint64 guid)
+CalendarInviteIdList const& CalendarMgr::GetPlayerInvites(ObjectGuid guid)
 {
     return _playerInvites[guid];
 }
 
-CalendarEventIdList const& CalendarMgr::GetPlayerEvents(uint64 guid)
+CalendarEventIdList const& CalendarMgr::GetPlayerEvents(ObjectGuid guid)
 {
     return _playerEvents[guid];
 }
@@ -476,13 +458,13 @@ bool CalendarMgr::RemoveEvent(uint64 eventId)
     return val;
 }
 
-bool CalendarMgr::AddPlayerEvent(uint64 guid, uint64 eventId)
+bool CalendarMgr::AddPlayerEvent(ObjectGuid guid, uint64 eventId)
 {
     _playerEvents[guid].insert(eventId);
     return true;
 }
 
-bool CalendarMgr::RemovePlayerEvent(uint64 guid, uint64 eventId)
+bool CalendarMgr::RemovePlayerEvent(ObjectGuid guid, uint64 eventId)
 {
     _playerEvents[guid].erase(eventId);
     return true;
@@ -525,13 +507,13 @@ uint64 CalendarMgr::RemoveInvite(uint64 inviteId)
     return RemovePlayerInvite(invitee, inviteId) ? invitee : 0;
 }
 
-bool CalendarMgr::AddPlayerInvite(uint64 guid, uint64 inviteId)
+bool CalendarMgr::AddPlayerInvite(ObjectGuid guid, uint64 inviteId)
 {
     _playerInvites[guid].insert(inviteId);
     return true;
 }
 
-bool CalendarMgr::RemovePlayerInvite(uint64 guid, uint64 inviteId)
+bool CalendarMgr::RemovePlayerInvite(ObjectGuid guid, uint64 inviteId)
 {
     _playerInvites[guid].erase(inviteId);
     return true;
@@ -555,31 +537,31 @@ void CalendarMgr::SendCalendarEventInviteAlert(CalendarEvent const& calendarEven
         player->GetSession()->SendCalendarEventInviteAlert(calendarEvent, invite);
 }
 
-void CalendarMgr::SendCalendarEventUpdateAlert(uint64 guid, CalendarEvent const& calendarEvent, CalendarSendEventType type)
+void CalendarMgr::SendCalendarEventUpdateAlert(ObjectGuid guid, CalendarEvent const& calendarEvent, CalendarSendEventType type)
 {
     if (Player* player = ObjectAccessor::FindPlayer(guid))
         player->GetSession()->SendCalendarEventUpdateAlert(calendarEvent, type);
 }
 
-void CalendarMgr::SendCalendarEventStatus(uint64 guid, CalendarEvent const& calendarEvent, CalendarInvite const& invite)
+void CalendarMgr::SendCalendarEventStatus(ObjectGuid guid, CalendarEvent const& calendarEvent, CalendarInvite const& invite)
 {
     if (Player* player = ObjectAccessor::FindPlayer(guid))
         player->GetSession()->SendCalendarEventStatus(calendarEvent, invite);
 }
 
-void CalendarMgr::SendCalendarEventRemovedAlert(uint64 guid, CalendarEvent const& calendarEvent)
+void CalendarMgr::SendCalendarEventRemovedAlert(ObjectGuid guid, CalendarEvent const& calendarEvent)
 {
     if (Player* player = ObjectAccessor::FindPlayer(guid))
         player->GetSession()->SendCalendarEventRemovedAlert(calendarEvent);
 }
 
-void CalendarMgr::SendCalendarEventInviteRemoveAlert(uint64 guid, CalendarEvent const& calendarEvent, CalendarInviteStatus status)
+void CalendarMgr::SendCalendarEventInviteRemoveAlert(ObjectGuid guid, CalendarEvent const& calendarEvent, CalendarInviteStatus status)
 {
     if (Player* player = ObjectAccessor::FindPlayer(guid))
         player->GetSession()->SendCalendarEventInviteRemoveAlert(calendarEvent, status);
 }
 
-void CalendarMgr::SendCalendarEventInviteRemove(uint64 guid, CalendarInvite const& invite, uint32 flags)
+void CalendarMgr::SendCalendarEventInviteRemove(ObjectGuid guid, CalendarInvite const& invite, uint32 flags)
 {
     if (Player* player = ObjectAccessor::FindPlayer(guid))
         player->GetSession()->SendCalendarEventInviteRemove(invite, flags);
