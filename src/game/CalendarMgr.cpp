@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS `calendar_invites` (
 #include "Player.h"
 #include "ObjectGuid.h"
 #include "Calendar.h"
+#include "ObjectMgr.h"
 
 CalendarMgr::CalendarMgr() :
     _eventNum(0), _inviteNum(0)
