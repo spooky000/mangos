@@ -21,21 +21,22 @@
 
 #include "Errors.h"
 #include "SharedDefines.h"
+#include "ObjectGuid.h"
 #include <map>
 
 class CalendarInvite
 {
     public:
         CalendarInvite() : _inviteId(0) { Init(); }
-        explicit CalendarInvite(uint64 inviteId) : _inviteId(inviteId) { Init(); }
+        explicit CalendarInvite(uint32 inviteId) : _inviteId(inviteId) { Init(); }
 
         ~CalendarInvite() { }
 
-        void SetInviteId(uint64 inviteId) { _inviteId = inviteId; }
-        uint64 GetInviteId() const { return _inviteId; }
+        void SetInviteId(uint32 inviteId) { _inviteId = inviteId; }
+        uint32 GetInviteId() const { return _inviteId; }
 
-        void SetEventId(uint64 eventId) { _eventId = eventId; }
-        uint64 GetEventId() const { return _eventId; }
+        void SetEventId(uint32 eventId) { _eventId = eventId; }
+        uint32 GetEventId() const { return _eventId; }
 
         void SetSenderGUID(ObjectGuid guid) { _senderGUID = guid; }
         ObjectGuid GetSenderGUID() const { return _senderGUID; }
@@ -60,8 +61,8 @@ class CalendarInvite
     private:
         void Init();
 
-        uint64 _inviteId;
-        uint64 _eventId;
+        uint32 _inviteId;
+        uint32 _eventId;
         ObjectGuid _invitee;
         ObjectGuid _senderGUID;
         uint32 _statusTime;
@@ -76,12 +77,12 @@ class CalendarEvent
 {
     public:
         CalendarEvent() : _eventId(0) { Init(); }
-        explicit CalendarEvent(uint64 eventId) : _eventId(eventId) { Init(); }
+        explicit CalendarEvent(uint32 eventId) : _eventId(eventId) { Init(); }
 
         ~CalendarEvent() { }
 
-        void SetEventId(uint64 eventId) { _eventId = eventId; }
-        uint64 GetEventId() const { return _eventId; }
+        void SetEventId(uint32 eventId) { _eventId = eventId; }
+        uint32 GetEventId() const { return _eventId; }
 
         void SetCreatorGUID(ObjectGuid guid) { _creatorGUID = guid; }
         ObjectGuid GetCreatorGUID() const { return _creatorGUID; }
@@ -116,14 +117,14 @@ class CalendarEvent
         void SetTimeZoneTime(uint32 timezoneTime) { _timezoneTime = timezoneTime; }
         uint32 GetTimeZoneTime() const { return _timezoneTime; }
 
-        void AddInvite(uint64 inviteId)
+        void AddInvite(uint32 inviteId)
         {
             if (inviteId)
                 _invites.insert(inviteId);
         }
 
-        void RemoveInvite(uint64 inviteId) { _invites.erase(inviteId); }
-        bool HasInvite(uint64 inviteId) const { return _invites.find(inviteId) != _invites.end(); }
+        void RemoveInvite(uint32 inviteId) { _invites.erase(inviteId); }
+        bool HasInvite(uint32 inviteId) const { return _invites.find(inviteId) != _invites.end(); }
         CalendarInviteIdList const& GetInviteIdList() const { return _invites; }
         void SetInviteIdList(CalendarInviteIdList const& list) { _invites = list; }
         void ClearInviteIdList() { _invites.clear(); }
@@ -133,7 +134,7 @@ class CalendarEvent
     private:
         void Init();
 
-        uint64 _eventId;
+        uint32 _eventId;
         ObjectGuid _creatorGUID;
         uint32 _guildId;
         CalendarEventType _type;
@@ -165,11 +166,11 @@ struct CalendarAction
         void SetAction(CalendarActionData data) { _action = data; }
         CalendarActionData GetAction() const { return _action; }
 
-        void SetPlayer(Player* player);
+        void SetPlayer(Player* player) { _player = player; }
         Player* GetPlayer() const { return _player; }
 
-        void SetInviteId(uint64 id) { _inviteId = id; }
-        uint64 GetInviteId() const { return _inviteId; }
+        void SetInviteId(uint32 id) { _inviteId = id; }
+        uint32 GetInviteId() const { return _inviteId; }
 
         void SetExtraData(uint32 data) { _data = data; }
         uint32 GetExtraData() const { return _data; }
@@ -182,7 +183,7 @@ struct CalendarAction
     private:
         CalendarActionData _action;
         Player* _player;
-        uint64 _inviteId;
+        uint32 _inviteId;
         uint32 _data;
 };
 

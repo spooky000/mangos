@@ -4,6 +4,7 @@
 
 #include <ace/Singleton.h>
 #include "Calendar.h"
+#include "ObjectGuid.h"
 
 class CalendarMgr
 {
@@ -15,15 +16,15 @@ class CalendarMgr
     public:
         void LoadFromDB();
 
-        CalendarInvite* GetInvite(uint64 inviteId);
-        CalendarEvent* GetEvent(uint64 eventId);
+        CalendarInvite* GetInvite(uint32 inviteId);
+        CalendarEvent* GetEvent(uint32 eventId);
 
         CalendarInviteIdList const& GetPlayerInvites(ObjectGuid guid);
         CalendarEventIdList const& GetPlayerEvents(ObjectGuid guid);
 
         uint32 GetPlayerNumPending(ObjectGuid guid);
-        uint64 GetFreeEventId();
-        uint64 GetFreeInviteId();
+        uint32 GetFreeEventId();
+        uint32 GetFreeInviteId();
 
         void AddAction(CalendarAction const& action);
 
@@ -38,17 +39,17 @@ class CalendarMgr
         void SendCalendarEventModeratorStatusAlert(CalendarInvite const& invite);
 
     private:
-        CalendarEvent* CheckPermisions(uint64 eventId, Player* player, uint64 inviteId, CalendarModerationRank minRank);
+        CalendarEvent* CheckPermisions(uint32 eventId, Player* player, uint32 inviteId, CalendarModerationRank minRank);
 
         bool AddEvent(CalendarEvent const& calendarEvent);
-        bool RemoveEvent(uint64 eventId);
-        bool AddPlayerEvent(ObjectGuid guid, uint64 eventId);
-        bool RemovePlayerEvent(ObjectGuid guid, uint64 eventId);
+        bool RemoveEvent(uint32 eventId);
+        bool AddPlayerEvent(ObjectGuid guid, uint32 eventId);
+        bool RemovePlayerEvent(ObjectGuid guid, uint32 eventId);
 
         bool AddInvite(CalendarInvite const& invite);
-        uint64 RemoveInvite(uint64 inviteId);
-        bool AddPlayerInvite(ObjectGuid guid, uint64 inviteId);
-        bool RemovePlayerInvite(ObjectGuid guid, uint64 inviteId);
+        uint32 RemoveInvite(uint32 inviteId);
+        bool AddPlayerInvite(ObjectGuid guid, uint32 inviteId);
+        bool RemovePlayerInvite(ObjectGuid guid, uint32 inviteId);
 
         CalendarEventMap _events;
         CalendarInviteMap _invites;
