@@ -20,6 +20,7 @@
 #include "BattleGround.h"
 #include "BattleGroundRV.h"
 #include "Language.h"
+#include "ObjectMgr.h"
 
 BattleGroundRV::BattleGroundRV()
 {
