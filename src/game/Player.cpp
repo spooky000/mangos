@@ -16572,7 +16572,7 @@ bool Player::isAllowedToLoot(Creature* creature)
 
     const Loot* loot = &creature->loot;
     // nothing to loot or everything looted.
-    if (loot->isLooted())
+    if (creature->isDead() && loot->isLooted())
         return false;
 
     // allow game-master seeing every loot
