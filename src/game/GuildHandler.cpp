@@ -140,13 +140,9 @@ void WorldSession::HandleGuildRemoveOpcode(WorldPacket& recvPacket)
 
     std::string plName;
     recvPacket >> plName;
-    Player * player = NULL;
 
     if (!normalizePlayerName(plName))
         return;
-
-    if(normalizePlayerName(plName))
-        player = ObjectAccessor::FindPlayerByName(plName.c_str());
 
     Guild* guild = sGuildMgr.GetGuildById(GetPlayer()->GetGuildId());
     if (!guild)
@@ -162,6 +158,7 @@ void WorldSession::HandleGuildRemoveOpcode(WorldPacket& recvPacket)
     }
 
     MemberSlot* slot = guild->GetMemberSlot(plName);
+    Player *player = sObjectMgr.GetPlayer(slot->guid);
     if (!slot || !player)
     {
         SendGuildCommandResult(GUILD_INVITE_S, plName, ERR_GUILD_PLAYER_NOT_IN_GUILD_S);
