@@ -158,8 +158,7 @@ void WorldSession::HandleGuildRemoveOpcode(WorldPacket& recvPacket)
     }
 
     MemberSlot* slot = guild->GetMemberSlot(plName);
-    Player *player = sObjectMgr.GetPlayer(slot->guid);
-    if (!slot || !player)
+    if (!slot)
     {
         SendGuildCommandResult(GUILD_INVITE_S, plName, ERR_GUILD_PLAYER_NOT_IN_GUILD_S);
         return;
@@ -187,7 +186,7 @@ void WorldSession::HandleGuildRemoveOpcode(WorldPacket& recvPacket)
     }
 
     // Put record into guild log
-    guild->LogGuildEvent(GUILD_EVENT_LOG_UNINVITE_PLAYER, GetPlayer()->GetObjectGuid(), player->GetObjectGuid());
+    guild->LogGuildEvent(GUILD_EVENT_LOG_UNINVITE_PLAYER, GetPlayer()->GetObjectGuid(), slot->guid);
 
     guild->BroadcastEvent(GE_REMOVED, plName.c_str(), _player->GetName());
 }
