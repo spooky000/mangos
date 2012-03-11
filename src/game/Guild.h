@@ -401,6 +401,7 @@ class Guild
         void   LoadGuildEventLogFromDB();
         void   DisplayGuildEventLog(WorldSession *session);
         void   LogGuildEvent(uint8 EventType, ObjectGuid playerGuid1, ObjectGuid playerGuid2 = ObjectGuid(), uint8 newRank = 0);
+        void   LogGuildRemove(ObjectGuid playerGuid1, ObjectGuid playerGuid2, std::string plName);
 
         // ** Guild bank **
         // Content & item deposit/withdraw
