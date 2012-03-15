@@ -924,29 +924,6 @@ void Guild::LogGuildEvent(uint8 EventType, ObjectGuid playerGuid1, ObjectGuid pl
         m_Id, m_GuildEventLogNextGuid, uint32(NewEvent.EventType), NewEvent.PlayerGuid1, NewEvent.PlayerGuid2, uint32(NewEvent.NewRank), NewEvent.TimeStamp);
 }
 
-// Temporary hackfix to make logging system working
-void Guild::LogGuildRemove(ObjectGuid playerGuid1, ObjectGuid playerGuid2, std::string plName)
-{
-    GuildEventLogEntry NewEvent;
-    // Create event
-    NewEvent.EventType = 5;
-    NewEvent.PlayerGuid1 = playerGuid1.GetCounter();
-    NewEvent.PlayerGuid2 = playerGuid2.GetCounter();
-    NewEvent.NewRank = 0;
-    NewEvent.TimeStamp = uint32(time(NULL));
-    // Count new LogGuid
-    m_GuildEventLogNextGuid = (m_GuildEventLogNextGuid + 1) % sWorld.getConfig(CONFIG_UINT32_GUILD_EVENT_LOG_COUNT);
-    // Check max records limit
-    if (m_GuildEventLog.size() >= GUILD_EVENTLOG_MAX_RECORDS)
-        m_GuildEventLog.pop_front();
-    // Add event to list
-    m_GuildEventLog.push_back(NewEvent);
-    // Save event to DB
-    CharacterDatabase.PExecute("DELETE FROM guild_eventlog WHERE guildid='%u' AND LogGuid='%u'", m_Id, m_GuildEventLogNextGuid);
-    CharacterDatabase.PExecute("INSERT INTO guild_eventlog (guildid, LogGuid, EventType, PlayerGuid1, PlayerGuid2, NewRank, TimeStamp) SELECT '%u','%u','%u','%u',guid,'%u','" UI64FMTD "' FROM characters WHERE name='%s'",
-        m_Id, m_GuildEventLogNextGuid, uint32(NewEvent.EventType), NewEvent.PlayerGuid1, uint32(NewEvent.NewRank), NewEvent.TimeStamp, plName.c_str());
-}
-
 // *************************************************
 // Guild Bank part
 // *************************************************
