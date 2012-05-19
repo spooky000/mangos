@@ -686,6 +686,9 @@ void Creature::Regenerate(Powers power)
                             addvalue = 10 * sWorld.getConfig(CONFIG_FLOAT_RATE_POWER_ENERGY);
                         break;
                     }
+                    // double the energy regen of Wyrmrest Skytalons (EoE)
+                    if (GetObjectGuid().GetEntry() == 32535 || GetObjectGuid().GetEntry() == 30161)
+                        addvalue = 20 * sWorld.getConfig(CONFIG_FLOAT_RATE_POWER_ENERGY);
                 }
             }
             else
