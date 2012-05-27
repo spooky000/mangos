@@ -99,7 +99,6 @@ Map::Map(uint32 id, time_t expiry, uint32 InstanceId, uint8 SpawnMode)
     MapPersistentState* persistentState = sMapPersistentStateMgr.AddPersistentState(i_mapEntry, GetInstanceId(), GetDifficulty(), 0, IsDungeon());
     persistentState->SetUsedByMapState(this);
     SetBroken(false);
-    ResetStatistic(true);
 }
 
 MapPersistentState* Map::GetPersistentState() const
@@ -478,7 +477,6 @@ void Map::VisitNearbyCellsOf(WorldObject* obj, TypeContainerVisitor<MaNGOS::Obje
 
 void Map::Update(const uint32 &t_diff)
 {
-    ResetStatistic(false);
     /// update worldsessions for existing players
     for(m_mapRefIter = m_mapRefManager.begin(); m_mapRefIter != m_mapRefManager.end(); ++m_mapRefIter)
     {
@@ -3617,6 +3615,19 @@ void Map::ForcedUnload()
         Player* player = itr->getSource();
         if (!player || !player->GetSession())
             continue;
+
+        if (player->IsBeingTeleportedFar())
+        {
+            WorldLocation old_loc;
+            player->GetPosition(old_loc);
+            if (!player->TeleportTo(old_loc))
+            {
+                DETAIL_LOG("Map::ForcedUnload: %s is in teleport state, cannot be ported to his previous place, teleporting him to his homebind place...",
+                    player->GetGuidStr().c_str());
+                player->TeleportToHomebind();
+            }
+            player->SetSemaphoreTeleportFar(false);
+        }
 
         switch (sWorld.getConfig(CONFIG_UINT32_VMSS_MAPFREEMETHOD))
         {

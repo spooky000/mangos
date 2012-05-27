@@ -283,14 +283,6 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         void SetBroken( bool _value = true ) { m_broken = _value; };
         void ForcedUnload();
 
-        // Map execution statistic system
-        void SetProcessingTime(bool stage = true);
-        void ResetStatistic(bool full = false);
-        void AddProcessedObject(uint8 typeId, bool type = true);
-        void PrintStatistic();
-        uint32 GetUpdatesCount() const { return  m_updatesCount; };
-        uint64 GetExecutionTime() const {return  m_executionTime;};
-
     private:
         void LoadMapAndVMap(int gx, int gy);
 
@@ -385,12 +377,6 @@ class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>
         ObjectLockType      i_lock[MAP_LOCK_TYPE_MAX];
         AttackersMap        m_attackersMap;
         bool                m_broken;
-
-        // Map execution statistic system
-        uint32              m_lastStartTime;
-        uint32              m_objectCount[MAX_TYPE_ID];
-        uint32              m_updatesCount;
-        uint64              m_executionTime;
 };
 
 class MANGOS_DLL_SPEC WorldMap : public Map

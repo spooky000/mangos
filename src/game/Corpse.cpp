@@ -54,9 +54,6 @@ void Corpse::AddToWorld()
         sObjectAccessor.AddObject(this);
 
     Object::AddToWorld();
-
-    if (GetMap())
-        GetMap()->AddProcessedObject(GetTypeId());
 }
 
 void Corpse::RemoveFromWorld()
@@ -66,9 +63,6 @@ void Corpse::RemoveFromWorld()
         sObjectAccessor.RemoveObject(this);
 
     Object::RemoveFromWorld();
-
-    if (GetMap())
-        GetMap()->AddProcessedObject(GetTypeId(), false);
 }
 
 bool Corpse::Create( uint32 guidlow )

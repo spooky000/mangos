@@ -196,9 +196,6 @@ void GameObject::Update(uint32 update_diff, uint32 p_time)
         return;
     }
 
-    if (GetMap())
-        GetMap()->AddProcessedObject(GetTypeId());
-
     switch (m_lootState)
     {
         case GO_NOT_READY:
