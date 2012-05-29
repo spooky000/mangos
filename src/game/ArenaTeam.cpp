@@ -667,7 +667,7 @@ float ArenaTeam::GetChanceAgainst(uint32 ownRating, uint32 opponentRating)
         if (opponentRating < 1000)
             opponentRating = 1000;
 
-    return 1.0f / (1.0f + exp(log(10.0f) * (float)((float)opponentRating - (float)ownRating) / 650.0f));
+    return 1.0f / (1.0f + exp(log(10.0f) * (float)((float)opponentRating - (float)ownRating) / 400.0f));
 }
 
 int32 ArenaTeam::GetMatchmakerRatingMod(uint32 ownRating, uint32 opponentRating, bool won /*, float& confidence_factor*/)
@@ -691,7 +691,7 @@ int32 ArenaTeam::GetMatchmakerRatingMod(uint32 ownRating, uint32 opponentRating,
     */
 
     // Real rating modification
-    mod *= 24.0f;
+    mod *= 32.0f;
 
     return (int32)ceil(mod);
 }
@@ -710,12 +710,12 @@ int32 ArenaTeam::GetRatingMod(uint32 ownRating, uint32 opponentRating, bool won 
     if (won && ownRating < 1300)
     {
         if (ownRating < 1000)
-            mod = 48.0f * (won_mod - chance);
+            mod = 64.0f * (won_mod - chance);
         else
-            mod = (24.0f + (24.0f * (1300.0f - float(ownRating)) / 300.0f)) * (won_mod - chance);
+            mod = (32.0f + (32.0f * (1300.0f - float(ownRating)) / 300.0f)) * (won_mod - chance);
     }
     else
-        mod = 24.0f * (won_mod - chance);
+        mod = 32.0f * (won_mod - chance);
 
     return (int32)ceil(mod);
 }
