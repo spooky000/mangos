@@ -1538,8 +1538,8 @@ bool ChatHandler::HandleModifyMoneyCommand(char* args)
         if (newmoney <= 0 )
         {
             PSendSysMessage(LANG_YOU_TAKE_ALL_MONEY, GetNameLink(chr).c_str());
-            if (needReportToTarget(chr))
-                ChatHandler(chr).PSendSysMessage(LANG_YOURS_ALL_MONEY_GONE, GetNameLink().c_str());
+            //if (needReportToTarget(chr))  // always display money taken message to the victim
+            ChatHandler(chr).PSendSysMessage(LANG_YOURS_ALL_MONEY_GONE, GetNameLink().c_str());
 
             chr->SetMoney(0);
         }
@@ -1557,10 +1557,10 @@ bool ChatHandler::HandleModifyMoneyCommand(char* args)
     else
     {
         PSendSysMessage(LANG_YOU_GIVE_MONEY, addmoney, GetNameLink(chr).c_str());
-        if (needReportToTarget(chr))
-            ChatHandler(chr).PSendSysMessage(LANG_YOURS_MONEY_GIVEN, GetNameLink().c_str(), addmoney);
+        //if (needReportToTarget(chr))  // always display money given message to the receiver
+        ChatHandler(chr).PSendSysMessage(LANG_YOURS_MONEY_GIVEN, GetNameLink().c_str(), addmoney);
 
-        if (addmoney >=MAX_MONEY_AMOUNT)
+        if (addmoney >= MAX_MONEY_AMOUNT)
             chr->SetMoney(MAX_MONEY_AMOUNT);
         else
             chr->ModifyMoney( addmoney );
