@@ -813,6 +813,11 @@ enum MangosStrings
     LANG_FAIL_ENTER_SPECTRAL_REALM      = 816,
     // Room for in-game strings           817-999 not used
 
+    // custom strings for announcing player names who joined
+    LANG_ARENA_QUEUE_ANNOUNCE_WORLD_JOIN_1 = 900,
+    LANG_ARENA_QUEUE_ANNOUNCE_WORLD_JOIN_2 = 901,
+    LANG_ARENA_QUEUE_ANNOUNCE_WORLD_JOIN_3 = 902,
+
     // Level 4 (CLI only commands)
     LANG_COMMAND_EXIT                   = 1000,
     LANG_ACCOUNT_DELETED                = 1001,

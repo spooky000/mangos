@@ -187,6 +187,38 @@ GroupQueueInfo * BattleGroundQueue::AddGroup(Player *leader, Group* grp, BattleG
     {
         sWorld.SendWorldText(LANG_ARENA_QUEUE_ANNOUNCE_WORLD_JOIN, ginfo->arenaType, ginfo->arenaType);
     }
+    // skirmish name announcer works only in 2v2 and 3v3 brackets
+    else if (!isRated && sWorld.getConfig(CONFIG_BOOL_ARENA_QUEUE_ANNOUNCER_JOIN_SKIRMISH))
+    {
+        if (grp)
+        {
+            ObjectGuid testArr[3];
+            int j = 0;
+            for(GroupReference *itr = grp->GetFirstMember(); itr != NULL; itr = itr->next())
+            {
+                Player *member = itr->getSource();
+                if(!member)
+                    continue;   // this should never happen
+
+                if (j <= 2)
+                    testArr[j] = member->GetObjectGuid();
+                j++;
+            }
+
+            Player *player1 = sObjectMgr.GetPlayer(testArr[0]);
+            Player *player2 = sObjectMgr.GetPlayer(testArr[1]);
+
+            if (grp->GetMembersCount() == 2)
+                sWorld.SendWorldText(LANG_ARENA_QUEUE_ANNOUNCE_WORLD_JOIN_2, ginfo->arenaType, ginfo->arenaType, player2->GetName(), player1->GetName());
+            else if (grp->GetMembersCount() == 3)
+            {
+                Player *player3 = sObjectMgr.GetPlayer(testArr[2]);
+                sWorld.SendWorldText(LANG_ARENA_QUEUE_ANNOUNCE_WORLD_JOIN_3, ginfo->arenaType, ginfo->arenaType, player3->GetName(), player2->GetName(), player1->GetName());
+            }
+        }
+        else    // if the player has no group
+            sWorld.SendWorldText(LANG_ARENA_QUEUE_ANNOUNCE_WORLD_JOIN_1, ginfo->arenaType, ginfo->arenaType, leader->GetName());
+    }
 
     //add players from group to ginfo
     {

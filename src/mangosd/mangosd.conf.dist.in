@@ -1508,6 +1508,11 @@ BattleGround.PremadeGroupWaitForMatch = 1800000
 #        Default: 0 (disable)
 #                 1 (enable)
 #
+#    Arena.Queueannouncer.JoinSkirmish
+#	 Enable queue announcer for skirmish games, also listing players names
+#	 Default: 0 (disabled)
+#	          1 (enabled)
+#
 #    Arena.QueueAnnouncer.Exit
 #        Enable arena queue announcer posting to chat at exit
 #        Default: 0 (disable)
@@ -1536,6 +1541,7 @@ Arena.RatingDiscardTimer = 600000
 Arena.AutoDistributePoints = 0
 Arena.AutoDistributeInterval = 7
 Arena.QueueAnnouncer.Join = 0
+Arena.Queueannouncer.JoinSkirmish = 0
 Arena.QueueAnnouncer.Exit = 0
 Arena.ArenaSeason.ID = 1
 Arena.ArenaSeasonPrevious.ID = 0
